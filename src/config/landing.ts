@@ -75,23 +75,23 @@ export interface ResolvedBrand {
  */
 export const CUSTOM_BRAND: CustomBrand = {
   /** Displayed in navbar, hero, footer copyright, page title â€” everywhere. */
-  name: "YourCRM",
+  name: "Ascend CRM",
 
   /** One-line positioning, surfaced in hero subtitle + meta description. */
-  tagline: "The AI-powered CRM that works while you sleep",
+  tagline: "Turn strategy into execution.",
 
   /**
    * Short (~140 char) description used under the hero headline. Should
    * read like a tweet â€” what the product does, for whom.
    */
   shortDescription:
-    "Contacts, pipeline, and a website builder â€” plus AI agents that answer every lead by chat, text, and phone the moment it lands, 24/7. One branded workspace your team actually wants to use.",
+    "Everything you need to manage customers, automate marketing, close more sales, and execute your growth strategy.",
 
   /** Used on CTA buttons + the FAQ "talk to us" line + footer. */
-  supportEmail: "hello@yourbrand.com",
+  supportEmail: "hello@divinex.io",
 
   /** Used in footer, og:url, canonical. No https://, no trailing slash. */
-  primaryDomain: "yourbrand.com",
+  primaryDomain: "crm.divinex.io",
 
   /**
    * Pricing tiers. HIDDEN BY DEFAULT â€” the custom landing is wired for

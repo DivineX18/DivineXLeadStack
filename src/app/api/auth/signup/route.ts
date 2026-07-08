@@ -5,6 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import { seedDefaultTemplates } from "@/lib/automations/seed-templates";
 import { GLOBAL_TERRITORY_ID, type Role } from "@/types";
+import { CUSTOM_BRAND } from "@/config/landing";
 
 interface SignupBody {
   email?: string;
@@ -160,7 +161,9 @@ export async function POST(request: Request) {
       const subAccountRef = db.collection("subAccounts").doc();
       const agencyId = agencyRef.id;
       const subAccountId = subAccountRef.id;
-      const agencyName = `${displayName || email.split("@")[0]}'s Agency`;
+      const agencyName = displayName
+        ? `${displayName}'s Agency`
+        : CUSTOM_BRAND.name;
 
       await auth.setCustomUserClaims(uid, {
         // Legacy claim — still consumed by the existing dashboard pages
