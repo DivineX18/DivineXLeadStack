@@ -1,0 +1,67 @@
+services:
+  - type: web
+    name: ascend-crm
+    runtime: node
+    plan: starter
+    branch: main
+    buildCommand: pnpm install && pnpm build
+    startCommand: pnpm start
+    domains:
+      - crm.divinex.io
+    envVars:
+      - key: NODE_VERSION
+        value: 20.19.0
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://crm.divinex.io
+      - key: BOOTSTRAP_ADMIN_EMAIL
+        value: hello@divinex.io
+      - key: EMAIL_FROM
+        value: "Ascend CRM <notifications@crm.divinex.io>"
+      - key: NEXT_PUBLIC_FIREBASE_API_KEY
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_APP_ID
+        sync: false
+      - key: FIREBASE_ADMIN_PROJECT_ID
+        sync: false
+      - key: FIREBASE_ADMIN_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_ADMIN_PRIVATE_KEY
+        sync: false
+      - key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRO_PRICE_ID
+        sync: false
+      - key: COOKIE_SECRET_CURRENT
+        sync: false
+      - key: COOKIE_SECRET_PREVIOUS
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: QSTASH_URL
+        sync: false
+      - key: QSTASH_TOKEN
+        sync: false
+      - key: QSTASH_CURRENT_SIGNING_KEY
+        sync: false
+      - key: QSTASH_NEXT_SIGNING_KEY
+        sync: false
+      - key: AUTOMATIONS_TOKEN_SECRET
+        sync: false
