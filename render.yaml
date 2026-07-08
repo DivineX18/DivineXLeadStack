@@ -10,7 +10,7 @@ services:
       - crm.divinex.io
     envVars:
       - key: NODE_VERSION
-        value: 20.19.0
+        value: "22"
       - key: NEXT_PUBLIC_APP_URL
         value: https://crm.divinex.io
       - key: BOOTSTRAP_ADMIN_EMAIL
