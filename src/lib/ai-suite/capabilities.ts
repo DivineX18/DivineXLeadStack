@@ -2504,7 +2504,45 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       required: ["heading", "hero_statement", "features", "benefits"],
       additionalProperties: false,
     },
-    validate: (raw) => {
+    validate: (rawIn) => {
+      // Confirm round-trips the camelCase `args` this validate() itself
+      // returns (see the `return { ok: true, args: {...} }` below) — so this
+      // function must accept both the LLM's original snake_case tool-call
+      // args AND its own previously-normalized camelCase output. Alias the
+      // camelCase keys back to their snake_case originals up front so every
+      // `str(raw, "snake_case")` read below works either way.
+      const rawObj = (rawIn ?? {}) as Record<string, unknown>;
+      const camelToSnake: Record<string, string> = {
+        siteName: "site_name",
+        buildType: "build_type",
+        videoLink: "video_link",
+        contactEmail: "contact_email",
+        ctaLink: "cta_link",
+        designPalette: "design_color_palette",
+        customColors: "custom_colors",
+        designTypography: "design_typography",
+        designLayout: "design_layout",
+        designComponents: "design_components",
+        designInteractions: "design_interactions",
+        designButtons: "design_buttons",
+        designContactForm: "design_contact_form",
+        designIcons: "design_icons",
+        servicesList: "services_list",
+        heroStatement: "hero_statement",
+        colorScheme: "color_scheme",
+        includeFaq: "include_faq",
+        includeContactPage: "include_contact_page",
+        includeServicesPage: "include_services_page",
+        includePrivacyPage: "include_privacy_page",
+        includeTermsPage: "include_terms_page",
+      };
+      const raw: Record<string, unknown> = { ...rawObj };
+      for (const [camel, snake] of Object.entries(camelToSnake)) {
+        if (raw[snake] === undefined && camel in rawObj) {
+          raw[snake] = rawObj[camel];
+        }
+      }
+
       const heading = str(raw, "heading");
       if (!heading) return { ok: false, error: "a site heading is required" };
       if (heading.length > 80) {
