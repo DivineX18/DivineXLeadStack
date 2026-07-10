@@ -519,6 +519,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ---------- publicSignups / accountActivations ----------
+    // Public self-serve signup bookkeeping. Server-only, both directions —
+    // the /pricing/success status page and the /activate/[token] flow both
+    // go through the Admin SDK (a server component + API routes), never a
+    // direct client read/write.
+    match /publicSignups/{sessionId} {
+      allow read, write: if false;
+    }
+    match /accountActivations/{uid} {
+      allow read, write: if false;
+    }
+
     // ---------- users ----------
     // Slim profile doc. Self-read + self-update (display name, photo URL).
     // Role/agency fields are server-only.

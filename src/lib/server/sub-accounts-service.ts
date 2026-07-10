@@ -3,6 +3,10 @@ import "server-only";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { seedDefaultTemplates } from "@/lib/automations/seed-templates";
+import {
+  assignPlanToSubAccount,
+  getDefaultPlanForAgency,
+} from "@/lib/server/billing-service";
 import { GLOBAL_TERRITORY_ID } from "@/types";
 
 /**
@@ -35,6 +39,14 @@ export interface CreateSubAccountInput {
     email: string | null;
     phone: string | null;
   } | null;
+  /**
+   * Skip the agency's default-plan auto-assign. Set by callers that are
+   * about to set `billing` themselves right after creation — today only
+   * the public self-serve signup webhook, which already knows the exact
+   * plan the buyer paid for and would otherwise collide with the separate
+   * default-plan assignment below.
+   */
+  skipDefaultPlanAssign?: boolean;
 }
 
 export interface CreateSubAccountResult {
@@ -42,6 +54,15 @@ export interface CreateSubAccountResult {
   accountNumber: number;
   name: string;
   agencyId: string;
+  /**
+   * "pending" when the agency has a default billing plan and it was
+   * auto-assigned — the workspace is walled for everyone except the agency
+   * owner until `checkoutUrl` is paid. "comped" (the historical default)
+   * when no default plan is configured, or auto-assignment failed.
+   */
+  billingStatus: "comped" | "pending";
+  /** Set when billingStatus is "pending" — share with the client to activate. */
+  checkoutUrl: string | null;
 }
 
 /**
@@ -241,5 +262,34 @@ export async function createSubAccountForAgency(
     return current;
   });
 
-  return { subAccountId, accountNumber, name, agencyId };
+  // Auto-assign the agency's default billing plan, if one is set — the
+  // workspace starts "pending" (paywalled for everyone but the owner)
+  // instead of the historical "comped" default. Best-effort: a failure here
+  // (Stripe hiccup, misconfiguration) must not undo an otherwise-successful
+  // sub-account create — the owner can assign a plan manually from Client
+  // billing if this doesn't land.
+  let billingStatus: "comped" | "pending" = "comped";
+  let checkoutUrl: string | null = null;
+  try {
+    const defaultPlan = input.skipDefaultPlanAssign
+      ? null
+      : await getDefaultPlanForAgency(agencyId);
+    if (defaultPlan) {
+      const result = await assignPlanToSubAccount({
+        agencyId,
+        subAccountId,
+        planId: defaultPlan.id,
+        specialPriceCents: null,
+      });
+      billingStatus = result.status === "pending" ? "pending" : "comped";
+      checkoutUrl = result.checkoutUrl;
+    }
+  } catch (err) {
+    console.error(
+      `[sub-accounts] default-plan auto-assign failed for ${subAccountId}`,
+      err,
+    );
+  }
+
+  return { subAccountId, accountNumber, name, agencyId, billingStatus, checkoutUrl };
 }

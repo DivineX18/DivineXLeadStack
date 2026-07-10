@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { toast } from "sonner";
-import { Archive, CreditCard, Pencil, Plus } from "lucide-react";
+import { Archive, CreditCard, Globe, Pencil, Plus, Star } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { getFirebaseDb } from "@/lib/firebase/client";
 import { Button } from "@/components/ui/button";
@@ -129,6 +129,57 @@ export default function AgencyBillingPage() {
     }
   }
 
+  async function handleSetDefault(plan: BillingPlanResponse, makeDefault: boolean) {
+    if (
+      makeDefault &&
+      !window.confirm(
+        `Make "${plan.name}" the default plan? Every NEW sub-account you create from now on will require payment on this plan before it can be used. Existing sub-accounts are unaffected.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/agency/plans/${plan.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ setDefault: makeDefault }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Failed to update.");
+      toast.success(
+        makeDefault
+          ? `"${plan.name}" is now the default plan for new sub-accounts.`
+          : `"${plan.name}" is no longer the default — new sub-accounts start comped.`,
+      );
+      refreshPlans();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update.");
+    }
+  }
+
+  async function handleTogglePublicSale(
+    plan: BillingPlanResponse,
+    sell: boolean,
+  ) {
+    try {
+      const res = await fetch(`/api/agency/plans/${plan.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ publicSelfServeEnabled: sell }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Failed to update.");
+      toast.success(
+        sell
+          ? `"${plan.name}" now appears on your public pricing page — anyone can pay and self-serve a new workspace.`
+          : `"${plan.name}" removed from the public pricing page.`,
+      );
+      refreshPlans();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update.");
+    }
+  }
+
   if (authLoading) {
     return (
       <div className="mx-auto w-full max-w-5xl space-y-6">
@@ -234,11 +285,25 @@ export default function AgencyBillingPage() {
                         </span>
                       </p>
                     </div>
-                    {plan.status === "archived" && (
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                        Archived
-                      </span>
-                    )}
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      {plan.status === "archived" && (
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                          Archived
+                        </span>
+                      )}
+                      {plan.status === "active" && plan.isDefault && (
+                        <span className="flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                          <Star className="h-2.5 w-2.5 fill-current" />
+                          Default
+                        </span>
+                      )}
+                      {plan.status === "active" && plan.publicSelfServeEnabled && (
+                        <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                          <Globe className="h-2.5 w-2.5" />
+                          Public
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {plan.description && (
                     <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
@@ -249,7 +314,17 @@ export default function AgencyBillingPage() {
                     {gateCount} feature{gateCount === 1 ? "" : "s"} ·{" "}
                     {clientCount} client{clientCount === 1 ? "" : "s"}
                   </p>
-                  <div className="mt-3 flex items-center gap-2">
+                  {plan.isDefault && (
+                    <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+                      New sub-accounts require payment on this plan.
+                    </p>
+                  )}
+                  {plan.publicSelfServeEnabled && (
+                    <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400">
+                      Live on your public pricing page — anyone can self-serve.
+                    </p>
+                  )}
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
                     <Button
                       type="button"
                       size="sm"
@@ -263,6 +338,34 @@ export default function AgencyBillingPage() {
                       <Pencil className="mr-1 h-3 w-3" />
                       Edit
                     </Button>
+                    {plan.status === "active" && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2.5 text-xs text-muted-foreground"
+                        onClick={() => handleSetDefault(plan, !plan.isDefault)}
+                      >
+                        <Star className="mr-1 h-3 w-3" />
+                        {plan.isDefault ? "Unset default" : "Set as default"}
+                      </Button>
+                    )}
+                    {plan.status === "active" && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2.5 text-xs text-muted-foreground"
+                        onClick={() =>
+                          handleTogglePublicSale(plan, !plan.publicSelfServeEnabled)
+                        }
+                      >
+                        <Globe className="mr-1 h-3 w-3" />
+                        {plan.publicSelfServeEnabled
+                          ? "Remove from pricing page"
+                          : "Sell on pricing page"}
+                      </Button>
+                    )}
                     {plan.status === "active" && (
                       <Button
                         type="button"
@@ -375,8 +478,11 @@ export default function AgencyBillingPage() {
           </table>
         </div>
         <p className="text-xs text-muted-foreground">
-          &quot;Comped&quot; clients aren&apos;t billed through the platform —
-          every workspace starts comped until you assign a plan. Payments,
+          &quot;Comped&quot; clients aren&apos;t billed through the platform.
+          Without a default plan set above, every new workspace starts
+          comped until you assign one manually; with a default plan set,
+          new workspaces start <span className="font-medium text-foreground">pending</span> and
+          are walled off until the client completes checkout. Payments,
           invoices, and payout timing live in your{" "}
           <a
             href="https://dashboard.stripe.com"

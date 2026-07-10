@@ -79,6 +79,22 @@ export interface BillingPlanDoc {
   currency: string;
   gates: PlanGates;
   status: BillingPlanStatus;
+  /**
+   * When true, this is the plan auto-assigned to every NEW sub-account the
+   * agency owner creates — the workspace starts `billing.status: "pending"`
+   * (walled for everyone except the owner) instead of the historical
+   * `"comped"` default. At most one plan per agency carries this flag;
+   * {@link setDefaultPlanForAgency} in the billing service enforces that.
+   */
+  isDefault: boolean;
+  /**
+   * When true, this plan is sold on the public marketing pricing page
+   * (`/pricing` + the homepage pricing section) via self-serve Stripe
+   * Checkout — a stranger can pay and get a brand-new sub-account
+   * provisioned automatically, no agency-owner action needed. See
+   * `createPublicSignupCheckoutSession` / `getPublicPlansForAgency`.
+   */
+  publicSelfServeEnabled: boolean;
   stripeProductId: string | null;
   stripePriceId: string | null;
   createdAt: Timestamp | FieldValue | Date | null;
@@ -94,8 +110,25 @@ export interface BillingPlanResponse {
   currency: string;
   gates: PlanGates;
   status: BillingPlanStatus;
+  isDefault: boolean;
+  publicSelfServeEnabled: boolean;
   createdAt: string | null;
   updatedAt: string | null;
+}
+
+/**
+ * Public-safe plan shape for the marketing pricing page (`/api/public/plans`).
+ * Deliberately excludes internal fields (raw gate keys, Stripe ids) — only
+ * what a prospective buyer needs to decide and check out.
+ */
+export interface PublicPlanSummary {
+  id: string;
+  name: string;
+  description: string | null;
+  priceMonthlyCents: number;
+  currency: string;
+  /** Human-readable feature list, derived from PLAN_GATE_LABELS. */
+  features: string[];
 }
 
 /**

@@ -66,7 +66,7 @@ function plansCollection(agencyId: string) {
  * dunning transition, so "who put this client on what, when" is answerable
  * without spelunking Stripe. Best-effort — never blocks the primary write.
  */
-function recordBillingEvent(entry: {
+export function recordBillingEvent(entry: {
   agencyId: string;
   subAccountId: string;
   event:
@@ -110,6 +110,8 @@ function serializePlan(
     currency: String(data.currency ?? "usd"),
     gates,
     status: data.status === "archived" ? "archived" : "active",
+    isDefault: data.isDefault === true,
+    publicSelfServeEnabled: data.publicSelfServeEnabled === true,
     createdAt: tsToIso(data.createdAt),
     updatedAt: tsToIso(data.updatedAt),
   };
@@ -204,6 +206,8 @@ export async function createPlanForAgency(input: {
     currency: input.currency,
     gates: input.gates,
     status: "active",
+    isDefault: false,
+    publicSelfServeEnabled: false,
     stripeProductId: product.id,
     stripePriceId: price.id,
     createdAt: FieldValue.serverTimestamp(),
@@ -222,6 +226,7 @@ export async function updatePlanForAgency(input: {
   priceMonthlyCents?: number;
   gates?: PlanGates;
   status?: "active" | "archived";
+  publicSelfServeEnabled?: boolean;
 }): Promise<BillingPlanResponse> {
   const ref = plansCollection(input.agencyId).doc(input.planId);
   const snap = await ref.get();
@@ -235,6 +240,9 @@ export async function updatePlanForAgency(input: {
   if (input.description !== undefined) updates.description = input.description;
   if (input.gates) updates.gates = input.gates;
   if (input.status) updates.status = input.status;
+  if (typeof input.publicSelfServeEnabled === "boolean") {
+    updates.publicSelfServeEnabled = input.publicSelfServeEnabled;
+  }
 
   const stripe = billingStripeIsConfigured() ? getStripeServer() : null;
 
@@ -287,13 +295,19 @@ export async function updatePlanForAgency(input: {
       );
   }
 
-  // Archive → deactivate the standard price so no new checkout can use it.
-  if (input.status === "archived" && stripe && plan.stripePriceId) {
-    await stripe.prices
-      .update(plan.stripePriceId, { active: false })
-      .catch((err) =>
-        console.warn("[billing] failed to deactivate archived price", err),
-      );
+  // Archive → deactivate the standard price so no new checkout can use it,
+  // and clear the default + public-sale flags (an archived plan can't be
+  // auto-assigned or sold on the pricing page).
+  if (input.status === "archived") {
+    if (stripe && plan.stripePriceId) {
+      await stripe.prices
+        .update(plan.stripePriceId, { active: false })
+        .catch((err) =>
+          console.warn("[billing] failed to deactivate archived price", err),
+        );
+    }
+    if (plan.isDefault) updates.isDefault = false;
+    if (plan.publicSelfServeEnabled) updates.publicSelfServeEnabled = false;
   }
 
   await ref.update(updates);
@@ -334,6 +348,64 @@ async function getPlanOrThrow(
   const snap = await plansCollection(agencyId).doc(planId).get();
   if (!snap.exists) throw new BillingError("Plan not found", 404);
   return { ...(snap.data() as BillingPlanDoc), id: snap.id };
+}
+
+/**
+ * The plan (if any) new sub-accounts should be auto-assigned at creation.
+ * Archived plans never qualify — {@link setDefaultPlanForAgency} also clears
+ * the flag when a default plan is archived, but this is a defensive
+ * double-check for callers reading the doc directly.
+ */
+export async function getDefaultPlanForAgency(
+  agencyId: string,
+): Promise<BillingPlanDoc | null> {
+  const snap = await plansCollection(agencyId)
+    .where("isDefault", "==", true)
+    .limit(1)
+    .get();
+  if (snap.empty) return null;
+  const doc = snap.docs[0];
+  const plan = { ...(doc.data() as BillingPlanDoc), id: doc.id };
+  return plan.status === "active" ? plan : null;
+}
+
+/**
+ * Set (or clear) the agency's default plan — the one auto-assigned to every
+ * new sub-account at creation, so it starts `pending` (must pay to
+ * activate) instead of `comped`. At most one plan is ever flagged; this
+ * unsets any previous default in the same batch so the invariant can't
+ * drift.
+ */
+export async function setDefaultPlanForAgency(input: {
+  agencyId: string;
+  /** null clears the default — new sub-accounts go back to comped. */
+  planId: string | null;
+}): Promise<void> {
+  const col = plansCollection(input.agencyId);
+  if (input.planId) {
+    const snap = await col.doc(input.planId).get();
+    if (!snap.exists) throw new BillingError("Plan not found", 404);
+    if (snap.data()?.status !== "active") {
+      throw new BillingError(
+        "Only an active plan can be the default for new sub-accounts.",
+      );
+    }
+  }
+  const all = await col.get();
+  const db = getAdminDb();
+  const batch = db.batch();
+  let touched = false;
+  for (const doc of all.docs) {
+    const shouldBeDefault = doc.id === input.planId;
+    if ((doc.data().isDefault === true) !== shouldBeDefault) {
+      batch.update(doc.ref, {
+        isDefault: shouldBeDefault,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      touched = true;
+    }
+  }
+  if (touched) await batch.commit();
 }
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,8 @@
 import { LANDING_VARIANT } from "@/config/landing";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import { resolveHeroVariant } from "@/lib/hero-variant-server";
+import { getPublicPlans } from "@/lib/server/public-signup-service";
+import { billingStripeIsConfigured } from "@/lib/server/billing-service";
 
 import { AnnouncementBar } from "@/components/landing/announcement-bar";
 import { Navbar as LeadStackNavbar } from "@/components/landing/navbar";
@@ -26,6 +28,7 @@ import { LiveVisitorBeacon } from "@/components/landing/live-visitor-beacon";
 import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { Hero as CustomHero } from "@/components/landing-custom/hero";
 import { Features as CustomFeatures } from "@/components/landing-custom/features";
+import { Pricing as CustomPricing } from "@/components/landing-custom/pricing";
 import { FAQ as CustomFAQ } from "@/components/landing-custom/faq";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
@@ -45,13 +48,17 @@ import { Footer as CustomFooter } from "@/components/landing-custom/footer";
  */
 export default async function HomePage() {
   if (LANDING_VARIANT === "custom") {
-    const brand = await resolveCustomBrand();
+    const [brand, { plans }] = await Promise.all([
+      resolveCustomBrand(),
+      getPublicPlans(),
+    ]);
     return (
       <div className="flex min-h-screen flex-col">
         <CustomNavbar brand={brand} />
         <main className="flex-1">
           <CustomHero brand={brand} />
           <CustomFeatures />
+          <CustomPricing plans={plans} configured={billingStripeIsConfigured()} />
           <CustomFAQ brand={brand} />
           <CustomCTA brand={brand} />
         </main>

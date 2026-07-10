@@ -623,8 +623,12 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         timezone: (args.timezone as string) ?? "UTC",
         accountContact: null,
       });
+      const billingNote =
+        res.billingStatus === "pending" && res.checkoutUrl
+          ? ` This agency's default plan was auto-assigned — the workspace is locked until the client pays: ${res.checkoutUrl}`
+          : "";
       return {
-        resultText: `Created sub-account “${res.name}” (#${res.accountNumber}). You'll find it under Agency → Sub-accounts.`,
+        resultText: `Created sub-account “${res.name}” (#${res.accountNumber}). You'll find it under Agency → Sub-accounts.${billingNote}`,
         ref: { kind: "subAccount", id: res.subAccountId },
       };
     },

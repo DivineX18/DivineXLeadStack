@@ -16,6 +16,10 @@ import {
   handleSubAccountPlanCheckoutCompleted,
   handleSubAccountSubscriptionEvent,
 } from "@/lib/server/billing-service";
+import {
+  PUBLIC_SELF_SERVE_SIGNUP_KIND,
+  handlePublicSelfServeSignupCheckoutCompleted,
+} from "@/lib/server/public-signup-service";
 import type { SubscriptionStatus } from "@/types";
 
 export async function handleCheckoutCompleted(
@@ -34,6 +38,15 @@ export async function handleCheckoutCompleted(
   // never see these sessions.
   if (session.metadata?.kind === SUB_ACCOUNT_PLAN_KIND) {
     await handleSubAccountPlanCheckoutCompleted(session);
+    return;
+  }
+
+  // Public self-serve signup: a stranger paying on the public pricing page,
+  // no sub-account exists yet. Provisions the workspace, then "graduates"
+  // the subscription's metadata to SUB_ACCOUNT_PLAN_KIND so subsequent
+  // lifecycle events fall through to the branch above with no new code.
+  if (session.metadata?.kind === PUBLIC_SELF_SERVE_SIGNUP_KIND) {
+    await handlePublicSelfServeSignupCheckoutCompleted(session);
     return;
   }
 

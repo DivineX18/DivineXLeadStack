@@ -1,11 +1,14 @@
 import {
   Bot,
   Calendar,
+  CalendarClock,
   CheckSquare,
   FileText,
   Globe,
   KanbanSquare,
   Mail,
+  Phone,
+  Receipt,
   Users,
   Zap,
 } from "lucide-react";
@@ -15,7 +18,13 @@ const features = [
     icon: Bot,
     title: "AI agents that never miss a lead",
     body:
-      "An AI agent answers your website chat, inbound texts, and phone calls 24/7 — qualifying leads and booking follow-ups the moment intent shows up, even at 2am.",
+      "An AI agent answers your website chat, inbound texts, WhatsApp, and phone calls 24/7 — qualifying leads and booking follow-ups the moment intent shows up, even at 2am.",
+  },
+  {
+    icon: Phone,
+    title: "AI voice that answers and calls back",
+    body:
+      "Inbound calls get picked up and qualified automatically. Turn it around and have the same AI agent proactively dial a filtered list of leads — one click, or a full campaign.",
   },
   {
     icon: Users,
@@ -34,6 +43,18 @@ const features = [
     title: "Speed-to-Lead automations",
     body:
       "Form submits trigger an SMS + email sequence within seconds. Configure once, watch your response time drop to under a minute.",
+  },
+  {
+    icon: Receipt,
+    title: "Quotes & invoices that get paid",
+    body:
+      "Build a line-itemed quote, send it, and the client accepts or pays right from their inbox — PDF, payment link, and a Won deal, all automatic.",
+  },
+  {
+    icon: CalendarClock,
+    title: "Booking pages that fill your calendar",
+    body:
+      "Share one link. Visitors pick an open slot, get an ICS-confirmed booking, and reminders send themselves — no back-and-forth.",
   },
   {
     icon: Calendar,

@@ -20,6 +20,11 @@ const PUBLIC_PATHS = [
   "/f",
   "/api/forms",
   "/api/auth/signup",
+  // Public self-serve activation — sets the password on a Firebase Auth
+  // user created server-side after a paid self-serve signup. Security is
+  // the HMAC activation token in the request body, verified inside the
+  // route (see /lib/auth/activation-token.ts).
+  "/api/auth/activate",
   // Workflow Builder step worker — QStash callback, signature-verified inside
   // the route.
   "/api/workflows/step",
@@ -134,6 +139,14 @@ const PUBLIC_PATHS = [
   // verified inside the route via `verifyQStashSignature`. Mirrors the
   // existing /api/broadcasts/email/step + /api/workflows/step paths.
   "/api/webhooks-out",
+  // Public self-serve signup — marketing pricing page (+ /pricing/success,
+  // covered by this prefix), the read-only plans + checkout-session API,
+  // and the post-payment "set your password" activation page. No session;
+  // security is the Stripe Checkout flow itself + the HMAC activation
+  // token (verified inside /api/auth/activate, quote/checkout-token model).
+  "/pricing",
+  "/activate",
+  "/api/public",
 ];
 
 /**

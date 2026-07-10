@@ -5,6 +5,7 @@ import { requireAgencyOwnerAny } from "@/lib/auth/require-tenancy";
 import {
   BillingError,
   normalizePlanGates,
+  setDefaultPlanForAgency,
   updatePlanForAgency,
   validatePlanPricing,
 } from "@/lib/server/billing-service";
@@ -78,9 +79,19 @@ export async function PATCH(
   if (body.status === "active" || body.status === "archived") {
     patch.status = body.status;
   }
+  if (typeof body.publicSelfServeEnabled === "boolean") {
+    patch.publicSelfServeEnabled = body.publicSelfServeEnabled;
+  }
 
   try {
-    const plan = await updatePlanForAgency(patch);
+    let plan = await updatePlanForAgency(patch);
+    if (typeof body.setDefault === "boolean") {
+      await setDefaultPlanForAgency({
+        agencyId: caller.agencyId!,
+        planId: body.setDefault ? planId : null,
+      });
+      plan = { ...plan, isDefault: body.setDefault };
+    }
     return NextResponse.json({ plan });
   } catch (err) {
     const res = billingErrorResponse(err);

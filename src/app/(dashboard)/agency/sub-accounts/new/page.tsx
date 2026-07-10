@@ -113,9 +113,23 @@ export default function NewSubAccountPage() {
         error?: string;
         subAccountId?: string;
         accountNumber?: number;
+        billingStatus?: "comped" | "pending";
+        checkoutUrl?: string | null;
       };
       if (!res.ok || !payload.subAccountId) {
         throw new Error(payload.error ?? "Could not create sub-account.");
+      }
+
+      let billingNote = "";
+      if (payload.billingStatus === "pending" && payload.checkoutUrl) {
+        billingNote =
+          " Your default plan was assigned — the workspace is locked until the client pays.";
+        try {
+          await navigator.clipboard.writeText(payload.checkoutUrl);
+          billingNote += " Payment link copied to your clipboard.";
+        } catch {
+          billingNote += ` Payment link: ${payload.checkoutUrl}`;
+        }
       }
 
       // Optionally seed the new sub-account from a snapshot. The account is
@@ -161,7 +175,9 @@ export default function NewSubAccountPage() {
       toast.success(
         (payload.accountNumber !== undefined
           ? `Created "${name.trim()}" (#${payload.accountNumber}).`
-          : `Created "${name.trim()}".`) + snapshotNote,
+          : `Created "${name.trim()}".`) +
+          snapshotNote +
+          billingNote,
       );
       router.push(`/sa/${payload.subAccountId}/dashboard`);
       router.refresh();

@@ -138,21 +138,24 @@ export async function POST(request: Request) {
   const accountContact = contactCheck.value;
   const { agencyId, uid } = access;
 
-  const { subAccountId, accountNumber } = await createSubAccountForAgency({
-    agencyId,
-    uid,
-    email: access.email,
-    displayName: access.displayName,
-    name,
-    slug,
-    timezone,
-    accountContact,
-  });
+  const { subAccountId, accountNumber, billingStatus, checkoutUrl } =
+    await createSubAccountForAgency({
+      agencyId,
+      uid,
+      email: access.email,
+      displayName: access.displayName,
+      name,
+      slug,
+      timezone,
+      accountContact,
+    });
 
   return NextResponse.json({
     subAccountId,
     accountNumber,
     name,
     agencyId,
+    billingStatus,
+    checkoutUrl,
   });
 }
