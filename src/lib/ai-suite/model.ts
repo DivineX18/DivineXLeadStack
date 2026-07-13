@@ -137,7 +137,18 @@ export async function runAiSuiteTurn({
       args = rawCall.function.arguments
         ? (JSON.parse(rawCall.function.arguments) as Record<string, unknown>)
         : {};
-    } catch {
+    } catch (err) {
+      // A truncated or malformed tool-call response falls back to empty
+      // args rather than throwing — downstream `validate()` catches missing
+      // required fields with a clear message, so this stays non-fatal. But
+      // silently swallowing the parse error made a real failure invisible
+      // (same failure mode found and fixed in the Ascend BI blueprint
+      // pipeline tonight) — log it so a truncation-driven pattern shows up.
+      console.warn(
+        "[ai-suite/model] tool-call arguments failed to parse, falling back to {}:",
+        err,
+        rawCall.function.arguments?.slice(0, 200),
+      );
       args = {};
     }
     toolCall = {
