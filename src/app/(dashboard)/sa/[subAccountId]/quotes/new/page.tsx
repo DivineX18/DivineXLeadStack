@@ -35,6 +35,8 @@ export default function NewQuotePage() {
   const { user, loading: authLoading } = useAuth();
   const { subAccountId, agencyId, saPath, subAccount } = useSubAccount();
   const paypalConnected = !!subAccount?.paypalConfig?.username;
+  const stripeEnabled = subAccount?.stripeInvoicesEnabled === true;
+  const hasPaymentMethod = paypalConnected || stripeEnabled;
 
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -118,7 +120,7 @@ export default function NewQuotePage() {
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {kind === "invoice"
-            ? "Build the line items and totals. Save as draft now — sending mints a Stripe Payment Link and emails the recipient."
+            ? "Build the line items and totals. Save as draft now — sending emails the recipient a link to pay by card or PayPal."
             : "Build the line items, totals, and terms. Save as a draft now — send to the recipient when you're ready."}
         </p>
       </div>
@@ -150,17 +152,18 @@ export default function NewQuotePage() {
         </p>
       </Card>
 
-      {kind === "invoice" && !paypalConnected && (
+      {kind === "invoice" && !hasPaymentMethod && (
         <div className="flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
           <div className="flex-1 text-sm">
             <p className="font-semibold text-amber-700 dark:text-amber-400">
-              PayPal isn&apos;t connected for this workspace.
+              No payment method is connected for this workspace.
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
               You can save this invoice as a draft, but you won&apos;t be able
-              to send it until a PayPal.me username is saved — the payment
-              link is generated at send time.{" "}
+              to send it until PayPal is connected (Stripe is set up
+              deployment-wide by the agency owner, not connected per
+              workspace).{" "}
               <Link
                 href={saPath("/dashboard/settings")}
                 className="font-medium text-amber-700 underline-offset-4 hover:underline dark:text-amber-400"

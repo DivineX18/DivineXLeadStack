@@ -107,6 +107,10 @@ export async function POST(
   // 4a. Invoice path — build a paypal.me URL from the sub-account's
   //     PayPal config. Always regenerate on send (paypal.me URLs encode
   //     the amount inline; no API call; no old link to deactivate).
+  //     Stripe is a separate, independent path (see stripeInvoicesEnabled):
+  //     it mints a fresh Checkout Session per click on the public page
+  //     rather than a link cached at send time, so it needs no handling
+  //     here — only gates whether PayPal is REQUIRED to send at all.
   let paymentLinkUpdate: {
     paymentLinkUrl: string;
     paymentLinkId: string | null;
@@ -114,7 +118,8 @@ export async function POST(
   } | null = null;
   if (quote.kind === "invoice") {
     const paypal = sub?.paypalConfig ?? null;
-    if (!paypal?.username) {
+    const stripeEnabled = sub?.stripeInvoicesEnabled === true;
+    if (!paypal?.username && !stripeEnabled) {
       return NextResponse.json(
         {
           error:
@@ -123,26 +128,28 @@ export async function POST(
         { status: 503 },
       );
     }
-    try {
-      const url = buildPaypalInvoiceUrl({ paypal, invoice: quote });
-      paymentLinkUpdate = {
-        paymentLinkUrl: url,
-        paymentLinkId: null,
-        paymentLinkMintedAt: FieldValue.serverTimestamp(),
-      };
-      // Reflect locally so the email + activity see the fresh URL.
-      quote.paymentLinkUrl = url;
-      quote.paymentLinkId = null;
-    } catch (err) {
-      console.error("[quotes/send] paypal link build failed", err);
-      return NextResponse.json(
-        {
-          error: `Failed to build PayPal link: ${
-            err instanceof Error ? err.message : "unknown error"
-          }`,
-        },
-        { status: 500 },
-      );
+    if (paypal?.username) {
+      try {
+        const url = buildPaypalInvoiceUrl({ paypal, invoice: quote });
+        paymentLinkUpdate = {
+          paymentLinkUrl: url,
+          paymentLinkId: null,
+          paymentLinkMintedAt: FieldValue.serverTimestamp(),
+        };
+        // Reflect locally so the email + activity see the fresh URL.
+        quote.paymentLinkUrl = url;
+        quote.paymentLinkId = null;
+      } catch (err) {
+        console.error("[quotes/send] paypal link build failed", err);
+        return NextResponse.json(
+          {
+            error: `Failed to build PayPal link: ${
+              err instanceof Error ? err.message : "unknown error"
+            }`,
+          },
+          { status: 500 },
+        );
+      }
     }
   }
 

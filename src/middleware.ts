@@ -25,6 +25,13 @@ const PUBLIC_PATHS = [
   // the HMAC activation token in the request body, verified inside the
   // route (see /lib/auth/activation-token.ts).
   "/api/auth/activate",
+  // Version 1 SSO from Ascend (see /Users/boss/.claude/plans/rosy-finding-summit.md).
+  // /api/auth/sso/callback — receives the one-time code from Ascend, not yet
+  // authenticated here. /api/auth/sso/exchange-bridge-token — reads its own
+  // short-lived HttpOnly bridge cookie, not the session cookie. /auth/sso/finish
+  // is the tiny client page that completes the Firebase sign-in.
+  "/api/auth/sso",
+  "/auth/sso",
   // Workflow Builder step worker — QStash callback, signature-verified inside
   // the route.
   "/api/workflows/step",

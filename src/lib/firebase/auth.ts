@@ -72,8 +72,11 @@ export async function changePassword(
 /**
  * Exchange the Firebase ID token for the __session cookie that
  * next-firebase-auth-edge middleware uses to gate protected routes.
+ * Exported so the SSO finish page (`/auth/sso/finish`) can reuse this exact
+ * cookie-mint path after `signInWithCustomToken` — same call the normal
+ * login form makes, so `/api/login` needs zero changes for SSO.
  */
-async function createSessionCookie(user: User): Promise<void> {
+export async function createSessionCookie(user: User): Promise<void> {
   const idToken = await user.getIdToken();
   const res = await fetch("/api/login", {
     method: "GET",
