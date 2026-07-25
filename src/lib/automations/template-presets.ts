@@ -68,7 +68,7 @@ Name:  {{contact.firstName}} {{contact.lastName}}
 Email: {{contact.email}}
 Phone: {{contact.phone}}
 
-Reply to them directly at {{contact.email}}, or open the lead in your CRM.
+Reply to them directly at {{contact.email}}, or open the lead to follow up.
 
 —
 {{unsubscribeLink}}`,

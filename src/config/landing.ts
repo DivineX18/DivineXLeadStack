@@ -37,6 +37,10 @@ export interface CustomBrand {
   shortDescription: string;
   supportEmail: string;
   primaryDomain: string;
+  /** Parent company, shown alongside the product name where extra context helps (e.g. PWA subtitle). Optional — omit if the product IS the company. */
+  parentCompany?: string;
+  /** One-line product category, shown next to the name where extra context helps (e.g. page title: "Flow • Growth Operations Platform"). Optional. */
+  productCategory?: string;
 }
 
 /**
@@ -53,6 +57,8 @@ export interface ResolvedBrand {
   shortDescription: string;
   supportEmail: string;
   primaryDomain: string;
+  parentCompany?: string;
+  productCategory?: string;
 }
 
 /**
@@ -63,7 +69,7 @@ export interface ResolvedBrand {
  */
 export const CUSTOM_BRAND: CustomBrand = {
   /** Displayed in navbar, hero, footer copyright, page title — everywhere. */
-  name: "DivineX",
+  name: "Flow",
 
   /** One-line positioning, surfaced in hero subtitle + meta description. */
   tagline: "The Growth Operating System for Purpose-Driven Businesses.",
@@ -80,4 +86,10 @@ export const CUSTOM_BRAND: CustomBrand = {
 
   /** Used in footer, og:url, canonical. No https://, no trailing slash. */
   primaryDomain: "crm.divinex.io",
+
+  /** Parent company — Flow is one product in the DivineX growth ecosystem (alongside Ascend, Zeno). */
+  parentCompany: "DivineX",
+
+  /** Shown next to the name where extra context helps (page title, PWA name). */
+  productCategory: "Growth Operations Platform",
 };

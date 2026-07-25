@@ -37,7 +37,7 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          "Firecrawl is not configured. Set FIRECRAWL_API_KEY on the agency deployment.",
+          "The website knowledge base isn't set up on this deployment yet — contact your workspace admin.",
       },
       { status: 503 },
     );

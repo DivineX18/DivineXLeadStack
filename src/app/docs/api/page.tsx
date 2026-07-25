@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 
 export const metadata: Metadata = {
   title: "API reference",
   description:
-    "Public REST API for the LeadStack CRM platform — authentication, resources, webhooks.",
+    "Public REST API — authentication, resources, webhooks.",
 };
 
 /**
@@ -14,8 +15,16 @@ export const metadata: Metadata = {
  * The reference is intentionally a single long page — easier to grep
  * with Ctrl+F than navigating a multi-page docs site, matches Stripe's
  * top-page format which is the gold standard agencies expect.
+ *
+ * NOT gated by LANDING_VARIANT — unlike the architecture/comparison docs,
+ * this documents a real feature that ships in every deployment (Public API
+ * v1). The `LeadStack-Version` / `LeadStack-Signature` header names further
+ * down this page are literal, load-bearing API contract values (see
+ * lib/api/responses.ts, lib/api/webhooks/signing.ts) — not a branding leak,
+ * do not rename them without a real API version bump.
  */
-export default function ApiDocsPage() {
+export default async function ApiDocsPage() {
+  const brand = await resolveCustomBrand();
   return (
     <div className="mx-auto max-w-3xl px-6 py-10">
       <header className="mb-10">
@@ -23,10 +32,10 @@ export default function ApiDocsPage() {
           API Reference · v2026-06-15
         </p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight">
-          LeadStack public API
+          {brand.name} public API
         </h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          REST + outbound webhooks for the LeadStack CRM. Sub-account-scoped
+          REST + outbound webhooks for {brand.name}. Sub-account-scoped
           Bearer auth, idempotent writes, signed webhooks, request log
           observability.
         </p>

@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { LANDING_VARIANT } from "@/config/landing";
 import { ArchitectureDiagram } from "@/components/docs/architecture-diagram";
 
 export const metadata: Metadata = {
@@ -16,8 +18,17 @@ export const metadata: Metadata = {
  * The page is intentionally light — title + diagram + a short legend
  * caption. Anyone sharing the URL (sales decks, landing-page hero links,
  * RFP responses) gets a self-contained one-pager.
+ *
+ * LeadStack-branded sales/marketing asset for the template itself — only
+ * served on the "leadstack" landing variant; under a buyer's white-label
+ * "custom" variant it 404s, same pattern as about/page.tsx. Unlike
+ * docs/api, this doesn't document a shipped feature of the buyer's own
+ * deployment.
  */
 export default function ArchitecturePage() {
+  if (LANDING_VARIANT !== "leadstack") {
+    notFound();
+  }
   return (
     <div className="mx-auto max-w-5xl px-6 py-10">
       <header className="mb-6">

@@ -10,7 +10,7 @@ import { getUserDoc } from "@/lib/firestore/users";
 import { subscribeToContacts } from "@/lib/firestore/contacts";
 import { serializeCsv, downloadCsv } from "@/lib/csv";
 import { toDate } from "@/lib/format";
-import { LANDING_VARIANT } from "@/config/landing";
+import { LANDING_VARIANT, CUSTOM_BRAND } from "@/config/landing";
 import { SubAccountBrandingSection } from "@/components/settings/sub-account-branding-section";
 import { SubAccountContactSection } from "@/components/settings/sub-account-contact-section";
 import { SubAccountMembersSection } from "@/components/settings/sub-account-members-section";
@@ -107,7 +107,8 @@ export default function SettingsPage() {
     }));
     const csv = serializeCsv(headers, rows);
     const stamp = new Date().toISOString().slice(0, 10);
-    downloadCsv(`leadstack-contacts-${stamp}.csv`, csv);
+    const brandSlug = CUSTOM_BRAND.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    downloadCsv(`${brandSlug}-contacts-${stamp}.csv`, csv);
     toast.success(`Exported ${rows.length} contacts`);
   }
 
@@ -221,7 +222,9 @@ export default function SettingsPage() {
           {/* Payments — PayPal.me username for the Products + Invoices flow. */}
           <SubAccountPayPalSection />
 
-          {/* Stripe Connect — v2 roadmap placeholder. */}
+          {/* Stripe card payments for invoices — fully functional on/off
+              toggle against the deployment's own Stripe account (no OAuth,
+              no per-sub-account keys). Not a placeholder. */}
           <SubAccountStripeSection />
 
           {/* Data export */}

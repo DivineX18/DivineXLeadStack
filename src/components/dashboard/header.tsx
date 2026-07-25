@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { signOutUser } from "@/lib/firebase/auth";
 import { maskEmail } from "@/lib/format";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { CUSTOM_BRAND } from "@/config/landing";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -74,7 +75,7 @@ function titleFor(pathname: string): string {
   for (const [re, label] of TITLES) {
     if (re.test(pathname)) return label;
   }
-  return "LeadStack";
+  return CUSTOM_BRAND.name;
 }
 
 function activeSubAccountFromPath(pathname: string): string | null {

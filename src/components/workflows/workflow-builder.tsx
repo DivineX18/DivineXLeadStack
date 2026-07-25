@@ -603,6 +603,7 @@ function StepCard({
         variant="ghost"
         size="icon"
         className="h-8 w-8"
+        aria-label="Delete step"
         onClick={onDelete}
       >
         <Trash2 className="h-4 w-4" />
@@ -616,7 +617,10 @@ function AddMenu({ onAdd }: { onAdd: (t: WorkflowNodeType) => void }) {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <button className="bg-card text-muted-foreground hover:text-foreground mx-auto flex h-8 w-8 items-center justify-center rounded-full border shadow-sm" />
+          <button
+            aria-label="Add step"
+            className="bg-card text-muted-foreground hover:text-foreground mx-auto flex h-8 w-8 items-center justify-center rounded-full border shadow-sm"
+          />
         }
       >
         <Plus className="h-4 w-4" />

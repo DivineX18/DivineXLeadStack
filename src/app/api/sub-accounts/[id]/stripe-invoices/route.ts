@@ -48,7 +48,7 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          "Stripe isn't configured on this deployment. Set STRIPE_SECRET_KEY first.",
+          "Online payments aren't set up on this deployment yet — contact your workspace admin.",
       },
       { status: 503 },
     );

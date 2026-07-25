@@ -28,6 +28,8 @@ export async function resolveCustomBrand(): Promise<ResolvedBrand> {
     shortDescription: CUSTOM_BRAND.shortDescription,
     supportEmail: CUSTOM_BRAND.supportEmail,
     primaryDomain: CUSTOM_BRAND.primaryDomain,
+    parentCompany: CUSTOM_BRAND.parentCompany,
+    productCategory: CUSTOM_BRAND.productCategory,
   };
 
   try {
@@ -52,6 +54,9 @@ export async function resolveCustomBrand(): Promise<ResolvedBrand> {
       shortDescription: fallback.shortDescription,
       supportEmail: agency.supportEmail || fallback.supportEmail,
       primaryDomain: agency.primaryDomain || fallback.primaryDomain,
+      // No agency-doc override exists for these two — always CUSTOM_BRAND's.
+      parentCompany: fallback.parentCompany,
+      productCategory: fallback.productCategory,
     };
   } catch {
     return fallback;
@@ -66,8 +71,8 @@ export async function resolveCustomBrand(): Promise<ResolvedBrand> {
 export async function resolveBrandName(): Promise<string> {
   try {
     const { name } = await resolveCustomBrand();
-    return name || "LeadStack";
+    return name || CUSTOM_BRAND.name;
   } catch {
-    return "LeadStack";
+    return CUSTOM_BRAND.name;
   }
 }

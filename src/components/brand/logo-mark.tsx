@@ -1,12 +1,12 @@
-import { LANDING_VARIANT } from "@/config/landing";
+import { LANDING_VARIANT, CUSTOM_BRAND } from "@/config/landing";
 
 /**
  * Default brand glyph, switched by deployment mode:
  *
  *   - "leadstack" (demo/template mode) — the LeadStack "Chevron Stack":
  *     three offset chevron-tipped bars alternating direction.
- *   - "custom" (buyer deployments) — the neutral green "my CRM" badge
- *     (emerald→teal gradient "CRM" on a dark rounded square, matching the
+ *   - "custom" (buyer deployments) — a neutral monogram badge (emerald→teal
+ *     gradient single-letter mark on a dark rounded square, matching the
  *     custom landing palette + the default PWA app icon), so no LeadStack
  *     branding ever leaks to a buyer's clients. Buyers replace it with
  *     their own logo via the agency Branding settings (logoUrl).
@@ -23,13 +23,14 @@ interface LogoMarkProps {
 }
 
 export function LogoMark(props: LogoMarkProps) {
-  if (LANDING_VARIANT === "custom") return <MyCrmMark {...props} />;
+  if (LANDING_VARIANT === "custom") return <BrandMark {...props} />;
   return <ChevronStackMark {...props} />;
 }
 
-/** Neutral buyer-default badge — mirrors scripts/pwa-default-icon.svg. */
-function MyCrmMark({ size = 20, className, idSuffix = "" }: LogoMarkProps) {
+/** Neutral buyer-default badge — mirrors scripts/pwa-default-icon.svg. Renders a single-letter monogram from the resolved brand name, so it never leaks a hardcoded product name. */
+function BrandMark({ size = 20, className, idSuffix = "" }: LogoMarkProps) {
   const gradId = `mycrm-grad${idSuffix}`;
+  const monogram = (CUSTOM_BRAND.name.trim()[0] ?? "F").toUpperCase();
   return (
     <svg
       width={size}
@@ -49,17 +50,16 @@ function MyCrmMark({ size = 20, className, idSuffix = "" }: LogoMarkProps) {
       <rect width="64" height="64" rx="14" fill="#18181b" />
       <text
         x="32"
-        y="38"
+        y="42"
         textAnchor="middle"
         fontFamily="inherit"
         fontWeight="700"
-        fontSize="25"
-        letterSpacing="0.5"
+        fontSize="32"
         fill={`url(#${gradId})`}
       >
-        CRM
+        {monogram}
       </text>
-      <rect x="19" y="44" width="26" height="4" rx="2" fill={`url(#${gradId})`} />
+      <rect x="19" y="48" width="26" height="4" rx="2" fill={`url(#${gradId})`} />
     </svg>
   );
 }

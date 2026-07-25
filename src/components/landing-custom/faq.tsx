@@ -14,7 +14,7 @@ const faqs = [
   {
     question: "How do imports work?",
     answer:
-      "Send us your existing contacts — a spreadsheet, HubSpot, Pipedrive, wherever they live now — and we bring them in clean, matched, and ready to work from. No manual re-entry.",
+      "Send us your existing contacts — a spreadsheet, another system, wherever they live now — and we bring them in clean, matched, and ready to work from. No manual re-entry.",
   },
   {
     question: "What about email and SMS?",

@@ -72,6 +72,7 @@ export function ConditionsEditor({
             variant="ghost"
             size="icon"
             className="h-8 w-8 shrink-0"
+            aria-label="Remove condition"
             onClick={() => set(all.filter((_, j) => j !== i))}
           >
             <X className="h-4 w-4" />

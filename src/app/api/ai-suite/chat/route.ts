@@ -147,7 +147,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "The AI Suite isn't configured on this deployment. Set OPENROUTER_API_KEY to enable it.",
+          "The AI Assistant isn't set up on this deployment yet — contact your workspace admin.",
       },
       { status: 503 },
     );

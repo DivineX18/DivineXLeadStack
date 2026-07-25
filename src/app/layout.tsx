@@ -28,16 +28,58 @@ const instrumentSerif = Instrument_Serif({
 // Metadata follows the same variant the landing page renders. The custom
 // variant derives title + description from CUSTOM_BRAND so the buyer edits
 // one config file to brand both the page chrome and the rendered landing.
+//
+// metadataBase + openGraph/twitter: without these, sharing any link (Slack,
+// LinkedIn, iMessage) shows a blank/generic preview — no title, no image.
+// Uses the same /api/pwa/icon/512 route the manifest already relies on, so
+// the share-preview image tracks whatever icon the agency owner has
+// uploaded (Agency → Settings → Mobile app icon) rather than a hardcoded
+// asset. Static metadataBase can't read the live Firestore-resolved
+// primaryDomain (this whole export is a static object, not
+// generateMetadata()) — falls back to CUSTOM_BRAND.primaryDomain, same
+// static-source-of-truth tradeoff the title/description above already make.
+const siteUrl = `https://${CUSTOM_BRAND.primaryDomain}`;
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   ...(LANDING_VARIANT === "custom"
     ? {
         title: `${CUSTOM_BRAND.name} — ${CUSTOM_BRAND.tagline}`,
         description: CUSTOM_BRAND.shortDescription,
+        openGraph: {
+          title: CUSTOM_BRAND.name,
+          description: CUSTOM_BRAND.shortDescription,
+          siteName: CUSTOM_BRAND.name,
+          url: siteUrl,
+          type: "website" as const,
+          images: ["/api/pwa/icon/512"],
+        },
+        twitter: {
+          card: "summary" as const,
+          title: CUSTOM_BRAND.name,
+          description: CUSTOM_BRAND.shortDescription,
+          images: ["/api/pwa/icon/512"],
+        },
       }
     : {
         title: "LeadStack — The all-in-one CRM for teams that actually close",
         description:
           "Capture leads, run pipelines, and book meetings from one simple workspace. Built for small teams that want to replace five tools with one.",
+        openGraph: {
+          title: "LeadStack",
+          description:
+            "Capture leads, run pipelines, and book meetings from one simple workspace.",
+          siteName: "LeadStack",
+          type: "website" as const,
+          images: ["/leadstack-icon-512.png"],
+        },
+        twitter: {
+          card: "summary" as const,
+          title: "LeadStack",
+          description:
+            "Capture leads, run pipelines, and book meetings from one simple workspace.",
+          images: ["/leadstack-icon-512.png"],
+        },
       }),
   // Favicon per deployment mode (the former src/app/icon.svg file
   // convention would override this metadata, so both marks live in

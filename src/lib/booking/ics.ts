@@ -12,6 +12,8 @@
  *  - No RRULE — v1 doesn't support recurring meetings.
  */
 
+import { CUSTOM_BRAND } from "@/config/landing";
+
 export interface IcsInput {
   /** Stable per-event UID. Use the Firestore event id. */
   uid: string;
@@ -85,7 +87,7 @@ export function generateIcs(input: IcsInput): string {
   const lines: string[] = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    `PRODID:-//LeadStack//Booking//${input.domain}//EN`,
+    `PRODID:-//${CUSTOM_BRAND.name}//Booking//${input.domain}//EN`,
     "CALSCALE:GREGORIAN",
     `METHOD:${method}`,
     "BEGIN:VEVENT",

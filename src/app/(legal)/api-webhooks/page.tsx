@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { openCrispChat } from "@/lib/crisp";
+import { CUSTOM_BRAND } from "@/config/landing";
 
 export default function ApiWebhooksPage() {
   return (
@@ -16,12 +17,12 @@ export default function ApiWebhooksPage() {
       <article className="prose dark:prose-invert mt-8 max-w-none">
         <h1>API &amp; Webhooks</h1>
         <p className="text-sm text-muted-foreground">
-          A high-level overview of how you connect LeadStack to the rest of
-          your stack.
+          A high-level overview of how you connect {CUSTOM_BRAND.name} to the
+          rest of your stack.
         </p>
 
         <p>
-          LeadStack ships a REST API and signed webhooks so your workspace can
+          {CUSTOM_BRAND.name} ships a REST API and signed webhooks so your workspace can
           talk to the tools you already use &mdash; sync contacts and deals,
           drive your own automations, and react to what happens in real time.
         </p>
@@ -49,14 +50,14 @@ export default function ApiWebhooksPage() {
 
         <h2>2. Webhooks</h2>
         <p>
-          Subscribe an endpoint to the events you care about and LeadStack{" "}
+          Subscribe an endpoint to the events you care about and {CUSTOM_BRAND.name}{" "}
           <strong>POSTs to it the moment they happen</strong> &mdash; no
           polling, no cron jobs on your side.
         </p>
         <p>
           Every payload is signed with <strong>HMAC-SHA256</strong> and carries{" "}
           <code>Webhook-Signature</code> and <code>Webhook-Timestamp</code>{" "}
-          headers, so you can verify each request genuinely came from LeadStack
+          headers, so you can verify each request genuinely came from {CUSTOM_BRAND.name}
           and reject anything stale or replayed. Failed deliveries are retried
           automatically.
         </p>

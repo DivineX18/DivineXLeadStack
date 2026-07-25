@@ -196,6 +196,7 @@ export function WorkflowsList({ saId }: { saId: string }) {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
+                aria-label={`Delete workflow "${w.name}"`}
                 onClick={() => remove(w.id)}
               >
                 <Trash2 className="h-4 w-4" />

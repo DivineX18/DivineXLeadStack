@@ -3,6 +3,7 @@ import { getAdminDb } from "@/lib/firebase/admin";
 import type { LeadForm } from "@/types/forms";
 import { PublicForm } from "@/components/forms/public-form";
 import { appearanceStyle, resolveAppearance } from "@/lib/forms/appearance";
+import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ export default async function PublicFormPage({
 }) {
   const { formId } = await params;
   const sp = await searchParams;
+  const brand = await resolveCustomBrand();
 
   const db = getAdminDb();
   const snap = await db.collection("forms").doc(formId).get();
@@ -49,7 +51,7 @@ export default async function PublicFormPage({
         {!appearance.hideChrome && (
           <div className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
             <span className="inline-block h-4 w-4 rounded-sm bg-gradient-to-br from-indigo-500 via-violet-500 to-pink-500" />
-            <span className="font-medium text-foreground">LeadStack</span>
+            <span className="font-medium text-foreground">{brand.name}</span>
           </div>
         )}
         <div className="rounded-2xl border bg-card p-6 shadow-sm sm:p-8">
@@ -69,7 +71,7 @@ export default async function PublicFormPage({
         </div>
         {!appearance.hideChrome && (
           <p className="mt-4 text-center text-[11px] text-muted-foreground">
-            Powered by LeadStack
+            Powered by {brand.name}
           </p>
         )}
       </div>
