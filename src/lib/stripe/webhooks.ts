@@ -20,6 +20,10 @@ import {
   PUBLIC_SELF_SERVE_SIGNUP_KIND,
   handlePublicSelfServeSignupCheckoutCompleted,
 } from "@/lib/server/public-signup-service";
+import {
+  QUOTE_INVOICE_PAYMENT_KIND,
+  handleQuoteInvoiceCheckoutCompleted,
+} from "@/lib/quotes/stripe-payment";
 import type { SubscriptionStatus } from "@/types";
 
 export async function handleCheckoutCompleted(
@@ -47,6 +51,15 @@ export async function handleCheckoutCompleted(
   // lifecycle events fall through to the branch above with no new code.
   if (session.metadata?.kind === PUBLIC_SELF_SERVE_SIGNUP_KIND) {
     await handlePublicSelfServeSignupCheckoutCompleted(session);
+    return;
+  }
+
+  // Products + Invoices: a quote/invoice recipient paying by card via the
+  // public /q/[token] page's "Pay with card" button (one-time payment,
+  // agency's own Stripe account — no Connect). Auto-flips the quote to
+  // paid, unlike the PayPal.me path which has no payment-status callback.
+  if (session.metadata?.kind === QUOTE_INVOICE_PAYMENT_KIND) {
+    await handleQuoteInvoiceCheckoutCompleted(session);
     return;
   }
 

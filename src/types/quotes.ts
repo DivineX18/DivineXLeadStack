@@ -153,13 +153,18 @@ export interface Quote {
   convertedFromQuoteAt: Timestamp | FieldValue | null;
 
   // ── Payment link (invoices only) ─────────────────────────────────
-  /** Stripe Payment Link URL — buyer clicks "Pay" on the public invoice
-   *  view or email to land here. Cached so re-sending the same invoice
-   *  reuses the link. Null when the invoice hasn't been sent yet OR when
-   *  the doc is a quote. */
+  /** PayPal.me payment link URL — buyer clicks "Pay" on the public
+   *  invoice view or email to land here. Cached so re-sending the same
+   *  invoice reuses the link. Null when the invoice hasn't been sent yet,
+   *  when the sub-account has no PayPal configured, OR when the doc is a
+   *  quote. Stripe Checkout (see `stripeInvoicesEnabled` on
+   *  `SubAccountDoc`) is a separate, unpersisted path — a fresh Checkout
+   *  Session is minted per click rather than cached here, since sessions
+   *  expire. */
   paymentLinkUrl: string | null;
-  /** Stripe Payment Link id (plink_…). Used to deactivate the old link
-   *  when the invoice is edited after send and a new link is minted. */
+  /** Unused by the current PayPal.me implementation (paypal.me links have
+   *  no id to deactivate) — reserved for a future payment provider that
+   *  issues an id alongside its link. */
   paymentLinkId: string | null;
   /** When the cached payment link was created. The send route compares
    *  this to `updatedAt` — if the invoice was edited since mint, the

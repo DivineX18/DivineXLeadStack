@@ -58,6 +58,10 @@ interface PublicQuoteViewProps {
   businessName: string;
   businessLogoUrl?: string | null;
   expired: boolean;
+  /** Whether this sub-account has Stripe Checkout enabled for invoices
+   *  (in addition to, or instead of, PayPal). See stripeInvoicesEnabled
+   *  on SubAccountDoc. */
+  stripeEnabled?: boolean;
 }
 
 export function PublicQuoteView({
@@ -66,11 +70,14 @@ export function PublicQuoteView({
   businessName,
   businessLogoUrl,
   expired,
+  stripeEnabled = false,
 }: PublicQuoteViewProps) {
   const isInvoice = quote.kind === "invoice";
   const docLabel = isInvoice ? "Invoice" : "Quote";
   const totals = computeQuoteTotals(quote);
-  const [busy, setBusy] = useState<null | "accept" | "decline">(null);
+  const [busy, setBusy] = useState<null | "accept" | "decline" | "stripe">(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [declineOpen, setDeclineOpen] = useState(false);
   const [reason, setReason] = useState<DeclineReason>("Too expensive");
@@ -113,6 +120,25 @@ export function PublicQuoteView({
   };
 
   const handleAccept = () => handleRespond({ action: "accept" });
+
+  const handlePayWithCard = async () => {
+    setError(null);
+    setBusy("stripe");
+    try {
+      const res = await fetch(`/api/quotes/${token}/pay`, { method: "POST" });
+      const body = (await res.json().catch(() => ({}))) as {
+        url?: string;
+        error?: string;
+      };
+      if (!res.ok || !body.url) {
+        throw new Error(body.error ?? `Failed (HTTP ${res.status})`);
+      }
+      window.location.href = body.url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to start checkout");
+      setBusy(null);
+    }
+  };
 
   const handleDeclineConfirm = () => {
     if (reason === "Other" && !note.trim()) {
@@ -313,25 +339,43 @@ export function PublicQuoteView({
           {isInvoice ? (
             <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
-                Pay securely via PayPal. You&apos;ll receive a receipt by
-                email once payment clears.
+                Pay securely by card{quote.paymentLinkUrl ? " or PayPal" : ""}.
+                You&apos;ll receive a receipt by email once payment clears.
               </p>
-              {quote.paymentLinkUrl ? (
-                <a
-                  href={quote.paymentLinkUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
-                >
-                  <CreditCard className="h-4 w-4" />
-                  Pay {formatCurrency(totals.total, quote.currency)}
-                </a>
-              ) : (
-                <p className="text-sm text-amber-700 dark:text-amber-400">
-                  Payment link not yet generated — please ask the sender
-                  to re-send.
-                </p>
-              )}
+              <div className="flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-center">
+                {quote.paymentLinkUrl && (
+                  <a
+                    href={quote.paymentLinkUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    Pay with PayPal
+                  </a>
+                )}
+                {stripeEnabled && (
+                  <button
+                    type="button"
+                    onClick={handlePayWithCard}
+                    disabled={busy !== null}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60"
+                  >
+                    {busy === "stripe" ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CreditCard className="h-4 w-4" />
+                    )}
+                    Pay {formatCurrency(totals.total, quote.currency)}
+                  </button>
+                )}
+                {!quote.paymentLinkUrl && !stripeEnabled && (
+                  <p className="text-sm text-amber-700 dark:text-amber-400">
+                    Payment link not yet generated — please ask the sender
+                    to re-send.
+                  </p>
+                )}
+              </div>
             </div>
           ) : (
             <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">

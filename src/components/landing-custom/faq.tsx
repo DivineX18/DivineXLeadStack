@@ -9,32 +9,32 @@ const faqs = [
   {
     question: "How do I get started?",
     answer:
-      "No coding required. We use a byo accounts model — you connect your own services, so you stay in control of your data and costs. Budget around a couple of hours if it's your first time and this isn't something you do every day (faster if it is). To start, you only need a login & database service. From there, add payments, email, messaging (SMS), background jobs, AI, a website builder, and maps as you switch features on. Optional extras include website-knowledge for AI, voice calling, ad tracking, and live chat. Your setup assistant walks you through each one.",
+      "No technical setup on your end. Tell us about your business, and we configure your systems — contacts, pipeline, follow-up, everything — and connect the tools you already use. Most teams are running within days.",
   },
   {
     question: "How do imports work?",
     answer:
-      "Drop in a CSV from Sheets, HubSpot, Pipedrive, or anywhere else. Our importer fuzzy-matches name / email / phone / company columns automatically; map anything else manually.",
+      "Send us your existing contacts — a spreadsheet, HubSpot, Pipedrive, wherever they live now — and we bring them in clean, matched, and ready to work from. No manual re-entry.",
   },
   {
     question: "What about email and SMS?",
     answer:
-      "Send from any contact profile in one click — replies route straight to your inbox via Reply-To. Email runs through our verified domain; SMS via a managed sender.",
+      "Every conversation lives in one place. Send from any contact profile in one click, and replies route straight back to your inbox — no shared mailbox, nothing to copy-paste.",
   },
   {
     question: "How fast can I get a website live?",
     answer:
-      "Built-in website builder ships a marketing site or video sales letter in 1–3 minutes. Multi-page or single-page funnel — pick a niche template, fill the form, hit Build, get a live URL.",
+      "A marketing site or a focused sales page, live in 1–3 minutes once we hit build. Pick a template that fits your business, fill in the details, and it's up.",
   },
   {
     question: "Is my data safe?",
     answer:
-      "All data is owner-scoped — only you and the people you invite can read or write to your workspace. Daily backups, encrypted at rest, exportable as CSV at any time.",
+      "Your workspace is yours alone — only you and the people you invite can access it. Daily backups, encrypted at rest, and you can export everything as a CSV whenever you want.",
   },
   {
     question: "Do you have an API?",
     answer:
-      "The form submission endpoint is public; full read/write API is on the roadmap. In the meantime, every page exports CSV and the underlying database is queryable directly.",
+      "Yes — if your team wants to connect its own tools, the API and integrations give you that flexibility. Most clients never need to touch it; we handle the setup for you.",
   },
 ];
 

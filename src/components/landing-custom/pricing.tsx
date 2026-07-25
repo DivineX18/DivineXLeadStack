@@ -70,7 +70,7 @@ export function Pricing({
           <h2 className="mt-2 text-3xl font-semibold tracking-tighter sm:text-5xl">
             Simple pricing.{" "}
             <span className="font-serif font-normal italic">
-              Cancel anytime.
+              Real growth.
             </span>
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">

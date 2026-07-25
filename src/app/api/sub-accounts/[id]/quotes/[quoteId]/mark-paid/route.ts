@@ -1,15 +1,9 @@
 import { NextResponse } from "next/server";
-import { FieldValue } from "firebase-admin/firestore";
 
 import { getAdminDb } from "@/lib/firebase/admin";
 import { requireSubAccountMember } from "@/lib/auth/require-tenancy";
 import { territoryGateForContact } from "@/lib/auth/territory-filter";
-import {
-  emitQuoteWebhook,
-  fireQuoteTrigger,
-  recordQuoteActivity,
-} from "@/lib/quotes/lifecycle";
-import { maybeSendReviewRequest } from "@/lib/reviews/request";
+import { markQuotePaid } from "@/lib/quotes/lifecycle";
 import type { Quote } from "@/types/quotes";
 
 export const dynamic = "force-dynamic";
@@ -75,11 +69,7 @@ export async function POST(
   }
 
   try {
-    await quoteRef.update({
-      status: "paid",
-      paidAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+    await markQuotePaid({ ...quote, id: quoteId }, { source: "manual" });
   } catch (err) {
     console.error("[quotes/mark-paid] write failed", err);
     return NextResponse.json(
@@ -87,22 +77,6 @@ export async function POST(
       { status: 500 },
     );
   }
-
-  // Side-effects — both swallow errors so a stale activity write
-  // doesn't block the mark-paid success response.
-  const quoteWithId = { ...quote, id: quoteId };
-  await recordQuoteActivity(quoteWithId, "quote_marked_paid");
-  await fireQuoteTrigger(quoteWithId, "quote_marked_paid");
-  void emitQuoteWebhook(quoteWithId, "quote_marked_paid");
-
-  // Auto Google review request ("after payment"). Fire-and-forget; gated by the
-  // sub-account's review config (enabled + triggerOnQuotePaid) inside.
-  void maybeSendReviewRequest({
-    subAccountId,
-    agencyId: quote.agencyId,
-    contactId: quote.contactId,
-    trigger: "quote_paid",
-  });
 
   return NextResponse.json({ ok: true });
 }

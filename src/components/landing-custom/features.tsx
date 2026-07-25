@@ -16,73 +16,73 @@ import {
 const features = [
   {
     icon: Bot,
-    title: "AI agents that never miss a lead",
+    title: "Never miss a lead — day or night",
     body:
       "An AI agent answers your website chat, inbound texts, WhatsApp, and phone calls 24/7 — qualifying leads and booking follow-ups the moment intent shows up, even at 2am.",
   },
   {
     icon: Phone,
-    title: "AI voice that answers and calls back",
+    title: "Answer every call. Follow up on every lead.",
     body:
       "Inbound calls get picked up and qualified automatically. Turn it around and have the same AI agent proactively dial a filtered list of leads — one click, or a full campaign.",
   },
   {
     icon: Users,
-    title: "Contacts that don't slip through",
+    title: "Build stronger relationships",
     body:
       "A clean list, fast search, profile pages with notes and a unified activity timeline. Import from a CSV in 30 seconds.",
   },
   {
     icon: KanbanSquare,
-    title: "Pipeline you can actually drag",
+    title: "See exactly where every deal stands",
     body:
       "Six-stage Kanban board with deal cards, stage timers, and a lost-reason prompt so you learn from what doesn't close.",
   },
   {
     icon: Zap,
-    title: "Speed-to-Lead automations",
+    title: "Never lose a lead to a slow response",
     body:
       "Form submits trigger an SMS + email sequence within seconds. Configure once, watch your response time drop to under a minute.",
   },
   {
     icon: Receipt,
-    title: "Quotes & invoices that get paid",
+    title: "Get paid without the back-and-forth",
     body:
       "Build a line-itemed quote, send it, and the client accepts or pays right from their inbox — PDF, payment link, and a Won deal, all automatic.",
   },
   {
     icon: CalendarClock,
-    title: "Booking pages that fill your calendar",
+    title: "Fill your calendar on your terms",
     body:
       "Share one link. Visitors pick an open slot, get an ICS-confirmed booking, and reminders send themselves — no back-and-forth.",
   },
   {
     icon: Calendar,
-    title: "Calendar + Tasks, built in",
+    title: "Know exactly what's next, every day",
     body:
       "Month-grid calendar, due-today badge in the sidebar, contact-linked events. No more juggling tabs to figure out what's next.",
   },
   {
     icon: FileText,
-    title: "Forms with a public page",
+    title: "Turn every visitor into a real lead",
     body:
       "Drag-order field builder, six field types, public hosted page at /f/[id], iframe embed for your site. Submissions auto-create contacts.",
   },
   {
     icon: Globe,
-    title: "Built-in website builder",
+    title: "Launch a site that turns visitors into clients",
     body:
       "Spin up a marketing site or video sales letter funnel for any client in minutes. Live URL in 1–3 minutes after you hit Build.",
   },
   {
     icon: Mail,
-    title: "Email + SMS from a contact profile",
+    title: "Stay in the conversation, wherever it happens",
     body:
       "One click to send. Replies route straight back to your inbox — no shared mailbox, no copy-paste.",
   },
   {
     icon: CheckSquare,
-    title: "Reports that load instantly",
+    title: "See what's working — instantly",
     body:
       "Date-range KPIs, pipeline funnel, won-revenue chart, leads-by-source donut. No spreadsheet exports required.",
   },
@@ -94,7 +94,7 @@ export function Features() {
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-sm font-semibold uppercase tracking-wide text-primary">
-            Features
+            The Platform
           </p>
           <h2 className="mt-2 text-3xl font-semibold tracking-tighter sm:text-5xl">
             Everything you need.{" "}
@@ -103,7 +103,7 @@ export function Features() {
             </span>
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Built for teams that close deals — not for committees that
+            Built for teams that grow their impact — not for committees that
             shop for software.
           </p>
         </div>

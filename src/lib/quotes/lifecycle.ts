@@ -8,6 +8,7 @@ import { emitWebhookEvent } from "@/lib/api/webhooks/dispatch";
 import { emitDealCreatedById } from "@/lib/server/deals-service";
 import { computeQuoteTotals } from "@/lib/quotes/calc";
 import { formatCurrency } from "@/lib/format";
+import { maybeSendReviewRequest } from "@/lib/reviews/request";
 import type { ActivityType } from "@/types/contacts";
 import type { WebhookEventType } from "@/types/webhooks";
 import { GLOBAL_TERRITORY_ID, type AutomationTriggerType } from "@/types";
@@ -298,4 +299,36 @@ export async function emitQuoteWebhook(
   } catch (err) {
     console.warn(`[quotes/lifecycle] webhook emit failed for ${event}`, err);
   }
+}
+
+/**
+ * The single "flip a quote/invoice to paid" chokepoint. Both the manual
+ * mark-paid route and the Stripe checkout webhook call this so the state
+ * transition + every side-effect (activity row, workflow trigger, outbound
+ * webhook, review request) only exist in one place. Caller is responsible
+ * for the pre-write guards (already-paid / status-not-eligible) — this
+ * function assumes the transition is valid.
+ */
+export async function markQuotePaid(
+  quote: Quote,
+  opts: { source: "manual" | "stripe" } = { source: "manual" },
+): Promise<void> {
+  await getAdminDb().collection("quotes").doc(quote.id).update({
+    status: "paid",
+    paidAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  await recordQuoteActivity(quote, "quote_marked_paid", {
+    extra: opts.source === "stripe" ? "via Stripe" : null,
+  });
+  await fireQuoteTrigger(quote, "quote_marked_paid");
+  void emitQuoteWebhook(quote, "quote_marked_paid");
+
+  void maybeSendReviewRequest({
+    subAccountId: quote.subAccountId,
+    agencyId: quote.agencyId,
+    contactId: quote.contactId,
+    trigger: "quote_paid",
+  });
 }

@@ -335,9 +335,20 @@ export interface SubAccountDoc {
    * payment flow. v1 uses paypal.me links — sub-account owner pastes
    * their PayPal.me username; on invoice send we generate
    * `https://paypal.me/{username}/{amount}{currency}`. Null = not
-   * connected. v2 will add Stripe Connect alongside.
+   * connected.
    */
   paypalConfig: PayPalConfig | null;
+  /**
+   * Opt-in to pay-with-card on the public invoice page via Stripe
+   * Checkout, charged against the AGENCY'S OWN Stripe account (the same
+   * one already configured for CRM billing) — not a per-sub-account
+   * Stripe Connect account. Deliberately simple: no OAuth, no new env
+   * vars, reuses `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`. Auto-marks
+   * the invoice paid via webhook (unlike PayPal.me, which has no
+   * payment-status callback and stays manual mark-paid). Undefined/false
+   * = PayPal-only for that sub-account, the default.
+   */
+  stripeInvoicesEnabled?: boolean;
   /**
    * Google review-request config (SMS / WhatsApp "leave us a review" sends
    * after payment or on demand). Optional — legacy/undefined reads as off.

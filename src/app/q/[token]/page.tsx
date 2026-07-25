@@ -91,6 +91,7 @@ export default async function PublicQuotePage({ params }: PageProps) {
     /^https?:\/\/.+/i.test(subData.logoUrl as string)
       ? (subData.logoUrl as string)
       : null;
+  const stripeEnabled = subData.stripeInvoicesEnabled === true;
 
   const expired = isQuoteExpired(quote);
 
@@ -125,6 +126,7 @@ export default async function PublicQuotePage({ params }: PageProps) {
           businessName={businessName}
           businessLogoUrl={businessLogoUrl}
           expired={expired}
+          stripeEnabled={stripeEnabled}
         />
       </main>
 

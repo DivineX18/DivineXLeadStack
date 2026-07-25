@@ -63,17 +63,17 @@ export interface ResolvedBrand {
  */
 export const CUSTOM_BRAND: CustomBrand = {
   /** Displayed in navbar, hero, footer copyright, page title — everywhere. */
-  name: "Ascend CRM",
+  name: "DivineX",
 
   /** One-line positioning, surfaced in hero subtitle + meta description. */
-  tagline: "Turn strategy into execution.",
+  tagline: "The Growth Operating System for Purpose-Driven Businesses.",
 
   /**
    * Short (~140 char) description used under the hero headline. Should
    * read like a tweet — what the product does, for whom.
    */
   shortDescription:
-    "Everything you need to manage customers, automate marketing, close more sales, and execute your growth strategy.",
+    "One intelligent platform to amplify your message, automate meaningful customer journeys, and grow your business with purpose.",
 
   /** Used on CTA buttons + the FAQ "talk to us" line + footer. */
   supportEmail: "hello@divinex.io",

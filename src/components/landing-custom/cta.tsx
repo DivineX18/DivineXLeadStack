@@ -8,11 +8,11 @@ export function CTA({ brand }: { brand: ResolvedBrand }) {
 
       <div className="container mx-auto px-4 text-center">
         <h2 className="mx-auto max-w-2xl text-3xl font-semibold tracking-tighter sm:text-5xl">
-          Get your team into{" "}
+          Give your mission{" "}
           <span className="font-serif font-normal italic">
-            {brand.name}
-          </span>{" "}
-          this afternoon.
+            the systems to scale
+          </span>
+          .
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
           Tell us about your business and we&apos;ll get you set up — contacts
