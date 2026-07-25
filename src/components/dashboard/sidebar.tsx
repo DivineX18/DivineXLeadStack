@@ -31,6 +31,7 @@ import {
   GraduationCap,
   Sparkles,
   CreditCard,
+  ExternalLink,
 } from "lucide-react";
 import { getFirebaseDb } from "@/lib/firebase/client";
 import { GET_LEADS_PARKED } from "@/lib/get-leads/business-types";
@@ -471,7 +472,17 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
         )}
       </nav>
 
-      <div className="border-t p-4">
+      <div className="border-t p-4 space-y-1">
+        {/* Version 1 SSO return link — a plain external <a>, not a client
+         *  <Link>, since this leaves the app entirely. Doesn't bypass
+         *  Ascend's own auth/entitlement checks; it just points there. */}
+        <a
+          href={process.env.NEXT_PUBLIC_ASCEND_APP_URL ?? "https://app.divinex.io"}
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <ExternalLink className="h-4 w-4" />
+          DivineX Home
+        </a>
         <Button
           variant="ghost"
           className="w-full justify-start gap-3"

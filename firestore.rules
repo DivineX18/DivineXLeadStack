@@ -662,6 +662,24 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ---------- SSO: Ascend -> Growth Operations (Version 1) ----------
+    // Both fully server-only — written by the Admin SDK inside the SSO
+    // callback/exchange routes, never read or written by a client. See
+    // /Users/boss/.claude/plans/rosy-finding-summit.md for the full design.
+    //
+    // ssoBridge/{bridgeId} — the short-lived, single-use bridge doc between
+    // the callback (Phase D) and the finish page's server-side exchange
+    // (Phase E). Only ever contains a token HASH, never the raw token.
+    match /ssoBridge/{bridgeId} {
+      allow read, write: if false;
+    }
+    // ssoLoginAttempts/{id} — audit trail. Content rule: never a raw code,
+    // bridge token, shared secret, custom token, or session cookie value —
+    // hashes, ids, and sanitized failure categories only.
+    match /ssoLoginAttempts/{attemptId} {
+      allow read, write: if false;
+    }
+
     match /contacts/{contactId} {
       // Reads honor territory scoping when enabled — collaborators only
       // see contacts whose `territoryId` is in their assigned list (or
