@@ -1,5 +1,6 @@
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import { OrganizationSchema } from "@/components/landing-custom/site-schema";
+import { FaqAccordion, type FaqItem } from "@/components/landing-custom/faq-accordion";
 import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
@@ -26,11 +27,39 @@ import {
 export async function generateMetadata() {
   const brand = await resolveCustomBrand();
   return {
-    title: `Features — ${brand.name}`,
-    description: `Every real, shipped ${brand.name} feature: AI agents across chat, SMS, WhatsApp and voice, contacts and pipeline, quotes and invoicing, booking pages, a public API, and more.`,
+    title: `Features — ${brand.name} CRM, Pipeline & AI Agent Tools`,
+    description: `Every real, shipped ${brand.name} feature: AI agents across web chat, SMS, WhatsApp and voice, contacts and sales pipeline, quotes and invoicing, lead capture forms, booking pages, and a public API.`,
     openGraph: { title: `Features — ${brand.name}`, type: "website" as const },
   };
 }
+
+const FEATURES_FAQS: FaqItem[] = [
+  {
+    question: "Which channels can the AI agent actually answer?",
+    answer:
+      "Web chat, SMS, WhatsApp, and inbound phone calls, all from one configured persona — plus outbound voice for proactive calling, behind its own compliance gate.",
+  },
+  {
+    question: "Can I use my own phone number and sending domain?",
+    answer:
+      "Yes — a dedicated phone number for SMS and calls, and a dedicated email sending domain, are both available so outbound messages carry your brand instead of a shared one.",
+  },
+  {
+    question: "Is the pipeline customizable, or fixed to six stages?",
+    answer:
+      "Six stages is the shipped default (New through Won/Lost) built around how most sales pipelines actually run — deals, values, and stage timing are all yours to work with inside it.",
+  },
+  {
+    question: "Do forms and booking pages need a developer to set up?",
+    answer:
+      "No — the form builder is drag-and-drop with six field types, and booking pages are configured through settings, not code. Both are ready to embed or share as a link immediately.",
+  },
+  {
+    question: "Is there really a public API, or just a promise of one?",
+    answer:
+      "It's live today — REST endpoints for contacts, deals, tasks, events, and form submissions, plus signed outbound webhooks, documented and ready to connect to Zapier, Make, or a custom script.",
+  },
+];
 
 interface Feature { icon: typeof Bot; title: string; body: string }
 
@@ -94,10 +123,20 @@ function FeatureGroup({ eyebrow, title, body, items }: { eyebrow: string; title:
 export default async function FeaturesPage() {
   const brand = await resolveCustomBrand();
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FEATURES_FAQS.map((f) => ({
+      "@type": "Question",
+      name: f.question,
+      acceptedAnswer: { "@type": "Answer", text: f.answer },
+    })),
+  };
 
   return (
     <div className="flex min-h-screen flex-col">
       <OrganizationSchema brand={brand} baseUrl={baseUrl} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <CustomNavbar brand={brand} />
       <main className="flex-1">
         <section className="py-20 text-center md:py-24">
@@ -151,6 +190,20 @@ export default async function FeaturesPage() {
             items={REPORT}
           />
         </div>
+
+        <section className="border-t py-16 md:py-20">
+          <div className="container mx-auto px-4">
+            <div className="mx-auto max-w-2xl text-center">
+              <p className="text-sm font-semibold uppercase tracking-wide text-primary">Features FAQ</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tighter sm:text-4xl">
+                Questions about specific features
+              </h2>
+            </div>
+            <div className="mx-auto mt-10">
+              <FaqAccordion items={FEATURES_FAQS} />
+            </div>
+          </div>
+        </section>
 
         <CustomCTA brand={brand} />
       </main>

@@ -3,6 +3,7 @@ import { Inbox, MessageCircle, Users2, Receipt, LineChart, Plug } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import { OrganizationSchema } from "@/components/landing-custom/site-schema";
+import { FaqAccordion, type FaqItem } from "@/components/landing-custom/faq-accordion";
 import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
@@ -10,11 +11,40 @@ import { Footer as CustomFooter } from "@/components/landing-custom/footer";
 export async function generateMetadata() {
   const brand = await resolveCustomBrand();
   return {
-    title: `Platform — ${brand.name}`,
-    description: `How ${brand.name} works: capture leads, respond instantly, organize the follow-up, get paid, and see what's working — one operating system, not five tools stitched together.`,
+    title: `Platform — ${brand.name} Growth Operations Platform`,
+    description: `How ${brand.name} works: capture leads, respond instantly with AI agents, organize the follow-up in a real pipeline, get paid, and see what's working — one growth operations platform, not five tools stitched together.`,
     openGraph: { title: `Platform — ${brand.name}`, type: "website" as const },
   };
 }
+
+const WHO_ITS_FOR = [
+  { title: "Service businesses", body: "Coaches, consultants, agencies, and local service providers running on referrals and inbound leads that need a real system underneath them." },
+  { title: "Small sales teams", body: "A handful of people who all need to see the same pipeline and the same contact history — without paying for enterprise CRM seats." },
+  { title: "Anyone tired of tool sprawl", body: "If your lead flow currently touches a spreadsheet, a shared inbox, a separate texting app, and a calendar tool that don't talk to each other, this replaces the seams." },
+];
+
+const PLATFORM_FAQS: FaqItem[] = [
+  {
+    question: "Is this a CRM, a growth operations platform, or both?",
+    answer:
+      "Both, in the sense that matters: it's a CRM (contacts, pipeline, calendar, tasks) with the operational layer — AI-driven response, quoting, booking, and reporting — built in, rather than bolted on as separate paid add-ons from different vendors.",
+  },
+  {
+    question: "Do I have to use every part of it?",
+    answer:
+      "No. Most teams start with contacts and pipeline, then turn on AI agents, booking pages, or quoting as they're ready. Nothing forces an all-or-nothing rollout.",
+  },
+  {
+    question: "Does it replace tools I'm already paying for?",
+    answer:
+      "For most teams, yes — a separate texting tool, a booking-link tool, a basic quoting tool, and spreadsheet-based reporting are usually the first things people consolidate in.",
+  },
+  {
+    question: "How is this different from a generic CRM?",
+    answer:
+      "A generic CRM stores contacts and deals and stops there. The response layer — AI agents answering chat, SMS, WhatsApp, and calls, plus speed-to-lead automation — is what actually closes the gap between a lead arriving and someone following up.",
+  },
+];
 
 const STAGES = [
   {
@@ -58,10 +88,20 @@ const STAGES = [
 export default async function PlatformPage() {
   const brand = await resolveCustomBrand();
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: PLATFORM_FAQS.map((f) => ({
+      "@type": "Question",
+      name: f.question,
+      acceptedAnswer: { "@type": "Answer", text: f.answer },
+    })),
+  };
 
   return (
     <div className="flex min-h-screen flex-col">
       <OrganizationSchema brand={brand} baseUrl={baseUrl} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <CustomNavbar brand={brand} />
       <main className="flex-1">
         <section className="relative overflow-hidden py-20 md:py-28">
@@ -133,6 +173,39 @@ export default async function PlatformPage() {
                   See every feature in detail
                 </Button>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t py-16 md:py-20">
+          <div className="container mx-auto px-4">
+            <div className="mx-auto max-w-2xl text-center">
+              <p className="text-sm font-semibold uppercase tracking-wide text-primary">Who it&apos;s for</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tighter sm:text-4xl">
+                Built for teams that outgrew a spreadsheet
+              </h2>
+            </div>
+            <div className="mx-auto mt-10 grid max-w-4xl gap-6 sm:grid-cols-3">
+              {WHO_ITS_FOR.map(({ title, body }) => (
+                <div key={title} className="rounded-2xl border bg-card p-6">
+                  <h3 className="text-sm font-semibold">{title}</h3>
+                  <p className="mt-1.5 text-sm text-muted-foreground">{body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t py-16 md:py-20">
+          <div className="container mx-auto px-4">
+            <div className="mx-auto max-w-2xl text-center">
+              <p className="text-sm font-semibold uppercase tracking-wide text-primary">Platform FAQ</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tighter sm:text-4xl">
+                Common questions about the platform
+              </h2>
+            </div>
+            <div className="mx-auto mt-10">
+              <FaqAccordion items={PLATFORM_FAQS} />
             </div>
           </div>
         </section>

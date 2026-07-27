@@ -3,6 +3,7 @@ import { ClipboardList, Settings2, Plug2, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import { OrganizationSchema } from "@/components/landing-custom/site-schema";
+import { FaqAccordion, type FaqItem } from "@/components/landing-custom/faq-accordion";
 import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
@@ -10,11 +11,34 @@ import { Footer as CustomFooter } from "@/components/landing-custom/footer";
 export async function generateMetadata() {
   const brand = await resolveCustomBrand();
   return {
-    title: `Implementation — ${brand.name}`,
-    description: `What getting started with ${brand.name} actually looks like: tell us about your business, we configure your systems, connect what you already use, and go live in days.`,
+    title: `Implementation & Onboarding — ${brand.name}`,
+    description: `What CRM onboarding with ${brand.name} actually looks like: tell us about your business, we configure your systems and migrate your existing contacts, connect what you already use, and go live in days — not months.`,
     openGraph: { title: `Implementation — ${brand.name}`, type: "website" as const },
   };
 }
+
+const IMPLEMENTATION_FAQS: FaqItem[] = [
+  {
+    question: "How long does implementation actually take?",
+    answer:
+      "Most teams are running within days of the first conversation, not weeks. Timeline depends mainly on how quickly you can hand over existing contacts and confirm your pipeline stages.",
+  },
+  {
+    question: "What format do my existing contacts need to be in?",
+    answer:
+      "Whatever you've got — a spreadsheet export, a CSV from another CRM, or a live login to your current system. Matching and cleaning the data during import is part of the process, not something you do yourself first.",
+  },
+  {
+    question: "Do I need to train my team, or does someone do that for me?",
+    answer:
+      "The pipeline and workflows are set up to match how your team already sells, so the learning curve is mostly \"where do I find things,\" not \"how does this work\" — walkthroughs are part of getting set up.",
+  },
+  {
+    question: "What if my business is unusual — will the pipeline actually fit?",
+    answer:
+      "Pipeline stages are configured around your actual sales process during setup, not left as a generic default you have to adapt to.",
+  },
+];
 
 const STEPS = [
   {
@@ -42,10 +66,20 @@ const STEPS = [
 export default async function ImplementationPage() {
   const brand = await resolveCustomBrand();
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: IMPLEMENTATION_FAQS.map((f) => ({
+      "@type": "Question",
+      name: f.question,
+      acceptedAnswer: { "@type": "Answer", text: f.answer },
+    })),
+  };
 
   return (
     <div className="flex min-h-screen flex-col">
       <OrganizationSchema brand={brand} baseUrl={baseUrl} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <CustomNavbar brand={brand} />
       <main className="flex-1">
         <section className="py-20 text-center md:py-24">
@@ -103,6 +137,20 @@ export default async function ImplementationPage() {
                   Read the FAQ
                 </Button>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t py-16 md:py-20">
+          <div className="container mx-auto px-4">
+            <div className="mx-auto max-w-2xl text-center">
+              <p className="text-sm font-semibold uppercase tracking-wide text-primary">Onboarding FAQ</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tighter sm:text-4xl">
+                Questions about getting set up
+              </h2>
+            </div>
+            <div className="mx-auto mt-10">
+              <FaqAccordion items={IMPLEMENTATION_FAQS} />
             </div>
           </div>
         </section>
