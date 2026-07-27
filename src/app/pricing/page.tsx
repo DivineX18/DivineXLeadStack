@@ -3,6 +3,7 @@ import { getPublicPlans } from "@/lib/server/public-signup-service";
 import { billingStripeIsConfigured } from "@/lib/server/billing-service";
 import { OrganizationSchema, ProductSchema } from "@/components/landing-custom/site-schema";
 import { FaqAccordion, type FaqItem } from "@/components/landing-custom/faq-accordion";
+import { HOMEPAGE_FAQS } from "@/components/landing-custom/faq";
 import {
   Users2,
   KanbanSquare,
@@ -10,11 +11,13 @@ import {
   CheckSquare,
   Bot,
   Receipt,
+  MessageSquareText,
+  CalendarClock,
+  FileText,
 } from "lucide-react";
 
 import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { Pricing as CustomPricing } from "@/components/landing-custom/pricing";
-import { FAQ as CustomFAQ } from "@/components/landing-custom/faq";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
 
@@ -42,7 +45,7 @@ const INCLUDED = [
   { icon: Bot, label: "AI agents", body: "Channel-by-channel AI availability varies by plan — every plan includes the core CRM above." },
 ];
 
-const PRICING_FAQS: FaqItem[] = [
+const BILLING_FAQS: FaqItem[] = [
   {
     question: "Is there a free trial?",
     answer:
@@ -70,6 +73,17 @@ const PRICING_FAQS: FaqItem[] = [
   },
 ];
 
+// One combined, organized FAQ instead of two separate accordion blocks
+// stacked on the page (general + billing repeated back to back reads as
+// padding, not depth) — same total question count, one coherent section.
+const PRICING_PAGE_FAQS: FaqItem[] = [...HOMEPAGE_FAQS, ...BILLING_FAQS];
+
+const CONSOLIDATES = [
+  { icon: MessageSquareText, label: "A separate texting/AI-answering tool", body: "SMS, WhatsApp, and web chat auto-replies are part of the platform, not a bolt-on line item." },
+  { icon: CalendarClock, label: "A separate booking-link tool", body: "Booking pages with ICS confirmations and reminders are included, not a third-party subscription." },
+  { icon: FileText, label: "A separate quoting/invoicing tool", body: "Line-itemed quotes clients can accept or pay from their inbox — no export-to-PDF workaround." },
+];
+
 /**
  * Dedicated marketing pricing page — same live, Stripe-backed plan data
  * (and the same <Pricing/> component) as the homepage teaser section, so
@@ -87,7 +101,7 @@ export default async function PricingPage() {
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: PRICING_FAQS.map((f) => ({
+    mainEntity: PRICING_PAGE_FAQS.map((f) => ({
       "@type": "Question",
       name: f.question,
       acceptedAnswer: { "@type": "Answer", text: f.answer },
@@ -149,18 +163,50 @@ export default async function PricingPage() {
         <section className="border-t py-16 md:py-20">
           <div className="container mx-auto px-4">
             <div className="mx-auto max-w-2xl text-center">
-              <p className="text-sm font-semibold uppercase tracking-wide text-primary">Billing questions</p>
+              <p className="text-sm font-semibold uppercase tracking-wide text-primary">What this replaces</p>
               <h2 className="mt-2 text-2xl font-semibold tracking-tighter sm:text-4xl">
-                Pricing &amp; billing FAQ
+                Often the same price as one of these alone
               </h2>
+              <p className="mt-3 text-muted-foreground">
+                Most teams comparing CRM pricing are really comparing it against the cost of
+                several separate subscriptions. Here&apos;s what&apos;s already included instead
+                of billed on top.
+              </p>
             </div>
-            <div className="mx-auto mt-10">
-              <FaqAccordion items={PRICING_FAQS} />
+            <div className="mx-auto mt-10 grid max-w-3xl gap-6 sm:grid-cols-3">
+              {CONSOLIDATES.map(({ icon: Icon, label, body }) => (
+                <div key={label} className="rounded-2xl border bg-card p-6">
+                  <span className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <h3 className="text-sm font-semibold">{label}</h3>
+                  <p className="mt-1.5 text-sm text-muted-foreground">{body}</p>
+                </div>
+              ))}
             </div>
           </div>
         </section>
 
-        <CustomFAQ brand={brand} />
+        <section className="border-t py-16 md:py-20">
+          <div className="container mx-auto px-4">
+            <div className="mx-auto max-w-2xl text-center">
+              <p className="text-sm font-semibold uppercase tracking-wide text-primary">FAQ</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tighter sm:text-4xl">
+                Frequently asked questions
+              </h2>
+              <p className="mt-3 text-muted-foreground">
+                Can&apos;t find what you&apos;re looking for?{" "}
+                <a href={`mailto:${brand.supportEmail}`} className="text-primary hover:underline">
+                  {brand.supportEmail}
+                </a>
+              </p>
+            </div>
+            <div className="mx-auto mt-10">
+              <FaqAccordion items={PRICING_PAGE_FAQS} />
+            </div>
+          </div>
+        </section>
+
         <CustomCTA brand={brand} pricingHref="#pricing" />
       </main>
       <CustomFooter brand={brand} />
