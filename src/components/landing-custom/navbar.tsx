@@ -22,24 +22,30 @@ export function Navbar({ brand }: { brand: ResolvedBrand }) {
 
   const navItems = (
     <>
-      <a
-        href="#features"
+      <Link
+        href="/platform"
+        className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+      >
+        Platform
+      </Link>
+      <Link
+        href="/features"
         className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         Features
-      </a>
+      </Link>
       <Link
         href="/pricing"
         className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         Pricing
       </Link>
-      <a
-        href="#faq"
+      <Link
+        href="/faq"
         className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         FAQ
-      </a>
+      </Link>
       {!loading && (
         <>
           {user ? (
@@ -104,7 +110,13 @@ export function Navbar({ brand }: { brand: ResolvedBrand }) {
             </SheetHeader>
             <nav className="flex flex-col gap-4 p-4">
               <SheetClose
-                render={<a href="#features" />}
+                render={<Link href="/platform" />}
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Platform
+              </SheetClose>
+              <SheetClose
+                render={<Link href="/features" />}
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 Features
@@ -116,7 +128,7 @@ export function Navbar({ brand }: { brand: ResolvedBrand }) {
                 Pricing
               </SheetClose>
               <SheetClose
-                render={<a href="#faq" />}
+                render={<Link href="/faq" />}
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 FAQ

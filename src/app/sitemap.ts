@@ -20,8 +20,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const sharedEntries: MetadataRoute.Sitemap = [
     { url: `${baseUrl}/`, lastModified: now, changeFrequency: "weekly", priority: 1.0 },
+    { url: `${baseUrl}/pricing`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
+    { url: `${baseUrl}/platform`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${baseUrl}/features`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${baseUrl}/implementation`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${baseUrl}/faq`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${baseUrl}/contact`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
+    // Public API reference is NOT LANDING_VARIANT-gated — it ships on every
+    // deployment (see src/app/docs/api/page.tsx), so it belongs in every
+    // deployment's sitemap, not just leadstackOnly below.
+    { url: `${baseUrl}/docs/api`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${baseUrl}/terms`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
     { url: `${baseUrl}/privacy`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${baseUrl}/refund-policy`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${baseUrl}/responsible-ai`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
   ];
 
   if (LANDING_VARIANT !== "leadstack") {
@@ -29,7 +41,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }
 
   const leadstackOnly: MetadataRoute.Sitemap = [
-    { url: `${baseUrl}/docs/api`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${baseUrl}/docs/architecture`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${baseUrl}/docs/updating`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
     { url: `${baseUrl}/affiliate-program`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },

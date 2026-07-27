@@ -16,7 +16,12 @@ services:
       - key: BOOTSTRAP_ADMIN_EMAIL
         value: hello@divinex.io
       - key: EMAIL_FROM
-        value: "Flow <notifications@crm.divinex.io>"
+        # notifications@divinex.io only — crm.divinex.io is NOT a verified
+        # Resend sending domain (confirmed via resend.domains.list()); only
+        # the apex divinex.io is. This committed value previously lagged
+        # the live Render dashboard value, which was corrected manually;
+        # this keeps the source of truth in sync with production.
+        value: "Flow <notifications@divinex.io>"
       - key: NEXT_PUBLIC_FIREBASE_API_KEY
         sync: false
       - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN

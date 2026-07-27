@@ -1,11 +1,8 @@
-"use client";
-
-import { useState } from "react";
-import { ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import Link from "next/link";
 import type { ResolvedBrand } from "@/config/landing";
+import { FaqAccordion } from "./faq-accordion";
 
-const faqs = [
+export const HOMEPAGE_FAQS = [
   {
     question: "How do I get started?",
     answer:
@@ -39,8 +36,6 @@ const faqs = [
 ];
 
 export function FAQ({ brand }: { brand: ResolvedBrand }) {
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
-
   return (
     <section id="faq" className="py-24">
       <div className="container mx-auto px-4">
@@ -50,7 +45,10 @@ export function FAQ({ brand }: { brand: ResolvedBrand }) {
             <span className="font-serif font-normal italic">asked</span>
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Can&apos;t find what you&apos;re looking for? Email{" "}
+            <Link href="/faq" className="text-primary hover:underline">
+              See the full FAQ
+            </Link>
+            , or email{" "}
             <a
               href={`mailto:${brand.supportEmail}`}
               className="text-primary hover:underline"
@@ -61,39 +59,8 @@ export function FAQ({ brand }: { brand: ResolvedBrand }) {
           </p>
         </div>
 
-        <div className="mx-auto mt-12 max-w-2xl divide-y">
-          {faqs.map(({ question, answer }, index) => (
-            <div key={question}>
-              <button
-                onClick={() =>
-                  setOpenIndex(openIndex === index ? null : index)
-                }
-                className="flex w-full items-center justify-between py-5 text-left text-sm font-medium transition-colors hover:text-primary"
-              >
-                {question}
-                <ChevronDown
-                  className={cn(
-                    "ml-4 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
-                    openIndex === index && "rotate-180",
-                  )}
-                />
-              </button>
-              <div
-                className={cn(
-                  "grid transition-all duration-200",
-                  openIndex === index
-                    ? "grid-rows-[1fr] pb-5"
-                    : "grid-rows-[0fr]",
-                )}
-              >
-                <div className="overflow-hidden">
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    {answer}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="mx-auto mt-12">
+          <FaqAccordion items={HOMEPAGE_FAQS} />
         </div>
       </div>
     </section>

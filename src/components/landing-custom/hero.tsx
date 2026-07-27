@@ -40,20 +40,27 @@ export function Hero({ brand }: { brand: ResolvedBrand }) {
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            {/* Primary CTA is the self-serve path (jumps straight to the
+                actual pricing/checkout decision) — previously the hero's
+                only CTA was the sales-assisted mailto, competing for
+                attention with the pricing section's own "Get started"
+                buttons and the navbar's "Sign Up" further down the same
+                page. One clear primary action; "Talk to us" stays as the
+                secondary path for anyone who wants to ask before buying. */}
             <Button
-              render={<a href={`mailto:${brand.supportEmail}`} />}
+              render={<a href="#pricing" />}
               size="lg"
               className="px-6 text-base"
             >
-              Talk to us
+              Get started
             </Button>
             <Button
-              render={<a href="#features" />}
+              render={<a href={`mailto:${brand.supportEmail}`} />}
               variant="outline"
               size="lg"
               className="px-6 text-base"
             >
-              See features
+              Talk to us
             </Button>
           </div>
         </div>

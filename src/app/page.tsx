@@ -25,6 +25,7 @@ import { UpdatesModal } from "@/components/landing/updates-modal";
 import { SalesPopup } from "@/components/landing/sales-popup";
 import { LiveVisitorBeacon } from "@/components/landing/live-visitor-beacon";
 
+import { OrganizationSchema, ProductSchema } from "@/components/landing-custom/site-schema";
 import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { Hero as CustomHero } from "@/components/landing-custom/hero";
 import { Features as CustomFeatures } from "@/components/landing-custom/features";
@@ -52,15 +53,18 @@ export default async function HomePage() {
       resolveCustomBrand(),
       getPublicPlans(),
     ]);
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
     return (
       <div className="flex min-h-screen flex-col">
+        <OrganizationSchema brand={brand} baseUrl={baseUrl} />
+        <ProductSchema brand={brand} baseUrl={baseUrl} plans={plans} />
         <CustomNavbar brand={brand} />
         <main className="flex-1">
           <CustomHero brand={brand} />
           <CustomFeatures />
           <CustomPricing plans={plans} configured={billingStripeIsConfigured()} />
           <CustomFAQ brand={brand} />
-          <CustomCTA brand={brand} />
+          <CustomCTA brand={brand} pricingHref="#pricing" />
         </main>
         <CustomFooter brand={brand} />
       </div>

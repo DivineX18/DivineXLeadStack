@@ -1,7 +1,22 @@
 import { Button } from "@/components/ui/button";
 import type { ResolvedBrand } from "@/config/landing";
 
-export function CTA({ brand }: { brand: ResolvedBrand }) {
+export function CTA({
+  brand,
+  pricingHref = "/pricing",
+}: {
+  brand: ResolvedBrand;
+  /**
+   * Where "Get started" goes. Defaults to the real /pricing page — the only
+   * destination that's valid from every page this component is rendered on.
+   * Pass "#pricing" only from a page that actually renders a
+   * <Pricing id="pricing"/> section itself (the homepage, /pricing) for a
+   * same-page scroll instead of a full navigation. Getting this wrong
+   * produces a real bug: clicking the button appends "#pricing" to whatever
+   * page you're on and silently does nothing.
+   */
+  pricingHref?: string;
+}) {
   return (
     <section className="relative overflow-hidden py-24">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,oklch(0.72_0.16_165)_/_14%,transparent_60%)]" />
@@ -15,12 +30,21 @@ export function CTA({ brand }: { brand: ResolvedBrand }) {
           .
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
-          Tell us about your business and we&apos;ll get you set up — contacts
-          imported, pipeline configured, ready to run in days, not months.
+          Pick a plan and get set up yourself, or tell us about your business
+          and we&apos;ll walk you through it — either way, contacts imported,
+          pipeline configured, ready to run in days, not months.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Button
+            render={<a href={pricingHref} />}
+            size="lg"
+            className="px-6 text-base"
+          >
+            Get started
+          </Button>
+          <Button
             render={<a href={`mailto:${brand.supportEmail}`} />}
+            variant="outline"
             size="lg"
             className="px-6 text-base"
           >

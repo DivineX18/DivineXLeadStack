@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LogoMark } from "@/components/brand/logo-mark";
+import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 
 /**
  * Public docs page — "Keeping your app up to date with the org build".
@@ -12,22 +13,33 @@ import { LogoMark } from "@/components/brand/logo-mark";
  * /thank-you page and intended to be a stable URL the buyer can bookmark and
  * come back to weeks/months later. Public (no auth) — listed in
  * middleware.ts PUBLIC_PATHS under "/docs".
+ *
+ * "LeadStack" appears twice in different senses on this page: as the site's
+ * OWN brand (nav wordmark, page title) — that must resolve to the buyer's
+ * actual brand — and as the literal name of the upstream template repo
+ * (git remote URL, "the official LeadStack build") — that stays "LeadStack"
+ * regardless of the buyer's brand, since that really is the repo's name.
+ * Only the former was ever a bug.
  */
 
-export const metadata = {
-  title: "Keeping your app up to date — LeadStack",
-  description:
-    "How to pull the latest official LeadStack build into your own customised version of the app — without losing your changes.",
-};
+export async function generateMetadata() {
+  const brand = await resolveCustomBrand();
+  return {
+    title: `Keeping your app up to date — ${brand.name}`,
+    description:
+      "How to pull the latest official LeadStack build into your own customised version of the app — without losing your changes.",
+  };
+}
 
-export default function UpdatingDocsPage() {
+export default async function UpdatingDocsPage() {
+  const brand = await resolveCustomBrand();
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2 text-lg font-bold">
             <LogoMark size={20} idSuffix="-docs" />
-            LeadStack
+            {brand.name}
           </Link>
           <Button render={<Link href="/" />} variant="outline" size="sm">
             Back to home

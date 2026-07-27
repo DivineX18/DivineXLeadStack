@@ -32,20 +32,44 @@ export function Footer({ brand }: { brand: ResolvedBrand }) {
             <h3 className="mb-3 text-sm font-semibold">Product</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <a
-                  href="#features"
+                <Link
+                  href="/platform"
+                  className="transition-colors hover:text-foreground"
+                >
+                  Platform
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/features"
                   className="transition-colors hover:text-foreground"
                 >
                   Features
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="#faq"
+                <Link
+                  href="/pricing"
+                  className="transition-colors hover:text-foreground"
+                >
+                  Pricing
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/implementation"
+                  className="transition-colors hover:text-foreground"
+                >
+                  Implementation
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/faq"
                   className="transition-colors hover:text-foreground"
                 >
                   FAQ
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -91,6 +115,14 @@ export function Footer({ brand }: { brand: ResolvedBrand }) {
           <div>
             <h3 className="mb-3 text-sm font-semibold">Contact</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
+              <li>
+                <Link
+                  href="/contact"
+                  className="transition-colors hover:text-foreground"
+                >
+                  Contact us
+                </Link>
+              </li>
               <li>
                 <a
                   href={`mailto:${brand.supportEmail}`}
