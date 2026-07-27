@@ -3,20 +3,39 @@ rules_version = '2';
 // Firebase Storage rules. The only writer surface today is the Community
 // feature's group cover/logo uploads. Community group images are PUBLIC (the
 // About page at /c/* is public), so reads are open; writes require a signed-in
-// Firebase user (staff — community members are NOT Firebase users, so they
-// can't write here) plus an image content-type + 5 MB size cap.
+// Firebase user who is an active member of THIS SPECIFIC sub-account (staff —
+// community members are NOT Firebase users, so they can't write here), plus
+// an image content-type + 5 MB size cap. The membership check mirrors
+// firestore.rules' canAdminSub()/isSubMemberActive() pattern via a
+// cross-service firestore.get() — without it, any authenticated user on the
+// deployment (from any sub-account) could overwrite or delete another
+// tenant's community images just by guessing/enumerating the path.
 //
 // Deploy with: firebase deploy --only storage
 service firebase.storage {
   match /b/{bucket}/o {
 
+    function isActiveMemberOrOwner(subAccountId) {
+      let sub = firestore.get(/databases/(default)/documents/subAccounts/$(subAccountId)).data;
+      let isOwner = request.auth.token.agencyRole == "owner"
+        && request.auth.token.agencyId == sub.agencyId;
+      let member = firestore.get(
+        /databases/(default)/documents/subAccounts/$(subAccountId)/subAccountMembers/$(request.auth.uid)
+      ).data;
+      return isOwner || member.status == "active";
+    }
+
     // Community group cover/logo images.
     match /community/{subAccountId}/{groupId}/{fileName} {
       allow read: if true;
+
       allow write: if request.auth != null
+        && isActiveMemberOrOwner(subAccountId)
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
-      allow delete: if request.auth != null;
+
+      allow delete: if request.auth != null
+        && isActiveMemberOrOwner(subAccountId);
     }
 
     // Default deny everything else.

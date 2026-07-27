@@ -8,6 +8,8 @@ const PUBLIC_PATHS = [
   "/signup",
   "/terms",
   "/privacy",
+  "/refund-policy",
+  "/responsible-ai",
   "/api-webhooks",
   "/about",
   "/thank-you",
@@ -114,7 +116,6 @@ const PUBLIC_PATHS = [
   // Upstash-Signature header verification inside the route.
   "/api/events/reminder",
   "/api/events/payment",
-  "/api/dev-only/danger-wipe-everything",
   "/setup.html",
   // SEO conventions — Next.js serves these as virtual routes from
   // src/app/robots.ts and src/app/sitemap.ts respectively. Both must

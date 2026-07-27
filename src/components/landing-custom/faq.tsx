@@ -29,7 +29,7 @@ const faqs = [
   {
     question: "Is my data safe?",
     answer:
-      "Your workspace is yours alone — only you and the people you invite can access it. Daily backups, encrypted at rest, and you can export everything as a CSV whenever you want.",
+      "Your workspace is yours alone — only you and the people you invite can access it. Data is encrypted at rest, and you can export everything as a CSV whenever you want.",
   },
   {
     question: "Do you have an API?",

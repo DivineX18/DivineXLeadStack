@@ -27,6 +27,7 @@ import { BulkEmailDialog } from "@/components/contacts/bulk-email-dialog";
 import { BulkCallDialog } from "@/components/contacts/bulk-call-dialog";
 import type { Contact } from "@/types/contacts";
 import type { TerritoryDoc } from "@/types";
+import { CUSTOM_BRAND } from "@/config/landing";
 
 /**
  * Reads ?import=1 from the URL, opens the import dialog, then strips the
@@ -79,6 +80,11 @@ export default function ContactsPage() {
         setContacts(list);
         setLoading(false);
       },
+      (err) => {
+        console.error("[contacts] listener error", err);
+        // Don't hang on the skeleton forever if the listener fails.
+        setLoading(false);
+      },
     );
     return () => unsub();
   }, [
@@ -119,7 +125,8 @@ export default function ContactsPage() {
     }));
     const csv = serializeCsv(headers, rows);
     const stamp = new Date().toISOString().slice(0, 10);
-    downloadCsv(`leadstack-contacts-${stamp}.csv`, csv);
+    const brandSlug = CUSTOM_BRAND.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    downloadCsv(`${brandSlug}-contacts-${stamp}.csv`, csv);
     toast.success(`Exported ${rows.length} contacts`);
   }
 

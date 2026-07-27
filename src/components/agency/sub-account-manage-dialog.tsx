@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { GET_LEADS_PARKED } from "@/lib/get-leads/business-types";
 import { SubAccountBillingSection } from "@/components/agency/sub-account-billing-section";
+import { CUSTOM_BRAND } from "@/config/landing";
 import { effectiveBillingState } from "@/lib/billing/status";
 import type { SubAccountDoc } from "@/types";
 
@@ -656,7 +657,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
             beta
           >
             When enabled, this sub-account can point its dedicated Twilio
-            number&apos;s voice line at LeadStack: inbound calls forward to the
+            number&apos;s voice line at {CUSTOM_BRAND.name}: inbound calls forward to the
             business&apos;s phone and, if unanswered, the caller is
             automatically texted back. Requires a dedicated Twilio number and is
             mutually exclusive with the AI inbound Voice agent (which answers

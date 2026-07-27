@@ -14,7 +14,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useSubAccount } from "@/context/sub-account-context";
 import { parseCsv, guessContactField, isValidEmail } from "@/lib/csv";
+import { CUSTOM_BRAND } from "@/config/landing";
 import type { ContactFormData, ContactSource } from "@/types/contacts";
+
+const TEMPLATE_DOWNLOAD_FILENAME = `${CUSTOM_BRAND.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-contacts-template.csv`;
 
 type MappableField = "name" | "email" | "phone" | "company" | "source" | "tags";
 
@@ -203,7 +206,7 @@ export function ImportContactsDialog({
             — we&apos;ll auto-match the columns. Need a starting point?{" "}
             <a
               href="/contacts-template.csv"
-              download="leadstack-contacts-template.csv"
+              download={TEMPLATE_DOWNLOAD_FILENAME}
               className="text-primary underline-offset-4 hover:underline"
             >
               Download the template

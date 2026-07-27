@@ -23,10 +23,17 @@ export default function ConversationsPage() {
   useEffect(() => {
     if (authLoading || !user || !subAccountId) return;
     setLoading(true);
-    const unsub = subscribeToConversations(subAccountId, (list) => {
-      setConversations(list);
-      setLoading(false);
-    });
+    const unsub = subscribeToConversations(
+      subAccountId,
+      (list) => {
+        setConversations(list);
+        setLoading(false);
+      },
+      (err) => {
+        console.error("[conversations] listener error", err);
+        setLoading(false);
+      },
+    );
     return () => unsub();
   }, [user, subAccountId, authLoading]);
 

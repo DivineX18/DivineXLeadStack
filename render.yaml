@@ -16,7 +16,7 @@ services:
       - key: BOOTSTRAP_ADMIN_EMAIL
         value: hello@divinex.io
       - key: EMAIL_FROM
-        value: "Ascend CRM <notifications@crm.divinex.io>"
+        value: "Flow <notifications@crm.divinex.io>"
       - key: NEXT_PUBLIC_FIREBASE_API_KEY
         sync: false
       - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN

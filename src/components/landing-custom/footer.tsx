@@ -69,6 +69,22 @@ export function Footer({ brand }: { brand: ResolvedBrand }) {
                   Privacy Policy
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/refund-policy"
+                  className="transition-colors hover:text-foreground"
+                >
+                  Refund Policy
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/responsible-ai"
+                  className="transition-colors hover:text-foreground"
+                >
+                  Responsible AI
+                </Link>
+              </li>
             </ul>
           </div>
 

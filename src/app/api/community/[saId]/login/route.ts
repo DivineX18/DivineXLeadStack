@@ -39,7 +39,8 @@ export async function POST(
   const joinGroupId =
     typeof body.join === "string" && body.join.trim() ? body.join.trim() : undefined;
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
 
   try {
     if (emailIsConfigured()) {

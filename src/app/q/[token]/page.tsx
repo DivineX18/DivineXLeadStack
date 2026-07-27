@@ -7,6 +7,7 @@ import { isQuoteExpired } from "@/lib/quotes/calc";
 import { emitQuoteWebhook, recordQuoteActivity } from "@/lib/quotes/lifecycle";
 import { PublicQuoteView } from "@/components/quotes/public-quote-view";
 import { LogoMark } from "@/components/brand/logo-mark";
+import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import type { Quote } from "@/types/quotes";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +36,7 @@ interface PageProps {
 
 export default async function PublicQuotePage({ params }: PageProps) {
   const { token } = await params;
+  const brand = await resolveCustomBrand();
 
   const verified = verifyQuoteToken(token);
   if (!verified) notFound();
@@ -132,7 +134,7 @@ export default async function PublicQuotePage({ params }: PageProps) {
 
       <footer className="border-t bg-background py-4">
         <div className="container mx-auto px-4 text-center text-[11px] text-muted-foreground">
-          {quote.kind === "invoice" ? "Invoice" : "Quote"} sent via LeadStack.
+          {quote.kind === "invoice" ? "Invoice" : "Quote"} sent via {brand.name}.
           Reply to the email to reach {businessName}.
         </div>
       </footer>

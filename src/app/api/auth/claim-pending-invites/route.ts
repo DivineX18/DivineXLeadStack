@@ -3,6 +3,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
+import { GLOBAL_TERRITORY_ID } from "@/types";
 
 /**
  * POST /api/auth/claim-pending-invites
@@ -80,11 +81,26 @@ export async function POST(request: Request): Promise<NextResponse> {
       subAccountRole: "admin" | "collaborator" | null;
       agencyRole: "owner" | "staff" | null;
       invitedByUid: string;
+      assignedTerritoryIds?: unknown;
     };
     if (!invite.subAccountId || !invite.subAccountRole) {
       // Agency-level invites aren't in scope for this helper. Skip.
       continue;
     }
+
+    // Territories the inviting admin pre-assigned (collaborators only) —
+    // must match /api/auth/signup's normalization exactly. Previously this
+    // route dropped the field entirely, which defaults the consumer-side
+    // filter to Global-only (broader access than intended) rather than the
+    // narrower scope an admin configured, for anyone who already had an
+    // account when a second invite auto-attached via this route.
+    const rawTerritories = invite.assignedTerritoryIds;
+    const assignedTerritoryIds =
+      Array.isArray(rawTerritories) &&
+      rawTerritories.length > 0 &&
+      invite.subAccountRole === "collaborator"
+        ? rawTerritories.filter((x): x is string => typeof x === "string")
+        : [GLOBAL_TERRITORY_ID];
 
     // Idempotency: if the membership already exists (e.g. claimed in a
     // prior call but the invite update silently failed), still mark the
@@ -110,6 +126,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         displayName: userRecord.displayName ?? "",
         addedAt: FieldValue.serverTimestamp(),
         addedByUid: invite.invitedByUid,
+        assignedTerritoryIds,
       });
 
       batch.set(

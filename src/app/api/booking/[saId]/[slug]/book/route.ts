@@ -2,6 +2,7 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
+import { CUSTOM_BRAND } from "@/config/landing";
 
 import { getAdminDb } from "@/lib/firebase/admin";
 import {
@@ -461,7 +462,7 @@ export async function POST(
   const appHost =
     process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, "")
       ?.replace(/\/.*$/, "")
-      ?.toLowerCase() ?? "leadstack.dev";
+      ?.toLowerCase() ?? CUSTOM_BRAND.primaryDomain;
 
   // Confirmation / payment-pending email.
   if (emailIsConfigured()) {

@@ -340,7 +340,7 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
                 )}
               >
                 <Settings className="h-4 w-4" />
-                Settings Agency
+                Agency Settings
               </Link>
             )}
           </div>

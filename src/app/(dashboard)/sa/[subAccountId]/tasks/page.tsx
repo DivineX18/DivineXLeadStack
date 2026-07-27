@@ -37,16 +37,34 @@ export default function TasksPage() {
     const settle = () => {
       if (tasksReady && contactsReady) setLoading(false);
     };
-    const unsubT = subscribeToTasks(scope, { territoryFilter }, (l) => {
-      setTasks(l);
-      tasksReady = true;
-      settle();
-    });
-    const unsubC = subscribeToContacts(scope, { territoryFilter }, (l) => {
-      setContacts(l);
-      contactsReady = true;
-      settle();
-    });
+    const unsubT = subscribeToTasks(
+      scope,
+      { territoryFilter },
+      (l) => {
+        setTasks(l);
+        tasksReady = true;
+        settle();
+      },
+      (err) => {
+        console.error("[tasks] listener error", err);
+        tasksReady = true;
+        settle();
+      },
+    );
+    const unsubC = subscribeToContacts(
+      scope,
+      { territoryFilter },
+      (l) => {
+        setContacts(l);
+        contactsReady = true;
+        settle();
+      },
+      (err) => {
+        console.error("[tasks] contacts listener error", err);
+        contactsReady = true;
+        settle();
+      },
+    );
     return () => {
       unsubT();
       unsubC();

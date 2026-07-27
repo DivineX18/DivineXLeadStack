@@ -14,6 +14,7 @@ import {
   locationFromPhone,
   mergeLocation,
 } from "@/lib/contacts/location";
+import { checkFormSubmitRateLimit } from "@/lib/forms/rate-limit";
 import { defaultSmsConsentText } from "@/types/forms";
 import type { FormField, LeadForm } from "@/types/forms";
 import type { Contact, ContactAttribution } from "@/types/contacts";
@@ -131,6 +132,16 @@ async function handleSubmit(
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
+
+  const ipForRateLimit = ipFromRequest(request) ?? "unknown";
+  const rl = checkFormSubmitRateLimit(ipForRateLimit);
+  if (!rl.ok) {
+    return jsonWithCors(
+      { error: "Too many submissions. Please try again shortly." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+    );
+  }
+
   let body: SubmitBody;
   try {
     body = (await request.json()) as SubmitBody;

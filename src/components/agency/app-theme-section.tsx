@@ -28,13 +28,13 @@ const OPTIONS: {
   {
     value: "green",
     label: "Green",
-    hint: "The emerald “my CRM” palette — matches the landing page and default app icon.",
+    hint: "The emerald default palette — matches the landing page and default app icon.",
     swatch: "bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-300",
   },
   {
     value: "leadstack",
     label: "Indigo",
-    hint: "The LeadStack design language — indigo/violet accents.",
+    hint: "Indigo/violet accents.",
     swatch: "bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500",
   },
   {

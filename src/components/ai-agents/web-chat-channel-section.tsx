@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { AiAgentProfile, AiChannelConfig } from "@/types/ai";
+import { CUSTOM_BRAND } from "@/config/landing";
 
 /**
  * Web Chat channel settings. Operator configures:
@@ -337,7 +338,7 @@ export function WebChatChannelSection() {
             <p className="text-[11px] text-muted-foreground">
               One hostname per line, no protocol. Only these origins can load
               the widget. Leave empty during testing to allow{" "}
-              <code>localhost</code> + your LeadStack domain.
+              <code>localhost</code> + {CUSTOM_BRAND.primaryDomain}.
             </p>
           </div>
 

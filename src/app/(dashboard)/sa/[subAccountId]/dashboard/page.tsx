@@ -25,18 +25,34 @@ import { useAuth } from "@/hooks/use-auth";
 import { useSubAccount } from "@/context/sub-account-context";
 import { useEffectiveTerritoryFilter } from "@/hooks/use-effective-territory-filter";
 import { getFirebaseDb } from "@/lib/firebase/client";
+import dynamic from "next/dynamic";
 import { subscribeToContacts } from "@/lib/firestore/contacts";
 import { subscribeToDeals } from "@/lib/firestore/deals";
 import { subscribeToForms } from "@/lib/firestore/forms";
 import { formatCurrency, daysSince, toDate } from "@/lib/format";
 import { getStage, type Deal } from "@/types/deals";
 import { usePipelineStages } from "@/hooks/use-pipeline-stages";
+import { CUSTOM_BRAND } from "@/config/landing";
 import type { Contact } from "@/types/contacts";
+
+// mapbox-gl is a sizeable dependency and this is the dashboard home page
+// every user lands on after login — deferring it off the initial bundle so
+// it only loads once this component actually mounts, instead of shipping
+// on every page load regardless of whether the map card is ever scrolled
+// to. ssr: false because Mapbox GL JS touches the DOM directly.
+const LeadsMap = dynamic(
+  () => import("@/components/dashboard/leads-map").then((m) => m.LeadsMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="aspect-[16/9] w-full animate-pulse rounded-lg border bg-muted/40" />
+    ),
+  },
+);
 import type { AutomationDoc } from "@/types";
 import type { LeadForm } from "@/types/forms";
 import { Button } from "@/components/ui/button";
 import { NewDealDialog } from "@/components/pipeline/new-deal-dialog";
-import { LeadsMap } from "@/components/dashboard/leads-map";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -595,7 +611,7 @@ function GettingStarted() {
           render={
             <a
               href="/contacts-template.csv"
-              download="leadstack-contacts-template.csv"
+              download={`${CUSTOM_BRAND.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-contacts-template.csv`}
             />
           }
         >

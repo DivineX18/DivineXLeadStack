@@ -2,6 +2,7 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
+import { requireAdmin } from "@/lib/auth/require-admin";
 
 /**
  * !!! DESTRUCTIVE — DEVELOPER USE ONLY !!!
@@ -15,8 +16,17 @@ import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
  *
  * Guards (all must pass):
  *   1. process.env.NODE_ENV !== "production"  -> returns 403 if it is
- *   2. ?confirm=NUKE in the query string      -> returns 400 if missing
- *   3. Lives under /api/dev-only/...          -> the path itself is a
+ *   2. A valid, active, admin-role session    -> returns 401/403 otherwise.
+ *      Previously this route relied on the NODE_ENV check alone (and was
+ *      listed in middleware's PUBLIC_PATHS, so no session was ever even
+ *      verified) — a single misconfigured NODE_ENV in any non-Next.js-CLI
+ *      deployment context would have made this an unauthenticated,
+ *      internet-reachable full data wipe. Removed from PUBLIC_PATHS and
+ *      added a real requireAdmin() check as defense-in-depth; the NODE_ENV
+ *      check alone should never be the only thing standing between the
+ *      internet and this route.
+ *   3. ?confirm=NUKE in the query string      -> returns 400 if missing
+ *   4. Lives under /api/dev-only/...          -> the path itself is a
  *      forewarning to anyone reviewing the routes table
  *
  * If you don't recognise this route, you almost certainly do not want to
@@ -29,6 +39,9 @@ export async function POST(request: Request) {
       { status: 403 },
     );
   }
+
+  const adminAuthResult = await requireAdmin(request);
+  if (adminAuthResult instanceof NextResponse) return adminAuthResult;
 
   const url = new URL(request.url);
   if (url.searchParams.get("confirm") !== "NUKE") {

@@ -36,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PIPELINE_STAGES, type PipelineStageId } from "@/types/deals";
+import { CUSTOM_BRAND } from "@/config/landing";
 import {
   defaultFormAppearance,
   defaultSmsConsentText,
@@ -119,20 +120,20 @@ function buildHtmlSnippet(form: LeadForm, origin: string): string {
     })
     .join("\n\n");
 
-  return `<!-- LeadStack form. Style with your own CSS — every element is unstyled. -->
+  return `<!-- Lead form. Style with your own CSS — every element is unstyled. -->
 <!-- Submissions create contacts and fire automations in your workspace. -->
-<form data-leadstack-form="${form.id}" novalidate>
+<form data-lead-form="${form.id}" novalidate>
 ${fieldsHtml}
 
   <button type="submit">Send message</button>
-  <p data-leadstack-status hidden></p>
+  <p data-lead-form-status hidden></p>
 </form>
 
 <script>
 (function () {
-  var form = document.querySelector('[data-leadstack-form="${form.id}"]');
+  var form = document.querySelector('[data-lead-form="${form.id}"]');
   if (!form) return;
-  var status = form.querySelector("[data-leadstack-status]");
+  var status = form.querySelector("[data-lead-form-status]");
   form.addEventListener("submit", function (e) {
     e.preventDefault();
     var values = {};
@@ -983,7 +984,7 @@ function EmbedAppearanceSection({
             checked={appearance.hideChrome}
             onCheckedChange={(v) => onChange({ hideChrome: !!v })}
           />
-          <span className="text-xs">Hide LeadStack header + footer</span>
+          <span className="text-xs">Hide {CUSTOM_BRAND.name} header + footer</span>
         </label>
 
         <label className="flex items-center gap-2">

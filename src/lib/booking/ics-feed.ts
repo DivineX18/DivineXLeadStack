@@ -15,6 +15,8 @@
  * Output is CRLF-terminated per RFC 5545.
  */
 
+import { CUSTOM_BRAND } from "@/config/landing";
+
 export interface FeedEventInput {
   /** Stable per-event UID. Use the Firestore event id. */
   uid: string;
@@ -80,7 +82,7 @@ export function generateIcsFeed(input: FeedInput): string {
   const lines: string[] = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    `PRODID:-//LeadStack//Calendar Feed//${input.domain}//EN`,
+    `PRODID:-//${CUSTOM_BRAND.name}//Calendar Feed//${input.domain}//EN`,
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     `X-WR-CALNAME:${escapeIcsText(input.calendarName)}`,

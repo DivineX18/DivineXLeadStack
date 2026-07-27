@@ -3,6 +3,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { Resend } from "resend";
+import { CUSTOM_BRAND } from "@/config/landing";
 
 import { getAdminDb } from "@/lib/firebase/admin";
 import {
@@ -205,7 +206,7 @@ async function runMarkPaidSideEffects(args: {
   const appHost =
     process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, "")
       ?.replace(/\/.*$/, "")
-      ?.toLowerCase() ?? "leadstack.dev";
+      ?.toLowerCase() ?? CUSTOM_BRAND.primaryDomain;
   const ics = generateIcs({
     uid: event.id,
     domain: appHost,

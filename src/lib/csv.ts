@@ -86,9 +86,20 @@ export function serializeCsv(
   return `${headerLine}\n${body}\n`;
 }
 
+// Leading =, +, -, or @ makes Excel/Sheets interpret a cell as a formula —
+// a classic CSV-injection vector when the value came from untrusted input
+// (e.g. a public form submission's name/company field later exported by an
+// operator). Prefixing with a single quote forces text interpretation;
+// spreadsheet apps render the leading quote invisibly, so this doesn't
+// change how legitimate values look.
+const FORMULA_TRIGGER_CHARS = new Set(["=", "+", "-", "@"]);
+
 function escapeCsvCell(v: unknown): string {
   if (v === null || v === undefined) return "";
-  const s = Array.isArray(v) ? v.join("; ") : String(v);
+  let s = Array.isArray(v) ? v.join("; ") : String(v);
+  if (s.length > 0 && FORMULA_TRIGGER_CHARS.has(s[0])) {
+    s = `'${s}`;
+  }
   if (s.includes(",") || s.includes('"') || s.includes("\n")) {
     return `"${s.replace(/"/g, '""')}"`;
   }

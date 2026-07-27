@@ -134,13 +134,15 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="admin">
-        <TabsList>
-          <TabsTrigger value="admin">Admin</TabsTrigger>
-          <TabsTrigger value="messaging">Messaging</TabsTrigger>
-          <TabsTrigger value="api">API</TabsTrigger>
-          <TabsTrigger value="custom-fields">Custom Fields</TabsTrigger>
-          <TabsTrigger value="import">Importer</TabsTrigger>
-        </TabsList>
+        <div className="-mx-1 overflow-x-auto px-1">
+          <TabsList>
+            <TabsTrigger value="admin">Admin</TabsTrigger>
+            <TabsTrigger value="messaging">Messaging</TabsTrigger>
+            <TabsTrigger value="api">API</TabsTrigger>
+            <TabsTrigger value="custom-fields">Custom Fields</TabsTrigger>
+            <TabsTrigger value="import">Importer</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* ---------- Admin: contact, branding, plan, members, territories,
             calendar, payments, data ---------- */}
