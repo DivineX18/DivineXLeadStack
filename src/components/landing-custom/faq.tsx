@@ -37,7 +37,7 @@ export const HOMEPAGE_FAQS = [
 
 export function FAQ({ brand }: { brand: ResolvedBrand }) {
   return (
-    <section id="faq" className="py-24">
+    <section id="faq" className="border-t py-24">
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-semibold tracking-tighter sm:text-5xl">

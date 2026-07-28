@@ -54,6 +54,29 @@ body {
   --sidebar-ring: oklch(0.511 0.262 276.97);
 }
 
+/* Marketing site accent (public pages only — never applied inside the
+   authenticated app, which has its own per-user accent-theme system above).
+   Reuses the exact emerald values from .theme-green so this isn't a new
+   brand color, just the existing "Flow Green" wired into --primary/--ring/
+   --accent so every already-primary-colored control (default Button,
+   text-primary labels, active states) picks it up with zero component
+   edits. Kept to primary/ring/accent (never background/foreground) so green
+   guides attention rather than dominating the page. */
+.marketing-accent {
+  --primary: oklch(0.596 0.145 163.23); /* emerald-600 */
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.696 0.17 162.48); /* emerald-500 */
+  --accent: oklch(0.596 0.145 163.23 / 8%);
+  --accent-foreground: oklch(0.596 0.145 163.23);
+}
+.dark .marketing-accent {
+  --primary: oklch(0.765 0.177 163.22); /* emerald-400 */
+  --primary-foreground: oklch(0.145 0 0);
+  --ring: oklch(0.596 0.145 163.23);
+  --accent: oklch(0.765 0.177 163.22 / 12%);
+  --accent-foreground: oklch(0.765 0.177 163.22);
+}
+
 /* Inline lesson video embeds (rich-text editor + public player share this). */
 .lesson-video {
   position: relative;

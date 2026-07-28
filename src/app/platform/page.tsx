@@ -96,7 +96,7 @@ export default async function PlatformPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="marketing-accent flex min-h-screen flex-col">
       <OrganizationSchema brand={brand} baseUrl={baseUrl} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <CustomNavbar brand={brand} />
@@ -154,7 +154,7 @@ export default async function PlatformPage() {
           </div>
         </section>
 
-        <section className="border-t py-16 md:py-20">
+        <section className="border-t bg-muted/30 py-16 md:py-20">
           <div className="container mx-auto px-4">
             <div className="mx-auto max-w-3xl text-center">
               <h2 className="text-2xl font-semibold tracking-tighter sm:text-4xl">
@@ -184,7 +184,10 @@ export default async function PlatformPage() {
             </div>
             <div className="mx-auto mt-10 grid max-w-4xl gap-6 sm:grid-cols-3">
               {WHO_ITS_FOR.map(({ title, body }) => (
-                <div key={title} className="rounded-2xl border bg-card p-6">
+                <div
+                  key={title}
+                  className="rounded-2xl border bg-card p-6 transition-all hover:-translate-y-0.5 hover:shadow-md"
+                >
                   <h3 className="text-sm font-semibold">{title}</h3>
                   <p className="mt-1.5 text-sm text-muted-foreground">{body}</p>
                 </div>

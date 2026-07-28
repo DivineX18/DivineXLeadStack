@@ -64,7 +64,7 @@ export default async function FaqPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="marketing-accent flex min-h-screen flex-col">
       <OrganizationSchema brand={brand} baseUrl={baseUrl} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <CustomNavbar brand={brand} />

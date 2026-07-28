@@ -77,7 +77,7 @@ export default async function AboutPage() {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
 
     return (
-      <div className="flex min-h-screen flex-col">
+      <div className="marketing-accent flex min-h-screen flex-col">
         <OrganizationSchema brand={brand} baseUrl={baseUrl} />
         <CustomNavbar brand={brand} />
         <main className="flex-1">
@@ -164,7 +164,7 @@ export default async function AboutPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="marketing-accent flex min-h-screen flex-col">
       <LeadStackNavbar />
 
       <main className="flex-1">

@@ -61,7 +61,7 @@ export function Pricing({
   }
 
   return (
-    <section id="pricing" className="py-24">
+    <section id="pricing" className="border-t bg-muted/30 py-24">
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-sm font-semibold uppercase tracking-wide text-primary">
@@ -106,9 +106,10 @@ export function Pricing({
                 <Card
                   key={plan.id}
                   className={cn(
-                    "flex flex-col",
-                    highlighted &&
-                      "relative border-primary shadow-xl shadow-primary/10 ring-2 ring-primary/30",
+                    "flex flex-col transition-all duration-200",
+                    highlighted
+                      ? "relative border-primary shadow-xl shadow-primary/10 ring-2 ring-primary/30 hover:shadow-2xl hover:shadow-primary/15"
+                      : "hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md",
                   )}
                 >
                   {highlighted && (

@@ -22,7 +22,7 @@ export default async function ResourcesPage() {
   const sorted = [...RESOURCE_POSTS].sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1));
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="marketing-accent flex min-h-screen flex-col">
       <OrganizationSchema brand={brand} baseUrl={baseUrl} />
       <CustomNavbar brand={brand} />
       <main className="flex-1">

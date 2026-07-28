@@ -56,7 +56,7 @@ export default async function HomePage() {
     ]);
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
     return (
-      <div className="flex min-h-screen flex-col">
+      <div className="marketing-accent flex min-h-screen flex-col">
         <OrganizationSchema brand={brand} baseUrl={baseUrl} />
         <ProductSchema brand={brand} baseUrl={baseUrl} plans={plans} />
         <CustomNavbar brand={brand} />
@@ -76,7 +76,7 @@ export default async function HomePage() {
   const heroVariant = await resolveHeroVariant();
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="marketing-accent flex min-h-screen flex-col">
       <AnnouncementBar />
       <LeadStackNavbar />
       <main className="flex-1">

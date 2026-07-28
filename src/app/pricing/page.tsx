@@ -109,7 +109,7 @@ export default async function PricingPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="marketing-accent flex min-h-screen flex-col">
       <OrganizationSchema brand={brand} baseUrl={baseUrl} />
       <ProductSchema brand={brand} baseUrl={baseUrl} plans={plans} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />

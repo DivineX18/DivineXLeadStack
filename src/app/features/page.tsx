@@ -3,6 +3,8 @@ import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import { OrganizationSchema } from "@/components/landing-custom/site-schema";
 import { FaqAccordion, type FaqItem } from "@/components/landing-custom/faq-accordion";
 import { ChannelDemo } from "@/components/landing-custom/channel-demo";
+import { StepFlow, type FlowStep } from "@/components/landing-custom/step-flow";
+import { cn } from "@/lib/utils";
 import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
@@ -78,6 +80,15 @@ const CAPTURE: Feature[] = [
   { icon: ShareIcon, title: "Attribution that survives the click", body: "UTM source, medium, campaign, fbclid, and gclid are captured on every form submission and stored on the contact — so \"where did this lead actually come from\" has a real answer." },
 ];
 
+const LEAD_CAPTURE_FLOW: FlowStep[] = [
+  { icon: Globe, label: "Website Visitor" },
+  { icon: FileText, label: "Lead Created" },
+  { icon: MessageSquareText, label: "SMS Sent" },
+  { icon: Mail, label: "Email Sent" },
+  { icon: CalendarClock, label: "Appointment Booked" },
+  { icon: KanbanSquare, label: "Pipeline Updated" },
+];
+
 const OPERATE: Feature[] = [
   { icon: Users, title: "Contacts built for speed", body: "A fast, searchable list, CSV import in seconds, and a profile page with notes and a unified activity timeline pulling every email, text, call, and form fill into one feed." },
   { icon: KanbanSquare, title: "A pipeline that shows the truth", body: "Six-stage Kanban board, drag-and-drop, days-in-stage on every card, and a lost-reason prompt — so next quarter's forecast is built on more than a guess." },
@@ -92,6 +103,13 @@ const CLOSE: Feature[] = [
   { icon: Mail, title: "Email and SMS from the same record", body: "Send from a contact's profile; replies route back to your own inbox, not a shared mailbox everyone has to check." },
 ];
 
+const AUTOMATION_FLOW: FlowStep[] = [
+  { icon: Zap, label: "Trigger", detail: "Form submitted" },
+  { icon: Webhook, label: "Workflow", detail: "Speed-to-lead runs" },
+  { icon: Mail, label: "Action", detail: "SMS + email sent" },
+  { icon: CheckSquare, label: "Result", detail: "Follow-up task created" },
+];
+
 const REPORT: Feature[] = [
   { icon: Globe, title: "Launch a client site in minutes", body: "Spin up a marketing site or a video-sales-letter funnel from a sectioned form — a live URL in one to three minutes." },
   { icon: Webhook, title: "A public API that isn't an afterthought", body: "REST endpoints for contacts, deals, tasks, events, and form submissions, plus signed outbound webhooks — so a script or a Zapier flow sees exactly what your team sees." },
@@ -103,6 +121,7 @@ function FeatureGroup({
   body,
   items,
   visual,
+  tone = "default",
 }: {
   eyebrow: string;
   title: string;
@@ -110,9 +129,11 @@ function FeatureGroup({
   items: Feature[];
   /** Optional interactive centerpiece, shown between the intro copy and the card grid — reserved for the one section per page that most benefits from "show, don't tell." */
   visual?: ReactNode;
+  /** Alternates section surface so the page has rhythm instead of one long identical background. */
+  tone?: "default" | "muted";
 }) {
   return (
-    <section className="py-14 md:py-16">
+    <section className={cn("py-14 md:py-16", tone === "muted" && "bg-muted/30")}>
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-sm font-semibold uppercase tracking-wide text-primary">{eyebrow}</p>
@@ -150,7 +171,7 @@ export default async function FeaturesPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="marketing-accent flex min-h-screen flex-col">
       <OrganizationSchema brand={brand} baseUrl={baseUrl} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <CustomNavbar brand={brand} />
@@ -179,8 +200,10 @@ export default async function FeaturesPage() {
           <FeatureGroup
             eyebrow="Capture"
             title="Turn visitors into contacts, automatically"
-            body="Forms, booking pages, and attribution tracking that all write into the same record."
+            body="One form submission cascades through every channel on its own — watch the same lead move end to end."
             items={CAPTURE}
+            visual={<StepFlow steps={LEAD_CAPTURE_FLOW} />}
+            tone="muted"
           />
         </div>
         <div className="border-t">
@@ -195,8 +218,10 @@ export default async function FeaturesPage() {
           <FeatureGroup
             eyebrow="Close"
             title="From lead to paid, without the back-and-forth"
-            body="Quoting, fast first response, and two-way messaging that keeps replies in your own inbox."
+            body="Quoting, fast first response, and two-way messaging that keeps replies in your own inbox. Every automated step below runs itself, no one watching the clock."
             items={CLOSE}
+            visual={<StepFlow steps={AUTOMATION_FLOW} />}
+            tone="muted"
           />
         </div>
         <div className="border-t">
