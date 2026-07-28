@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Inbox, MessageCircle, Users2, Receipt, LineChart, Plug } from "lucide-react";
+import { Inbox, MessageCircle, Users2, Receipt, LineChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import { OrganizationSchema } from "@/components/landing-custom/site-schema";
@@ -46,6 +46,9 @@ const PLATFORM_FAQS: FaqItem[] = [
   },
 ];
 
+// Same five stages as the homepage's journey visualization (Capture,
+// Convert, Deliver, Retain, Understand) — kept identical on purpose so
+// the story doesn't change shape between pages, just depth.
 const STAGES = [
   {
     icon: Inbox,
@@ -55,33 +58,27 @@ const STAGES = [
   },
   {
     icon: MessageCircle,
-    step: "Respond",
-    title: "Someone — or something — answers immediately",
-    body: "A form submit can trigger an SMS and email within seconds. An AI agent can answer web chat, SMS, WhatsApp, and phone calls around the clock, qualify the lead, and hand off a summary. You decide how much of the first response is automated and how much stays hands-on.",
-  },
-  {
-    icon: Users2,
-    step: "Organize",
-    title: "Nothing falls through because nothing's scattered",
-    body: "Contacts, a six-stage pipeline, a calendar, and a task list — the same four things a growing team actually uses, connected to each other instead of living in four different apps.",
+    step: "Convert",
+    title: "Someone — or something — answers immediately, and the deal moves",
+    body: "A form submit can trigger an SMS and email within seconds. An AI agent can answer web chat, SMS, WhatsApp, and phone calls around the clock, qualify the lead, and hand it into a six-stage pipeline you can actually see move.",
   },
   {
     icon: Receipt,
-    step: "Close & get paid",
+    step: "Deliver",
     title: "Quoting and payment collection without the back-and-forth",
-    body: "Build a line-itemed quote, send it, and the client can accept or pay from their inbox. Accepted quotes can auto-create a won deal, so the pipeline stays honest without extra data entry.",
+    body: "Build a line-itemed quote, send it, and the client can accept or pay from their inbox. Accepted quotes can auto-create a won deal, and bookings get an automatic confirmation — no extra data entry to keep either one honest.",
+  },
+  {
+    icon: Users2,
+    step: "Retain",
+    title: "Every client's history, in one place",
+    body: "Notes, messages, bookings, and quotes merge into one activity timeline per contact — a calendar and task list tied back to who they're about, so follow-up doesn't depend on anyone remembering.",
   },
   {
     icon: LineChart,
     step: "Understand",
     title: "See what's actually working",
-    body: "Date-range KPIs, a pipeline funnel, a won-revenue trend, and a leads-by-source breakdown — the numbers you'd otherwise be exporting to a spreadsheet to figure out.",
-  },
-  {
-    icon: Plug,
-    step: "Connect",
-    title: "It plugs into what you already run",
-    body: "A public REST API and outbound webhooks mean Zapier, Make, or a custom script can read and write the same data your team sees — you're not locked into working only inside the app.",
+    body: "Date-range KPIs, a pipeline funnel, a won-revenue trend, and a leads-by-source breakdown — the numbers you'd otherwise be exporting to a spreadsheet to figure out. A public API means a custom report can read the same data, too.",
   },
 ];
 

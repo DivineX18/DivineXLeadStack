@@ -28,7 +28,8 @@ import { LiveVisitorBeacon } from "@/components/landing/live-visitor-beacon";
 import { OrganizationSchema, ProductSchema } from "@/components/landing-custom/site-schema";
 import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { Hero as CustomHero } from "@/components/landing-custom/hero";
-import { Features as CustomFeatures } from "@/components/landing-custom/features";
+import { BeforeAfterFlow } from "@/components/landing-custom/before-after-flow";
+import { BusinessOperatingSystem } from "@/components/landing-custom/business-operating-system";
 import { Pricing as CustomPricing } from "@/components/landing-custom/pricing";
 import { FAQ as CustomFAQ } from "@/components/landing-custom/faq";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
@@ -61,7 +62,8 @@ export default async function HomePage() {
         <CustomNavbar brand={brand} />
         <main className="flex-1">
           <CustomHero brand={brand} />
-          <CustomFeatures />
+          <BeforeAfterFlow brand={brand} />
+          <BusinessOperatingSystem />
           <CustomPricing plans={plans} configured={billingStripeIsConfigured()} />
           <CustomFAQ brand={brand} />
           <CustomCTA brand={brand} pricingHref="#pricing" />
