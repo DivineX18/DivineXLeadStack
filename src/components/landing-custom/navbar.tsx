@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Menu } from "lucide-react";
+import { ChevronDown, Menu } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,24 @@ import {
   SheetTitle,
   SheetClose,
 } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { ResolvedBrand } from "@/config/landing";
 import { Logo } from "./logo";
+
+/** Lower-traffic pages grouped under the "Resources" dropdown so the flat
+ * nav row doesn't grow past ~6 items — Implementation and FAQ both support
+ * the buying decision but aren't primary navigation the way Platform/
+ * Features/Pricing are. */
+const RESOURCES_MENU = [
+  { href: "/resources", label: "Resources" },
+  { href: "/faq", label: "FAQ" },
+  { href: "/implementation", label: "Implementation" },
+];
 
 export function Navbar({ brand }: { brand: ResolvedBrand }) {
   const { user, loading } = useAuth();
@@ -46,23 +62,29 @@ export function Navbar({ brand }: { brand: ResolvedBrand }) {
       >
         Pricing
       </Link>
-      <Link
-        href="/resources"
-        className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        Resources
-      </Link>
-      <Link
-        href="/faq"
-        className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        FAQ
-      </Link>
+      <DropdownMenu>
+        <DropdownMenuTrigger className="flex items-center gap-1 text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-foreground">
+          Resources <ChevronDown className="h-3.5 w-3.5" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          {RESOURCES_MENU.map((item) => (
+            <DropdownMenuItem key={item.href} render={<Link href={item.href} />}>
+              {item.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
       <Link
         href="/about"
         className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         About
+      </Link>
+      <Link
+        href="/contact"
+        className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+      >
+        Contact
       </Link>
       {!loading && (
         <>
@@ -164,10 +186,22 @@ export function Navbar({ brand }: { brand: ResolvedBrand }) {
                 FAQ
               </SheetClose>
               <SheetClose
+                render={<Link href="/implementation" />}
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Implementation
+              </SheetClose>
+              <SheetClose
                 render={<Link href="/about" />}
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 About
+              </SheetClose>
+              <SheetClose
+                render={<Link href="/contact" />}
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Contact
               </SheetClose>
               {!loading && (
                 <>
