@@ -40,11 +40,15 @@ export interface CreateSubAccountInput {
     phone: string | null;
   } | null;
   /**
-   * Skip the agency's default-plan auto-assign. Set by callers that are
-   * about to set `billing` themselves right after creation — today only
-   * the public self-serve signup webhook, which already knows the exact
-   * plan the buyer paid for and would otherwise collide with the separate
-   * default-plan assignment below.
+   * Skip the agency's default-plan auto-assign. Two real callers:
+   *   - The public self-serve signup webhook, always true — it already
+   *     knows the exact plan the buyer paid for and would otherwise
+   *     collide with the default-plan assignment below.
+   *   - The agency owner's "New sub-account" form, user-controlled — lets
+   *     the owner explicitly land a fresh sub-account on "comped" (free/
+   *     test) instead of always auto-assigning the default paid plan,
+   *     e.g. for a demo account or one they're building a landing page
+   *     for before the client has agreed to anything.
    */
   skipDefaultPlanAssign?: boolean;
 }

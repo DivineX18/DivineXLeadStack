@@ -14,6 +14,14 @@ interface CreateBody {
     email?: string | null;
     phone?: string | null;
   } | null;
+  /**
+   * Owner-controlled opt-out of the agency's default-plan auto-assign —
+   * lets the create form offer "comped / free / test account" as an
+   * explicit choice instead of always landing on the default paid plan
+   * (which pays for itself but isn't what you want for a demo or a
+   * prospect's landing-page-only account).
+   */
+  skipDefaultPlanAssign?: boolean;
 }
 
 const SLUG_RE = /^[a-z0-9-]+$/;
@@ -148,6 +156,7 @@ export async function POST(request: Request) {
       slug,
       timezone,
       accountContact,
+      skipDefaultPlanAssign: body.skipDefaultPlanAssign === true,
     });
 
   return NextResponse.json({

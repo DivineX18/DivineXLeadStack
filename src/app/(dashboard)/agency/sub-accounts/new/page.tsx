@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { ArrowLeft, Building2, Hash, Layers, Mail, Phone, User as UserIcon } from "lucide-react";
+import { ArrowLeft, Building2, CreditCard, Globe, Hash, Layers, Mail, Phone, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TimezoneSelect } from "@/components/ui/timezone-select";
+import type { BillingPlanResponse } from "@/types/billing";
 
 interface SnapshotOption {
   id: string;
@@ -20,6 +21,13 @@ interface SnapshotOption {
     products: number;
     workflows: number;
   };
+}
+
+function formatPlanPrice(plan: BillingPlanResponse): string {
+  const amount = (plan.priceMonthlyCents / 100).toFixed(
+    plan.priceMonthlyCents % 100 === 0 ? 0 : 2,
+  );
+  return `$${amount}/mo`;
 }
 
 export default function NewSubAccountPage() {
@@ -39,6 +47,9 @@ export default function NewSubAccountPage() {
   const [nextNumber, setNextNumber] = useState<number | null>(null);
   const [snapshots, setSnapshots] = useState<SnapshotOption[]>([]);
   const [snapshotId, setSnapshotId] = useState("");
+  const [defaultPlan, setDefaultPlan] = useState<BillingPlanResponse | null>(null);
+  const [billingChoice, setBillingChoice] = useState<"default" | "comped">("default");
+  const [enableWebsiteNow, setEnableWebsiteNow] = useState(false);
 
   useEffect(() => {
     if (loading || agencyRole !== "owner") return;
@@ -55,6 +66,18 @@ export default function NewSubAccountPage() {
       .then((data) => {
         if (cancelled || !data) return;
         if (Array.isArray(data.snapshots)) setSnapshots(data.snapshots);
+      })
+      .catch(() => undefined);
+    // Only relevant if the agency has a default plan configured — if not,
+    // every new sub-account is comped already (the historical default) and
+    // there's nothing to choose, so the billing section below stays hidden.
+    fetch("/api/agency/plans")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        const plans = (data.plans ?? []) as BillingPlanResponse[];
+        const found = plans.find((p) => p.isDefault && p.status === "active") ?? null;
+        setDefaultPlan(found);
       })
       .catch(() => undefined);
     return () => {
@@ -107,6 +130,7 @@ export default function NewSubAccountPage() {
           slug: slug.trim(),
           timezone,
           accountContact,
+          skipDefaultPlanAssign: !defaultPlan || billingChoice === "comped",
         }),
       });
       const payload = (await res.json().catch(() => ({}))) as {
@@ -118,6 +142,36 @@ export default function NewSubAccountPage() {
       };
       if (!res.ok || !payload.subAccountId) {
         throw new Error(payload.error ?? "Could not create sub-account.");
+      }
+
+      // Best-effort follow-up, same pattern as the snapshot apply below —
+      // the account already exists, so a failed gate flip shouldn't block
+      // navigation. Lets "create a free/test account to build a landing
+      // page for a prospect" happen in one step instead of create-then-
+      // remember-to-go-flip-the-gate-in-Manage.
+      let websiteGateNote = "";
+      if (enableWebsiteNow) {
+        try {
+          const gateRes = await fetch(
+            `/api/agency/sub-accounts/${payload.subAccountId}/feature-gates`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ websiteEnabled: true }),
+            },
+          );
+          if (!gateRes.ok) {
+            const gateData = await gateRes.json().catch(() => ({}));
+            throw new Error(gateData.error ?? "Could not enable website builder.");
+          }
+          websiteGateNote = " Website builder access is on.";
+        } catch (gateErr) {
+          toast.warning(
+            gateErr instanceof Error
+              ? `Account created, but website access didn't enable: ${gateErr.message} You can flip it on from Manage.`
+              : "Account created, but website access didn't enable. You can flip it on from Manage.",
+          );
+        }
       }
 
       let billingNote = "";
@@ -177,7 +231,8 @@ export default function NewSubAccountPage() {
           ? `Created "${name.trim()}" (#${payload.accountNumber}).`
           : `Created "${name.trim()}".`) +
           snapshotNote +
-          billingNote,
+          billingNote +
+          websiteGateNote,
       );
       router.push(`/sa/${payload.subAccountId}/dashboard`);
       router.refresh();
@@ -313,6 +368,78 @@ export default function NewSubAccountPage() {
               </>
             )}
           </p>
+        </div>
+
+        {defaultPlan && (
+          <div className="space-y-3 border-t pt-5">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-3.5 w-3.5 text-muted-foreground" />
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Billing
+              </h2>
+            </div>
+            <div className="space-y-2">
+              <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-input p-3 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                <input
+                  type="radio"
+                  name="billing-choice"
+                  className="mt-0.5"
+                  checked={billingChoice === "default"}
+                  onChange={() => setBillingChoice("default")}
+                />
+                <span>
+                  Assign your default plan —{" "}
+                  <span className="font-medium">
+                    {defaultPlan.name} ({formatPlanPrice(defaultPlan)})
+                  </span>
+                  <span className="block text-[11px] text-muted-foreground">
+                    Workspace is locked for the client until they pay; you keep full access as the owner.
+                  </span>
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-input p-3 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                <input
+                  type="radio"
+                  name="billing-choice"
+                  className="mt-0.5"
+                  checked={billingChoice === "comped"}
+                  onChange={() => setBillingChoice("comped")}
+                />
+                <span>
+                  Comped — free / test account
+                  <span className="block text-[11px] text-muted-foreground">
+                    No billing at all. Use this for a demo, an internal test, or an account you&apos;re
+                    setting up for a prospect before they&apos;ve agreed to anything. Assign a real
+                    plan later from Manage whenever you&apos;re ready.
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-3 border-t pt-5">
+          <div className="flex items-center gap-2">
+            <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Access
+            </h2>
+          </div>
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-input p-3 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={enableWebsiteNow}
+              onChange={(e) => setEnableWebsiteNow(e.target.checked)}
+            />
+            <span>
+              Enable website builder now
+              <span className="block text-[11px] text-muted-foreground">
+                Off by default for every new sub-account. Turn this on if you need to build a landing
+                page for this client right away — otherwise you can flip it on later from Manage.
+              </span>
+            </span>
+          </label>
         </div>
 
         <div className="space-y-4 border-t pt-5">
