@@ -27,7 +27,7 @@ export const RESOURCE_POSTS: ResourcePost[] = [
     metaDescription:
       "Why response time is the single highest-leverage lever in lead follow-up, and how automated speed-to-lead sequences close the gap between form submission and first contact.",
     dek: "A lead that waits an hour for a reply has usually already moved on. Here's why response speed outweighs almost everything else in the first contact.",
-    readingMinutes: 5,
+    readingMinutes: 6,
     publishedAt: "2026-04-02",
     category: "Follow-Up",
     body: [
@@ -45,6 +45,8 @@ export const RESOURCE_POSTS: ResourcePost[] = [
       { type: "h2", text: "What automated speed-to-lead actually looks like" },
       { type: "p", text: "The fix isn't asking people to respond faster — it's removing the dependency on a person being available at all for the first response. A form submission can trigger an SMS and email within seconds, confirming receipt and setting expectations, while the lead's attention is still on you. Where it fits, an AI agent can go a step further: answering initial questions, qualifying the lead, and handing off a clear summary to a human for anything that needs judgment." },
       { type: "p", text: "The human follow-up still matters — automated speed-to-lead isn't a replacement for a real conversation, it's what keeps the lead warm long enough for that conversation to happen." },
+      { type: "h2", text: "Speed still has to respect boundaries" },
+      { type: "p", text: "Fast isn't the same as reckless. A speed-to-lead sequence that fires at 2am local time, or keeps texting someone who's already asked to be left alone, does more damage than a slow reply would have. A responsible sequence checks two things before it sends anything: is this inside a reasonable contact window for the recipient's own timezone, and has this person opted out. Speed is the goal, but it has to be speed within limits someone actually agreed to." },
       { type: "h2", text: "Where to start" },
       { type: "p", text: "If nothing else exists today, the highest-leverage first step is a simple automated acknowledgment the moment a lead comes in — even just confirming you received their message and telling them when to expect a real reply closes most of the gap. Layering in AI-qualified first response after that is where the bigger gains show up." },
     ],
@@ -55,7 +57,7 @@ export const RESOURCE_POSTS: ResourcePost[] = [
     metaDescription:
       "Generic sales-stage templates rarely fit how a specific business actually moves a lead to a close. Here's how to design pipeline stages around your real process instead.",
     dek: "A pipeline copied from a template you don't recognize your own sales process in isn't tracking anything useful. Here's how to build one that actually is.",
-    readingMinutes: 6,
+    readingMinutes: 7,
     publishedAt: "2026-04-16",
     category: "Pipeline",
     body: [
@@ -73,6 +75,10 @@ export const RESOURCE_POSTS: ResourcePost[] = [
       { type: "p", text: "More stages feels like more precision, but in practice a pipeline with twelve stages just means more clicking and more disagreement about which one applies. Somewhere between four and seven stages covers almost every real sales process without turning stage management into its own chore." },
       { type: "h2", text: "Revisit it once, not constantly" },
       { type: "p", text: "The instinct to keep tweaking stages as edge cases come up usually makes things worse, not better — a pipeline that changes shape every month stops being a reliable place to look for \"where do things actually stand.\" Get the stages right once, live with them for a real sales cycle, and only adjust based on a pattern you've actually seen repeat, not a single unusual deal." },
+      { type: "h2", text: "Track how long, not just where" },
+      { type: "p", text: "A stage name tells you where a deal is. It doesn't tell you whether it's been there for two days or two months — and a deal that's stalled looks identical to a deal that's moving, right up until someone actually checks. Surfacing days-in-stage on every card turns a pipeline from a snapshot into something you can actually triage: the deals sitting longest are usually the ones that need attention first, not the newest ones." },
+      { type: "h2", text: "Capture why a deal was lost, not just that it was" },
+      { type: "p", text: "\"Lost\" as a single stage throws away the most useful information a pipeline can give you. Prompting for a reason at the moment a deal is marked lost — too expensive, bad timing, went with a competitor — turns a pile of dead deals into a pattern you can actually act on. If half your losses cite price, that's a pricing conversation. If half cite timing, that's a follow-up-cadence conversation. Neither is visible from \"Lost\" alone." },
     ],
   },
   {
@@ -81,7 +87,7 @@ export const RESOURCE_POSTS: ResourcePost[] = [
     metaDescription:
       "AI agents are good at some parts of lead follow-up and genuinely bad at others. A practical breakdown of where automation helps and where a human still needs to take over.",
     dek: "Automating everything isn't the goal — automating the right five minutes is. Here's a practical line between what AI should handle and what a person should.",
-    readingMinutes: 5,
+    readingMinutes: 6,
     publishedAt: "2026-05-01",
     category: "AI Agents",
     body: [
@@ -101,6 +107,8 @@ export const RESOURCE_POSTS: ResourcePost[] = [
       { type: "p", text: "The version of this that goes wrong isn't \"too much automation\" — it's automation with no escalation path, where a frustrated or confused visitor just keeps talking to a bot with no way out. Business hours, escalation keywords, and a clear handoff to a real person aren't optional extras; they're what makes the automated part trustworthy in the first place." },
       { type: "h2", text: "Start narrow, expand deliberately" },
       { type: "p", text: "The lowest-risk starting point is usually after-hours coverage — a channel that would otherwise get zero response outside business hours picks up an automated one instead. From there, expanding into business-hours first response is a deliberate choice, not a default, and it works best once the escalation rules have actually been tested against real conversations." },
+      { type: "h2", text: "One persona, not four different bots" },
+      { type: "p", text: "A common mistake is standing up separate tools for chat, text, and phone — each with its own configuration, its own tone, and its own idea of what the business actually offers. A lead who starts on web chat and follows up by text shouldn't have to re-explain themselves to what is functionally a different assistant. Configuring the persona, the hours, and the escalation rules once, and having every channel answer from that same configuration, is what keeps the experience consistent instead of fragmented by whichever channel happened to be convenient that day." },
     ],
   },
   {
@@ -109,7 +117,7 @@ export const RESOURCE_POSTS: ResourcePost[] = [
     metaDescription:
       "When your CRM, texting tool, booking tool, and quoting tool don't talk to each other, the cost isn't just the subscriptions — it's the leads that fall through the seams between them.",
     dek: "Five tools that don't talk to each other aren't five conveniences. They're five places a lead can quietly disappear.",
-    readingMinutes: 4,
+    readingMinutes: 5,
     publishedAt: "2026-05-15",
     category: "Operations",
     body: [
@@ -127,6 +135,8 @@ export const RESOURCE_POSTS: ResourcePost[] = [
       { type: "p", text: "The value of consolidating onto one system isn't that it's more convenient to log into fewer apps — it's that every touchpoint with a lead becomes part of the same record, visible to anyone who needs it, instead of scattered across tools that require someone to manually reconcile. A text message, a booked appointment, and a sent quote showing up in the same activity timeline is the actual point, not a nice-to-have." },
       { type: "h2", text: "It doesn't have to happen all at once" },
       { type: "p", text: "Consolidating tool sprawl doesn't require ripping everything out on day one. The highest-leverage first move is usually whichever tool is causing the most information loss right now — often the texting or booking tool that isn't connected to anything else — and working outward from there." },
+      { type: "h2", text: "Consolidating shouldn't mean losing the tools you actually like" },
+      { type: "p", text: "The fear with \"just use one system\" is usually that it means giving up a tool that already works well for one specific job. That's a fair concern — but it's an argument for a system with a real API and outbound webhooks, not an argument against consolidating at all. If a core record can still notify or feed a specialized tool the moment something changes, you're not choosing between one system and five — you're choosing one source of truth that the others can still plug into." },
     ],
   },
   {
@@ -135,7 +145,7 @@ export const RESOURCE_POSTS: ResourcePost[] = [
     metaDescription:
       "No-shows aren't just a scheduling inconvenience — they're a real cost to any appointment-based business. Here's how automatic confirmations and reminders actually reduce them.",
     dek: "An empty slot on the calendar is a missed opportunity. An unconfirmed booking that turns into a no-show is worse — it was never really booked at all.",
-    readingMinutes: 4,
+    readingMinutes: 5,
     publishedAt: "2026-06-03",
     category: "Booking & Scheduling",
     body: [
@@ -152,6 +162,8 @@ export const RESOURCE_POSTS: ResourcePost[] = [
       { type: "p", text: "Sending a personal reminder text to every booked appointment works — until the number of appointments makes it impractical to remember for every single one, every single day. It's exactly the kind of task that's simple in principle and unreliable in practice once volume goes up, which is why it needs to happen automatically rather than depend on someone remembering." },
       { type: "h2", text: "Booking pages that handle this on their own" },
       { type: "p", text: "A public booking link where someone picks their own slot, gets an automatic ICS-confirmed booking, and receives reminders on a schedule set once — not per appointment — removes the dependency on anyone remembering to follow up. The reschedule option matters just as much as the reminder: making it easy to move an appointment is often what prevents it from becoming a no-show in the first place." },
+      { type: "h2", text: "For paid appointments, the deposit does double duty" },
+      { type: "p", text: "When a booking involves a fee, a small hold or deposit at the time of booking does more than collect money early — it filters for people who actually intend to show up. Someone who's put something on the line for a slot treats it differently than someone who claimed a free one on a whim. It's not a guarantee against no-shows, but combined with a confirmation and a well-timed reminder, it closes most of the remaining gap." },
     ],
   },
 ];

@@ -3,7 +3,6 @@ import { getPublicPlans } from "@/lib/server/public-signup-service";
 import { billingStripeIsConfigured } from "@/lib/server/billing-service";
 import { OrganizationSchema, ProductSchema } from "@/components/landing-custom/site-schema";
 import { FaqAccordion, type FaqItem } from "@/components/landing-custom/faq-accordion";
-import { HOMEPAGE_FAQS } from "@/components/landing-custom/faq";
 import {
   Users2,
   KanbanSquare,
@@ -73,10 +72,23 @@ const BILLING_FAQS: FaqItem[] = [
   },
 ];
 
-// One combined, organized FAQ instead of two separate accordion blocks
-// stacked on the page (general + billing repeated back to back reads as
-// padding, not depth) — same total question count, one coherent section.
-const PRICING_PAGE_FAQS: FaqItem[] = [...HOMEPAGE_FAQS, ...BILLING_FAQS];
+// Billing-specific questions plus the two general ones someone about to pay
+// actually asks (imports, data safety) — not a repeat of the full homepage
+// FAQ, which duplicated content already covered on /faq and made this
+// section read as padding rather than a focused pre-purchase check.
+const PRICING_PAGE_FAQS: FaqItem[] = [
+  ...BILLING_FAQS,
+  {
+    question: "What happens to my existing contacts when I sign up?",
+    answer:
+      "Send over whatever you've got — a spreadsheet, an export from another CRM — and they're imported, matched, and ready to work from before you finish setup. No manual re-entry.",
+  },
+  {
+    question: "Is my data safe?",
+    answer:
+      "Your workspace is yours alone — only you and the people you invite can access it. Data is encrypted at rest, and you can export everything as a CSV whenever you want.",
+  },
+];
 
 const CONSOLIDATES = [
   { icon: MessageSquareText, label: "A separate texting/AI-answering tool", body: "SMS, WhatsApp, and web chat auto-replies are part of the platform, not a bolt-on line item." },

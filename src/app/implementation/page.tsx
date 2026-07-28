@@ -7,6 +7,7 @@ import { FaqAccordion, type FaqItem } from "@/components/landing-custom/faq-acco
 import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
+import { StepFlow, type FlowStep } from "@/components/landing-custom/step-flow";
 
 export async function generateMetadata() {
   const brand = await resolveCustomBrand();
@@ -44,23 +45,30 @@ const STEPS = [
   {
     icon: ClipboardList,
     title: "Tell us about your business",
-    body: "How you currently handle leads, what tools you're already using, and where things tend to slip — a spreadsheet, a shared inbox, a CRM that doesn't fit anymore. No technical setup required on your end for this part.",
+    body: "How you currently handle leads, what tools you're already using, and where things tend to slip — a spreadsheet, a shared inbox, a CRM that doesn't fit anymore. No technical setup required on your end for this part; a conversation is enough for us to start building.",
   },
   {
     icon: Settings2,
     title: "We configure your systems",
-    body: "Contacts imported, pipeline stages built around how you actually sell, and a follow-up sequence configured — not a generic default template, one matched to your business.",
+    body: "Contacts imported, pipeline stages built around how you actually sell, and a follow-up sequence configured — not a generic default template, one matched to your business. If you want an AI agent answering chat, SMS, or calls, its persona and escalation rules get written around your actual services during this step too.",
   },
   {
     icon: Plug2,
     title: "Connect what you already use",
-    body: "Your sending email, a phone number for SMS and calls, and your calendar. Existing contacts come with you — nothing gets re-entered by hand.",
+    body: "Your sending email, a phone number for SMS and calls, and your calendar. Existing contacts come with you — nothing gets re-entered by hand, and nothing sits half-migrated while you keep working off two systems at once.",
   },
   {
     icon: Rocket,
     title: "Go live",
-    body: "Most teams are running within days, not months. You keep working the way you already do; the system is just underneath it now, catching what used to slip.",
+    body: "Most teams are running within days, not months. You keep working the way you already do; the system is just underneath it now, catching what used to slip — and every conversation, quote, and booking from day one is already in the record.",
   },
+];
+
+const IMPLEMENTATION_FLOW: FlowStep[] = [
+  { icon: ClipboardList, label: "Business Info", detail: "Tell us how you sell" },
+  { icon: Settings2, label: "System Setup", detail: "Pipeline + agent built" },
+  { icon: Plug2, label: "Tools Connected", detail: "Email, phone, calendar" },
+  { icon: Rocket, label: "Go Live", detail: "Running in days" },
 ];
 
 export default async function ImplementationPage() {
@@ -96,6 +104,15 @@ export default async function ImplementationPage() {
           </div>
         </section>
 
+        <section className="pb-10">
+          <div className="container mx-auto px-4">
+            <p className="mb-6 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              The four steps, at a glance
+            </p>
+            <StepFlow steps={IMPLEMENTATION_FLOW} />
+          </div>
+        </section>
+
         <section className="pb-16 md:pb-20">
           <div className="container mx-auto px-4">
             <div className="mx-auto grid max-w-3xl gap-5">
@@ -119,6 +136,32 @@ export default async function ImplementationPage() {
           </div>
         </section>
 
+        <section className="border-t bg-muted/30 py-16 md:py-20">
+          <div className="container mx-auto px-4">
+            <div className="mx-auto max-w-2xl text-center">
+              <p className="text-sm font-semibold uppercase tracking-wide text-primary">What&apos;s on us</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tighter sm:text-4xl">
+                Things you don&apos;t have to do yourself
+              </h2>
+            </div>
+            <div className="mx-auto mt-10 grid max-w-4xl gap-6 sm:grid-cols-3">
+              {[
+                { title: "Design the pipeline", body: "Stages get built around how your team already sells, not filled in from a generic template you have to adapt to." },
+                { title: "Write the automations", body: "Speed-to-lead sequences, escalation rules, and the AI agent's persona are configured during setup, not left as a blank builder for you to figure out." },
+                { title: "Clean up the data", body: "Existing contacts get matched and de-duplicated during import — you hand over what you have, not a spreadsheet you've already spent a weekend tidying." },
+              ].map(({ title, body }) => (
+                <div
+                  key={title}
+                  className="rounded-2xl border bg-card p-6 transition-all hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <h3 className="text-sm font-semibold">{title}</h3>
+                  <p className="mt-1.5 text-sm text-muted-foreground">{body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section className="border-t py-16 md:py-20">
           <div className="container mx-auto px-4">
             <div className="mx-auto max-w-2xl text-center">
@@ -127,7 +170,9 @@ export default async function ImplementationPage() {
               </h2>
               <p className="mt-4 text-lg text-muted-foreground">
                 Existing contacts and data come with you — implementation includes bringing your
-                current system over, not asking you to start from a blank slate.
+                current system over, not asking you to start from a blank slate. Whatever
+                you&apos;re moving off, the pipeline, contacts, and follow-up rules are rebuilt
+                around your business before you ever log in for the first time.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Button render={<Link href="/contact" />} size="lg" className="px-6 text-base">

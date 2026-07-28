@@ -18,9 +18,9 @@ export async function generateMetadata() {
 }
 
 const WHO_ITS_FOR = [
-  { title: "Service businesses", body: "Coaches, consultants, agencies, and local service providers running on referrals and inbound leads that need a real system underneath them." },
-  { title: "Small sales teams", body: "A handful of people who all need to see the same pipeline and the same contact history — without paying for enterprise CRM seats." },
-  { title: "Anyone tired of tool sprawl", body: "If your lead flow currently touches a spreadsheet, a shared inbox, a separate texting app, and a calendar tool that don't talk to each other, this replaces the seams." },
+  { title: "Service businesses", body: "Coaches, consultants, agencies, and local service providers running on referrals and inbound leads that need a real system underneath them instead of a growing pile of sticky notes and half-finished spreadsheets." },
+  { title: "Small sales teams", body: "A handful of people who all need to see the same pipeline and the same contact history — without paying for enterprise CRM seats or waiting on an admin to configure anything." },
+  { title: "Anyone tired of tool sprawl", body: "If your lead flow currently touches a spreadsheet, a shared inbox, a separate texting app, and a calendar tool that don't talk to each other, this replaces the seams between them with one record." },
 ];
 
 const PLATFORM_FAQS: FaqItem[] = [
@@ -54,31 +54,31 @@ const STAGES = [
     icon: Inbox,
     step: "Capture",
     title: "Every lead lands somewhere real",
-    body: "A form on your site, a booking page, a web chat widget — every one of them writes straight into a real contact record, with the campaign it came from attached. Nothing sits in an inbox waiting to be copied somewhere else.",
+    body: "A form on your site, a booking page, a web chat widget — every one of them writes straight into a real contact record, with the campaign it came from attached. Nothing sits in an inbox waiting to be copied somewhere else, and nothing depends on someone remembering to log it.",
   },
   {
     icon: MessageCircle,
     step: "Convert",
     title: "Someone — or something — answers immediately, and the deal moves",
-    body: "A form submit can trigger an SMS and email within seconds. An AI agent can answer web chat, SMS, WhatsApp, and phone calls around the clock, qualify the lead, and hand it into a six-stage pipeline you can actually see move.",
+    body: "A form submit can trigger an SMS and email within seconds. An AI agent can answer web chat, SMS, WhatsApp, and phone calls around the clock, qualify the lead, and hand it into a six-stage pipeline you can actually see move — with drag-and-drop stages and days-in-stage visible on every card.",
   },
   {
     icon: Receipt,
     step: "Deliver",
     title: "Quoting and payment collection without the back-and-forth",
-    body: "Build a line-itemed quote, send it, and the client can accept or pay from their inbox. Accepted quotes can auto-create a won deal, and bookings get an automatic confirmation — no extra data entry to keep either one honest.",
+    body: "Build a line-itemed quote, send it, and the client can accept or pay from their inbox. Accepted quotes can auto-create a won deal, and bookings get an automatic confirmation — no extra data entry to keep either one honest, and no separate document to reconcile against the deal later.",
   },
   {
     icon: Users2,
     step: "Retain",
     title: "Every client's history, in one place",
-    body: "Notes, messages, bookings, and quotes merge into one activity timeline per contact — a calendar and task list tied back to who they're about, so follow-up doesn't depend on anyone remembering.",
+    body: "Notes, messages, bookings, and quotes merge into one activity timeline per contact — a calendar and task list tied back to who they're about, so follow-up doesn't depend on anyone remembering. Whoever picks up the account next sees the same history, not a gap they have to ask around to fill.",
   },
   {
     icon: LineChart,
     step: "Understand",
     title: "See what's actually working",
-    body: "Date-range KPIs, a pipeline funnel, a won-revenue trend, and a leads-by-source breakdown — the numbers you'd otherwise be exporting to a spreadsheet to figure out. A public API means a custom report can read the same data, too.",
+    body: "Date-range KPIs, a pipeline funnel, a won-revenue trend, and a leads-by-source breakdown — the numbers you'd otherwise be exporting to a spreadsheet to figure out. A public API means a custom report can read the same data, too, so this isn't the only place the numbers can live.",
   },
 ];
 

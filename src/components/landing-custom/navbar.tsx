@@ -22,14 +22,19 @@ import {
 import type { ResolvedBrand } from "@/config/landing";
 import { Logo } from "./logo";
 
-/** Lower-traffic pages grouped under the "Resources" dropdown so the flat
- * nav row doesn't grow past ~6 items — Implementation and FAQ both support
- * the buying decision but aren't primary navigation the way Platform/
- * Features/Pricing are. */
+/** Flat row stays to the three pages a prospect actually needs to decide
+ * "is this for me and what does it cost": Platform, Industries, Pricing.
+ * Everything else groups into one of two small dropdowns so the row never
+ * grows past 5 top-level slots. Features isn't dropped — it's linked from
+ * the Platform page's own CTA and the footer — just not top-level nav. */
 const RESOURCES_MENU = [
   { href: "/resources", label: "Resources" },
   { href: "/faq", label: "FAQ" },
   { href: "/implementation", label: "Implementation" },
+];
+const COMPANY_MENU = [
+  { href: "/about", label: "About" },
+  { href: "/contact", label: "Contact" },
 ];
 
 export function Navbar({ brand }: { brand: ResolvedBrand }) {
@@ -43,12 +48,6 @@ export function Navbar({ brand }: { brand: ResolvedBrand }) {
         className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         Platform
-      </Link>
-      <Link
-        href="/features"
-        className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        Features
       </Link>
       <Link
         href="/industries"
@@ -74,18 +73,18 @@ export function Navbar({ brand }: { brand: ResolvedBrand }) {
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-      <Link
-        href="/about"
-        className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        About
-      </Link>
-      <Link
-        href="/contact"
-        className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        Contact
-      </Link>
+      <DropdownMenu>
+        <DropdownMenuTrigger className="flex items-center gap-1 text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-foreground">
+          Company <ChevronDown className="h-3.5 w-3.5" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          {COMPANY_MENU.map((item) => (
+            <DropdownMenuItem key={item.href} render={<Link href={item.href} />}>
+              {item.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
       {!loading && (
         <>
           {user ? (
