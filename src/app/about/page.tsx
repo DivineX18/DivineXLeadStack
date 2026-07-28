@@ -146,28 +146,32 @@ export default async function AboutPage() {
                 What {brand.name} is — and isn&rsquo;t
               </h2>
               <div className="mx-auto mt-10 grid max-w-3xl gap-5 sm:grid-cols-2">
-                <div className="rounded-2xl border border-destructive/15 bg-destructive/[0.03] p-6">
-                  <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-destructive/80">
+                <div className="rounded-2xl border border-destructive/25 bg-destructive/[0.07] p-6 shadow-sm sm:p-7">
+                  <p className="mb-5 text-xs font-bold uppercase tracking-wider text-destructive">
                     {brand.name} is not
                   </p>
-                  <div className="space-y-3">
+                  <div className="space-y-3.5">
                     {FLOW_IS_NOT.map((item) => (
-                      <div key={item} className="flex items-start gap-2.5">
-                        <X className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive/60" />
-                        <p className="text-sm text-muted-foreground">{item}</p>
+                      <div key={item} className="flex items-start gap-3">
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-destructive/15">
+                          <X className="h-3 w-3 text-destructive" strokeWidth={3} />
+                        </span>
+                        <p className="text-[15px] text-foreground/70">{item}</p>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-6">
-                  <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-primary">
+                <div className="rounded-2xl border border-primary/30 bg-primary/[0.08] p-6 shadow-sm sm:p-7">
+                  <p className="mb-5 text-xs font-bold uppercase tracking-wider text-primary">
                     {brand.name} is
                   </p>
-                  <div className="space-y-3">
+                  <div className="space-y-3.5">
                     {FLOW_IS.map((item) => (
-                      <div key={item} className="flex items-start gap-2.5">
-                        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                        <p className="text-sm text-foreground/90">{item}</p>
+                      <div key={item} className="flex items-start gap-3">
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                          <Check className="h-3 w-3" strokeWidth={3} />
+                        </span>
+                        <p className="text-[15px] font-medium text-foreground">{item}</p>
                       </div>
                     ))}
                   </div>
