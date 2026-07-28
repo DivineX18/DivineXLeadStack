@@ -155,6 +155,14 @@ const PUBLIC_PATHS = [
   "/pricing",
   "/activate",
   "/api/public",
+  // Marketing pages (custom landing variant) — content-only, no auth.
+  // Each was missing here initially, which silently redirected every
+  // signed-out visitor to /login instead of showing the page.
+  "/platform",
+  "/features",
+  "/implementation",
+  "/faq",
+  "/contact",
 ];
 
 /**
