@@ -58,6 +58,12 @@ export function Navbar({ brand }: { brand: ResolvedBrand }) {
       >
         FAQ
       </Link>
+      <Link
+        href="/about"
+        className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+      >
+        About
+      </Link>
       {!loading && (
         <>
           {user ? (
@@ -156,6 +162,12 @@ export function Navbar({ brand }: { brand: ResolvedBrand }) {
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 FAQ
+              </SheetClose>
+              <SheetClose
+                render={<Link href="/about" />}
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                About
               </SheetClose>
               {!loading && (
                 <>
