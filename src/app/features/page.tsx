@@ -1,6 +1,8 @@
+import type { ReactNode } from "react";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import { OrganizationSchema } from "@/components/landing-custom/site-schema";
 import { FaqAccordion, type FaqItem } from "@/components/landing-custom/faq-accordion";
+import { ChannelDemo } from "@/components/landing-custom/channel-demo";
 import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
@@ -95,7 +97,20 @@ const REPORT: Feature[] = [
   { icon: Webhook, title: "A public API that isn't an afterthought", body: "REST endpoints for contacts, deals, tasks, events, and form submissions, plus signed outbound webhooks — so a script or a Zapier flow sees exactly what your team sees." },
 ];
 
-function FeatureGroup({ eyebrow, title, body, items }: { eyebrow: string; title: string; body: string; items: Feature[] }) {
+function FeatureGroup({
+  eyebrow,
+  title,
+  body,
+  items,
+  visual,
+}: {
+  eyebrow: string;
+  title: string;
+  body: string;
+  items: Feature[];
+  /** Optional interactive centerpiece, shown between the intro copy and the card grid — reserved for the one section per page that most benefits from "show, don't tell." */
+  visual?: ReactNode;
+}) {
   return (
     <section className="py-14 md:py-16">
       <div className="container mx-auto px-4">
@@ -104,6 +119,7 @@ function FeatureGroup({ eyebrow, title, body, items }: { eyebrow: string; title:
           <h2 className="mt-2 text-2xl font-semibold tracking-tighter sm:text-4xl">{title}</h2>
           <p className="mt-3 text-muted-foreground">{body}</p>
         </div>
+        {visual && <div className="mt-10">{visual}</div>}
         <div className="mx-auto mt-10 grid max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {items.map(({ icon: Icon, title: t, body: b }) => (
             <div key={t} className="group rounded-2xl border bg-card p-6 transition-all hover:-translate-y-0.5 hover:shadow-md">
@@ -155,8 +171,9 @@ export default async function FeaturesPage() {
         <FeatureGroup
           eyebrow="AI Agents"
           title="One persona. Every channel."
-          body="Configure the agent once — it answers consistently everywhere your leads actually reach out."
+          body="Configure the agent once — it answers consistently everywhere your leads actually reach out. Switch channels below to see the same conversation happen on each one."
           items={AI_AGENTS}
+          visual={<ChannelDemo />}
         />
         <div className="border-t">
           <FeatureGroup
