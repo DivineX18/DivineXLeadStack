@@ -35,10 +35,22 @@ export function Navbar({ brand }: { brand: ResolvedBrand }) {
         Features
       </Link>
       <Link
+        href="/industries"
+        className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+      >
+        Industries
+      </Link>
+      <Link
         href="/pricing"
         className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         Pricing
+      </Link>
+      <Link
+        href="/resources"
+        className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+      >
+        Resources
       </Link>
       <Link
         href="/faq"
@@ -122,10 +134,22 @@ export function Navbar({ brand }: { brand: ResolvedBrand }) {
                 Features
               </SheetClose>
               <SheetClose
+                render={<Link href="/industries" />}
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Industries
+              </SheetClose>
+              <SheetClose
                 render={<Link href="/pricing" />}
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 Pricing
+              </SheetClose>
+              <SheetClose
+                render={<Link href="/resources" />}
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Resources
               </SheetClose>
               <SheetClose
                 render={<Link href="/faq" />}

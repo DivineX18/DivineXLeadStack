@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { LANDING_VARIANT } from "@/config/landing";
 import { COMPARISON_SLUGS } from "@/data/comparisons";
+import { INDUSTRIES } from "@/data/industries";
+import { RESOURCE_POSTS } from "@/data/resources-posts";
 
 /**
  * Sitemap. Next.js 15 picks this file up automatically and serves the
@@ -26,6 +28,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${baseUrl}/implementation`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${baseUrl}/faq`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${baseUrl}/contact`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${baseUrl}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${baseUrl}/industries`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    ...INDUSTRIES.map((industry) => ({
+      url: `${baseUrl}/industries/${industry.slug}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
+    { url: `${baseUrl}/resources`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
+    ...RESOURCE_POSTS.map((post) => ({
+      url: `${baseUrl}/resources/${post.slug}`,
+      lastModified: new Date(post.publishedAt),
+      changeFrequency: "yearly" as const,
+      priority: 0.6,
+    })),
     // Public API reference is NOT LANDING_VARIANT-gated — it ships on every
     // deployment (see src/app/docs/api/page.tsx), so it belongs in every
     // deployment's sitemap, not just leadstackOnly below.

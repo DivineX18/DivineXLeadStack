@@ -163,6 +163,8 @@ const PUBLIC_PATHS = [
   "/implementation",
   "/faq",
   "/contact",
+  "/industries",
+  "/resources",
 ];
 
 /**

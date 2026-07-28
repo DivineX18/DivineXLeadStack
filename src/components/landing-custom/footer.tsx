@@ -65,6 +65,14 @@ export function Footer({ brand }: { brand: ResolvedBrand }) {
               </li>
               <li>
                 <Link
+                  href="/industries"
+                  className="transition-colors hover:text-foreground"
+                >
+                  Industries
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/faq"
                   className="transition-colors hover:text-foreground"
                 >
@@ -113,8 +121,24 @@ export function Footer({ brand }: { brand: ResolvedBrand }) {
           </div>
 
           <div>
-            <h3 className="mb-3 text-sm font-semibold">Contact</h3>
+            <h3 className="mb-3 text-sm font-semibold">Company</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
+              <li>
+                <Link
+                  href="/about"
+                  className="transition-colors hover:text-foreground"
+                >
+                  About
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/resources"
+                  className="transition-colors hover:text-foreground"
+                >
+                  Resources
+                </Link>
+              </li>
               <li>
                 <Link
                   href="/contact"
@@ -129,14 +153,6 @@ export function Footer({ brand }: { brand: ResolvedBrand }) {
                   className="transition-colors hover:text-foreground"
                 >
                   {brand.supportEmail}
-                </a>
-              </li>
-              <li>
-                <a
-                  href={`https://${brand.primaryDomain}`}
-                  className="transition-colors hover:text-foreground"
-                >
-                  {brand.primaryDomain}
                 </a>
               </li>
             </ul>
