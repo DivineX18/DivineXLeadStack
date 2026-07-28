@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Check, X } from "lucide-react";
 
 import { LANDING_VARIANT } from "@/config/landing";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
@@ -24,7 +24,7 @@ export async function generateMetadata() {
     const brand = await resolveCustomBrand();
     return {
       title: `About — ${brand.name}`,
-      description: `${brand.name} is the growth operations platform in the DivineX ecosystem — built to run the day-to-day of a growing business: leads, follow-up, pipeline, and getting paid, in one place.`,
+      description: `${brand.name} is DivineX's growth operations platform — built to run the day-to-day of a growing business: leads, follow-up, pipeline, and getting paid, in one place.`,
       openGraph: { title: `About — ${brand.name}`, type: "website" as const },
     };
   }
@@ -54,6 +54,31 @@ const APPS = [
     href: "https://sigmaseo.io",
     blurb: "SEO tooling to audit, optimise, and grow organic search traffic.",
   },
+];
+
+const FLOW_IS_NOT = [
+  "A project-management tool",
+  "A generic marketing-automation platform",
+  "A website builder on its own",
+  "A place data goes to sit",
+  "Something you need a developer to configure",
+];
+
+const FLOW_IS = [
+  "A CRM built to run day-to-day operations, not just record them",
+  "One record for every touchpoint — chat, text, call, email, quote, booking",
+  "AI agents that answer the moment a lead reaches out, on any channel",
+  "Pipeline stages configured around how your team actually sells",
+  "Ready to run in days, not months",
+];
+
+const INCLUDED = [
+  { name: "Contacts & Pipeline", desc: "A searchable list and a six-stage Kanban board, both reading from the same record." },
+  { name: "AI Agents", desc: "One persona answering web chat, SMS, WhatsApp, and phone calls, day or night." },
+  { name: "Quotes & Booking", desc: "Line-itemed quotes clients accept from their inbox; public booking pages with automatic confirmations." },
+  { name: "Automations", desc: "Speed-to-lead sequences that respond within seconds of a form submission." },
+  { name: "Reporting", desc: "Pipeline funnel, won-revenue trend, and lead-source breakdown, always current." },
+  { name: "Public API", desc: "REST endpoints and outbound webhooks — connect the tools you already use." },
 ];
 
 const PRINCIPLES = [
@@ -86,13 +111,12 @@ export default async function AboutPage() {
               <p className="text-sm font-semibold uppercase tracking-wide text-primary">About</p>
               <h1 className="mx-auto mt-2 max-w-3xl text-balance text-4xl font-semibold tracking-tighter sm:text-5xl">
                 The growth operations platform{" "}
-                <span className="font-serif font-normal italic">in the DivineX ecosystem</span>.
+                <span className="font-serif font-normal italic">for growing businesses</span>.
               </h1>
               <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-                {brand.name} is built by DivineX, provided by Jade&rsquo;s Gems &amp; SOULutions
-                LLC. It exists to run the operational side of a growing business — capturing
-                leads, responding fast, keeping a pipeline honest, and getting paid — after the
-                strategy work is done.
+                {brand.name} is built by DivineX. It exists to run the operational side of a
+                growing business — capturing leads, responding fast, keeping a pipeline honest,
+                and getting paid, all from one system.
               </p>
             </div>
           </section>
@@ -101,17 +125,75 @@ export default async function AboutPage() {
             <div className="container mx-auto px-4">
               <div className="mx-auto max-w-3xl">
                 <h2 className="text-2xl font-semibold tracking-tighter sm:text-4xl">
-                  Two products, one progression
+                  Built to run the operational side, not just record it
                 </h2>
                 <p className="mt-4 text-muted-foreground">
-                  DivineX runs on two connected phases: understand the business, then improve it.
-                  Ascend, DivineX&rsquo;s business-intelligence product, helps a business figure
-                  out what actually needs to change — its primary growth constraint, a blueprint,
-                  a roadmap. {brand.name} is where that plan gets executed day to day: the
-                  contacts, pipeline, follow-up, and booking that turn a strategy into completed
-                  work. Each stands on its own — {brand.name} doesn&rsquo;t require Ascend to be
-                  useful — but together they cover the full loop from diagnosis to execution.
+                  Most small businesses don&rsquo;t lose deals because of bad service — they lose
+                  them because a lead sits unanswered too long, a follow-up gets forgotten, or a
+                  pipeline nobody trusts stops getting checked. A CRM that only stores information
+                  after the fact doesn&rsquo;t fix that; it just documents it. {brand.name} is
+                  built around the parts of the day that actually decide whether a lead becomes a
+                  client: the first response, the follow-up that happens without anyone having to
+                  remember it, and one record the whole team can trust.
                 </p>
+              </div>
+            </div>
+          </section>
+
+          <section className="border-t bg-muted/30 py-16 md:py-20">
+            <div className="container mx-auto px-4">
+              <h2 className="text-center text-2xl font-semibold tracking-tighter sm:text-4xl">
+                What {brand.name} is — and isn&rsquo;t
+              </h2>
+              <div className="mx-auto mt-10 grid max-w-3xl gap-5 sm:grid-cols-2">
+                <div className="rounded-2xl border border-destructive/15 bg-destructive/[0.03] p-6">
+                  <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-destructive/80">
+                    {brand.name} is not
+                  </p>
+                  <div className="space-y-3">
+                    {FLOW_IS_NOT.map((item) => (
+                      <div key={item} className="flex items-start gap-2.5">
+                        <X className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive/60" />
+                        <p className="text-sm text-muted-foreground">{item}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-6">
+                  <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-primary">
+                    {brand.name} is
+                  </p>
+                  <div className="space-y-3">
+                    {FLOW_IS.map((item) => (
+                      <div key={item} className="flex items-start gap-2.5">
+                        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                        <p className="text-sm text-foreground/90">{item}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="border-t py-16 md:py-20">
+            <div className="container mx-auto px-4">
+              <div className="mx-auto max-w-2xl text-center">
+                <p className="text-sm font-semibold uppercase tracking-wide text-primary">The platform</p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tighter sm:text-4xl">
+                  Six pieces. One system.
+                </h2>
+              </div>
+              <div className="mx-auto mt-10 flex max-w-2xl flex-col divide-y divide-border">
+                {INCLUDED.map(({ name, desc }) => (
+                  <div key={name} className="flex items-start gap-4 py-4">
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                    <div className="flex flex-1 flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                      <span className="text-sm font-semibold">{name}</span>
+                      <span className="text-sm text-muted-foreground">{desc}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </section>
@@ -137,12 +219,16 @@ export default async function AboutPage() {
 
           <section className="border-t py-16 md:py-20">
             <div className="container mx-auto px-4">
-              <div className="mx-auto max-w-2xl text-center">
-                <h2 className="text-2xl font-semibold tracking-tighter sm:text-4xl">Get in touch</h2>
+              <div className="mx-auto max-w-2xl rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/[0.06] to-transparent p-8 text-center sm:p-10">
+                <div className="mx-auto mb-5 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+                  <span className="text-sm font-bold">D</span>
+                </div>
+                <h2 className="text-2xl font-semibold tracking-tighter sm:text-3xl">
+                  Built by DivineX
+                </h2>
                 <p className="mt-4 text-muted-foreground">
-                  {brand.name} is provided by Jade&rsquo;s Gems &amp; SOULutions LLC, doing
-                  business as DivineX, based in Houston, Texas. Questions about the product,
-                  pricing, or anything else —{" "}
+                  {brand.name} is built by DivineX, based in Houston, Texas. Questions about the
+                  product, pricing, or anything else — {" "}
                   <Link href="/contact" className="text-primary hover:underline">
                     reach out directly
                   </Link>{" "}
