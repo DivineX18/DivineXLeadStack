@@ -13,17 +13,20 @@ import {
 } from "@/hooks/use-gitpage-status";
 import { Button } from "@/components/ui/button";
 import { WebsiteBuilder } from "@/components/website/website-builder";
-import { MAX_WEBSITES_PER_SUBACCOUNT } from "@/lib/website/limits";
+import { effectiveWebsiteCap } from "@/lib/website/limits";
 import type { WebsiteDoc } from "@/types/website";
 
 /**
- * Website builder — a sub-account can hold up to MAX_WEBSITES_PER_SUBACCOUNT
- * sites. This page owns the collection subscription + the "Add website"
- * affordance and the account-wide activation gate; each site card renders via
- * <WebsiteBuilder/>, which holds its own form + build/status logic.
+ * Website builder — a sub-account can hold up to its effective site cap
+ * (the shared default, or a per-sub-account `websiteMaxSites` override —
+ * see effectiveWebsiteCap). This page owns the collection subscription +
+ * the "Add website" affordance and the account-wide activation gate; each
+ * site card renders via <WebsiteBuilder/>, which holds its own form +
+ * build/status logic.
  */
 export default function WebsitePage() {
-  const { subAccountId, isAdmin, loading: subLoading } = useSubAccount();
+  const { subAccount, subAccountId, isAdmin, loading: subLoading } = useSubAccount();
+  const maxSites = effectiveWebsiteCap(subAccount);
   const [sites, setSites] = useState<WebsiteDoc[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -71,7 +74,8 @@ export default function WebsitePage() {
     return [...sites].sort((a, b) => toMillis(a) - toMillis(b));
   }, [sites]);
 
-  const atCap = orderedSites.length >= MAX_WEBSITES_PER_SUBACCOUNT;
+  const atCap = orderedSites.length >= maxSites;
+  const maxSitesLabel = Number.isFinite(maxSites) ? String(maxSites) : "unlimited";
   const gateBlocked = gateState.kind === "subscribe-needed";
 
   const handleAdd = useCallback(async () => {
@@ -124,7 +128,7 @@ export default function WebsitePage() {
           <h1 className="text-2xl font-bold tracking-tight">Websites</h1>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Build up to {MAX_WEBSITES_PER_SUBACCOUNT} marketing sites for this
+          Build up to {maxSitesLabel} marketing sites for this
           client via gitpage.site. Add a site, fill in the details, hit Build,
           and we&apos;ll return a live URL in a minute or two.
         </p>
@@ -142,7 +146,7 @@ export default function WebsitePage() {
           <p className="text-sm font-medium">No websites yet</p>
           <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
             Add your first site to get started. You can build up to{" "}
-            {MAX_WEBSITES_PER_SUBACCOUNT} per client.
+            {maxSitesLabel} per client.
           </p>
           <Button
             type="button"
@@ -171,7 +175,7 @@ export default function WebsitePage() {
 
           <div className="flex items-center justify-between rounded-2xl border border-dashed bg-card/50 p-4">
             <p className="text-xs text-muted-foreground">
-              {orderedSites.length} of {MAX_WEBSITES_PER_SUBACCOUNT} websites
+              {orderedSites.length} of {maxSitesLabel} websites
               used.
             </p>
             <Button

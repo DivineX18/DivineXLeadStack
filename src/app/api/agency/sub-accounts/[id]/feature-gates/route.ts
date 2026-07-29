@@ -41,6 +41,15 @@ interface PatchBody {
   whatsappEnabled?: boolean;
   metaInboxEnabled?: boolean;
   websiteEnabled?: boolean;
+  /**
+   * Per-sub-account override of the website-slot cap (see
+   * `lib/website/limits.ts::effectiveWebsiteCap`). `null` resets to the
+   * shared default; `-1` means unlimited; a positive integer sets that
+   * many slots instead of the default. Not a boolean gate, so it doesn't
+   * route through `applyFeatureGates` — it's a plain field write, same as
+   * the `*HiddenWhenDisabled` overrides below.
+   */
+  websiteMaxSites?: number | null;
   socialPlannerEnabled?: boolean;
   communityEnabled?: boolean;
   missedCallTextBackEnabled?: boolean;
@@ -102,6 +111,24 @@ export async function PATCH(
     typeof body.getLeadsHiddenWhenDisabled === "boolean";
   const wantsAiSuiteHidden =
     typeof body.aiSuiteHiddenWhenDisabled === "boolean";
+  const wantsWebsiteMaxSites = body.websiteMaxSites !== undefined;
+  if (
+    wantsWebsiteMaxSites &&
+    body.websiteMaxSites !== null &&
+    !(
+      typeof body.websiteMaxSites === "number" &&
+      Number.isInteger(body.websiteMaxSites) &&
+      (body.websiteMaxSites === -1 || body.websiteMaxSites > 0)
+    )
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "websiteMaxSites must be null (reset to default), -1 (unlimited), or a positive integer.",
+      },
+      { status: 400 },
+    );
+  }
   if (
     !wantsEmail &&
     !wantsApi &&
@@ -110,6 +137,7 @@ export async function PATCH(
     !wantsWhatsapp &&
     !wantsMetaInbox &&
     !wantsWebsite &&
+    !wantsWebsiteMaxSites &&
     !wantsSocialPlanner &&
     !wantsCommunity &&
     !wantsMissedCall &&
@@ -210,31 +238,34 @@ export async function PATCH(
   // "Locked" entry or omits it entirely. Persisted independently of the gate
   // so the agency owner can pre-set "hide" before flipping the feature off.
   // Not plan-managed, so they update here rather than in the gate service.
-  const hiddenUpdates: Record<string, unknown> = {};
+  const extraUpdates: Record<string, unknown> = {};
+  if (wantsWebsiteMaxSites) {
+    extraUpdates.websiteMaxSites = body.websiteMaxSites;
+  }
   if (wantsBroadcastsHidden) {
-    hiddenUpdates.broadcastsHiddenWhenDisabled =
+    extraUpdates.broadcastsHiddenWhenDisabled =
       body.broadcastsHiddenWhenDisabled;
   }
   if (wantsWebsiteHidden) {
-    hiddenUpdates.websiteHiddenWhenDisabled = body.websiteHiddenWhenDisabled;
+    extraUpdates.websiteHiddenWhenDisabled = body.websiteHiddenWhenDisabled;
   }
   if (wantsSocialPlannerHidden) {
-    hiddenUpdates.socialPlannerHiddenWhenDisabled =
+    extraUpdates.socialPlannerHiddenWhenDisabled =
       body.socialPlannerHiddenWhenDisabled;
   }
   if (wantsCommunityHidden) {
-    hiddenUpdates.communityHiddenWhenDisabled =
+    extraUpdates.communityHiddenWhenDisabled =
       body.communityHiddenWhenDisabled;
   }
   if (wantsGetLeadsHidden) {
-    hiddenUpdates.getLeadsHiddenWhenDisabled = body.getLeadsHiddenWhenDisabled;
+    extraUpdates.getLeadsHiddenWhenDisabled = body.getLeadsHiddenWhenDisabled;
   }
   if (wantsAiSuiteHidden) {
-    hiddenUpdates.aiSuiteHiddenWhenDisabled = body.aiSuiteHiddenWhenDisabled;
+    extraUpdates.aiSuiteHiddenWhenDisabled = body.aiSuiteHiddenWhenDisabled;
   }
-  if (Object.keys(hiddenUpdates).length > 0) {
-    hiddenUpdates.updatedAt = FieldValue.serverTimestamp();
-    await subRef.update(hiddenUpdates);
+  if (Object.keys(extraUpdates).length > 0) {
+    extraUpdates.updatedAt = FieldValue.serverTimestamp();
+    await subRef.update(extraUpdates);
   }
 
   return NextResponse.json({
@@ -248,6 +279,7 @@ export async function PATCH(
     ...(wantsWhatsapp ? { whatsappEnabled: body.whatsappEnabled } : {}),
     ...(wantsMetaInbox ? { metaInboxEnabled: body.metaInboxEnabled } : {}),
     ...(wantsWebsite ? { websiteEnabled: body.websiteEnabled } : {}),
+    ...(wantsWebsiteMaxSites ? { websiteMaxSites: body.websiteMaxSites } : {}),
     ...(wantsSocialPlanner
       ? { socialPlannerEnabled: body.socialPlannerEnabled }
       : {}),

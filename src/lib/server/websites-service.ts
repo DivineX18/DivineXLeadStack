@@ -2,7 +2,7 @@ import "server-only";
 
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
-import { MAX_WEBSITES_PER_SUBACCOUNT } from "@/lib/website/limits";
+import { effectiveWebsiteCap } from "@/lib/website/limits";
 import {
   validateWebsiteConfig,
   type ValidationErrors,
@@ -68,6 +68,7 @@ async function requireWebsiteEnabledSub(subAccountId: string): Promise<{
   agencyId: string;
   name: string | undefined;
   data: Record<string, unknown>;
+  maxSites: number;
 }> {
   const snap = await getAdminDb().doc(`subAccounts/${subAccountId}`).get();
   if (!snap.exists) {
@@ -81,7 +82,12 @@ async function requireWebsiteEnabledSub(subAccountId: string): Promise<{
   if (!agencyId) {
     throw new WebsiteServiceError("Sub-account is missing agencyId.", 500);
   }
-  return { agencyId, name: data.name as string | undefined, data };
+  return {
+    agencyId,
+    name: data.name as string | undefined,
+    data,
+    maxSites: effectiveWebsiteCap(data),
+  };
 }
 
 /**
@@ -94,14 +100,16 @@ export async function createWebsiteForSubAccount(input: {
   name?: string;
 }): Promise<{ siteId: string; agencyId: string }> {
   const { subAccountId } = input;
-  const { agencyId } = await requireWebsiteEnabledSub(subAccountId);
+  const { agencyId, maxSites } = await requireWebsiteEnabledSub(subAccountId);
 
   const db = getAdminDb();
   const col = db.collection(`subAccounts/${subAccountId}/website`);
   const existing = await col.get();
-  if (existing.size >= MAX_WEBSITES_PER_SUBACCOUNT) {
+  if (existing.size >= maxSites) {
     throw new WebsiteServiceError(
-      `You can create up to ${MAX_WEBSITES_PER_SUBACCOUNT} websites per sub-account. Remove one to add another.`,
+      Number.isFinite(maxSites)
+        ? `You can create up to ${maxSites} websites per sub-account. Remove one to add another.`
+        : "Unexpected site cap reached.",
       409,
     );
   }

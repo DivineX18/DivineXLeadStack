@@ -190,6 +190,19 @@ export interface SubAccountDoc {
    */
   websiteEnabledByAgency?: boolean;
   /**
+   * Agency-controlled override of the per-sub-account website-slot cap
+   * (`MAX_WEBSITES_PER_SUBACCOUNT`, currently 5). Only the agency owner can
+   * set it (same PATCH route as the gates above). `undefined`/`null` = use
+   * the global default; `-1` = unlimited; any positive integer = that many
+   * slots instead of the default. Exists so an agency can raise the cap for
+   * its own workspace or a client on a higher-tier plan without touching the
+   * shared constant — the natural hook for a future paid-tier "more/
+   * unlimited funnels" upsell via Client Billing plans, not wired to a plan
+   * yet. Enforced in `lib/server/websites-service.ts::effectiveWebsiteCap()`,
+   * the single place that resolves this override against the default.
+   */
+  websiteMaxSites?: number | null;
+  /**
    * Agency-controlled gate for the Social Planner (schedule + auto-publish
    * posts to the connected Facebook Page / Instagram Business via the shared
    * `metaConfig` connection). Only the agency owner can flip it (PATCH

@@ -62,7 +62,7 @@ import {
   WebsiteServiceError,
 } from "@/lib/server/websites-service";
 import { gitpageIsConfigured } from "@/lib/gitpage/client";
-import { MAX_WEBSITES_PER_SUBACCOUNT } from "@/lib/website/limits";
+import { effectiveWebsiteCap } from "@/lib/website/limits";
 import {
   FirecrawlError,
   firecrawlIsConfigured,
@@ -2370,11 +2370,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           : null;
 
       const gateOn = sub.websiteEnabledByAgency === true;
+      const maxSites = effectiveWebsiteCap(sub);
+      const maxSitesLabel = Number.isFinite(maxSites) ? String(maxSites) : "unlimited";
       const lines = [
         `Website builder enabled by agency: ${gateOn ? "yes" : "NO — the agency owner must enable it before any build (tell the user this up front)"}`,
         `Builder configured on this deployment: ${gitpageIsConfigured() ? "yes" : "NO (GITPAGE_API_KEY missing — builds will fail)"}`,
-        `Site slots used: ${sitesSnap.size} of ${MAX_WEBSITES_PER_SUBACCOUNT}${
-          sitesSnap.size >= MAX_WEBSITES_PER_SUBACCOUNT
+        `Site slots used: ${sitesSnap.size} of ${maxSitesLabel}${
+          sitesSnap.size >= maxSites
             ? " — FULL, one must be removed first"
             : ""
         }`,

@@ -68,6 +68,15 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
   const initialWhatsapp = subAccount?.whatsappEnabledByAgency === true;
   const initialMetaInbox = subAccount?.metaInboxEnabledByAgency === true;
   const initialWebsite = subAccount?.websiteEnabledByAgency === true;
+  // Per-sub-account site-cap override (see effectiveWebsiteCap): -1 means
+  // unlimited, a positive number replaces the shared default, null/unset
+  // uses the default and renders as an empty input.
+  const initialWebsiteUnlimited = subAccount?.websiteMaxSites === -1;
+  const initialWebsiteMaxSitesText =
+    typeof subAccount?.websiteMaxSites === "number" &&
+    subAccount.websiteMaxSites > 0
+      ? String(subAccount.websiteMaxSites)
+      : "";
   const initialSocial = subAccount?.socialPlannerEnabledByAgency === true;
   const initialCommunity = subAccount?.communityEnabledByAgency === true;
   const initialMissedCall =
@@ -100,6 +109,12 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
   const [whatsappEnabled, setWhatsappEnabled] = useState(initialWhatsapp);
   const [metaInboxEnabled, setMetaInboxEnabled] = useState(initialMetaInbox);
   const [websiteEnabled, setWebsiteEnabled] = useState(initialWebsite);
+  const [websiteUnlimited, setWebsiteUnlimited] = useState(
+    initialWebsiteUnlimited,
+  );
+  const [websiteMaxSitesText, setWebsiteMaxSitesText] = useState(
+    initialWebsiteMaxSitesText,
+  );
   const [socialPlannerEnabled, setSocialPlannerEnabled] =
     useState(initialSocial);
   const [communityEnabled, setCommunityEnabled] = useState(initialCommunity);
@@ -201,6 +216,9 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
   const whatsappDirty = whatsappEnabled !== initialWhatsapp;
   const metaInboxDirty = metaInboxEnabled !== initialMetaInbox;
   const websiteDirty = websiteEnabled !== initialWebsite;
+  const websiteMaxSitesDirty =
+    websiteUnlimited !== initialWebsiteUnlimited ||
+    (!websiteUnlimited && websiteMaxSitesText !== initialWebsiteMaxSitesText);
   const socialDirty = socialPlannerEnabled !== initialSocial;
   const communityDirty = communityEnabled !== initialCommunity;
   const missedCallDirty = missedCallEnabled !== initialMissedCall;
@@ -220,6 +238,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
     whatsappDirty ||
     metaInboxDirty ||
     websiteDirty ||
+    websiteMaxSitesDirty ||
     socialDirty ||
     communityDirty ||
     missedCallDirty ||
@@ -252,6 +271,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
         whatsappEnabled?: boolean;
         metaInboxEnabled?: boolean;
         websiteEnabled?: boolean;
+        websiteMaxSites?: number | null;
         socialPlannerEnabled?: boolean;
         communityEnabled?: boolean;
         missedCallTextBackEnabled?: boolean;
@@ -271,6 +291,13 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
       if (whatsappDirty) payload.whatsappEnabled = whatsappEnabled;
       if (metaInboxDirty) payload.metaInboxEnabled = metaInboxEnabled;
       if (websiteDirty) payload.websiteEnabled = websiteEnabled;
+      if (websiteMaxSitesDirty) {
+        payload.websiteMaxSites = websiteUnlimited
+          ? -1
+          : websiteMaxSitesText.trim() === ""
+            ? null
+            : Math.max(1, parseInt(websiteMaxSitesText, 10) || 1);
+      }
       if (socialDirty) payload.socialPlannerEnabled = socialPlannerEnabled;
       if (communityDirty) payload.communityEnabled = communityEnabled;
       if (missedCallDirty)
@@ -545,6 +572,37 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
             sub-accounts). Disabling locks the Website sidebar entry and returns
             403 on new build attempts; the existing config and any published
             site are preserved, so re-enabling resumes instantly.
+
+            {websiteEnabled && (
+              <div
+                className="mt-3 flex flex-wrap items-center gap-3 border-t pt-3"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  Site slots
+                  <Input
+                    type="number"
+                    min={1}
+                    inputMode="numeric"
+                    placeholder="5 (default)"
+                    className="h-7 w-28 text-xs"
+                    value={websiteMaxSitesText}
+                    disabled={saving || websiteUnlimited}
+                    onChange={(e) => setWebsiteMaxSitesText(e.target.value)}
+                  />
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    className="h-3.5 w-3.5"
+                    checked={websiteUnlimited}
+                    disabled={saving}
+                    onChange={(e) => setWebsiteUnlimited(e.target.checked)}
+                  />
+                  Unlimited
+                </label>
+              </div>
+            )}
           </GateToggle>
 
           <GateToggle
@@ -860,7 +918,7 @@ function GateToggle({
               </span>
             )}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{children}</p>
+          <div className="mt-1 text-xs text-muted-foreground">{children}</div>
         </div>
       </label>
       {hideOption && !checked && (
