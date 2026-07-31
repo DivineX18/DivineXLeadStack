@@ -37,6 +37,7 @@ import {
   NICHE_META,
   nicheSample,
 } from "@/lib/website/niches";
+import { contentFlagCategoryLabel } from "@/lib/website/content-audit";
 import {
   firstValidationError,
   validateWebsiteConfig,
@@ -511,6 +512,24 @@ export function WebsiteBuilder({
           )}
         </div>
       </div>
+
+      {doc.contentFlags && doc.contentFlags.length > 0 && (
+        <div className="border-t border-destructive/30 bg-destructive/5 px-4 py-3">
+          <p className="flex items-center gap-1.5 text-xs font-medium text-destructive">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+            This page may contain generic filler content — review before sharing the link
+          </p>
+          <p className="mt-1 text-[11px] text-destructive/80">
+            gitpage&apos;s template sometimes invents testimonials, stats, or program details
+            that aren&apos;t true for your product. Detected:
+          </p>
+          <ul className="mt-1 list-disc pl-5 text-[11px] text-destructive/90">
+            {doc.contentFlags.map((flag, i) => (
+              <li key={i}>{contentFlagCategoryLabel(flag.category)}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {doc.partialErrors && doc.partialErrors.length > 0 && (
         <div className="border-t border-amber-500/30 bg-amber-500/5 px-4 py-3">

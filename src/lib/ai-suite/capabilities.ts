@@ -2938,6 +2938,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           (w.name as string) ||
           ((w.config as { heading?: string } | undefined)?.heading ?? "Untitled site");
         const status = w.status as string;
+        const contentFlags = w.contentFlags as unknown[] | null | undefined;
         const detail =
           status === "ready" && w.liveUrl
             ? `live at ${w.liveUrl}`
@@ -2946,7 +2947,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               : status === "queued" || status === "building"
                 ? "building now (usually 1–3 minutes)"
                 : "draft (not built yet)";
-        return `- “${name}”: ${detail}`;
+        const flagWarning =
+          status === "ready" && contentFlags && contentFlags.length > 0
+            ? " ⚠️ may contain generic filler content (fake testimonials/stats/program details) — tell the user to review before sharing this link"
+            : "";
+        return `- “${name}”: ${detail}${flagWarning}`;
       });
       return {
         resultText: `Websites in this workspace:\n${lines.join("\n")}`,

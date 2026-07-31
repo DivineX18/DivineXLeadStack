@@ -1,4 +1,5 @@
 import type { Timestamp, FieldValue } from "firebase/firestore";
+import type { ContentFlag } from "@/lib/website/content-audit";
 
 /**
  * Mirrors the gitpage.site typeform inputs verbatim. Field names match
@@ -154,6 +155,16 @@ export interface WebsiteDoc {
    * live URL. Null when there were none or the build hasn't finished.
    */
   partialErrors: string[] | null;
+  /**
+   * Set once, right after a build reaches "ready" — a scan of the live HTML
+   * for gitpage's known generic-template fabrication patterns (fake
+   * testimonials, inflated stats, invented founder bios, phantom program
+   * features). Null means the scan ran and found nothing OR hasn't run yet
+   * (pre-dates this field). See lib/website/content-audit.ts. Never
+   * auto-cleared — an operator dismisses it by rebuilding or editing via
+   * gitpage's MCP tools, which produces a fresh doc on the next poll cycle.
+   */
+  contentFlags: ContentFlag[] | null;
   /** Number of times we've polled gitpage for the current job — used to cap. */
   pollAttempts: number;
   lastBuildAt: Timestamp | FieldValue | null;

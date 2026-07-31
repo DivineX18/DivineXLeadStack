@@ -10,6 +10,7 @@ import {
 } from "@/lib/automations/qstash";
 import { GitpageError, pollBuild } from "@/lib/gitpage/client";
 import { markGitpageKeyInvalid } from "@/lib/gitpage/heartbeat";
+import { auditGeneratedContent } from "@/lib/website/content-audit";
 import type { WebsiteDoc } from "@/types/website";
 
 export const dynamic = "force-dynamic";
@@ -169,11 +170,31 @@ export async function POST(
   // Terminal states — update the doc and stop polling.
   if (pollResult.isTerminal) {
     if (pollResult.status === "Published") {
+      // Best-effort content audit — gitpage's generic template fills empty
+      // sections with fabricated testimonials/stats/program details (see
+      // lib/website/content-audit.ts). A fetch failure here must never
+      // block the build from being marked ready; the operator just won't
+      // see a warning banner until the next successful scan.
+      let contentFlags: ReturnType<typeof auditGeneratedContent> | null = null;
+      if (pollResult.pagesUrl) {
+        try {
+          const pageRes = await fetch(pollResult.pagesUrl, { redirect: "follow" });
+          if (pageRes.ok) {
+            const html = await pageRes.text();
+            const flags = auditGeneratedContent(html);
+            contentFlags = flags.length > 0 ? flags : null;
+          }
+        } catch (err) {
+          console.warn("[website/poll] content audit fetch failed", err);
+        }
+      }
+
       await docRef.update({
         status: "ready",
         liveUrl: pollResult.pagesUrl,
         errorMessage: null,
         partialErrors: pollResult.partialErrors,
+        contentFlags,
         pollAttempts: attempts,
         updatedAt: FieldValue.serverTimestamp(),
       });
