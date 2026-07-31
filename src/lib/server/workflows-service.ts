@@ -44,7 +44,8 @@ export type WorkflowTemplate =
   | "speed-to-lead"
   | "appointment-confirmation"
   | "lead-nurture"
-  | "stage-change-followup";
+  | "stage-change-followup"
+  | "post-purchase-nurture";
 
 type Seed = Pick<WorkflowDoc, "trigger" | "nodes" | "startNodeId">;
 
@@ -273,11 +274,69 @@ function stageChangeFollowupSeed(): Seed {
   };
 }
 
+/** Post-Purchase Nurture (quote.paid): fires whenever a quote/invoice is
+ *  marked paid (manual mark-paid or, later, a Stripe webhook) — the trigger
+ *  that fills the gap invoices leave, since kind:"invoice" skips the
+ *  "accepted" step quote.accepted relies on. Thank-you email, a short wait,
+ *  a check-in, and an owner notification for visibility on the sale. */
+function postPurchaseNurtureSeed(): Seed {
+  const DAY = 86_400;
+  const nodes: Record<string, WorkflowNode> = {
+    n1: {
+      id: "n1",
+      type: "add_tag",
+      config: { tag: "customer" },
+      next: "n2",
+    },
+    n2: {
+      id: "n2",
+      type: "send_email",
+      config: {
+        subject: "Thanks for your order, {{contact.firstName}}!",
+        body: "Hi {{contact.firstName}},\n\nThank you — your order is confirmed and paid. If anything's missing or you have a question, just reply to this email and we'll sort it out.\n\n{{unsubscribeLink}}",
+      },
+      next: "n3",
+    },
+    n3: {
+      id: "n3",
+      type: "wait",
+      config: { seconds: 2 * DAY },
+      next: "n4",
+    },
+    n4: {
+      id: "n4",
+      type: "send_email",
+      config: {
+        subject: "How's everything going, {{contact.firstName}}?",
+        body: "Hi {{contact.firstName}},\n\nJust checking in a couple of days after your purchase — how's it going so far? Reply and let me know if you have any questions or need a hand with anything.\n\n{{unsubscribeLink}}",
+      },
+      next: "n5",
+    },
+    n5: {
+      id: "n5",
+      type: "notify",
+      config: {
+        recipient: "owner",
+        to: "",
+        subject: "New sale",
+        body: "{{contact.name}} ({{contact.email}}) just paid.",
+      },
+      next: null,
+    },
+  };
+  return {
+    trigger: { type: "quote.paid", filters: { all: [] } },
+    nodes,
+    startNodeId: "n1",
+  };
+}
+
 const SEEDS: Record<Exclude<WorkflowTemplate, "blank">, () => Seed> = {
   "speed-to-lead": speedToLeadSeed,
   "appointment-confirmation": appointmentConfirmationSeed,
   "lead-nurture": leadNurtureSeed,
   "stage-change-followup": stageChangeFollowupSeed,
+  "post-purchase-nurture": postPurchaseNurtureSeed,
 };
 
 export async function createWorkflowServerSide(opts: {

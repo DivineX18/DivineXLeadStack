@@ -302,6 +302,7 @@ const WORKFLOW_TEMPLATES: Record<WorkflowTemplate, string> = {
   "appointment-confirmation": "Appointment Confirmation",
   "lead-nurture": "Lead Nurture",
   "stage-change-followup": "Stage-Change Follow-up",
+  "post-purchase-nurture": "Post-Purchase Nurture",
 };
 
 /**
@@ -1510,9 +1511,19 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             "appointment-confirmation",
             "lead-nurture",
             "stage-change-followup",
+            "post-purchase-nurture",
           ],
           description:
-            "Which starter to use. 'blank' for an empty workflow, or a named template.",
+            "Which starter to use. 'blank' for an empty workflow. Named templates: " +
+            "'speed-to-lead' (form submitted -> instant SMS + email + notify), " +
+            "'appointment-confirmation' (booking created -> confirm + prep task), " +
+            "'lead-nurture' (form submitted -> multi-day email/SMS drip), " +
+            "'stage-change-followup' (deal moves pipeline stage -> follow-up task), " +
+            "'post-purchase-nurture' (a quote OR invoice is marked paid -> thank-you email, " +
+            "a 2-day wait, a check-in email, notify the owner of the sale). Use " +
+            "'post-purchase-nurture' whenever the user asks for something like a " +
+            "thank-you, nurture, or follow-up sequence for after someone buys/pays " +
+            "(including PayPal-paid invoices, which have no 'accepted' step of their own).",
         },
         name: {
           type: "string",
@@ -1528,7 +1539,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         return {
           ok: false,
           error:
-            "pick a template: blank, speed-to-lead, appointment-confirmation, lead-nurture, or stage-change-followup",
+            "pick a template: blank, speed-to-lead, appointment-confirmation, lead-nurture, stage-change-followup, or post-purchase-nurture",
         };
       }
       const name = str(raw, "name");
