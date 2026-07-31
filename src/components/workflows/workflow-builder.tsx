@@ -70,6 +70,7 @@ const TRIGGER_TYPES: WorkflowTriggerType[] = [
   "pipeline.stage.changed",
   "booking.created",
   "quote.accepted",
+  "quote.paid",
 ];
 
 const ICONS: Record<WorkflowNodeType, typeof Mail> = {

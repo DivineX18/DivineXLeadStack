@@ -15,7 +15,8 @@ export type WorkflowTriggerType =
   | "form.submitted"
   | "pipeline.stage.changed"
   | "booking.created"
-  | "quote.accepted";
+  | "quote.accepted"
+  | "quote.paid";
 
 /* ------------------------------ Conditions ----------------------------- */
 

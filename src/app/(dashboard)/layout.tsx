@@ -9,6 +9,7 @@ import { InstallBanner } from "@/components/pwa/install-banner";
 import { BottomTabBar } from "@/components/pwa/bottom-tab-bar";
 import { AppBadge } from "@/components/pwa/app-badge";
 import { AppAccent } from "@/components/theme/app-accent";
+import { ZenoLauncher } from "@/components/ai-suite/zeno-launcher";
 import { cn } from "@/lib/utils";
 
 export default function DashboardLayout({
@@ -60,6 +61,7 @@ export default function DashboardLayout({
       <AppBadge />
       <AppAccent />
       <CommandPalette open={searchOpen} onOpenChange={setSearchOpen} />
+      <ZenoLauncher />
     </div>
   );
 }

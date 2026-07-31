@@ -117,26 +117,33 @@ function defaultActivityContent(
 }
 
 /**
- * Dispatch a workflow trigger for a quote lifecycle event. v1 ships
- * the dispatch plumbing but no recipe type subscribes to quote events
- * yet (computeFirstStepDelay returns null for unsupported recipe/trigger
- * combos) — so this call is a no-op unless an operator hand-builds an
- * automation with a quote trigger via direct Firestore edit. v2 will
- * extend the recipe editor + step executor to react properly.
+ * Dispatch a workflow trigger for a quote lifecycle event, so an operator
+ * can build a Workflow Builder automation (e.g. a nurture/thank-you send)
+ * off either event. `quote_accepted` and `quote_marked_paid` are the two
+ * v1 triggers — the latter is what lets a PayPal.me-paid invoice (which has
+ * no "accepted" step) fire an automated follow-up. `quote_sent`/
+ * `quote_viewed`/`quote_declined` are intentionally not wired to a workflow
+ * trigger yet.
  *
- * Wrapping fireTriggers — which already swallows errors — means this
+ * Wrapping fireWorkflowTrigger — which already swallows errors — means this
  * is safe to call from any post-write path without try/catch noise.
  */
 export async function fireQuoteTrigger(
   quote: Pick<Quote, "agencyId" | "subAccountId" | "contactId">,
   trigger: Extract<AutomationTriggerType, `quote_${string}`>,
 ): Promise<void> {
-  // Workflow Builder: only quote acceptance is a v1 trigger.
   if (trigger === "quote_accepted") {
     void fireWorkflowTrigger({
       agencyId: quote.agencyId,
       subAccountId: quote.subAccountId,
       type: "quote.accepted",
+      contactId: quote.contactId,
+    });
+  } else if (trigger === "quote_marked_paid") {
+    void fireWorkflowTrigger({
+      agencyId: quote.agencyId,
+      subAccountId: quote.subAccountId,
+      type: "quote.paid",
       contactId: quote.contactId,
     });
   }
