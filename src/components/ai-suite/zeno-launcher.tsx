@@ -69,7 +69,7 @@ export function ZenoLauncher() {
     <>
       {open && (
         <div
-          className="fixed bottom-20 right-4 z-50 flex h-[32rem] max-h-[calc(100dvh-6rem)] w-[22rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl md:bottom-24 md:right-6"
+          className="fixed bottom-20 right-4 z-40 flex h-[32rem] max-h-[calc(100dvh-6rem)] w-[22rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl md:bottom-24 md:right-6"
           role="dialog"
           aria-label="Ask Zeno"
         >
@@ -104,7 +104,7 @@ export function ZenoLauncher() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Close Zeno" : "Ask Zeno"}
-        className="fixed bottom-20 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 via-violet-500 to-pink-500 text-white shadow-lg transition-transform hover:scale-105 md:bottom-6 md:right-6"
+        className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 via-violet-500 to-pink-500 text-white shadow-lg transition-transform hover:scale-105 md:bottom-6 md:right-6"
       >
         {open ? <X className="h-6 w-6" /> : <Sparkles className="h-6 w-6" />}
       </button>
