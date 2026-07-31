@@ -2396,7 +2396,9 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     menuLabel:
       "Create and build a website for this workspace (via the website builder)",
     description:
-      "Create a website and submit a REAL build via the website builder — use when the user asks to build/make/create a website or landing page. Workflow: (1) call get_website_prefill FIRST — it tells you the business name, saved contact email, default CTA link, and remaining site slots, so you only ask the user for what's genuinely missing; (2) if they name a reference site, call research_website_reference and mirror its tone/services WITHOUT copying text; (3) pick the closest niche template — gym_fitness for gyms/trainers, home_services for trades (plumbers, electricians, cleaners), real_estate for agents — or 'none' for anything else; (4) NICHE SITES NEED THE BUSINESS'S STREET ADDRESS (street + city) — ask for it if unknown, or use niche 'none' without a contact page; (5) features and benefits are each EXACTLY 3 short comma-separated phrases (max 60 chars total); (6) build_type 'vsl' is a single-page video funnel — only use it when the user has a video embed URL; default 'local'. Contact email and the main button link default from the workspace's saved details when omitted. Confirming spends one of the agency's website builds; the site goes live in ~1–3 minutes on the Website page.",
+      "Create a website and submit a REAL build via the website builder — use when the user asks to build/make/create a website or landing page. Workflow: (1) call get_website_prefill FIRST — it tells you the business name, saved contact email, default CTA link, and remaining site slots, so you only ask the user for what's genuinely missing; (2) if they name a reference site, call research_website_reference and mirror its tone/services WITHOUT copying text; (3) pick the closest niche template — gym_fitness for gyms/trainers, home_services for trades (plumbers, electricians, cleaners), real_estate for agents — or 'none' for anything else; (4) NICHE SITES NEED THE BUSINESS'S STREET ADDRESS (street + city) — ask for it if unknown, or use niche 'none' without a contact page; (5) features and benefits are each EXACTLY 3 short comma-separated phrases (max 60 chars total); (6) build_type 'vsl' is a single-page video funnel — only use it when the user has a video embed URL; default 'local'. Contact email and the main button link default from the workspace's saved details when omitted. Confirming spends one of the agency's website builds; the site goes live in ~1–3 minutes on the Website page." +
+      " (7) WRITE LIKE A DIRECT-RESPONSE COPYWRITER (think Russell Brunson / Jim Edwards / Dan Kennedy), NOT A CORPORATE BROCHURE. gitpage's own template defaults to generic filler ('Our comprehensive approach combines cutting-edge methodology with timeless wisdom') when a site is built around vague input — your job is to give it something specific enough that it can't fall back to that. hero_statement should hook with the reader's actual problem, not describe the business in the abstract — a sharp question or a concrete pain beats a mission statement every time. features/benefits phrases must name a specific outcome or mechanism, never an adjective doing all the work ('transformative', 'revolutionary', 'comprehensive', 'cutting-edge' are banned — they say nothing). Ground every phrase in what the user actually told you about this specific business; if you don't have enough specifics to be concrete, ask one more question rather than padding with generic claims." +
+      " (8) VARY THE DESIGN TO MATCH THIS BUSINESS'S ACTUAL PERSONALITY — don't default to the same design_color_palette/design_typography/design_components/design_interactions combination every time out of habit. A tattoo studio, a children's dentist, and a B2B SaaS tool should never land on the same design choices. Reason about who this business is for and what tone earns their trust (playful vs. authoritative, bold vs. minimal, energetic vs. calm) before picking — the enum lists exist precisely so different businesses can look different.",
     parameters: {
       type: "object",
       properties: {
@@ -2418,21 +2420,23 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         },
         heading: {
           type: "string",
-          description: "Site heading / title, max 80 chars. Usually the business name plus a hook.",
+          description:
+            "Site heading / title, max 80 chars. The business name plus a specific, concrete hook — not a generic tagline. Bad: 'Elevate Your Fitness Journey'. Good: 'Drop 15lbs Before Your Reunion, Not Someday'.",
         },
         hero_statement: {
           type: "string",
-          description: "One-line subheading under the heading, max 80 chars.",
+          description:
+            "One-line subheading under the heading, max 80 chars. Hook with the reader's actual problem or a sharp question, not a mission statement. Bad: 'Comprehensive fitness solutions for everyone'. Good: 'Tired of gyms that feel like a second job?'",
         },
         features: {
           type: "string",
           description:
-            "Exactly 3 short comma-separated phrases, max 60 chars total, e.g. 'Coach-led, HR tracked, Progressive'.",
+            "Exactly 3 short comma-separated phrases, max 60 chars total, e.g. 'Coach-led, HR tracked, Progressive'. Each phrase names a specific mechanism or outcome, not a vague adjective ('cutting-edge', 'comprehensive', 'transformative' are banned).",
         },
         benefits: {
           type: "string",
           description:
-            "Exactly 3 short comma-separated phrases, max 60 chars total, e.g. 'Adapt fast, Stay durable, Train sharper'.",
+            "Exactly 3 short comma-separated phrases, max 60 chars total, e.g. 'Adapt fast, Stay durable, Train sharper'. What the reader actually gets, in their terms — not a restatement of the feature in fancier words.",
         },
         contact_email: {
           type: "string",
@@ -2454,17 +2458,30 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         design_color_palette: {
           type: "string",
           enum: [...GITPAGE_DESIGN_COLOR_PALETTES],
-          description: "Use 'Custom' only when the user gives specific brand colours.",
+          description:
+            "Pick to match THIS business's personality, not the same default every time. Use 'Custom' when the user gives specific brand colours.",
         },
         custom_colors: {
           type: "string",
           description:
             "Only with design_color_palette 'Custom': three hex colours, e.g. '#5B4BFF,#EEF0FF,#00E5A8'.",
         },
-        design_typography: { type: "string", enum: [...GITPAGE_DESIGN_TYPOGRAPHY] },
+        design_typography: {
+          type: "string",
+          enum: [...GITPAGE_DESIGN_TYPOGRAPHY],
+          description: "Match the business's voice — a playful brand and a law firm shouldn't share one.",
+        },
         design_layout: { type: "string", enum: [...GITPAGE_DESIGN_LAYOUT] },
-        design_components: { type: "string", enum: [...GITPAGE_DESIGN_COMPONENTS] },
-        design_interactions: { type: "string", enum: [...GITPAGE_DESIGN_INTERACTIONS] },
+        design_components: {
+          type: "string",
+          enum: [...GITPAGE_DESIGN_COMPONENTS],
+          description: "Sharp/geometric reads differently than rounded/soft — pick what fits this brand.",
+        },
+        design_interactions: {
+          type: "string",
+          enum: [...GITPAGE_DESIGN_INTERACTIONS],
+          description: "Energetic suits bold/active brands; subtle suits calm/premium ones.",
+        },
         design_buttons: { type: "string", enum: [...GITPAGE_DESIGN_BUTTONS] },
         design_contact_form: { type: "string", enum: [...GITPAGE_DESIGN_CONTACT_FORM] },
         design_icons: { type: "string", enum: [...GITPAGE_DESIGN_ICONS] },
