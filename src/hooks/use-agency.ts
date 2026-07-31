@@ -19,7 +19,7 @@ interface AgencySummary {
   /** Dashboard accent theme. Null = deployment-mode default. */
   appTheme: AppTheme | null;
   /**
-   * Agency Assistant master switch (Agency → Settings). OFF by default —
+   * Zeno (agency level) master switch (Agency → Settings). OFF by default —
    * only an explicit `true` on the doc enables it; legacy/unset reads off.
    * Drives the sidebar entry + the /agency/ai-suite page state.
    */

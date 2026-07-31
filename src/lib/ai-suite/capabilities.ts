@@ -3062,7 +3062,7 @@ function inSubAccount(base: AiSuiteCapability): AiSuiteCapability {
   };
 }
 
-// Workspace capabilities the Agency Assistant may run against a named
+// Workspace capabilities Zeno (agency level) may run against a named
 // sub-account. Deliberately a curated allowlist, not "everything".
 const AGENCY_DELEGATED = [
   "find_contacts",

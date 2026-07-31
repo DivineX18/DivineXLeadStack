@@ -15,9 +15,9 @@ function BetaPill() {
  * moves between the two surfaces all day always knows whether they're acting
  * on one client or on the whole agency:
  *
- *  - **Workspace Assistant** — scoped to one sub-account; reassures that
+ *  - **Zeno (sub-account level)** — scoped to one sub-account; reassures that
  *    actions stay inside that client's workspace.
- *  - **Agency Assistant** — agency-wide reach; warns that actions can affect
+ *  - **Zeno (agency level)** — agency-wide reach; warns that actions can affect
  *    every client (create sub-accounts, change feature gates).
  *
  * Deliberately visually distinct per level (icon + accent) so the two never
@@ -38,7 +38,7 @@ export function AiSuiteScopeBanner({
         </span>
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-sm font-semibold">
-            Agency Assistant
+            Zeno
             <BetaPill />
           </p>
           <p className="text-xs text-muted-foreground">
@@ -58,7 +58,7 @@ export function AiSuiteScopeBanner({
       </span>
       <div className="min-w-0">
         <p className="flex items-center gap-2 text-sm font-semibold">
-          <span className="truncate">Workspace Assistant · {name}</span>
+          <span className="truncate">Zeno · {name}</span>
           <BetaPill />
         </p>
         <p className="text-xs text-muted-foreground">

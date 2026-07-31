@@ -32,7 +32,7 @@ const CURRENCIES = ["usd", "aud", "eur", "gbp", "cad", "nzd"] as const;
 function defaultGates(): PlanGates {
   const gates = {} as PlanGates;
   for (const key of PLAN_GATE_KEYS) {
-    // Every gate (incl. the Workspace Assistant) is opt-in platform-wide;
+    // Every gate (incl. Zeno at the sub-account level) is opt-in platform-wide;
     // a new plan starts with nothing bundled.
     gates[key] = false;
   }

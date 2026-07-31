@@ -36,11 +36,11 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
   {
     id: "workspace-assistant",
     levels: ["sub-account", "agency"],
-    title: "The assistants (Workspace Assistant & Agency Assistant)",
-    location: "Sidebar → Workspace Assistant / Agency → Agency Assistant",
-    keywords: ["assistant", "ai suite", "chatbot", "help", "actions", "confirm", "safe", "permissions", "what can you do"],
+    title: "Zeno, your AI assistant",
+    location: "Sidebar → Zeno / Agency → Zeno",
+    keywords: ["assistant", "zeno", "ai suite", "chatbot", "help", "actions", "confirm", "safe", "permissions", "what can you do"],
     body:
-      "Two in-app AI assistants: the Workspace Assistant (in each sub-account, scoped strictly to that one workspace's data) and the Agency Assistant (agency owner only — can answer across sub-accounts and act inside a named one). Both answer how-to questions and perform a fixed set of actions; every action shows a confirmation card and nothing runs until you confirm. All executed actions are audit-logged. Both are OFF by default because replies use the agency's AI credits: the agency owner enables the Workspace Assistant per sub-account from the Manage dialog, and the Agency Assistant from Agency → Settings Agency → Agency Assistant.",
+      "Zeno is DivineX's in-app AI assistant, available at two levels: inside each sub-account (scoped strictly to that one workspace's data) and at the agency level (agency owner only — can answer across sub-accounts and act inside a named one). Both answer how-to questions and perform a fixed set of actions; every action shows a confirmation card and nothing runs until you confirm. All executed actions are audit-logged. Both are OFF by default because replies use the agency's AI credits: the agency owner enables Zeno per sub-account from the Manage dialog, and at the agency level from Agency → Settings → Zeno.",
   },
   {
     id: "contacts",
@@ -140,7 +140,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     location: "Sidebar → AI Agents",
     keywords: ["ai agent", "bot", "web chat", "sms", "whatsapp", "voice", "persona", "channel", "openrouter", "outbound"],
     body:
-      "AI Agents is one persona (system prompt + business hours + escalation keywords + optional website knowledge base) that answers across channels. Configure the shared persona on the Overview, then enable channels: Web Chat (an embeddable widget), SMS and WhatsApp (auto-replies on the dedicated Twilio number), and Voice (AI answers inbound calls). Outbound Voice proactively dials contacts. Every channel needs a non-empty persona prompt first, and channels that send need a dedicated Twilio number (Settings → SMS). Note: AI Agents answers your CLIENTS' inbound messages — the Workspace Assistant (this assistant) helps YOU use the app, and is separate.",
+      "AI Agents is one persona (system prompt + business hours + escalation keywords + optional website knowledge base) that answers across channels. Configure the shared persona on the Overview, then enable channels: Web Chat (an embeddable widget), SMS and WhatsApp (auto-replies on the dedicated Twilio number), and Voice (AI answers inbound calls). Outbound Voice proactively dials contacts. Every channel needs a non-empty persona prompt first, and channels that send need a dedicated Twilio number (Settings → SMS). Note: AI Agents answers your CLIENTS' inbound messages — Zeno (this assistant) helps YOU use the app, and is separate.",
   },
   {
     id: "conversations",
@@ -259,7 +259,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     location: "Agency → Sub-accounts",
     keywords: ["sub-account", "subaccount", "create", "client", "workspace", "new", "add", "manage"],
     body:
-      "Each client gets a sub-account — an isolated workspace with its own contacts, pipeline, and data. Create one from Agency → Sub-accounts → create; it's assigned a human-readable account number automatically and seeded with default templates. Use the per-row Manage button to rename it, manage members, and control its feature gates. The Agency Assistant can create a sub-account for you, list them with their gates, report a sub-account's record counts and pipeline, and perform workspace actions (contacts, tasks, deals, workflows, webhooks, communities) inside a sub-account you name.",
+      "Each client gets a sub-account — an isolated workspace with its own contacts, pipeline, and data. Create one from Agency → Sub-accounts → create; it's assigned a human-readable account number automatically and seeded with default templates. Use the per-row Manage button to rename it, manage members, and control its feature gates. Zeno (agency level) can create a sub-account for you, list them with their gates, report a sub-account's record counts and pipeline, and perform workspace actions (contacts, tasks, deals, workflows, webhooks, communities) inside a sub-account you name.",
   },
   {
     id: "agency-feature-gates",
@@ -270,7 +270,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     location: "Agency → Sub-accounts → Manage",
     keywords: ["gate", "enable", "disable", "lock", "feature", "permission", "website", "broadcasts", "api", "whatsapp", "social", "community", "assistant"],
     body:
-      "Feature gates let the agency owner turn optional features on or off per sub-account — features that consume agency resources (email sending domains, the public API + webhooks, broadcasts, WhatsApp, outbound voice, website builds, Social Planner, Community, Missed-Call Text-Back, and the Workspace Assistant). Every gate is off by default. Open a sub-account's Manage dialog and tick the gates. While a feature is off, its sidebar entry shows a 'Locked' badge (or is hidden if you chose hide-instead-of-lock) and its routes are blocked. Enabling resumes instantly. The Agency Assistant can flip most gates for you (the email sending domain gate must be changed in the Manage dialog because disabling it tears down the live domain). If a sub-account is on a Client billing plan, that plan's gate bundle is applied automatically at activation and whenever the plan is edited — manual gate changes still work, but a plan edit re-applies the bundle.",
+      "Feature gates let the agency owner turn optional features on or off per sub-account — features that consume agency resources (email sending domains, the public API + webhooks, broadcasts, WhatsApp, outbound voice, website builds, Social Planner, Community, Missed-Call Text-Back, and Zeno at the sub-account level). Every gate is off by default. Open a sub-account's Manage dialog and tick the gates. While a feature is off, its sidebar entry shows a 'Locked' badge (or is hidden if you chose hide-instead-of-lock) and its routes are blocked. Enabling resumes instantly. Zeno (agency level) can flip most gates for you (the email sending domain gate must be changed in the Manage dialog because disabling it tears down the live domain). If a sub-account is on a Client billing plan, that plan's gate bundle is applied automatically at activation and whenever the plan is edited — manual gate changes still work, but a plan edit re-applies the bundle.",
   },
   {
     id: "agency-client-billing",

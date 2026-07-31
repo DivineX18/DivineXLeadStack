@@ -7,7 +7,7 @@ import { AiSuiteScopeBanner } from "@/components/ai-suite/ai-suite-scope-banner"
 import { AiSuiteUsageCard } from "@/components/ai-suite/ai-suite-usage-card";
 
 /**
- * Workspace Assistant (sub-account) — an in-app assistant that answers "how
+ * Zeno (sub-account level) — an in-app assistant that answers "how
  * do I use X" questions and performs a few confirm-first actions, all scoped
  * to this one client workspace.
  */

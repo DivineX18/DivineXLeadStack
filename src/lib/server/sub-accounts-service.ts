@@ -219,7 +219,7 @@ export async function createSubAccountForAgency(
       communityEnabledByAgency: false,
       getLeadsEnabledByAgency: false,
       missedCallTextBackEnabledByAgency: false,
-      // Workspace Assistant ships OFF like every other gate (opt-in) — the
+      // Zeno (sub-account level) ships OFF like every other gate (opt-in) — the
       // agency owner enables it per sub-account from the Manage dialog.
       aiSuiteEnabledByAgency: false,
       metaConfig: null,

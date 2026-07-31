@@ -63,13 +63,13 @@ export interface AgencyDoc {
    */
   sharedSmsAllowed?: boolean;
   /**
-   * Master switch for the Agency Assistant (the owner-level AI at
+   * Master switch for Zeno at the agency level (the owner-level AI at
    * /agency/ai-suite). OFF by default — read `=== true`, so legacy docs
    * (undefined) stay off until the owner enables it under Agency → Settings.
    * Gated because every reply spends the deployment's OpenRouter credits.
    * While off: the sidebar entry is hidden, the page shows an enable prompt,
    * and the agency-level chat/confirm routes 403. Orthogonal to the
-   * per-sub-account `aiSuiteEnabledByAgency` gate (Workspace Assistant).
+   * per-sub-account `aiSuiteEnabledByAgency` gate (Zeno at sub-account level).
    */
   agencyAssistantEnabled?: boolean;
 }
@@ -272,8 +272,8 @@ export interface SubAccountDoc {
    */
   missedCallTextBackEnabledByAgency?: boolean;
   /**
-   * Agency-controlled gate for the Workspace Assistant (the in-app AI
-   * assistant at Sidebar → Workspace Assistant). Only the agency owner can
+   * Agency-controlled gate for Zeno at the sub-account level (the in-app AI
+   * assistant at Sidebar → Zeno). Only the agency owner can
    * flip it (PATCH /api/agency/sub-accounts/[id]/feature-gates). Opt-in like
    * every other gate: defaults to `false` at creation and consumers read
    * `=== true` so legacy docs (undefined) stay off. Gated because every

@@ -7,11 +7,11 @@ import { Sparkles } from "lucide-react";
 import { useAgency } from "@/hooks/use-agency";
 
 /**
- * Agency Settings card: master switch for the Agency Assistant (the
+ * Agency Settings card: master switch for Zeno at the agency level (the
  * owner-level AI at /agency/ai-suite). OFF by default — every reply spends
  * the deployment's OpenRouter credits, so the owner opts in deliberately.
- * The per-sub-account Workspace Assistant is gated separately (per client,
- * from the Manage dialog) and is unaffected by this switch.
+ * Zeno at the sub-account level is gated separately (per client, from the
+ * Manage dialog) and is unaffected by this switch.
  *
  * Writes `agencyAssistantEnabled` via PATCH /api/agency; the sidebar entry
  * and the assistant page react live through the useAgency() snapshot.
@@ -40,8 +40,8 @@ export function AgencyAssistantSection() {
       if (!res.ok) throw new Error(payload.error ?? "Could not save.");
       toast.success(
         next
-          ? "Agency Assistant enabled — it now appears in your sidebar."
-          : "Agency Assistant disabled.",
+          ? "Zeno enabled — it now appears in your sidebar."
+          : "Zeno disabled.",
       );
     } catch (err) {
       setPending(null);
@@ -61,7 +61,7 @@ export function AgencyAssistantSection() {
         </span>
         <div>
           <h2 className="flex items-center gap-2 text-sm font-semibold">
-            Agency Assistant
+            Zeno
             <span className="rounded-full bg-fuchsia-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-fuchsia-600 dark:text-fuchsia-400">
               Beta
             </span>
@@ -76,12 +76,12 @@ export function AgencyAssistantSection() {
 
       <div className="flex items-start justify-between gap-3 rounded-xl border bg-background p-4">
         <div>
-          <p className="text-xs font-medium">Enable the Agency Assistant</p>
+          <p className="text-xs font-medium">Enable Zeno for the agency</p>
           <p className="text-[11px] text-muted-foreground">
             Off by default. Every reply uses your OpenRouter credits
             (<code>OPENROUTER_API_KEY</code>). When off, the sidebar entry is
             hidden and the assistant refuses requests. Each client&apos;s{" "}
-            <span className="font-medium">Workspace Assistant</span> is
+            <span className="font-medium">Zeno</span> is
             separate — enable it per sub-account under{" "}
             <Link
               href="/agency/sub-accounts"

@@ -81,7 +81,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
   const initialCommunity = subAccount?.communityEnabledByAgency === true;
   const initialMissedCall =
     subAccount?.missedCallTextBackEnabledByAgency === true;
-  // Workspace Assistant is opt-in like every other gate — off unless
+  // Zeno (sub-account level) is opt-in like every other gate — off unless
   // explicitly enabled (legacy/unset reads as off).
   const initialAiSuite = subAccount?.aiSuiteEnabledByAgency === true;
   const initialGetLeads = subAccount?.getLeadsEnabledByAgency === true;
@@ -411,8 +411,8 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
       if (aiSuiteDirty) {
         parts.push(
           aiSuiteEnabled
-            ? "Workspace Assistant enabled."
-            : "Workspace Assistant disabled. The sidebar entry locks and the assistant is blocked for this sub-account.",
+            ? "Zeno enabled."
+            : "Zeno disabled. The sidebar entry locks and the assistant is blocked for this sub-account.",
         );
       }
       if (getLeadsDirty) {
@@ -438,7 +438,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
         hiddenChanges.push(`Get Leads ${getLeadsHidden ? "hidden" : "shown as Locked"}`);
       if (aiSuiteHiddenDirty)
         hiddenChanges.push(
-          `Workspace Assistant ${aiSuiteHidden ? "hidden" : "shown as Locked"}`,
+          `Zeno ${aiSuiteHidden ? "hidden" : "shown as Locked"}`,
         );
       if (hiddenChanges.length > 0) {
         parts.push(`When disabled: ${hiddenChanges.join(", ")}.`);
@@ -754,14 +754,14 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
             onChange={setAiSuiteEnabled}
             disabled={saving}
             icon={<Sparkles className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />}
-            title="Workspace Assistant"
+            title="Zeno"
             hideOption={{
               hidden: aiSuiteHidden,
               onHiddenChange: setAiSuiteHidden,
               disabled: saving,
             }}
           >
-            The Workspace Assistant — the sub-account&apos;s in-app assistant
+            Zeno — the sub-account&apos;s in-app assistant
             that answers &quot;how do I…&quot; questions about the app and can
             perform a few actions (create a contact, task, or workflow), each of
             which the operator confirms before it runs.{" "}

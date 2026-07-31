@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     const subSnap = await getAdminDb()
       .doc(`subAccounts/${body.subAccountId}`)
       .get();
-    // Opt-in gate: the Workspace Assistant is OFF unless the agency owner
+    // Opt-in gate: Zeno (sub-account level) is OFF unless the agency owner
     // explicitly enabled it for this sub-account (legacy/unset reads as off).
     if (subSnap.data()?.aiSuiteEnabledByAgency !== true) {
       return NextResponse.json(
@@ -112,7 +112,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "The Agency Assistant is turned off. Enable it under Agency → Settings.",
+            "Zeno is turned off. Enable it under Agency → Settings.",
         },
         { status: 403 },
       );

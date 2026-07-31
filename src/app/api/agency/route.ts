@@ -166,7 +166,7 @@ export async function PATCH(request: Request) {
     update.sharedSmsAllowed = body.sharedSmsAllowed;
   }
 
-  // Agency Assistant master switch (off by default; read `=== true`).
+  // Zeno (agency level) master switch (off by default; read `=== true`).
   if (body.agencyAssistantEnabled !== undefined) {
     if (typeof body.agencyAssistantEnabled !== "boolean") {
       return NextResponse.json(

@@ -79,7 +79,7 @@ export default function AgencySettingsPage() {
       {/* Read-only view of the deployment-wide AI model powering AI Agents. */}
       <AiModelSection />
 
-      {/* Agency Assistant master switch — OFF by default; every reply spends
+      {/* Zeno (agency level) master switch — OFF by default; every reply spends
           OpenRouter credits so the owner opts in deliberately. */}
       <AgencyAssistantSection />
 

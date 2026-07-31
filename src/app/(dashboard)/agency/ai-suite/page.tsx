@@ -10,7 +10,7 @@ import { AiSuiteScopeBanner } from "@/components/ai-suite/ai-suite-scope-banner"
 import { AiSuiteUsageCard } from "@/components/ai-suite/ai-suite-usage-card";
 
 /**
- * Agency Assistant (agency level) — an in-app assistant for the agency
+ * Zeno (agency level) — an in-app assistant for the agency
  * owner: how to create and manage sub-accounts, feature gates, branding,
  * members, billing, plus a few agency-wide actions. The chat API
  * independently enforces agency-owner access + the master switch; these
@@ -27,7 +27,7 @@ export default function AgencyAiSuitePage() {
     return (
       <div className="mx-auto w-full max-w-5xl">
         <p className="rounded-md border border-dashed px-3 py-3 text-sm text-muted-foreground">
-          The Agency Assistant is available to the agency owner.
+          Zeno is available to the agency owner.
         </p>
       </div>
     );
@@ -41,7 +41,7 @@ export default function AgencyAiSuitePage() {
         <div className="rounded-2xl border border-dashed bg-card p-10 text-center">
           <Sparkles className="mx-auto mb-3 h-6 w-6 text-muted-foreground" />
           <h1 className="text-lg font-semibold">
-            The Agency Assistant is turned off
+            Zeno is turned off
           </h1>
           <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
             It answers questions about running your agency and can perform a

@@ -64,7 +64,7 @@ interface NavItem {
 // render time; `matchPrefix` is the stem used to highlight the active link.
 const SUB_ACCOUNT_NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: Home, enabled: true },
-  { href: "/ai-suite", label: "Workspace Assistant", icon: Sparkles, enabled: true },
+  { href: "/ai-suite", label: "Zeno", icon: Sparkles, enabled: true },
   {
     href: "/conversations",
     label: "Conversations",
@@ -192,8 +192,8 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
         setWebsiteGate(data?.websiteEnabledByAgency === true);
         setSocialGate(data?.socialPlannerEnabledByAgency === true);
         setCommunityGate(data?.communityEnabledByAgency === true);
-        // Workspace Assistant is opt-in like the other gates — off unless the
-        // agency owner explicitly enabled it (legacy/unset reads as off).
+        // Zeno (sub-account level) is opt-in like the other gates — off unless
+        // the agency owner explicitly enabled it (legacy/unset reads as off).
         setAiSuiteGate(data?.aiSuiteEnabledByAgency === true);
         setGetLeadsGate(data?.getLeadsEnabledByAgency === true);
         // Default (unset) → hidden. Only an explicit `false` shows the Locked row.
@@ -314,7 +314,7 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
               </Link>
             )}
             {/* Hidden until the owner enables it under Agency → Settings —
-                the Agency Assistant ships OFF by default. */}
+                Zeno (agency level) ships OFF by default. */}
             {agencyRole === "owner" && agency.agencyAssistantEnabled && (
               <Link
                 href="/agency/ai-suite"
@@ -326,7 +326,7 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
                 )}
               >
                 <Sparkles className="h-4 w-4" />
-                Agency Assistant
+                Zeno
               </Link>
             )}
             {agencyRole === "owner" && !trimmed && (
