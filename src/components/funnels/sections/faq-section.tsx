@@ -12,7 +12,10 @@ export function FaqSection({
   return (
     <section className="px-4 py-12">
       <div className="mx-auto max-w-2xl">
-        <h2 className="mb-7 text-center text-2xl font-extrabold tracking-tight sm:text-3xl">
+        <h2
+          className="mb-7 text-balance text-center font-extrabold tracking-tight"
+          style={{ fontSize: "clamp(1.5rem, 4vw, 2.25rem)", lineHeight: 1.15 }}
+        >
           Frequently asked questions
         </h2>
         <div className="space-y-3">

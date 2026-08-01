@@ -21,14 +21,27 @@ import type {
   CtaBannerConfig,
   FaqConfig,
   FunnelDoc,
+  FunnelGenre,
   FunnelSection,
   FunnelSectionType,
+  GuaranteeConfig,
   HeroConfig,
   OfferConfig,
   ProofStripConfig,
   StoryConfig,
   TicketTiersConfig,
+  TrustBadgesConfig,
 } from "@/types/funnels";
+
+const GENRE_LABELS: Record<FunnelGenre, string> = {
+  lead_magnet: "Lead Magnet",
+  vsl: "VSL",
+  challenge: "Challenge",
+  application: "Application",
+  tripwire: "Tripwire",
+  webinar: "Webinar",
+  lead_gen: "Lead Gen",
+};
 
 const SECTION_LABELS: Record<FunnelSectionType, string> = {
   hero: "Hero",
@@ -40,6 +53,8 @@ const SECTION_LABELS: Record<FunnelSectionType, string> = {
   countdown: "Countdown",
   agenda: "Agenda",
   ticket_tiers: "Ticket tiers",
+  guarantee: "Guarantee",
+  trust_badges: "Trust badges",
 };
 
 const SECTION_DEFAULTS: Record<FunnelSectionType, () => FunnelSection["config"]> = {
@@ -52,6 +67,8 @@ const SECTION_DEFAULTS: Record<FunnelSectionType, () => FunnelSection["config"]>
   countdown: () => ({ endsAt: new Date(Date.now() + 3 * 86_400_000).toISOString() }) satisfies CountdownConfig,
   agenda: () => ({ days: [] }) satisfies AgendaConfig,
   ticket_tiers: () => ({ tiers: [] }) satisfies TicketTiersConfig,
+  guarantee: () => ({ headline: "30-day money-back guarantee", bodyText: "", badgeIcon: "shield" }) satisfies GuaranteeConfig,
+  trust_badges: () => ({ badges: [] }) satisfies TrustBadgesConfig,
 };
 
 function linesToArray(v: string): string[] {
@@ -162,11 +179,7 @@ export function FunnelBuilder({
     <div className="space-y-4 pb-16">
       <div className="flex items-center justify-between gap-2">
         <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-          {funnel.genre === "lead_magnet"
-            ? "Lead Magnet"
-            : funnel.genre === "vsl"
-              ? "VSL"
-              : "Challenge"}
+          {GENRE_LABELS[funnel.genre] ?? funnel.genre}
         </span>
         <div className="flex gap-2">
           {status === "published" && (
@@ -354,13 +367,27 @@ function SectionFields({
             </select>
           </Field>
           {c.mediaType !== "none" && (
-            <Field label="Media URL">
-              <Input
-                value={c.mediaUrl ?? ""}
-                onChange={(e) => onChange({ ...c, mediaUrl: e.target.value })}
-                className="h-9"
-              />
-            </Field>
+            <>
+              <Field label="Media URL">
+                <Input
+                  value={c.mediaUrl ?? ""}
+                  onChange={(e) => onChange({ ...c, mediaUrl: e.target.value })}
+                  className="h-9"
+                />
+              </Field>
+              <Field label="Layout">
+                <select
+                  value={c.layout ?? "centered"}
+                  onChange={(e) =>
+                    onChange({ ...c, layout: e.target.value as HeroConfig["layout"] })
+                  }
+                  className={fieldClass}
+                >
+                  <option value="centered">Centered — media below text</option>
+                  <option value="split">Split — media beside text</option>
+                </select>
+              </Field>
+            </>
           )}
           <Field label="CTA label (optional)">
             <Input
@@ -742,6 +769,82 @@ function SectionFields({
             </div>
           )}
           addLabel="Add tier"
+        />
+      );
+    }
+    case "guarantee": {
+      const c = section.config as GuaranteeConfig;
+      return (
+        <div className="space-y-3">
+          <Field label="Headline">
+            <Input
+              value={c.headline}
+              onChange={(e) => onChange({ ...c, headline: e.target.value })}
+              className="h-9"
+            />
+          </Field>
+          <Field label="Terms (your real guarantee — nothing pre-filled)">
+            <Textarea
+              rows={3}
+              value={c.bodyText}
+              onChange={(e) => onChange({ ...c, bodyText: e.target.value })}
+            />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Badge icon">
+              <select
+                value={c.badgeIcon ?? "shield"}
+                onChange={(e) =>
+                  onChange({ ...c, badgeIcon: e.target.value as GuaranteeConfig["badgeIcon"] })
+                }
+                className={fieldClass}
+              >
+                <option value="shield">Shield</option>
+                <option value="seal">Seal</option>
+                <option value="check">Check</option>
+              </select>
+            </Field>
+            <Field label='Duration label (e.g. "30 DAYS")'>
+              <Input
+                value={c.durationLabel ?? ""}
+                onChange={(e) => onChange({ ...c, durationLabel: e.target.value })}
+                className="h-9"
+              />
+            </Field>
+          </div>
+        </div>
+      );
+    }
+    case "trust_badges": {
+      const c = section.config as TrustBadgesConfig;
+      return (
+        <ListEditor
+          items={c.badges}
+          onChange={(badges) => onChange({ badges })}
+          empty={{ label: "", iconType: "shield" } as TrustBadgesConfig["badges"][number]}
+          renderRow={(badge, update) => (
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                placeholder="Label (e.g. SSL Secured)"
+                value={badge.label}
+                onChange={(e) => update({ ...badge, label: e.target.value })}
+                className="h-9"
+              />
+              <select
+                value={badge.iconType}
+                onChange={(e) =>
+                  update({ ...badge, iconType: e.target.value as TrustBadgesConfig["badges"][number]["iconType"] })
+                }
+                className={fieldClass}
+              >
+                <option value="lock">Lock</option>
+                <option value="card">Card</option>
+                <option value="shield">Shield</option>
+                <option value="star">Star</option>
+              </select>
+            </div>
+          )}
+          addLabel="Add badge"
         />
       );
     }

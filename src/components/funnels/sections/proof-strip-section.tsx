@@ -7,7 +7,14 @@ export function ProofStripSection({ config }: { config: ProofStripConfig }) {
     if (!reviewCount) return null;
     return (
       <section className="px-4 py-5">
-        <div className="mx-auto flex max-w-3xl items-center justify-center gap-2.5 rounded-full">
+        <div className="mx-auto flex w-fit max-w-3xl items-center justify-center gap-2.5 rounded-full border bg-[var(--card-bg)] px-4 py-2 shadow-sm"
+          style={
+            {
+              "--card-bg": "color-mix(in oklab, currentColor 3%, transparent)",
+              borderColor: "rgba(128,128,128,0.16)",
+            } as React.CSSProperties
+          }
+        >
           <div className="flex" style={{ color: "#f59e0b" }}>
             {Array.from({ length: scale }).map((_, i) => (
               <Star

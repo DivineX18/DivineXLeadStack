@@ -12,6 +12,8 @@ import { CtaBannerSection } from "./sections/cta-banner-section";
 import { CountdownSection } from "./sections/countdown-section";
 import { AgendaSection } from "./sections/agenda-section";
 import { TicketTiersSection } from "./sections/ticket-tiers-section";
+import { GuaranteeSection } from "./sections/guarantee-section";
+import { TrustBadgesSection } from "./sections/trust-badges-section";
 
 /**
  * Maps a funnel's `sections[]` to its section component, mirroring the
@@ -35,6 +37,8 @@ const SECTION_COMPONENTS: Record<FunnelSectionType, ComponentType<any>> = {
   countdown: CountdownSection,
   agenda: AgendaSection,
   ticket_tiers: TicketTiersSection,
+  guarantee: GuaranteeSection,
+  trust_badges: TrustBadgesSection,
 };
 
 const SYSTEM_FONT_STACK =

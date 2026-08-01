@@ -11,6 +11,10 @@ const GENRE_NAMES: Record<FunnelGenre, string> = {
   lead_magnet: "Lead Magnet",
   vsl: "VSL",
   challenge: "Challenge",
+  application: "Application",
+  tripwire: "Tripwire",
+  webinar: "Webinar",
+  lead_gen: "Lead Gen",
 };
 
 export const dynamic = "force-dynamic";

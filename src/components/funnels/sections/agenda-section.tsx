@@ -11,14 +11,17 @@ export function AgendaSection({
   return (
     <section className="px-4 py-12">
       <div className="mx-auto max-w-4xl">
-        <h2 className="mb-7 text-center text-2xl font-extrabold tracking-tight sm:text-3xl">
+        <h2
+          className="mb-7 text-balance text-center font-extrabold tracking-tight"
+          style={{ fontSize: "clamp(1.5rem, 4vw, 2.25rem)", lineHeight: 1.15 }}
+        >
           Everything you&apos;ll learn
         </h2>
         <div className="grid gap-5 sm:grid-cols-2">
           {config.days.map((day, i) => (
             <div
               key={i}
-              className="rounded-2xl border bg-[var(--card-bg)] p-6 shadow-[0_12px_30px_-15px_rgba(0,0,0,0.25)]"
+              className="rounded-2xl border bg-[var(--card-bg)] p-6 shadow-[0_12px_30px_-15px_rgba(0,0,0,0.25)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_20px_45px_-18px_rgba(0,0,0,0.35)]"
               style={
                 {
                   "--card-bg": "color-mix(in oklab, currentColor 2%, transparent)",

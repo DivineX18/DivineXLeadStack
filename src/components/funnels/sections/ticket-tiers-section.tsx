@@ -28,7 +28,10 @@ export function TicketTiersSection({
   return (
     <section className="px-4 py-12">
       <div className="mx-auto max-w-4xl">
-        <h2 className="mb-7 text-center text-2xl font-extrabold tracking-tight sm:text-3xl">
+        <h2
+          className="mb-7 text-balance text-center font-extrabold tracking-tight"
+          style={{ fontSize: "clamp(1.5rem, 4vw, 2.25rem)", lineHeight: 1.15 }}
+        >
           Select your ticket
         </h2>
         <div className="grid gap-6 sm:grid-cols-2">
@@ -37,7 +40,7 @@ export function TicketTiersSection({
             return (
               <div
                 key={i}
-                className="relative overflow-hidden rounded-2xl border bg-[var(--card-bg)] p-7 shadow-[0_16px_40px_-18px_rgba(0,0,0,0.3)]"
+                className="relative overflow-hidden rounded-2xl border bg-[var(--card-bg)] p-7 shadow-[0_16px_40px_-18px_rgba(0,0,0,0.3)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_24px_55px_-20px_rgba(0,0,0,0.4)]"
                 style={
                   {
                     "--card-bg": "color-mix(in oklab, currentColor 2%, transparent)",
@@ -82,7 +85,7 @@ export function TicketTiersSection({
                   ) : (
                     <a
                       href={tier.ctaHref || "#"}
-                      className="block rounded-xl px-6 py-3.5 text-center text-sm font-bold text-white shadow-lg transition-transform hover:scale-[1.02]"
+                      className="block rounded-xl px-6 py-3.5 text-center text-sm font-bold text-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
                       style={{ backgroundColor: accentColor }}
                     >
                       {tier.ctaLabel}

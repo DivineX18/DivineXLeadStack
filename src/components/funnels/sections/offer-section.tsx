@@ -52,7 +52,10 @@ export function OfferSection({
           />
         )}
         {config.headline && (
-          <h2 className="text-center text-xl font-bold tracking-tight">
+          <h2
+            className="text-balance text-center font-bold tracking-tight"
+            style={{ fontSize: "clamp(1.25rem, 3vw, 1.625rem)", lineHeight: 1.2 }}
+          >
             {config.headline}
           </h2>
         )}
@@ -95,7 +98,7 @@ export function OfferSection({
           ) : (
             <a
               href={config.ctaHref || "#"}
-              className="block rounded-xl px-6 py-4 text-center text-base font-bold text-white shadow-[0_8px_24px_-6px_var(--accent-shadow)] transition-transform hover:scale-[1.02]"
+              className="block rounded-xl px-6 py-4 text-center text-base font-bold text-white shadow-[0_8px_24px_-6px_var(--accent-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-6px_var(--accent-shadow)]"
               style={
                 {
                   backgroundColor: accentColor,

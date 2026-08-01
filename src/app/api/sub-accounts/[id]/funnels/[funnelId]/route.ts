@@ -20,6 +20,8 @@ const SECTION_TYPES: FunnelSectionType[] = [
   "countdown",
   "agenda",
   "ticket_tiers",
+  "guarantee",
+  "trust_badges",
 ];
 
 /** Defensive sanitize of a client-supplied sections array — authed staff,

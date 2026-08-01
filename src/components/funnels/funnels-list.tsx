@@ -8,10 +8,13 @@ import {
   BookOpen,
   ChevronDown,
   Clapperboard,
+  ClipboardCheck,
   Funnel,
   Loader2,
   Lock,
   Plus,
+  Radio,
+  Tag,
   Trash2,
   Users,
 } from "lucide-react";
@@ -45,8 +48,32 @@ const GENRES: { id: FunnelGenre; label: string; hint: string; icon: typeof BookO
   {
     id: "challenge",
     label: "Challenge",
-    hint: "Webinar/challenge registration -> agenda, ticket tiers",
+    hint: "Multi-day challenge registration -> agenda, ticket tiers",
     icon: Users,
+  },
+  {
+    id: "application",
+    label: "Application",
+    hint: "Qualify leads before a call -> proof, story, application form",
+    icon: ClipboardCheck,
+  },
+  {
+    id: "tripwire",
+    label: "Tripwire",
+    hint: "Low-ticket entry offer -> priced offer, trust badges, guarantee",
+    icon: Tag,
+  },
+  {
+    id: "webinar",
+    label: "Webinar",
+    hint: "Single-session registration -> countdown, agenda, signup",
+    icon: Radio,
+  },
+  {
+    id: "lead_gen",
+    label: "Lead Gen",
+    hint: "Generic interest capture -> no specific magnet asset",
+    icon: BookOpen,
   },
 ];
 

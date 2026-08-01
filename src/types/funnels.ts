@@ -8,7 +8,14 @@ import type { Timestamp, FieldValue } from "firebase/firestore";
  * the public renderer just maps over whatever `sections` exist.
  */
 
-export type FunnelGenre = "lead_magnet" | "vsl" | "challenge";
+export type FunnelGenre =
+  | "lead_magnet"
+  | "vsl"
+  | "challenge"
+  | "application"
+  | "tripwire"
+  | "webinar"
+  | "lead_gen";
 export type FunnelStatus = "draft" | "published";
 
 export type FunnelSectionType =
@@ -20,7 +27,9 @@ export type FunnelSectionType =
   | "cta_banner"
   | "countdown"
   | "agenda"
-  | "ticket_tiers";
+  | "ticket_tiers"
+  | "guarantee"
+  | "trust_badges";
 
 export interface HeroConfig {
   eyebrow?: string;
@@ -30,6 +39,11 @@ export interface HeroConfig {
   mediaUrl?: string;
   ctaLabel?: string;
   ctaHref?: string;
+  /** "split" places media beside the text (desktop) instead of below it —
+   *  the default "centered" layout reads templated at scale; split is the
+   *  standard modern-funnel pattern. Falls back to centered when no media
+   *  is set, since split has nothing to put in the second column. */
+  layout?: "centered" | "split";
 }
 
 export interface ProofStripConfig {
@@ -91,6 +105,21 @@ export interface TicketTiersConfig {
   }[];
 }
 
+/** Operator-typed real guarantee terms — nothing pre-filled or invented,
+ *  unlike gitpage's fabricated-guarantee problem documented in CLAUDE.md. */
+export interface GuaranteeConfig {
+  headline: string;
+  bodyText: string;
+  badgeIcon?: "shield" | "seal" | "check";
+  durationLabel?: string;
+}
+
+/** Icon-driven trust row — no fabricated ratings/review counts (that's
+ *  proof_strip's rating variant, which already covers real star display). */
+export interface TrustBadgesConfig {
+  badges: { label: string; iconType: "lock" | "card" | "shield" | "star" }[];
+}
+
 export type FunnelSectionConfig =
   | HeroConfig
   | ProofStripConfig
@@ -100,7 +129,9 @@ export type FunnelSectionConfig =
   | CtaBannerConfig
   | CountdownConfig
   | AgendaConfig
-  | TicketTiersConfig;
+  | TicketTiersConfig
+  | GuaranteeConfig
+  | TrustBadgesConfig;
 
 export interface FunnelSection {
   id: string;
