@@ -1,28 +1,43 @@
+import { Plus } from "lucide-react";
 import type { FaqConfig } from "@/types/funnels";
 
-export function FaqSection({ config }: { config: FaqConfig }) {
+export function FaqSection({
+  config,
+  accentColor,
+}: {
+  config: FaqConfig;
+  accentColor: string;
+}) {
   if (config.items.length === 0) return null;
   return (
-    <section className="px-4 py-10">
+    <section className="px-4 py-12">
       <div className="mx-auto max-w-2xl">
-        <h2 className="mb-6 text-center text-2xl font-bold">
+        <h2 className="mb-7 text-center text-2xl font-extrabold tracking-tight sm:text-3xl">
           Frequently asked questions
         </h2>
         <div className="space-y-3">
           {config.items.map((item, i) => (
             <details
               key={i}
-              className="group rounded-xl border border-black/10 p-4 dark:border-white/10"
+              className="group rounded-2xl border bg-[var(--card-bg)] p-5 shadow-sm transition-shadow open:shadow-md"
+              style={
+                {
+                  "--card-bg": "color-mix(in oklab, currentColor 2%, transparent)",
+                } as React.CSSProperties
+              }
             >
-              <summary className="cursor-pointer list-none font-medium marker:content-none">
+              <summary className="cursor-pointer list-none font-semibold marker:content-none">
                 <span className="flex items-center justify-between gap-4">
                   {item.question}
-                  <span className="shrink-0 text-lg opacity-50 transition-transform group-open:rotate-45">
-                    +
+                  <span
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-transform group-open:rotate-45"
+                    style={{ backgroundColor: `${accentColor}1a`, color: accentColor }}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
                   </span>
                 </span>
               </summary>
-              <p className="mt-3 text-sm leading-relaxed opacity-80">
+              <p className="mt-3 text-sm leading-relaxed opacity-75">
                 {item.answer}
               </p>
             </details>
