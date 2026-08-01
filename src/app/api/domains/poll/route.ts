@@ -8,7 +8,7 @@ import {
   qstashIsConfigured,
   verifyQStashSignature,
 } from "@/lib/automations/qstash";
-import { getProjectDomainConfig } from "@/lib/vercel/client";
+import { getServiceCustomDomain } from "@/lib/render/client";
 import type { CustomDomainDoc } from "@/types/custom-domains";
 
 export const dynamic = "force-dynamic";
@@ -70,16 +70,16 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ ok: true, settled: "timeout" });
   }
 
-  let config;
+  let result;
   try {
-    config = await getProjectDomainConfig(payload.domain);
+    result = await getServiceCustomDomain(payload.domain);
   } catch (err) {
-    console.warn("[domains/poll] config check threw — rescheduling", err);
+    console.warn("[domains/poll] status check threw — rescheduling", err);
     await reschedule(payload.domain, attempts);
     return NextResponse.json({ ok: true, deferred: "transient" });
   }
 
-  if (!config.misconfigured) {
+  if (result?.verificationStatus === "verified") {
     await ref.update({
       status: "verified",
       misconfigured: false,

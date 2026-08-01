@@ -17,7 +17,8 @@ export interface CustomDomainDoc {
   funnelId: string;
   status: CustomDomainStatus;
   misconfigured: boolean;
-  /** Verbatim DNS records Vercel says are required, shown to the operator. */
+  /** DNS record(s) to show the operator — a CNAME to this app's Render
+   *  onrender.com hostname, computed at registration time. */
   verificationRecords: { type: string; name: string; value: string }[];
   createdAt: Timestamp | FieldValue | null;
   updatedAt: Timestamp | FieldValue | null;

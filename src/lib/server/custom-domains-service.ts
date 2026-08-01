@@ -3,13 +3,13 @@ import "server-only";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import {
-  addProjectDomain,
-  getProjectDomainConfig,
-  removeProjectDomain,
-  VercelError,
-} from "@/lib/vercel/client";
+  addServiceCustomDomain,
+  getServiceCustomDomain,
+  getServiceOnrenderHostname,
+  removeServiceCustomDomain,
+  RenderError,
+} from "@/lib/render/client";
 import { effectiveCustomDomainsCap } from "@/lib/domains/limits";
-import { publishCallback } from "@/lib/automations/qstash";
 import type { CustomDomainDoc } from "@/types/custom-domains";
 
 const DOMAIN_RE =
@@ -30,10 +30,13 @@ export type AddDomainResult =
   | { ok: false; error: string };
 
 /**
- * Registers a domain against the Vercel project + writes the tracking doc.
- * Doc id = the lowercased domain, for O(1) middleware lookup. Re-checks the
- * per-sub-account cap (mirrors the website-slot cap enforcement) before
- * calling Vercel, so a capped tenant never burns an API call for nothing.
+ * Registers a domain against the Render service + writes the tracking doc.
+ * Doc id = the lowercased domain, for O(1) middleware lookup. v1 only
+ * supports subdomains (e.g. leads.client.com), not apex/root domains —
+ * apex DNS setup on Render needs a different record type this feature
+ * doesn't attempt to walk an operator through yet. Re-checks the
+ * per-sub-account cap before calling Render, so a capped tenant never
+ * burns an API call for nothing.
  */
 export async function addCustomDomain(opts: {
   subAccountId: string;
@@ -45,6 +48,13 @@ export async function addCustomDomain(opts: {
   const domain = opts.domain.trim().toLowerCase();
   if (!DOMAIN_RE.test(domain)) {
     return { ok: false, error: "That doesn't look like a valid domain." };
+  }
+  if (domain.split(".").length < 3) {
+    return {
+      ok: false,
+      error:
+        "Use a subdomain (e.g. leads.yourbrand.com), not a root domain — root domains need a different DNS setup this feature doesn't support yet.",
+    };
   }
 
   const db = getAdminDb();
@@ -62,41 +72,30 @@ export async function addCustomDomain(opts: {
     };
   }
 
-  let vercelResult;
   try {
-    vercelResult = await addProjectDomain(domain);
+    await addServiceCustomDomain(domain);
   } catch (err) {
     const msg =
-      err instanceof VercelError
+      err instanceof RenderError
         ? err.message
-        : "Couldn't register the domain with Vercel.";
+        : "Couldn't register the domain with Render.";
     return { ok: false, error: msg };
   }
 
+  const cnameTarget = await getServiceOnrenderHostname();
   const doc: Omit<CustomDomainDoc, "domain"> = {
     subAccountId: opts.subAccountId,
     agencyId: opts.agencyId,
     funnelId: opts.funnelId,
     status: "pending",
     misconfigured: true,
-    verificationRecords: (vercelResult.verification ?? []).map((v) => ({
-      type: v.type,
-      name: v.domain,
-      value: v.value,
-    })),
+    verificationRecords: cnameTarget
+      ? [{ type: "CNAME", name: domain, value: cnameTarget }]
+      : [],
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   };
   await db.doc(`customDomains/${domain}`).set({ domain, ...doc });
-
-  // Kick off the background verify chain immediately (20s first tick) so the
-  // Domains tab doesn't sit at "pending" until the next scheduled check.
-  void publishCallback({
-    pathname: "/api/domains/poll",
-    body: { domain, attempts: 0 },
-    delaySeconds: 20,
-    deduplicationId: `domain_${domain}_0`,
-  });
 
   return {
     ok: true,
@@ -112,17 +111,17 @@ export async function removeCustomDomain(
   const snap = await ref.get();
   if (!snap.exists || snap.data()?.subAccountId !== subAccountId) return false;
   try {
-    await removeProjectDomain(domain);
+    await removeServiceCustomDomain(domain);
   } catch {
-    // Best-effort — the domain may already be gone on Vercel's side.
+    // Best-effort — the domain may already be gone on Render's side.
     // Still remove our tracking doc so the sub-account isn't stuck holding
-    // a slot for a domain Vercel no longer recognizes either way.
+    // a slot for a domain Render no longer recognizes either way.
   }
   await ref.delete();
   return true;
 }
 
-/** Re-checks a domain's DNS status against Vercel and updates the doc. */
+/** Re-checks a domain's verification status against Render and updates the doc. */
 export async function recheckCustomDomain(
   domain: string,
 ): Promise<CustomDomainDoc | null> {
@@ -130,20 +129,20 @@ export async function recheckCustomDomain(
   const snap = await ref.get();
   if (!snap.exists) return null;
 
-  let config;
+  let result;
   try {
-    config = await getProjectDomainConfig(domain);
+    result = await getServiceCustomDomain(domain);
   } catch {
     return snap.data() as CustomDomainDoc;
   }
+  if (!result) return snap.data() as CustomDomainDoc;
 
-  const status: CustomDomainDoc["status"] = config.misconfigured
-    ? "pending"
-    : "verified";
+  const status: CustomDomainDoc["status"] =
+    result.verificationStatus === "verified" ? "verified" : "pending";
   await ref.update({
     status,
-    misconfigured: config.misconfigured,
+    misconfigured: status !== "verified",
     updatedAt: FieldValue.serverTimestamp(),
   });
-  return { ...(snap.data() as CustomDomainDoc), status, misconfigured: config.misconfigured };
+  return { ...(snap.data() as CustomDomainDoc), status, misconfigured: status !== "verified" };
 }

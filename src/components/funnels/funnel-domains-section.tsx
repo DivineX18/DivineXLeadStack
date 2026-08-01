@@ -180,8 +180,9 @@ export function FunnelDomainsSection({
             )}
             {d.status !== "verified" && d.verificationRecords.length === 0 && (
               <p className="mt-2 text-xs text-muted-foreground">
-                Point a CNAME record at <code>cname.vercel-dns.com</code>, then
-                click recheck.
+                Couldn&apos;t determine the exact CNAME target — check your
+                deployment&apos;s Render dashboard for this service&apos;s
+                onrender.com hostname, point a CNAME at it, then click recheck.
               </p>
             )}
           </div>

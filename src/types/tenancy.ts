@@ -246,11 +246,11 @@ export interface SubAccountDoc {
   funnelsEnabledByAgency?: boolean;
   /**
    * Agency-controlled gate for Custom Domains — pointing a client's own
-   * domain at one of their published funnels (via Vercel's Domains API),
+   * domain at one of their published funnels (via Render's Custom Domains API),
    * so the funnel never shows `crm.divinex.io` in the URL bar. Deliberately
    * SEPARATE from `funnelsEnabledByAgency`: funnels work at the free
    * `/lp/...` URL under the base gate regardless; registering a real domain
-   * is a distinct, higher-cost capability (Vercel API usage, SSL issuance,
+   * is a distinct, higher-cost capability (Render API usage, SSL issuance,
    * a domain "slot") gated on its own, and a natural higher-tier-plan
    * differentiator. Only the agency owner can flip it. When `false`: the
    * Domains tab inside the funnel editor shows a "Locked by your agency"

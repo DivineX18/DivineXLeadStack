@@ -4,11 +4,9 @@ import type { HeroConfig } from "@/types/funnels";
 export function HeroSection({
   config,
   accentColor,
-  theme,
 }: {
   config: HeroConfig;
   accentColor: string;
-  theme: "light" | "dark";
 }) {
   const hasMedia = config.mediaType !== "none" && config.mediaUrl;
   return (
