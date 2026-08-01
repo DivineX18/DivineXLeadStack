@@ -243,3 +243,70 @@ export async function getLatestDeploymentState(): Promise<{
     return null;
   }
 }
+
+// ── custom domains (Funnels — pointing a client's own domain at a funnel) ──
+
+export interface DomainVerificationRecord {
+  type: string;
+  domain: string;
+  value: string;
+  reason?: string;
+}
+
+export interface AddDomainResult {
+  name: string;
+  /** False when the domain needs an ownership-verification TXT record —
+   *  rare for a CNAME'd subdomain, common for an apex domain or one
+   *  already claimed under a different Vercel account/project. */
+  verified: boolean;
+  verification?: DomainVerificationRecord[];
+}
+
+/** Registers a domain against this project (`POST /v10/projects/{id}/domains`). */
+export async function addProjectDomain(domain: string): Promise<AddDomainResult> {
+  const { projectId, teamId } = requireConfig();
+  const data = (await vercelFetch(
+    `/v10/projects/${projectId}/domains`,
+    { method: "POST", body: JSON.stringify({ name: domain }) },
+    teamId,
+  )) as {
+    name: string;
+    verified?: boolean;
+    verification?: DomainVerificationRecord[];
+  };
+  return {
+    name: data.name,
+    verified: data.verified === true,
+    verification: data.verification,
+  };
+}
+
+export interface DomainConfigResult {
+  /** True until the domain's DNS actually resolves to Vercel. */
+  misconfigured: boolean;
+}
+
+/** Checks whether a domain's DNS is correctly pointed at Vercel
+ *  (`GET /v6/domains/{domain}/config`) — the poll target while a
+ *  registered domain sits in "pending". */
+export async function getProjectDomainConfig(
+  domain: string,
+): Promise<DomainConfigResult> {
+  const { teamId } = requireConfig();
+  const data = (await vercelFetch(
+    `/v6/domains/${domain}/config`,
+    { method: "GET" },
+    teamId,
+  )) as { misconfigured?: boolean };
+  return { misconfigured: data.misconfigured !== false };
+}
+
+/** Removes a domain from this project (`DELETE /v9/projects/{id}/domains/{domain}`). */
+export async function removeProjectDomain(domain: string): Promise<void> {
+  const { projectId, teamId } = requireConfig();
+  await vercelFetch(
+    `/v9/projects/${projectId}/domains/${domain}`,
+    { method: "DELETE" },
+    teamId,
+  );
+}

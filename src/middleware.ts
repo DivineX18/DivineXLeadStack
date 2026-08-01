@@ -104,6 +104,11 @@ const PUBLIC_PATHS = [
   // as /f/[formId], since a funnel is meant for mass/anonymous ad traffic
   // like a form, not a private single-recipient document like a quote.
   "/lp",
+  // Custom-domain resolver — internal rewrite target for Funnels custom
+  // domains (see customDomainRewrite() below); never linked to directly.
+  "/cdomain",
+  // Custom-domain DNS-verify QStash callback. Signature-verified inside.
+  "/api/domains/poll",
   // Public booking pages — /b/[saId]/[slug] hosted slot picker, plus the
   // availability + book POST endpoints. Security:
   //  - Page reads only return slots when `status === "published"`
@@ -219,7 +224,45 @@ function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATH_PATTERNS.some((re) => re.test(pathname));
 }
 
+// Custom-domain rewrite for Funnels (crm.divinex.io/lp/[funnelId] -> a
+// client's own domain). Pure string comparison, no Firestore, no runtime
+// change — safe to run before anything else in this file. A request whose
+// Host header isn't the app's own domain (or a Vercel preview/localhost)
+// gets rewritten to an internal resolver path that does the real Firestore
+// lookup; the browser's address bar keeps showing the client's own domain
+// throughout since this is a rewrite, not a redirect.
+function customDomainRewrite(request: NextRequest): NextResponse | null {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) return null;
+  let appHostname: string;
+  try {
+    appHostname = new URL(appUrl).hostname;
+  } catch {
+    return null;
+  }
+  // request.nextUrl.hostname does NOT reflect the incoming Host header (it
+  // stays pinned to the server's own bind address) — read the real Host
+  // header directly, the standard technique for multi-tenant Next.js apps.
+  const hostHeader = request.headers.get("host");
+  if (!hostHeader) return null;
+  const hostname = hostHeader.split(":")[0];
+  if (
+    hostname === appHostname ||
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname.endsWith(".vercel.app")
+  ) {
+    return null;
+  }
+  return NextResponse.rewrite(
+    new URL(`/cdomain/${hostname}${request.nextUrl.pathname}${request.nextUrl.search}`, request.url),
+  );
+}
+
 export default function middleware(request: NextRequest) {
+  const domainRewrite = customDomainRewrite(request);
+  if (domainRewrite) return domainRewrite;
+
   // Skip auth middleware if Firebase is not configured
   if (
     !process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||

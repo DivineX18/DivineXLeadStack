@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { subscribeToForms } from "@/lib/firestore/forms";
+import { FunnelDomainsSection } from "@/components/funnels/funnel-domains-section";
 import type { LeadForm } from "@/types/forms";
 import type {
   AgendaConfig,
@@ -228,6 +229,8 @@ export function FunnelBuilder({
           </div>
         </div>
       </div>
+
+      <FunnelDomainsSection saId={saId} funnelId={funnelId} />
 
       <div className="space-y-3">
         {sections.map((section, i) => (

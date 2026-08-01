@@ -260,6 +260,13 @@ export interface SubAccountDoc {
    */
   customDomainsEnabledByAgency?: boolean;
   /**
+   * Per-sub-account override of the custom-domain cap (see
+   * `lib/domains/limits.ts::effectiveCustomDomainsCap`). `null` resets to
+   * the shared default; `-1` means unlimited; a positive integer sets that
+   * many slots instead. Mirrors `websiteMaxSites`.
+   */
+  maxCustomDomains?: number | null;
+  /**
    * Get Leads: operator-defined custom service types shown in the business-
    * type picker alongside the curated list. Plain display labels (each
    * doubles as the Google Maps query, ≤60 chars, ≤30 entries). Written only
