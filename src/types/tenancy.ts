@@ -232,6 +232,34 @@ export interface SubAccountDoc {
    */
   getLeadsEnabledByAgency?: boolean;
   /**
+   * Agency-controlled gate for Funnels — first-party ClickFunnels/GHL-style
+   * single-page funnels (/lp/[funnelId]), rendered directly by this app
+   * (no gitpage.site involvement). Only the agency owner can flip it (PATCH
+   * /api/agency/sub-accounts/[id]/feature-gates). When `false` (or undefined
+   * on legacy docs): the Funnels sidebar entry renders a "Locked by your
+   * agency" state and the funnels API routes 403. No tear-down on disable —
+   * existing funnels + their public pages are preserved (published funnels
+   * stay live even while the builder is locked), so re-enabling resumes
+   * instantly. Defaults to `false` at creation (explicit allowlist). Read
+   * `=== true` so legacy docs stay locked.
+   */
+  funnelsEnabledByAgency?: boolean;
+  /**
+   * Agency-controlled gate for Custom Domains — pointing a client's own
+   * domain at one of their published funnels (via Vercel's Domains API),
+   * so the funnel never shows `crm.divinex.io` in the URL bar. Deliberately
+   * SEPARATE from `funnelsEnabledByAgency`: funnels work at the free
+   * `/lp/...` URL under the base gate regardless; registering a real domain
+   * is a distinct, higher-cost capability (Vercel API usage, SSL issuance,
+   * a domain "slot") gated on its own, and a natural higher-tier-plan
+   * differentiator. Only the agency owner can flip it. When `false`: the
+   * Domains tab inside the funnel editor shows a "Locked by your agency"
+   * state and the domains routes 403. No tear-down on disable — registered
+   * domains are preserved, so re-enabling resumes instantly. Defaults to
+   * `false` at creation. Read `=== true` so legacy docs stay locked.
+   */
+  customDomainsEnabledByAgency?: boolean;
+  /**
    * Get Leads: operator-defined custom service types shown in the business-
    * type picker alongside the curated list. Plain display labels (each
    * doubles as the Google Maps query, ≤60 chars, ≤30 entries). Written only
@@ -301,6 +329,7 @@ export interface SubAccountDoc {
   communityHiddenWhenDisabled?: boolean;
   getLeadsHiddenWhenDisabled?: boolean;
   aiSuiteHiddenWhenDisabled?: boolean;
+  funnelsHiddenWhenDisabled?: boolean;
   /**
    * BETA Facebook Messenger + Instagram DM connection. Null/undefined until the
    * sub-account admin connects a Page (only possible when

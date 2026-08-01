@@ -240,6 +240,8 @@ export async function POST(request: Request) {
         getLeadsEnabledByAgency: false,
         missedCallTextBackEnabledByAgency: false,
         aiSuiteEnabledByAgency: false,
+        funnelsEnabledByAgency: false,
+        customDomainsEnabledByAgency: false,
         metaConfig: null,
         bookingConfig: null,
         sendWindow: null,

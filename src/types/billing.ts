@@ -32,6 +32,8 @@ export const PLAN_GATE_KEYS = [
   "communityEnabledByAgency",
   "missedCallTextBackEnabledByAgency",
   "aiSuiteEnabledByAgency",
+  "funnelsEnabledByAgency",
+  "customDomainsEnabledByAgency",
 ] as const;
 
 export type PlanGateKey = (typeof PLAN_GATE_KEYS)[number];
@@ -49,6 +51,8 @@ export const PLAN_GATE_LABELS: Record<PlanGateKey, string> = {
   communityEnabledByAgency: "Community + Courses",
   missedCallTextBackEnabledByAgency: "Missed Call Text Back",
   aiSuiteEnabledByAgency: "AI Suite assistant",
+  funnelsEnabledByAgency: "Funnels",
+  customDomainsEnabledByAgency: "Custom domains",
 };
 
 /** Full gate bundle a plan carries — every key present, true = enabled. */

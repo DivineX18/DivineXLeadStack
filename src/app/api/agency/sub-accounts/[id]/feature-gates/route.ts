@@ -55,6 +55,8 @@ interface PatchBody {
   missedCallTextBackEnabled?: boolean;
   aiSuiteEnabled?: boolean;
   getLeadsEnabled?: boolean;
+  funnelsEnabled?: boolean;
+  customDomainsEnabled?: boolean;
   // "Hide instead of lock" overrides for the sidebar-gated features.
   // Only take effect while the matching gate is off. See `*HiddenWhenDisabled`
   // on SubAccountDoc.
@@ -64,6 +66,7 @@ interface PatchBody {
   communityHiddenWhenDisabled?: boolean;
   getLeadsHiddenWhenDisabled?: boolean;
   aiSuiteHiddenWhenDisabled?: boolean;
+  funnelsHiddenWhenDisabled?: boolean;
 }
 
 export async function PATCH(
@@ -99,6 +102,8 @@ export async function PATCH(
   const wantsMissedCall = typeof body.missedCallTextBackEnabled === "boolean";
   const wantsAiSuite = typeof body.aiSuiteEnabled === "boolean";
   const wantsGetLeads = typeof body.getLeadsEnabled === "boolean";
+  const wantsFunnels = typeof body.funnelsEnabled === "boolean";
+  const wantsCustomDomains = typeof body.customDomainsEnabled === "boolean";
   const wantsBroadcastsHidden =
     typeof body.broadcastsHiddenWhenDisabled === "boolean";
   const wantsWebsiteHidden =
@@ -111,6 +116,8 @@ export async function PATCH(
     typeof body.getLeadsHiddenWhenDisabled === "boolean";
   const wantsAiSuiteHidden =
     typeof body.aiSuiteHiddenWhenDisabled === "boolean";
+  const wantsFunnelsHidden =
+    typeof body.funnelsHiddenWhenDisabled === "boolean";
   const wantsWebsiteMaxSites = body.websiteMaxSites !== undefined;
   if (
     wantsWebsiteMaxSites &&
@@ -143,12 +150,15 @@ export async function PATCH(
     !wantsMissedCall &&
     !wantsAiSuite &&
     !wantsGetLeads &&
+    !wantsFunnels &&
+    !wantsCustomDomains &&
     !wantsBroadcastsHidden &&
     !wantsWebsiteHidden &&
     !wantsSocialPlannerHidden &&
     !wantsCommunityHidden &&
     !wantsGetLeadsHidden &&
-    !wantsAiSuiteHidden
+    !wantsAiSuiteHidden &&
+    !wantsFunnelsHidden
   ) {
     return NextResponse.json(
       {
@@ -226,6 +236,12 @@ export async function PATCH(
   if (typeof body.getLeadsEnabled === "boolean") {
     gates.getLeadsEnabledByAgency = body.getLeadsEnabled;
   }
+  if (typeof body.funnelsEnabled === "boolean") {
+    gates.funnelsEnabledByAgency = body.funnelsEnabled;
+  }
+  if (typeof body.customDomainsEnabled === "boolean") {
+    gates.customDomainsEnabledByAgency = body.customDomainsEnabled;
+  }
 
   let clearedDomain = false;
   if (Object.keys(gates).length > 0) {
@@ -262,6 +278,9 @@ export async function PATCH(
   }
   if (wantsAiSuiteHidden) {
     extraUpdates.aiSuiteHiddenWhenDisabled = body.aiSuiteHiddenWhenDisabled;
+  }
+  if (wantsFunnelsHidden) {
+    extraUpdates.funnelsHiddenWhenDisabled = body.funnelsHiddenWhenDisabled;
   }
   if (Object.keys(extraUpdates).length > 0) {
     extraUpdates.updatedAt = FieldValue.serverTimestamp();

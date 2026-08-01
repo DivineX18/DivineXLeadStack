@@ -895,6 +895,12 @@ service cloud.firestore {
     match /workflowRuns/{runId} {
       allow read, write: if false;
     }
+    match /funnels/{funnelId} {
+      allow read, write: if false;
+    }
+    match /customDomains/{domain} {
+      allow read, write: if false;
+    }
 
     // Import jobs (bulk migration ingest). Members can read to watch progress
     // + see the run summary; all writes go through the admin-SDK import routes.

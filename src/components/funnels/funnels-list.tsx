@@ -1,0 +1,233 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { toast } from "sonner";
+import {
+  BookOpen,
+  ChevronDown,
+  Clapperboard,
+  Funnel,
+  Loader2,
+  Lock,
+  Plus,
+  Trash2,
+  Users,
+} from "lucide-react";
+import { doc, onSnapshot } from "firebase/firestore";
+import { getFirebaseDb } from "@/lib/firebase/client";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { FunnelGenre, FunnelStatus } from "@/types/funnels";
+
+const GENRES: { id: FunnelGenre; label: string; hint: string; icon: typeof BookOpen }[] = [
+  {
+    id: "lead_magnet",
+    label: "Lead Magnet",
+    hint: "Free book/offer -> headline, proof, story, FAQ",
+    icon: BookOpen,
+  },
+  {
+    id: "vsl",
+    label: "VSL",
+    hint: "High-ticket video sales page -> price anchor, one CTA",
+    icon: Clapperboard,
+  },
+  {
+    id: "challenge",
+    label: "Challenge",
+    hint: "Webinar/challenge registration -> agenda, ticket tiers",
+    icon: Users,
+  },
+];
+
+interface Row {
+  id: string;
+  name: string;
+  genre: FunnelGenre;
+  status: FunnelStatus;
+}
+
+export function FunnelsList({ saId }: { saId: string }) {
+  const router = useRouter();
+  const [rows, setRows] = useState<Row[] | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [gate, setGate] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    return onSnapshot(
+      doc(getFirebaseDb(), "subAccounts", saId),
+      (snap) => setGate(snap.data()?.funnelsEnabledByAgency === true),
+      () => setGate(null),
+    );
+  }, [saId]);
+
+  async function load() {
+    const res = await fetch(`/api/sub-accounts/${saId}/funnels`);
+    const d = (await res.json().catch(() => ({}))) as { funnels?: Row[] };
+    setRows(d.funnels ?? []);
+  }
+  useEffect(() => {
+    if (gate) void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saId, gate]);
+
+  async function create(genre: FunnelGenre) {
+    setCreating(true);
+    try {
+      const res = await fetch(`/api/sub-accounts/${saId}/funnels`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ genre }),
+      });
+      const d = (await res.json()) as { id?: string };
+      if (!res.ok || !d.id) throw new Error();
+      router.push(`/sa/${saId}/funnels/${d.id}`);
+    } catch {
+      toast.error("Couldn't create funnel");
+      setCreating(false);
+    }
+  }
+
+  async function remove(id: string) {
+    setRows((r) => r?.filter((x) => x.id !== id) ?? null);
+    const res = await fetch(`/api/sub-accounts/${saId}/funnels/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      toast.error("Couldn't delete");
+      void load();
+    }
+  }
+
+  if (gate === false) {
+    return (
+      <div className="rounded-2xl border border-dashed bg-card p-10 text-center">
+        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          <Lock className="h-6 w-6" />
+        </span>
+        <h2 className="mt-4 text-base font-semibold">
+          Funnels is locked by your agency
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Ask your agency administrator to enable Funnels for this sub-account.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">Funnels</h1>
+          <p className="text-sm text-muted-foreground">
+            ClickFunnels/GHL-style single-page funnels, hosted directly on
+            this platform.
+          </p>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<Button type="button" disabled={creating} />}
+          >
+            {creating ? (
+              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="mr-1 h-4 w-4" />
+            )}
+            New funnel
+            <ChevronDown className="ml-1 h-4 w-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-72">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Funnel type</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {GENRES.map((g) => (
+                <DropdownMenuItem
+                  key={g.id}
+                  onClick={() => create(g.id)}
+                  className="flex flex-col items-start gap-0.5"
+                >
+                  <span className="flex items-center gap-2 font-medium">
+                    <g.icon className="h-4 w-4" /> {g.label}
+                  </span>
+                  <span className="pl-6 text-xs text-muted-foreground">
+                    {g.hint}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {rows === null ? (
+        <div className="flex justify-center py-16 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="rounded-xl border border-dashed p-12 text-center">
+          <Funnel className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            No funnels yet. Create your first one.
+          </p>
+        </div>
+      ) : (
+        <div className="divide-y overflow-hidden rounded-xl border bg-card">
+          {rows.map((f) => {
+            const genre = GENRES.find((g) => g.id === f.genre);
+            return (
+              <div key={f.id} className="flex items-center gap-3 p-4 hover:bg-muted/40">
+                <Link href={`/sa/${saId}/funnels/${f.id}`} className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-medium">{f.name}</span>
+                    <span
+                      className={
+                        f.status === "published"
+                          ? "rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
+                          : "rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                      }
+                    >
+                      {f.status === "published" ? "Published" : "Draft"}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {genre?.label ?? f.genre}
+                  </div>
+                </Link>
+                {f.status === "published" && (
+                  <a
+                    href={`/lp/${f.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-primary underline-offset-2 hover:underline"
+                  >
+                    View live
+                  </a>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label={`Delete funnel "${f.name}"`}
+                  onClick={() => remove(f.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

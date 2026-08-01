@@ -222,6 +222,8 @@ export async function createSubAccountForAgency(
       // Zeno (sub-account level) ships OFF like every other gate (opt-in) — the
       // agency owner enables it per sub-account from the Manage dialog.
       aiSuiteEnabledByAgency: false,
+      funnelsEnabledByAgency: false,
+      customDomainsEnabledByAgency: false,
       metaConfig: null,
       bookingConfig: null,
       sendWindow: null,

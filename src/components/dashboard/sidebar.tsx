@@ -28,6 +28,7 @@ import {
   MessagesSquare,
   Radar,
   Share2,
+  Funnel,
   GraduationCap,
   Sparkles,
   CreditCard,
@@ -96,6 +97,7 @@ const SUB_ACCOUNT_NAV: NavItem[] = [
   { href: "/products", label: "Products", icon: Package, enabled: true },
   { href: "/quotes", label: "Quotes", icon: FileSignature, enabled: true },
   { href: "/website", label: "Website", icon: Globe, enabled: true },
+  { href: "/funnels", label: "Funnels", icon: Funnel, enabled: true },
   { href: "/workflows", label: "Workflows", icon: Workflow, enabled: true },
   { href: "/ai-agents", label: "AI Agents", icon: Bot, enabled: true },
   { href: "/broadcasts", label: "Broadcasts", icon: Send, enabled: true },
@@ -163,6 +165,7 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
   const [communityGate, setCommunityGate] = useState<boolean | null>(null);
   const [aiSuiteGate, setAiSuiteGate] = useState<boolean | null>(null);
   const [getLeadsGate, setGetLeadsGate] = useState<boolean | null>(null);
+  const [funnelsGate, setFunnelsGate] = useState<boolean | null>(null);
   // Per-feature "hide vs. show as Locked" flag. Only consulted when the
   // matching gate is off. HIDDEN IS THE DEFAULT — a disabled feature is omitted
   // entirely so the tenant never knows it exists; the agency owner has to opt a
@@ -173,6 +176,7 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
   const [communityHidden, setCommunityHidden] = useState(false);
   const [getLeadsHidden, setGetLeadsHidden] = useState(false);
   const [aiSuiteHidden, setAiSuiteHidden] = useState(false);
+  const [funnelsHidden, setFunnelsHidden] = useState(false);
   useEffect(() => {
     const linkSubIdLocal = activeSubId ?? memberships[0]?.subAccountId ?? null;
     if (!linkSubIdLocal) {
@@ -182,6 +186,7 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
       setCommunityGate(null);
       setAiSuiteGate(null);
       setGetLeadsGate(null);
+      setFunnelsGate(null);
       return;
     }
     return onSnapshot(
@@ -196,6 +201,7 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
         // the agency owner explicitly enabled it (legacy/unset reads as off).
         setAiSuiteGate(data?.aiSuiteEnabledByAgency === true);
         setGetLeadsGate(data?.getLeadsEnabledByAgency === true);
+        setFunnelsGate(data?.funnelsEnabledByAgency === true);
         // Default (unset) → hidden. Only an explicit `false` shows the Locked row.
         setBroadcastsHidden(data?.broadcastsHiddenWhenDisabled !== false);
         setWebsiteHidden(data?.websiteHiddenWhenDisabled !== false);
@@ -203,6 +209,7 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
         setCommunityHidden(data?.communityHiddenWhenDisabled !== false);
         setGetLeadsHidden(data?.getLeadsHiddenWhenDisabled !== false);
         setAiSuiteHidden(data?.aiSuiteHiddenWhenDisabled !== false);
+        setFunnelsHidden(data?.funnelsHiddenWhenDisabled !== false);
       },
       () => {
         setBroadcastsGate(null);
@@ -211,6 +218,7 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
         setCommunityGate(null);
         setAiSuiteGate(null);
         setGetLeadsGate(null);
+        setFunnelsGate(null);
       },
     );
   }, [activeSubId, memberships]);
@@ -375,7 +383,8 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
                 (item.href === "/social" && socialGate === false) ||
                 (item.href === "/community" && communityGate === false) ||
                 (item.href === "/ai-suite" && aiSuiteGate === false) ||
-                (item.href === "/get-leads" && getLeadsGate === false);
+                (item.href === "/get-leads" && getLeadsGate === false) ||
+                (item.href === "/funnels" && funnelsGate === false);
               // When the agency owner opted to hide (not just lock) a disabled
               // feature, omit the entry entirely so the tenant never sees it.
               const gateHidden =
@@ -396,7 +405,10 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
                   getLeadsHidden) ||
                 (item.href === "/ai-suite" &&
                   aiSuiteGate === false &&
-                  aiSuiteHidden);
+                  aiSuiteHidden) ||
+                (item.href === "/funnels" &&
+                  funnelsGate === false &&
+                  funnelsHidden);
               if (gateHidden) return null;
               if (!item.enabled || gateLocked) {
                 const lockedByGate = gateLocked;

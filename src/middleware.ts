@@ -99,6 +99,11 @@ const PUBLIC_PATHS = [
   // verification inside the route; no session needed.
   "/q",
   "/api/quotes",
+  // Public funnel pages — /lp/[funnelId] first-party ClickFunnels/GHL-style
+  // landing pages. Fully public, zero token, doc-ID-is-the-URL — same model
+  // as /f/[formId], since a funnel is meant for mass/anonymous ad traffic
+  // like a form, not a private single-recipient document like a quote.
+  "/lp",
   // Public booking pages — /b/[saId]/[slug] hosted slot picker, plus the
   // availability + book POST endpoints. Security:
   //  - Page reads only return slots when `status === "published"`

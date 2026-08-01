@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   AlertTriangle,
   Globe,
+  Funnel,
   KeyRound,
   Loader2,
   Mail,
@@ -85,6 +86,8 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
   // explicitly enabled (legacy/unset reads as off).
   const initialAiSuite = subAccount?.aiSuiteEnabledByAgency === true;
   const initialGetLeads = subAccount?.getLeadsEnabledByAgency === true;
+  const initialFunnels = subAccount?.funnelsEnabledByAgency === true;
+  const initialCustomDomains = subAccount?.customDomainsEnabledByAgency === true;
   // "Hide vs. show as Locked" flag for the sidebar-gated features. HIDDEN is the
   // default — a disabled feature is omitted from the tenant's sidebar unless the
   // owner explicitly opts it into the greyed "Locked" row (field set to `false`).
@@ -100,6 +103,8 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
     subAccount?.getLeadsHiddenWhenDisabled !== false;
   const initialAiSuiteHidden =
     subAccount?.aiSuiteHiddenWhenDisabled !== false;
+  const initialFunnelsHidden =
+    subAccount?.funnelsHiddenWhenDisabled !== false;
   const hasLiveDomain = !!subAccount?.resendConfig;
   const [emailDomainEnabled, setEmailDomainEnabled] = useState(initialEmail);
   const [apiAccessEnabled, setApiAccessEnabled] = useState(initialApi);
@@ -121,6 +126,10 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
   const [missedCallEnabled, setMissedCallEnabled] = useState(initialMissedCall);
   const [aiSuiteEnabled, setAiSuiteEnabled] = useState(initialAiSuite);
   const [getLeadsEnabled, setGetLeadsEnabled] = useState(initialGetLeads);
+  const [funnelsEnabled, setFunnelsEnabled] = useState(initialFunnels);
+  const [customDomainsEnabled, setCustomDomainsEnabled] = useState(
+    initialCustomDomains,
+  );
   const [broadcastsHidden, setBroadcastsHidden] = useState(
     initialBroadcastsHidden,
   );
@@ -131,6 +140,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
   );
   const [getLeadsHidden, setGetLeadsHidden] = useState(initialGetLeadsHidden);
   const [aiSuiteHidden, setAiSuiteHidden] = useState(initialAiSuiteHidden);
+  const [funnelsHidden, setFunnelsHidden] = useState(initialFunnelsHidden);
   const [saving, setSaving] = useState(false);
   // Danger-zone delete state. `deleteConfirm` must match the sub-account name
   // before the button unlocks; `deleting` disables the whole dialog mid-request.
@@ -174,12 +184,15 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
       setMissedCallEnabled(initialMissedCall);
       setAiSuiteEnabled(initialAiSuite);
       setGetLeadsEnabled(initialGetLeads);
+      setFunnelsEnabled(initialFunnels);
+      setCustomDomainsEnabled(initialCustomDomains);
       setBroadcastsHidden(initialBroadcastsHidden);
       setWebsiteHidden(initialWebsiteHidden);
       setSocialHidden(initialSocialHidden);
       setCommunityHidden(initialCommunityHidden);
       setGetLeadsHidden(initialGetLeadsHidden);
       setAiSuiteHidden(initialAiSuiteHidden);
+      setFunnelsHidden(initialFunnelsHidden);
       setDeleteConfirm("");
     }
   }, [
@@ -196,12 +209,15 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
     initialMissedCall,
     initialAiSuite,
     initialGetLeads,
+    initialFunnels,
+    initialCustomDomains,
     initialBroadcastsHidden,
     initialWebsiteHidden,
     initialSocialHidden,
     initialCommunityHidden,
     initialGetLeadsHidden,
     initialAiSuiteHidden,
+    initialFunnelsHidden,
     subAccount?.id,
   ]);
 
@@ -224,12 +240,15 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
   const missedCallDirty = missedCallEnabled !== initialMissedCall;
   const aiSuiteDirty = aiSuiteEnabled !== initialAiSuite;
   const getLeadsDirty = getLeadsEnabled !== initialGetLeads;
+  const funnelsDirty = funnelsEnabled !== initialFunnels;
+  const customDomainsDirty = customDomainsEnabled !== initialCustomDomains;
   const broadcastsHiddenDirty = broadcastsHidden !== initialBroadcastsHidden;
   const websiteHiddenDirty = websiteHidden !== initialWebsiteHidden;
   const socialHiddenDirty = socialHidden !== initialSocialHidden;
   const communityHiddenDirty = communityHidden !== initialCommunityHidden;
   const getLeadsHiddenDirty = getLeadsHidden !== initialGetLeadsHidden;
   const aiSuiteHiddenDirty = aiSuiteHidden !== initialAiSuiteHidden;
+  const funnelsHiddenDirty = funnelsHidden !== initialFunnelsHidden;
   const dirty =
     emailDirty ||
     apiDirty ||
@@ -244,12 +263,15 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
     missedCallDirty ||
     aiSuiteDirty ||
     getLeadsDirty ||
+    funnelsDirty ||
+    customDomainsDirty ||
     broadcastsHiddenDirty ||
     websiteHiddenDirty ||
     socialHiddenDirty ||
     communityHiddenDirty ||
     getLeadsHiddenDirty ||
-    aiSuiteHiddenDirty;
+    aiSuiteHiddenDirty ||
+    funnelsHiddenDirty;
 
   // Meta features can't work without app creds on the deployment. Gray out the
   // two Meta gates when unconfigured — but still allow turning an already-on
@@ -277,12 +299,15 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
         missedCallTextBackEnabled?: boolean;
         aiSuiteEnabled?: boolean;
         getLeadsEnabled?: boolean;
+        funnelsEnabled?: boolean;
+        customDomainsEnabled?: boolean;
         broadcastsHiddenWhenDisabled?: boolean;
         websiteHiddenWhenDisabled?: boolean;
         socialPlannerHiddenWhenDisabled?: boolean;
         communityHiddenWhenDisabled?: boolean;
         getLeadsHiddenWhenDisabled?: boolean;
         aiSuiteHiddenWhenDisabled?: boolean;
+        funnelsHiddenWhenDisabled?: boolean;
       } = {};
       if (emailDirty) payload.emailDomainEnabled = emailDomainEnabled;
       if (apiDirty) payload.apiAccessEnabled = apiAccessEnabled;
@@ -304,6 +329,9 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
         payload.missedCallTextBackEnabled = missedCallEnabled;
       if (aiSuiteDirty) payload.aiSuiteEnabled = aiSuiteEnabled;
       if (getLeadsDirty) payload.getLeadsEnabled = getLeadsEnabled;
+      if (funnelsDirty) payload.funnelsEnabled = funnelsEnabled;
+      if (customDomainsDirty)
+        payload.customDomainsEnabled = customDomainsEnabled;
       if (broadcastsHiddenDirty)
         payload.broadcastsHiddenWhenDisabled = broadcastsHidden;
       if (websiteHiddenDirty)
@@ -316,6 +344,8 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
         payload.getLeadsHiddenWhenDisabled = getLeadsHidden;
       if (aiSuiteHiddenDirty)
         payload.aiSuiteHiddenWhenDisabled = aiSuiteHidden;
+      if (funnelsHiddenDirty)
+        payload.funnelsHiddenWhenDisabled = funnelsHidden;
 
       const res = await fetch(
         `/api/agency/sub-accounts/${subAccount.id}/feature-gates`,
@@ -420,6 +450,20 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
           getLeadsEnabled
             ? "Get Leads enabled."
             : "Get Leads disabled. New searches blocked until re-enabled.",
+        );
+      }
+      if (funnelsDirty) {
+        parts.push(
+          funnelsEnabled
+            ? "Funnels enabled."
+            : "Funnels disabled. Existing published funnels stay live; the builder locks.",
+        );
+      }
+      if (customDomainsDirty) {
+        parts.push(
+          customDomainsEnabled
+            ? "Custom domains enabled."
+            : "Custom domains disabled. Registered domains preserved; new ones blocked until re-enabled.",
         );
       }
       // "Hide instead of lock" changes. Only meaningful while the feature is
@@ -769,6 +813,41 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
             agency&apos;s OpenRouter credits, which is why you control who gets
             it. While off, the sidebar entry shows Locked and the assistant
             403s; nothing is torn down, so enabling/disabling is instant.
+          </GateToggle>
+
+          <GateToggle
+            checked={funnelsEnabled}
+            onChange={setFunnelsEnabled}
+            disabled={saving}
+            icon={<Funnel className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />}
+            title="Funnels"
+            hideOption={{
+              hidden: funnelsHidden,
+              onHiddenChange: setFunnelsHidden,
+              disabled: saving,
+            }}
+          >
+            When enabled, this sub-account can build first-party
+            ClickFunnels/GHL-style single-page funnels (lead magnet, VSL,
+            challenge/webinar), hosted directly on this platform — no
+            gitpage.site involved. Disabling locks the Funnels sidebar entry
+            and the builder API; published funnels stay live at their
+            existing URL, so re-enabling resumes instantly.
+          </GateToggle>
+
+          <GateToggle
+            checked={customDomainsEnabled}
+            onChange={setCustomDomainsEnabled}
+            disabled={saving}
+            icon={<Globe className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />}
+            title="Custom domains"
+          >
+            When enabled, this sub-account can point its own domain at a
+            published funnel instead of showing the platform&apos;s URL — a
+            natural higher-tier differentiator, since it&apos;s independent of
+            the base Funnels gate. Disabling blocks registering new domains;
+            already-registered ones are preserved, so re-enabling resumes
+            instantly.
           </GateToggle>
         </div>
 
