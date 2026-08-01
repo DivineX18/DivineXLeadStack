@@ -92,6 +92,46 @@ function mergeSubject(
   };
 }
 
+/**
+ * Split a resolved body into paragraph <p> tags. When `unsub` is given, a
+ * paragraph that is JUST the unsubscribe token (the common case — every
+ * seed template puts it on its own trailing line) renders as a small muted
+ * footer with a top rule, instead of a bare link mid-paragraph; an inline
+ * occurrence (atypical, but not unsupported) still gets a styled anchor.
+ */
+function bodyToHtml(
+  resolved: string,
+  unsub?: { token: string; href: string }
+): string {
+  const anchor = unsub
+    ? `<a href="${unsub.href}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a>`
+    : "";
+  return resolved
+    .split(/\n\s*\n/)
+    .filter((p) => p.trim().length > 0)
+    .map((raw) => {
+      if (unsub && raw.trim() === unsub.token) {
+        return `<p style="margin:24px 0 0;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af;">${anchor}</p>`;
+      }
+      const withLink = unsub ? raw.split(unsub.token).join(anchor) : raw;
+      return `<p style="margin:0 0 16px;">${withLink.replace(/\r?\n/g, "<br>")}</p>`;
+    })
+    .join("");
+}
+
+/** Shared card wrapper for every workflow-sent email (customer sends AND
+ *  internal notifications) — replaces the old bare-paragraph-on-white
+ *  output with a bordered card + a light sender label, still simple/plain,
+ *  no logo or imagery required. */
+function wrapEmailHtml(senderName: string, bodyHtml: string): string {
+  return `<!doctype html><html><body style="margin:0;padding:24px;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;padding:32px;">
+${senderName ? `<p style="margin:0 0 20px;font-size:12px;font-weight:600;letter-spacing:0.04em;color:#6366f1;text-transform:uppercase;">${senderName}</p>` : ""}
+<div style="font-size:15px;line-height:1.65;color:#1a1a1a;">${bodyHtml}</div>
+</div>
+</body></html>`;
+}
+
 const execSendEmail: NodeExecutor = async (ctx) => {
   const cfg = ctx.node.config as unknown as SendEmailConfig;
   const contact = ctx.contact;
@@ -103,6 +143,7 @@ const execSendEmail: NodeExecutor = async (ctx) => {
     return { result: { kind: "next" }, log: "error:email_not_configured" };
   }
 
+  const UNSUB_TOKEN = "@@UNSUBSCRIBE_LINK@@";
   const unsubscribeLink = buildUnsubscribeUrl(contact.id);
   const subject = resolveMergeTags(
     cfg.subject ?? "",
@@ -112,11 +153,14 @@ const execSendEmail: NodeExecutor = async (ctx) => {
     cfg.body ?? "",
     mergeSubject(ctx, unsubscribeLink)
   );
-  const htmlInner = resolveMergeTags(
+  const resolvedForHtml = resolveMergeTags(
     cfg.body ?? "",
-    mergeSubject(ctx, `<a href="${unsubscribeLink}">Unsubscribe</a>`)
-  ).replace(/\r?\n/g, "<br>");
-  const html = `<!doctype html><html><body style="font-family:system-ui,-apple-system,sans-serif;line-height:1.6;color:#1a1a1a;max-width:600px;margin:0 auto;padding:24px;">${htmlInner}</body></html>`;
+    mergeSubject(ctx, UNSUB_TOKEN)
+  );
+  const html = wrapEmailHtml(
+    ctx.subAccount?.name ?? "",
+    bodyToHtml(resolvedForHtml, { token: UNSUB_TOKEN, href: unsubscribeLink })
+  );
 
   try {
     await sendEmail({
@@ -363,10 +407,7 @@ const execNotify: NodeExecutor = async (ctx) => {
     mergeSubject(ctx, "")
   );
   const text = resolveMergeTags(cfg.body ?? "", mergeSubject(ctx, ""));
-  const html = `<!doctype html><html><body style="font-family:system-ui,-apple-system,sans-serif;line-height:1.6;color:#1a1a1a;max-width:600px;margin:0 auto;padding:24px;">${text.replace(
-    /\r?\n/g,
-    "<br>"
-  )}</body></html>`;
+  const html = wrapEmailHtml(ctx.subAccount?.name ?? "", bodyToHtml(text));
   try {
     await sendEmail({
       to,
