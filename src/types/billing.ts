@@ -34,6 +34,7 @@ export const PLAN_GATE_KEYS = [
   "aiSuiteEnabledByAgency",
   "funnelsEnabledByAgency",
   "customDomainsEnabledByAgency",
+  "funnelCheckoutEnabledByAgency",
 ] as const;
 
 export type PlanGateKey = (typeof PLAN_GATE_KEYS)[number];
@@ -53,6 +54,7 @@ export const PLAN_GATE_LABELS: Record<PlanGateKey, string> = {
   aiSuiteEnabledByAgency: "AI Suite assistant",
   funnelsEnabledByAgency: "Funnels",
   customDomainsEnabledByAgency: "Custom domains",
+  funnelCheckoutEnabledByAgency: "Funnel checkout (Stripe)",
 };
 
 /** Full gate bundle a plan carries — every key present, true = enabled. */

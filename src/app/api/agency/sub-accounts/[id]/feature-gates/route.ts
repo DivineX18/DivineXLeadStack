@@ -57,6 +57,7 @@ interface PatchBody {
   getLeadsEnabled?: boolean;
   funnelsEnabled?: boolean;
   customDomainsEnabled?: boolean;
+  funnelCheckoutEnabled?: boolean;
   // "Hide instead of lock" overrides for the sidebar-gated features.
   // Only take effect while the matching gate is off. See `*HiddenWhenDisabled`
   // on SubAccountDoc.
@@ -104,6 +105,7 @@ export async function PATCH(
   const wantsGetLeads = typeof body.getLeadsEnabled === "boolean";
   const wantsFunnels = typeof body.funnelsEnabled === "boolean";
   const wantsCustomDomains = typeof body.customDomainsEnabled === "boolean";
+  const wantsFunnelCheckout = typeof body.funnelCheckoutEnabled === "boolean";
   const wantsBroadcastsHidden =
     typeof body.broadcastsHiddenWhenDisabled === "boolean";
   const wantsWebsiteHidden =
@@ -152,6 +154,7 @@ export async function PATCH(
     !wantsGetLeads &&
     !wantsFunnels &&
     !wantsCustomDomains &&
+    !wantsFunnelCheckout &&
     !wantsBroadcastsHidden &&
     !wantsWebsiteHidden &&
     !wantsSocialPlannerHidden &&
@@ -242,6 +245,9 @@ export async function PATCH(
   if (typeof body.customDomainsEnabled === "boolean") {
     gates.customDomainsEnabledByAgency = body.customDomainsEnabled;
   }
+  if (typeof body.funnelCheckoutEnabled === "boolean") {
+    gates.funnelCheckoutEnabledByAgency = body.funnelCheckoutEnabled;
+  }
 
   let clearedDomain = false;
   if (Object.keys(gates).length > 0) {
@@ -328,6 +334,9 @@ export async function PATCH(
       : {}),
     ...(wantsAiSuiteHidden
       ? { aiSuiteHiddenWhenDisabled: body.aiSuiteHiddenWhenDisabled }
+      : {}),
+    ...(wantsFunnelCheckout
+      ? { funnelCheckoutEnabled: body.funnelCheckoutEnabled }
       : {}),
     ...(clearedDomain ? { clearedDomain: true } : {}),
   });

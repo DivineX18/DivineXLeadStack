@@ -26,6 +26,7 @@ import { SubAccountPlanBillingSection } from "@/components/settings/sub-account-
 import { SubAccountSendingPreferencesSection } from "@/components/settings/sub-account-sending-preferences-section";
 import { SubAccountGoogleReviewSection } from "@/components/settings/sub-account-google-review-section";
 import { SubAccountStripeSection } from "@/components/settings/sub-account-stripe-section";
+import { SubAccountStripeCheckoutSection } from "@/components/settings/sub-account-stripe-checkout-section";
 import { SubAccountApiKeysSection } from "@/components/settings/sub-account-api-keys-section";
 import { SubAccountApiRecipesSection } from "@/components/settings/sub-account-api-recipes-section";
 import { SubAccountCalendarSyncSection } from "@/components/settings/sub-account-calendar-sync-section";
@@ -228,6 +229,13 @@ export default function SettingsPage() {
               toggle against the deployment's own Stripe account (no OAuth,
               no per-sub-account keys). Not a placeholder. */}
           <SubAccountStripeSection />
+
+          {/* BYO-Stripe for Funnel Checkout — a distinct, higher-stakes
+              connection: the sub-account's OWN Stripe key, used for real
+              checkout/order-bump/upsell on funnel pages. Self-gating
+              (renders a Locked state when funnelCheckoutEnabledByAgency
+              is off). Do not confuse with SubAccountStripeSection above. */}
+          <SubAccountStripeCheckoutSection />
 
           {/* Data export */}
           <section className="rounded-2xl border bg-card p-5">

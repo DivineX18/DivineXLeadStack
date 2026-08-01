@@ -267,6 +267,22 @@ export interface SubAccountDoc {
    */
   maxCustomDomains?: number | null;
   /**
+   * Agency-controlled gate for Funnel Checkout — native Stripe checkout
+   * (order bump + one-click upsell/downsell) on `checkout`/`upsell_offer`
+   * funnel sections. SEPARATE from `funnelsEnabledByAgency`: base funnels
+   * work at the free `/lp/...` URL regardless; wiring up real payment is a
+   * distinct, higher-cost/higher-support-burden capability (real money,
+   * a bigger Stripe API surface) gated on its own, same reasoning as
+   * `customDomainsEnabledByAgency`. Only the agency owner can flip it. When
+   * `false`: the Stripe checkout settings card shows a "Locked by your
+   * agency" state and the connect/checkout-session/refund routes 403. No
+   * tear-down on disable — the sub-account's connected `stripeConfig` and
+   * past `funnelOrders` are preserved, so re-enabling resumes instantly.
+   * Defaults to `false` at creation. Read `=== true` so legacy docs stay
+   * locked.
+   */
+  funnelCheckoutEnabledByAgency?: boolean;
+  /**
    * Get Leads: operator-defined custom service types shown in the business-
    * type picker alongside the curated list. Plain display labels (each
    * doubles as the Google Maps query, ≤60 chars, ≤30 entries). Written only
@@ -398,6 +414,19 @@ export interface SubAccountDoc {
    * = PayPal-only for that sub-account, the default.
    */
   stripeInvoicesEnabled?: boolean;
+  /**
+   * BYO-Stripe connection for native Funnel Checkout (order bump +
+   * one-click upsell/downsell). Distinct from `stripeInvoicesEnabled`
+   * (which charges through the AGENCY's own Stripe) — this sub-account
+   * pastes its OWN Stripe secret key, so the sub-account/client is the
+   * merchant of record and the agency never touches the money. The
+   * secret key + webhook signing secret are AES-256-GCM encrypted at
+   * rest (see `lib/crypto/secrets.ts`) — the first per-tenant credential
+   * in this codebase that gets encryption rather than relying solely on
+   * server-only Admin SDK access. Null = not connected. Gated by
+   * `funnelCheckoutEnabledByAgency`.
+   */
+  stripeConfig: SubAccountStripeConfig | null;
   /**
    * Google review-request config (SMS / WhatsApp "leave us a review" sends
    * after payment or on demand). Optional — legacy/undefined reads as off.
@@ -610,6 +639,33 @@ export interface PayPalConfig {
    */
   username: string;
   connectedAt: Date;
+}
+
+/**
+ * BYO-Stripe connection for Funnel Checkout — the sub-account's OWN
+ * Stripe account, not the agency's. `mode` is inferred from the pasted
+ * key's `sk_live_`/`sk_test_` prefix, no API call needed. The webhook
+ * endpoint is auto-created via the tenant's own Stripe API at connect
+ * time (`stripe.webhookEndpoints.create()`) rather than asking the
+ * operator to paste back a signing secret by hand. Reconnecting (pasting
+ * a new key while one is already stored) doubles as key rotation — see
+ * `lib/stripe/tenant-server.ts`.
+ */
+export interface SubAccountStripeConfig {
+  mode: "test" | "live";
+  /** AES-256-GCM ciphertext — see `lib/crypto/secrets.ts`. Never sent to the client. */
+  secretKeyEncrypted: string;
+  /** Plaintext last 4 chars of the raw key — UI display + a way to tell
+   *  a stored key apart from another even if decryption ever breaks. */
+  secretKeyLast4: string;
+  webhookSecretEncrypted: string;
+  /** Stripe's id for the auto-created webhook endpoint, so it can be
+   *  updated/deleted on disconnect or reconnect. */
+  stripeWebhookEndpointId: string;
+  connectedAt: Date;
+  connectedByUid: string;
+  status: "connected" | "invalid";
+  lastValidatedAt: Date | null;
 }
 
 /**

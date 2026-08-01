@@ -345,6 +345,10 @@ const FEATURE_GATES: Record<
     field: "customDomainsEnabledByAgency",
     label: "Custom domains",
   },
+  "funnel-checkout": {
+    field: "funnelCheckoutEnabledByAgency",
+    label: "Funnel checkout (Stripe)",
+  },
   // Get Leads is PARKED — while the flag is on the assistant can't flip (or
   // report) its gate, matching the hidden Manage-dialog toggle. When
   // un-parked, enabling doesn't require OUTSCRAPER_API_KEY to be set —

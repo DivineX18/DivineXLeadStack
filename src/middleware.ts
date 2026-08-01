@@ -211,6 +211,11 @@ const PUBLIC_PATH_PATTERNS: RegExp[] = [
   // no auth required. Each competitor has its own static route under
   // src/app/leadstack-vs-{slug}/page.tsx; this regex catches them all.
   /^\/leadstack-vs-[a-z0-9-]+$/,
+  // Per-tenant Stripe webhook for Funnel Checkout (BYO-Stripe) —
+  // /api/webhooks/stripe/tenant/{subAccountId}. Public path; security is
+  // the per-tenant signature check inside the route, not the session
+  // cookie — same model as every other regex entry here.
+  /^\/api\/webhooks\/stripe\/tenant\/[^/]+$/,
 ];
 
 function isPublicPath(pathname: string): boolean {

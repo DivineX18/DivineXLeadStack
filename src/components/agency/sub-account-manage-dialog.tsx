@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertTriangle,
+  CreditCard,
   Globe,
   Funnel,
   KeyRound,
@@ -88,6 +89,8 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
   const initialGetLeads = subAccount?.getLeadsEnabledByAgency === true;
   const initialFunnels = subAccount?.funnelsEnabledByAgency === true;
   const initialCustomDomains = subAccount?.customDomainsEnabledByAgency === true;
+  const initialFunnelCheckout =
+    subAccount?.funnelCheckoutEnabledByAgency === true;
   // "Hide vs. show as Locked" flag for the sidebar-gated features. HIDDEN is the
   // default — a disabled feature is omitted from the tenant's sidebar unless the
   // owner explicitly opts it into the greyed "Locked" row (field set to `false`).
@@ -129,6 +132,9 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
   const [funnelsEnabled, setFunnelsEnabled] = useState(initialFunnels);
   const [customDomainsEnabled, setCustomDomainsEnabled] = useState(
     initialCustomDomains,
+  );
+  const [funnelCheckoutEnabled, setFunnelCheckoutEnabled] = useState(
+    initialFunnelCheckout,
   );
   const [broadcastsHidden, setBroadcastsHidden] = useState(
     initialBroadcastsHidden,
@@ -186,6 +192,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
       setGetLeadsEnabled(initialGetLeads);
       setFunnelsEnabled(initialFunnels);
       setCustomDomainsEnabled(initialCustomDomains);
+      setFunnelCheckoutEnabled(initialFunnelCheckout);
       setBroadcastsHidden(initialBroadcastsHidden);
       setWebsiteHidden(initialWebsiteHidden);
       setSocialHidden(initialSocialHidden);
@@ -211,6 +218,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
     initialGetLeads,
     initialFunnels,
     initialCustomDomains,
+    initialFunnelCheckout,
     initialBroadcastsHidden,
     initialWebsiteHidden,
     initialSocialHidden,
@@ -242,6 +250,8 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
   const getLeadsDirty = getLeadsEnabled !== initialGetLeads;
   const funnelsDirty = funnelsEnabled !== initialFunnels;
   const customDomainsDirty = customDomainsEnabled !== initialCustomDomains;
+  const funnelCheckoutDirty =
+    funnelCheckoutEnabled !== initialFunnelCheckout;
   const broadcastsHiddenDirty = broadcastsHidden !== initialBroadcastsHidden;
   const websiteHiddenDirty = websiteHidden !== initialWebsiteHidden;
   const socialHiddenDirty = socialHidden !== initialSocialHidden;
@@ -265,6 +275,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
     getLeadsDirty ||
     funnelsDirty ||
     customDomainsDirty ||
+    funnelCheckoutDirty ||
     broadcastsHiddenDirty ||
     websiteHiddenDirty ||
     socialHiddenDirty ||
@@ -301,6 +312,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
         getLeadsEnabled?: boolean;
         funnelsEnabled?: boolean;
         customDomainsEnabled?: boolean;
+        funnelCheckoutEnabled?: boolean;
         broadcastsHiddenWhenDisabled?: boolean;
         websiteHiddenWhenDisabled?: boolean;
         socialPlannerHiddenWhenDisabled?: boolean;
@@ -332,6 +344,8 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
       if (funnelsDirty) payload.funnelsEnabled = funnelsEnabled;
       if (customDomainsDirty)
         payload.customDomainsEnabled = customDomainsEnabled;
+      if (funnelCheckoutDirty)
+        payload.funnelCheckoutEnabled = funnelCheckoutEnabled;
       if (broadcastsHiddenDirty)
         payload.broadcastsHiddenWhenDisabled = broadcastsHidden;
       if (websiteHiddenDirty)
@@ -464,6 +478,13 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
           customDomainsEnabled
             ? "Custom domains enabled."
             : "Custom domains disabled. Registered domains preserved; new ones blocked until re-enabled.",
+        );
+      }
+      if (funnelCheckoutDirty) {
+        parts.push(
+          funnelCheckoutEnabled
+            ? "Funnel checkout (Stripe) enabled."
+            : "Funnel checkout (Stripe) disabled. The connected Stripe key + past orders are preserved; new checkouts blocked until re-enabled.",
         );
       }
       // "Hide instead of lock" changes. Only meaningful while the feature is
@@ -848,6 +869,22 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
             the base Funnels gate. Disabling blocks registering new domains;
             already-registered ones are preserved, so re-enabling resumes
             instantly.
+          </GateToggle>
+
+          <GateToggle
+            checked={funnelCheckoutEnabled}
+            onChange={setFunnelCheckoutEnabled}
+            disabled={saving}
+            icon={<CreditCard className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />}
+            title="Funnel checkout (Stripe)"
+          >
+            When enabled, this sub-account can connect its OWN Stripe account
+            (paste-a-key, not the agency&apos;s) to sell products directly on
+            funnel pages — real checkout with an order bump and one-click
+            post-purchase upsell/downsell. The sub-account is the merchant of
+            record; the agency never touches the money. Disabling blocks new
+            checkouts and Stripe connect/reconnect; the connected key and past
+            orders are preserved, so re-enabling resumes instantly.
           </GateToggle>
         </div>
 
