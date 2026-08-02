@@ -64,6 +64,13 @@ import {
 import { gitpageIsConfigured } from "@/lib/gitpage/client";
 import { effectiveWebsiteCap } from "@/lib/website/limits";
 import {
+  createFunnelServerSide,
+  getFunnel,
+  listFunnels,
+  updateFunnelServerSide,
+  FunnelValidationError,
+} from "@/lib/server/funnels-service";
+import {
   FirecrawlError,
   firecrawlIsConfigured,
   scrapeUrl,
@@ -2995,6 +3002,264 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       };
     },
   },
+  {
+    name: "create_funnel",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Create a funnel for this workspace (via the Funnel Builder)",
+    description:
+      "Create a funnel (a first-party single-page ClickFunnels/GHL-style landing page, hosted directly on this platform — not the website builder) — use when the user asks to build/make/create/generate a funnel, landing page, lead magnet page, webinar registration page, application page, or tripwire offer. Creates a DRAFT the user reviews and publishes themselves — never auto-publishes, since a funnel can include real Stripe checkout (real money) once the user connects one. Workflow: (1) pick the genre that best matches the request — lead_magnet (free book/PDF opt-in), vsl (high-ticket video sales page), challenge (multi-day registration), application (qualify leads before a call), tripwire (low-ticket entry offer), webinar (single-session registration), lead_gen (generic interest capture with no specific asset); (2) write a specific, concrete headline — never a generic tagline; (3) bullets must name a specific outcome or mechanism, never a vague adjective ('transformative', 'game-changing', 'cutting-edge' are banned — they say nothing); (4) ONLY include faq_items if the user gave you enough real detail to answer honestly — never invent generic filler Q&A or fabricated guarantees/stats, matching this platform's strict no-fabrication policy; (5) price_cents only applies to genres with a priced offer (tripwire, vsl, challenge) — omit for a free lead magnet. After creating, feel free to suggest one or two concrete improvements in your reply (e.g. a sharper headline angle, a stronger CTA placement, a trust element to add) — but only as a suggestion the user can act on, never as a score or grade.",
+    parameters: {
+      type: "object",
+      properties: {
+        funnel_name: {
+          type: "string",
+          description: "Short internal label for the funnel list. Defaults to the headline.",
+        },
+        genre: {
+          type: "string",
+          enum: ["lead_magnet", "vsl", "challenge", "application", "tripwire", "webinar", "lead_gen"],
+        },
+        eyebrow: {
+          type: "string",
+          description: "Small text above the headline, e.g. 'Your FREE copy will show you how to:'. Optional.",
+        },
+        headline: {
+          type: "string",
+          description:
+            "Main hero headline, max 80 chars. A specific, concrete hook — not a generic tagline. Bad: 'Unlock Your Potential'. Good: 'Book 10 Qualified Calls a Week Without Cold DMs'.",
+        },
+        subheadline: {
+          type: "string",
+          description: "One-line subheadline under the headline, max 140 chars. Optional.",
+        },
+        bullets: {
+          type: "string",
+          description:
+            "3-5 short comma-separated phrases naming a specific outcome or mechanism, e.g. 'Done-in-a-day setup, No cold outreach, Works with any niche'. Never vague adjectives alone.",
+        },
+        price_cents: {
+          type: "number",
+          description:
+            "Offer price in cents (e.g. 4700 = $47). Only for tripwire/vsl/challenge genres with a real priced offer. Omit for a free lead magnet.",
+        },
+        cta_label: {
+          type: "string",
+          description: "Button text, e.g. 'Get instant access'. Omit for a sensible per-genre default.",
+        },
+        accent_color: {
+          type: "string",
+          description: "Hex color, e.g. '#2563eb'. Pick to match the brand/offer tone. Omit for the genre default.",
+        },
+        theme: { type: "string", enum: ["light", "dark"] },
+        faq_items: {
+          type: "array",
+          description:
+            "ONLY include if you have enough real detail from the user to answer honestly — omit entirely rather than invent generic filler Q&A.",
+          items: {
+            type: "object",
+            properties: {
+              question: { type: "string" },
+              answer: { type: "string" },
+            },
+            required: ["question", "answer"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["headline", "bullets"],
+      additionalProperties: false,
+    },
+    validate: (rawIn) => {
+      const raw = (rawIn ?? {}) as Record<string, unknown>;
+      const headline = str(raw, "headline");
+      if (!headline || headline.length > 80) {
+        return { ok: false, error: "a headline (max 80 characters) is required" };
+      }
+      const bullets = str(raw, "bullets");
+      if (!bullets) {
+        return { ok: false, error: "at least one bullet point is required" };
+      }
+      const genreRaw = str(raw, "genre");
+      const validGenres = ["lead_magnet", "vsl", "challenge", "application", "tripwire", "webinar", "lead_gen"];
+      const genre = validGenres.includes(genreRaw) ? genreRaw : "lead_magnet";
+
+      const priceCentsRaw = raw.price_cents;
+      let priceCents: number | null = null;
+      if (priceCentsRaw !== undefined && priceCentsRaw !== null) {
+        const n = Number(priceCentsRaw);
+        if (!Number.isFinite(n) || n < 0) {
+          return { ok: false, error: "price_cents must be a non-negative number" };
+        }
+        priceCents = Math.round(n);
+      }
+
+      const accentColor = str(raw, "accent_color");
+      if (accentColor && !/^#[0-9a-f]{6}$/i.test(accentColor)) {
+        return { ok: false, error: "accent_color must be a hex color like #2563eb" };
+      }
+      const theme = str(raw, "theme") === "dark" ? "dark" : str(raw, "theme") === "light" ? "light" : null;
+
+      const faqRaw = Array.isArray(raw.faq_items) ? raw.faq_items : [];
+      const faqItems = faqRaw
+        .filter(
+          (i): i is { question: string; answer: string } =>
+            !!i &&
+            typeof (i as Record<string, unknown>).question === "string" &&
+            typeof (i as Record<string, unknown>).answer === "string",
+        )
+        .slice(0, 10)
+        .map((i) => ({ question: i.question.slice(0, 200), answer: i.answer.slice(0, 1000) }));
+
+      return {
+        ok: true,
+        args: {
+          funnelName: str(raw, "funnel_name").slice(0, 60),
+          genre,
+          eyebrow: str(raw, "eyebrow").slice(0, 100),
+          headline,
+          subheadline: str(raw, "subheadline").slice(0, 140),
+          bullets: bullets
+            .split(",")
+            .map((b) => b.trim())
+            .filter(Boolean)
+            .slice(0, 6),
+          priceCents,
+          ctaLabel: str(raw, "cta_label").slice(0, 40),
+          accentColor,
+          theme,
+          faqItems,
+        },
+      };
+    },
+    summarize: (args) => {
+      const genreLabels: Record<string, string> = {
+        lead_magnet: "Lead Magnet",
+        vsl: "VSL",
+        challenge: "Challenge",
+        application: "Application",
+        tripwire: "Tripwire",
+        webinar: "Webinar",
+        lead_gen: "Lead Gen",
+      };
+      return `Create a DRAFT ${genreLabels[args.genre as string] ?? args.genre} funnel “${
+        args.funnelName || args.headline
+      }” with headline “${args.headline}”. You'll review and publish it yourself — nothing goes live automatically.`;
+    },
+    execute: async (ctx, args) => {
+      const subAccountId = ctx.subAccountId!;
+      const db = getAdminDb();
+      const subSnap = await db.doc(`subAccounts/${subAccountId}`).get();
+      if (subSnap.data()?.funnelsEnabledByAgency !== true) {
+        throw new CapabilityUserError(
+          "Funnels aren't enabled for this workspace. Ask the agency owner to turn it on first.",
+        );
+      }
+
+      const genre = args.genre as
+        | "lead_magnet"
+        | "vsl"
+        | "challenge"
+        | "application"
+        | "tripwire"
+        | "webinar"
+        | "lead_gen";
+      const funnelId = await createFunnelServerSide({
+        subAccountId,
+        createdByUid: ctx.uid,
+        name: (args.funnelName as string) || (args.headline as string),
+        genre,
+      });
+
+      const created = await getFunnel(subAccountId, funnelId);
+      if (!created) {
+        throw new CapabilityUserError("Something went wrong creating the funnel.");
+      }
+
+      const bullets = args.bullets as string[];
+      const faqItems = args.faqItems as { question: string; answer: string }[];
+      const nextSections = created.sections.map((section) => {
+        if (section.type === "hero") {
+          return {
+            ...section,
+            config: {
+              ...section.config,
+              ...(args.eyebrow ? { eyebrow: args.eyebrow as string } : {}),
+              headline: args.headline as string,
+              ...(args.subheadline ? { subheadline: args.subheadline as string } : {}),
+            },
+          };
+        }
+        if (section.type === "offer") {
+          return {
+            ...section,
+            config: {
+              ...section.config,
+              bullets,
+              ...(args.priceCents !== null ? { priceCents: args.priceCents as number } : {}),
+              ...(args.ctaLabel ? { ctaLabel: args.ctaLabel as string } : {}),
+            },
+          };
+        }
+        if (section.type === "faq" && faqItems.length > 0) {
+          return { ...section, config: { items: faqItems } };
+        }
+        return section;
+      });
+
+      try {
+        await updateFunnelServerSide({
+          subAccountId,
+          funnelId,
+          patch: {
+            sections: nextSections,
+            ...(args.accentColor ? { accentColor: args.accentColor as string } : {}),
+            ...(args.theme ? { theme: args.theme as "light" | "dark" } : {}),
+          },
+        });
+      } catch (err) {
+        if (err instanceof FunnelValidationError) {
+          throw new CapabilityUserError(err.message);
+        }
+        throw err;
+      }
+
+      return {
+        resultText: `Created a draft funnel "${
+          (args.funnelName as string) || (args.headline as string)
+        }" — review it under Sidebar → Funnels, then hit Publish when it's ready.`,
+        ref: { kind: "funnel", id: funnelId },
+      };
+    },
+  },
+  {
+    name: "check_funnel_status",
+    level: "sub-account",
+    requiredRole: "subAccountMember",
+    readonly: true,
+    menuLabel: "Check this workspace's funnels (draft/published status + live URLs)",
+    description:
+      "List this sub-account's funnels with their status and live URL. Use when the user asks whether their funnel is done, what funnels exist, or for a funnel's address.",
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+    validate: () => ({ ok: true, args: {} }),
+    summarize: () => "Check the funnels' status.",
+    execute: async (ctx) => {
+      const funnels = await listFunnels(ctx.subAccountId!);
+      if (funnels.length === 0) {
+        return {
+          resultText:
+            "No funnels exist in this workspace yet. Ask me to build one, or use Sidebar → Funnels.",
+        };
+      }
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
+      const lines = funnels.map((f) => {
+        const detail =
+          f.status === "published" ? `live at ${appUrl}/lp/${f.id}` : "draft (not published yet)";
+        return `- "${f.name}": ${detail}`;
+      });
+      return { resultText: `Funnels in this workspace:\n${lines.join("\n")}` };
+    },
+  },
 ];
 
 /**
@@ -3109,6 +3374,11 @@ const AGENCY_DELEGATED = [
   "research_website_reference",
   "create_website",
   "check_website_status",
+  // Funnel Builder — same delegation shape as the website builder above.
+  // funnelsEnabledByAgency still applies inside createFunnelServerSide's
+  // caller (checked explicitly in create_funnel's execute()).
+  "create_funnel",
+  "check_funnel_status",
 ];
 for (const name of AGENCY_DELEGATED) {
   const base = AI_SUITE_CAPABILITIES.find((c) => c.name === name);
