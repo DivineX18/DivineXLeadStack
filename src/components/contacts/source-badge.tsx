@@ -14,6 +14,7 @@ const LABELS: Record<Exclude<ContactSource, "">, string> = {
   "booking-page": "Booking",
   community: "Community",
   "get-leads": "Get Leads",
+  "funnel-checkout": "Funnel Checkout",
   website: "Website",
   referral: "Referral",
   ads: "Ads",
@@ -33,6 +34,8 @@ const STYLES: Record<Exclude<ContactSource, "">, string> = {
     "bg-orange-500/10 text-orange-700 dark:bg-orange-400/15 dark:text-orange-300",
   "get-leads":
     "bg-cyan-500/10 text-cyan-700 dark:bg-cyan-400/15 dark:text-cyan-300",
+  "funnel-checkout":
+    "bg-fuchsia-500/10 text-fuchsia-700 dark:bg-fuchsia-400/15 dark:text-fuchsia-300",
   website:
     "bg-sky-500/10 text-sky-700 dark:bg-sky-400/15 dark:text-sky-300",
   referral:

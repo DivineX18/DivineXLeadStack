@@ -94,6 +94,13 @@ export const WEBHOOK_EVENT_TYPES = [
   "billing.activated",
   "billing.past_due",
   "billing.canceled",
+  // Funnel Checkout (BYO-Stripe) — emitted from the tenant Stripe webhook
+  // handler. Always live — each sub-account uses its own real Stripe
+  // account, so there is no test-mode/live-mode subscription split here
+  // the way platform-billing events have (the tenant's key itself is
+  // already test or live).
+  "funnel.order.completed",
+  "funnel.upsell.accepted",
 ] as const;
 
 export type WebhookEventType = (typeof WEBHOOK_EVENT_TYPES)[number];

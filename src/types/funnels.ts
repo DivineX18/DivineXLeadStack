@@ -29,7 +29,8 @@ export type FunnelSectionType =
   | "agenda"
   | "ticket_tiers"
   | "guarantee"
-  | "trust_badges";
+  | "trust_badges"
+  | "checkout";
 
 export interface HeroConfig {
   eyebrow?: string;
@@ -120,6 +121,45 @@ export interface TrustBadgesConfig {
   badges: { label: string; iconType: "lock" | "card" | "shield" | "star" }[];
 }
 
+export interface OrderBumpConfig {
+  headline: string;
+  description?: string;
+  priceCents: number;
+  /** Materialized at save time on the tenant's own Stripe account —
+   *  null until first successful save with a connected tenant. */
+  stripePriceId: string | null;
+}
+
+/**
+ * Real, native Stripe checkout — additive to (not a replacement of)
+ * `offer`, which stays the external-link/lead-capture-form option.
+ * `offer` is untouched so every already-published funnel keeps working.
+ */
+export interface CheckoutConfig {
+  productImageUrl?: string;
+  headline?: string;
+  priceCents: number | null;
+  strikethroughPriceCents?: number | null;
+  bullets: string[];
+  ctaLabel: string;
+  checkoutMode: "external_link" | "form_capture" | "stripe_checkout";
+  // external_link mode:
+  ctaHref?: string;
+  // form_capture mode:
+  formId?: string | null;
+  // stripe_checkout mode — ISO 4217, defaults "usd":
+  currency?: string;
+  billingMode?: "one_time" | "subscription";
+  recurringInterval?: "month" | "year";
+  stripePriceId?: string | null;
+  stripeProductId?: string | null;
+  orderBump?: OrderBumpConfig | null;
+  /** Post-purchase chain — wired up in a later slice; present now so the
+   *  config shape doesn't need another migration when it lands. */
+  upsellFunnelId?: string | null;
+  downsellFunnelId?: string | null;
+}
+
 export type FunnelSectionConfig =
   | HeroConfig
   | ProofStripConfig
@@ -131,7 +171,8 @@ export type FunnelSectionConfig =
   | AgendaConfig
   | TicketTiersConfig
   | GuaranteeConfig
-  | TrustBadgesConfig;
+  | TrustBadgesConfig
+  | CheckoutConfig;
 
 export interface FunnelSection {
   id: string;

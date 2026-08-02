@@ -2,12 +2,17 @@ import "server-only";
 
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
+import { getStripeForTenant } from "@/lib/stripe/tenant-server";
+import { materializeCheckoutPrice } from "@/lib/funnels/materialize-price";
 import type {
+  CheckoutConfig,
   FunnelDoc,
   FunnelGenre,
   FunnelSection,
   FunnelStatus,
 } from "@/types/funnels";
+
+export class FunnelValidationError extends Error {}
 
 /** Admin-SDK CRUD for the Funnel Builder. All reads/writes are sub-account
  *  scoped — every helper re-checks the doc's `subAccountId`. */
@@ -352,6 +357,98 @@ export interface FunnelPatch {
   sections?: FunnelSection[];
 }
 
+/** For any `checkout` section in `stripe_checkout` mode, mints/reuses a real
+ *  Stripe Product+Price on the tenant's own account for the main offer and
+ *  (if present) its order bump, matching each incoming section against its
+ *  prior version (by section id) so an unchanged price is never re-minted.
+ *  Throws FunnelValidationError if the sub-account has no connected Stripe
+ *  and one of the sections needs one — a save must not silently ship a
+ *  checkout button with no real price behind it. */
+async function materializeSectionsPrices(
+  subAccountId: string,
+  oldSections: FunnelSection[],
+  newSections: FunnelSection[],
+): Promise<FunnelSection[]> {
+  const needsStripe = newSections.some(
+    (s) => s.type === "checkout" && (s.config as CheckoutConfig).checkoutMode === "stripe_checkout",
+  );
+  if (!needsStripe) return newSections;
+
+  const tenant = await getStripeForTenant(subAccountId);
+  if (!tenant) {
+    throw new FunnelValidationError(
+      "Connect your Stripe account (Settings → Funnel checkout) before using real checkout on a section.",
+    );
+  }
+
+  const oldById = new Map(oldSections.map((s) => [s.id, s]));
+
+  return Promise.all(
+    newSections.map(async (section) => {
+      if (section.type !== "checkout") return section;
+      const c = { ...(section.config as CheckoutConfig) };
+      if (c.checkoutMode !== "stripe_checkout" || !c.priceCents) return { ...section, config: c };
+
+      const old = oldById.get(section.id);
+      const oldConfig = old?.type === "checkout" ? (old.config as CheckoutConfig) : null;
+      const currency = (c.currency ?? "usd").toLowerCase();
+      const billingMode = c.billingMode ?? "one_time";
+
+      const main = await materializeCheckoutPrice(
+        tenant.stripe,
+        {
+          productName: c.headline || "Funnel offer",
+          priceCents: c.priceCents,
+          currency,
+          billingMode,
+          recurringInterval: c.recurringInterval,
+        },
+        oldConfig
+          ? {
+              productName: oldConfig.headline || "Funnel offer",
+              priceCents: oldConfig.priceCents ?? 0,
+              currency: (oldConfig.currency ?? "usd").toLowerCase(),
+              billingMode: oldConfig.billingMode ?? "one_time",
+              recurringInterval: oldConfig.recurringInterval,
+              stripeProductId: oldConfig.stripeProductId ?? null,
+              stripePriceId: oldConfig.stripePriceId ?? null,
+            }
+          : null,
+      );
+      c.stripeProductId = main.stripeProductId;
+      c.stripePriceId = main.stripePriceId;
+      c.currency = currency;
+      c.billingMode = billingMode;
+
+      if (c.orderBump && c.orderBump.priceCents) {
+        const oldBump = oldConfig?.orderBump ?? null;
+        const bump = await materializeCheckoutPrice(
+          tenant.stripe,
+          {
+            productName: c.orderBump.headline || "Order bump",
+            priceCents: c.orderBump.priceCents,
+            currency,
+            billingMode: "one_time",
+          },
+          oldBump
+            ? {
+                productName: oldBump.headline || "Order bump",
+                priceCents: oldBump.priceCents,
+                currency,
+                billingMode: "one_time",
+                stripeProductId: null,
+                stripePriceId: oldBump.stripePriceId ?? null,
+              }
+            : null,
+        );
+        c.orderBump = { ...c.orderBump, stripePriceId: bump.stripePriceId };
+      }
+
+      return { ...section, config: c };
+    }),
+  );
+}
+
 export async function updateFunnelServerSide(opts: {
   subAccountId: string;
   funnelId: string;
@@ -370,7 +467,14 @@ export async function updateFunnelServerSide(opts: {
   if (patch.status !== undefined) write.status = patch.status;
   if (patch.theme !== undefined) write.theme = patch.theme;
   if (patch.accentColor !== undefined) write.accentColor = patch.accentColor;
-  if (patch.sections !== undefined) write.sections = patch.sections;
+  if (patch.sections !== undefined) {
+    const oldData = snap.data() as Omit<FunnelDoc, "id">;
+    write.sections = await materializeSectionsPrices(
+      opts.subAccountId,
+      oldData.sections,
+      patch.sections,
+    );
+  }
   await ref.update(write);
   return true;
 }

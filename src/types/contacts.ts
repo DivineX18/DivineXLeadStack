@@ -8,6 +8,7 @@ import type { Timestamp, FieldValue } from "firebase/firestore";
  *   - "website-form"  Submitted a public hosted form at /f/[id]. (Preferred.)
  *   - "web-chat"      Captured via the AI Agents web chat widget.
  *   - "booking-page"  Booked a slot via a native /b/[saId]/[slug] page.
+ *   - "funnel-checkout"  Completed a real Stripe checkout on a funnel page.
  *   - "website"       Legacy generic — predates the form/chat split. Still
  *                     selectable in the manual-create UI as a catch-all.
  *   - "referral" / "ads" / "other"  Manual-entry options.
@@ -22,6 +23,7 @@ export type ContactSource =
   | "booking-page"
   | "community"
   | "get-leads"
+  | "funnel-checkout"
   | "website"
   | "referral"
   | "ads"

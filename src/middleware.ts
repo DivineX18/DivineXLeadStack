@@ -104,6 +104,10 @@ const PUBLIC_PATHS = [
   // as /f/[formId], since a funnel is meant for mass/anonymous ad traffic
   // like a form, not a private single-recipient document like a quote.
   "/lp",
+  // Public checkout-session creation for Funnel Checkout — same trust
+  // model as /api/forms/[id]/submit: funnelId + sectionId are the only
+  // credential, rate-limited per IP inside the route.
+  "/api/lp",
   // Custom-domain resolver — internal rewrite target for Funnels custom
   // domains (see customDomainRewrite() below); never linked to directly.
   "/cdomain",

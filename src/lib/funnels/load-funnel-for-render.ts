@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getAdminDb } from "@/lib/firebase/admin";
-import type { FunnelDoc, OfferConfig, TicketTiersConfig } from "@/types/funnels";
+import type { CheckoutConfig, FunnelDoc, OfferConfig, TicketTiersConfig } from "@/types/funnels";
 import type { LeadForm } from "@/types/forms";
 
 export interface RenderableFunnel {
@@ -36,6 +36,10 @@ export async function loadFunnelForRender(
     if (section.type === "ticket_tiers") {
       const c = section.config as TicketTiersConfig;
       for (const t of c.tiers) if (t.formId) formIds.add(t.formId);
+    }
+    if (section.type === "checkout") {
+      const c = section.config as CheckoutConfig;
+      if (c.checkoutMode === "form_capture" && c.formId) formIds.add(c.formId);
     }
   }
 

@@ -362,4 +362,21 @@ export const SAMPLE_PAYLOADS: Record<WebhookEventType, () => unknown> = {
     previousStatus: "past_due",
     status: "canceled",
   }),
+  "funnel.order.completed": () => ({
+    orderId: sampleId("order"),
+    funnelId: sampleId("funnel"),
+    sectionId: "s1",
+    contactId: sampleId("contact"),
+    customerEmail: "buyer@example.com",
+    currency: "usd",
+    mainOrderAmountCents: 4700,
+    bumpIncluded: true,
+    bumpAmountCents: 1900,
+    totalAmountCents: 6600,
+  }),
+  "funnel.upsell.accepted": () => ({
+    orderId: sampleId("order"),
+    funnelId: sampleId("funnel"),
+    amountCents: 2900,
+  }),
 };

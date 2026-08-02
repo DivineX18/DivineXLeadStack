@@ -14,6 +14,7 @@ import { AgendaSection } from "./sections/agenda-section";
 import { TicketTiersSection } from "./sections/ticket-tiers-section";
 import { GuaranteeSection } from "./sections/guarantee-section";
 import { TrustBadgesSection } from "./sections/trust-badges-section";
+import { CheckoutSection } from "./sections/checkout-section";
 
 /**
  * Maps a funnel's `sections[]` to its section component, mirroring the
@@ -39,6 +40,7 @@ const SECTION_COMPONENTS: Record<FunnelSectionType, ComponentType<any>> = {
   ticket_tiers: TicketTiersSection,
   guarantee: GuaranteeSection,
   trust_badges: TrustBadgesSection,
+  checkout: CheckoutSection,
 };
 
 const SYSTEM_FONT_STACK =
@@ -75,6 +77,8 @@ export function PublicFunnelView({
               accentColor={funnel.accentColor}
               theme={funnel.theme}
               forms={forms}
+              funnelId={funnel.id}
+              sectionId={section.id}
             />
           );
         })}

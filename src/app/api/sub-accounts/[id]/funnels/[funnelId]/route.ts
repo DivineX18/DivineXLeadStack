@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireSubAccountMember } from "@/lib/auth/require-tenancy";
 import {
   deleteFunnelServerSide,
+  FunnelValidationError,
   getFunnel,
   updateFunnelServerSide,
   type FunnelPatch,
@@ -22,6 +23,7 @@ const SECTION_TYPES: FunnelSectionType[] = [
   "ticket_tiers",
   "guarantee",
   "trust_badges",
+  "checkout",
 ];
 
 /** Defensive sanitize of a client-supplied sections array — authed staff,
@@ -89,7 +91,15 @@ export async function PATCH(
     patch.sections = sections;
   }
 
-  const ok = await updateFunnelServerSide({ subAccountId, funnelId, patch });
+  let ok: boolean;
+  try {
+    ok = await updateFunnelServerSide({ subAccountId, funnelId, patch });
+  } catch (err) {
+    if (err instanceof FunnelValidationError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
+    throw err;
+  }
   if (!ok) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

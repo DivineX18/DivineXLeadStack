@@ -17,6 +17,7 @@ import { FunnelDomainsSection } from "@/components/funnels/funnel-domains-sectio
 import type { LeadForm } from "@/types/forms";
 import type {
   AgendaConfig,
+  CheckoutConfig,
   CountdownConfig,
   CtaBannerConfig,
   FaqConfig,
@@ -55,6 +56,7 @@ const SECTION_LABELS: Record<FunnelSectionType, string> = {
   ticket_tiers: "Ticket tiers",
   guarantee: "Guarantee",
   trust_badges: "Trust badges",
+  checkout: "Checkout",
 };
 
 const SECTION_DEFAULTS: Record<FunnelSectionType, () => FunnelSection["config"]> = {
@@ -69,6 +71,13 @@ const SECTION_DEFAULTS: Record<FunnelSectionType, () => FunnelSection["config"]>
   ticket_tiers: () => ({ tiers: [] }) satisfies TicketTiersConfig,
   guarantee: () => ({ headline: "30-day money-back guarantee", bodyText: "", badgeIcon: "shield" }) satisfies GuaranteeConfig,
   trust_badges: () => ({ badges: [] }) satisfies TrustBadgesConfig,
+  checkout: () =>
+    ({
+      priceCents: 0,
+      bullets: [],
+      ctaLabel: "Buy now",
+      checkoutMode: "external_link",
+    }) satisfies CheckoutConfig,
 };
 
 function linesToArray(v: string): string[] {
@@ -770,6 +779,207 @@ function SectionFields({
           )}
           addLabel="Add tier"
         />
+      );
+    }
+    case "checkout": {
+      const c = section.config as CheckoutConfig;
+      return (
+        <div className="space-y-3">
+          <Field label="Headline (optional)">
+            <Input
+              value={c.headline ?? ""}
+              onChange={(e) => onChange({ ...c, headline: e.target.value })}
+              className="h-9"
+            />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Price (USD)">
+              <Input
+                type="number"
+                step="0.01"
+                value={(c.priceCents ?? 0) / 100}
+                onChange={(e) =>
+                  onChange({ ...c, priceCents: Math.round(Number(e.target.value) * 100) })
+                }
+                className="h-9"
+              />
+            </Field>
+            <Field label="Strikethrough price (optional)">
+              <Input
+                type="number"
+                step="0.01"
+                value={c.strikethroughPriceCents ? c.strikethroughPriceCents / 100 : ""}
+                onChange={(e) =>
+                  onChange({
+                    ...c,
+                    strikethroughPriceCents: e.target.value
+                      ? Math.round(Number(e.target.value) * 100)
+                      : null,
+                  })
+                }
+                className="h-9"
+              />
+            </Field>
+          </div>
+          <Field label="Bullets, one per line">
+            <Textarea
+              rows={4}
+              value={c.bullets.join("\n")}
+              onChange={(e) => onChange({ ...c, bullets: linesToArray(e.target.value) })}
+            />
+          </Field>
+          <Field label="Checkout mode">
+            <select
+              value={c.checkoutMode}
+              onChange={(e) =>
+                onChange({ ...c, checkoutMode: e.target.value as CheckoutConfig["checkoutMode"] })
+              }
+              className={fieldClass}
+            >
+              <option value="external_link">External link (e.g. Amazon, another checkout)</option>
+              <option value="form_capture">Lead-capture form</option>
+              <option value="stripe_checkout">Real checkout — your own Stripe</option>
+            </select>
+          </Field>
+
+          {c.checkoutMode === "external_link" && (
+            <Field label="CTA link">
+              <Input
+                value={c.ctaHref ?? ""}
+                onChange={(e) => onChange({ ...c, ctaHref: e.target.value })}
+                className="h-9"
+              />
+            </Field>
+          )}
+
+          {c.checkoutMode === "form_capture" && (
+            <Field label="Lead-capture form">
+              <select
+                value={c.formId ?? ""}
+                onChange={(e) => onChange({ ...c, formId: e.target.value || null })}
+                className={fieldClass}
+              >
+                <option value="">Choose a form</option>
+                {forms.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+
+          {c.checkoutMode === "stripe_checkout" && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Currency">
+                  <Input
+                    value={c.currency ?? "usd"}
+                    onChange={(e) => onChange({ ...c, currency: e.target.value.toLowerCase() })}
+                    className="h-9"
+                    maxLength={3}
+                  />
+                </Field>
+                <Field label="Billing">
+                  <select
+                    value={c.billingMode ?? "one_time"}
+                    onChange={(e) =>
+                      onChange({
+                        ...c,
+                        billingMode: e.target.value as CheckoutConfig["billingMode"],
+                      })
+                    }
+                    className={fieldClass}
+                  >
+                    <option value="one_time">One-time</option>
+                    <option value="subscription">Subscription</option>
+                  </select>
+                </Field>
+              </div>
+              {c.billingMode === "subscription" && (
+                <Field label="Bills every">
+                  <select
+                    value={c.recurringInterval ?? "month"}
+                    onChange={(e) =>
+                      onChange({
+                        ...c,
+                        recurringInterval: e.target.value as CheckoutConfig["recurringInterval"],
+                      })
+                    }
+                    className={fieldClass}
+                  >
+                    <option value="month">Month</option>
+                    <option value="year">Year</option>
+                  </select>
+                </Field>
+              )}
+              <div className="rounded-lg border p-3">
+                <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={!!c.orderBump}
+                    onChange={(e) =>
+                      onChange({
+                        ...c,
+                        orderBump: e.target.checked
+                          ? { headline: "", priceCents: 0, stripePriceId: null }
+                          : null,
+                      })
+                    }
+                  />
+                  Add an order bump
+                </label>
+                {c.orderBump && (
+                  <div className="mt-3 space-y-2">
+                    <Input
+                      placeholder="Bump headline"
+                      value={c.orderBump.headline}
+                      onChange={(e) =>
+                        onChange({ ...c, orderBump: { ...c.orderBump!, headline: e.target.value } })
+                      }
+                      className="h-9"
+                    />
+                    <Input
+                      placeholder="Bump description (optional)"
+                      value={c.orderBump.description ?? ""}
+                      onChange={(e) =>
+                        onChange({
+                          ...c,
+                          orderBump: { ...c.orderBump!, description: e.target.value },
+                        })
+                      }
+                      className="h-9"
+                    />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="Bump price (USD)"
+                      value={(c.orderBump.priceCents ?? 0) / 100}
+                      onChange={(e) =>
+                        onChange({
+                          ...c,
+                          orderBump: {
+                            ...c.orderBump!,
+                            priceCents: Math.round(Number(e.target.value) * 100),
+                          },
+                        })
+                      }
+                      className="h-9"
+                    />
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          <Field label="CTA label">
+            <Input
+              value={c.ctaLabel}
+              onChange={(e) => onChange({ ...c, ctaLabel: e.target.value })}
+              className="h-9"
+            />
+          </Field>
+        </div>
       );
     }
     case "guarantee": {
