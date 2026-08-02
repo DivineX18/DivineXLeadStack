@@ -15,12 +15,40 @@ import "server-only";
  * Agents client. Model defaults to Opus 4.8, overridable via AI_SUITE_MODEL.
  */
 
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+// Overridable so the retry/timeout regression script can point this at a
+// local fake server instead of the real OpenRouter endpoint. Read per-call
+// (not a module-level const) so a script can set the env var after import.
+function openRouterUrl(): string {
+  return (
+    process.env.AI_SUITE_MODEL_URL_OVERRIDE ||
+    "https://openrouter.ai/api/v1/chat/completions"
+  );
+}
 
 // OpenRouter slugs for this deployment's models are hyphenated (matching the
 // AI Agents config, e.g. "anthropic/claude-haiku-4-5"). If OpenRouter serves
 // Opus 4.8 under a different slug, set AI_SUITE_MODEL to it.
 const DEFAULT_AI_SUITE_MODEL = "anthropic/claude-opus-4-8";
+
+// A funnel-orchestration turn carries ~25 tool schemas + up to 12 history
+// turns — noticeably heavier than a plain chat reply — so OpenRouter/Anthropic
+// occasionally blip (429 rate limit, 5xx, or a stalled connection) on a turn
+// that would otherwise succeed a moment later. Retry transient failures with
+// backoff (same shape as lib/import/ghl/client.ts's ghlFetch) instead of
+// surfacing "couldn't reach the model" to the user on the first hiccup, and
+// bound the request with a timeout so a stalled connection fails fast rather
+// than hanging past what the user will wait for.
+const MAX_MODEL_RETRIES = 3;
+// Overridable so the retry/timeout regression script can exercise the abort
+// path in milliseconds instead of waiting out a real 45s hang. Read per-call
+// (not a module-level const) so a script can set the env var after import.
+function requestTimeoutMs(): number {
+  return Number(process.env.AI_SUITE_MODEL_TIMEOUT_MS) || 45_000;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 export function aiSuiteIsConfigured(): boolean {
   return !!process.env.OPENROUTER_API_KEY;
@@ -102,18 +130,58 @@ export async function runAiSuiteTurn({
     body.tool_choice = "auto";
   }
 
-  const res = await fetch(OPENROUTER_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer":
-        process.env.NEXT_PUBLIC_APP_URL ?? "https://leadstack.dev",
-      "X-Title": "LeadStack AI Suite",
-    },
-    body: JSON.stringify(body),
-  });
+  let res: Response | null = null;
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt <= MAX_MODEL_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), requestTimeoutMs());
+    try {
+      res = await fetch(openRouterUrl(), {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer":
+            process.env.NEXT_PUBLIC_APP_URL ?? "https://leadstack.dev",
+          "X-Title": "LeadStack AI Suite",
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      lastErr = null;
+    } catch (err) {
+      // Network error, DNS failure, or our own timeout abort — all
+      // transient from the caller's perspective, so retry the same way a
+      // 429/5xx does below.
+      lastErr = err;
+      res = null;
+    } finally {
+      clearTimeout(timer);
+    }
 
+    if (res?.ok) break;
+
+    const status = res?.status;
+    const retryable = res === null || status === 429 || (status !== undefined && status >= 500);
+    if (retryable && attempt < MAX_MODEL_RETRIES) {
+      const retryAfter = Number(res?.headers.get("retry-after"));
+      const waitMs = Number.isFinite(retryAfter)
+        ? retryAfter * 1000
+        : Math.min(8000, 500 * 2 ** attempt);
+      console.warn(
+        `[ai-suite/model] OpenRouter call failed (attempt ${attempt + 1}/${MAX_MODEL_RETRIES + 1}), retrying in ${waitMs}ms:`,
+        res === null ? (lastErr instanceof Error ? lastErr.message : lastErr) : `${status} ${res.statusText}`,
+      );
+      await sleep(waitMs);
+      continue;
+    }
+    break;
+  }
+
+  if (res === null) {
+    const detail = lastErr instanceof Error ? lastErr.message : String(lastErr);
+    throw new Error(`OpenRouter request failed after retries: ${detail}`);
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(
