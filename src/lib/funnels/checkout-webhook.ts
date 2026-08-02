@@ -111,3 +111,87 @@ export async function handleFunnelCheckoutCompleted(
     },
   });
 }
+
+async function findOrderByPaymentIntent(
+  subAccountId: string,
+  paymentIntentId: string | null,
+): Promise<FirebaseFirestore.QueryDocumentSnapshot | null> {
+  if (!paymentIntentId) return null;
+  const db = getAdminDb();
+  const snap = await db
+    .collection("funnelOrders")
+    .where("subAccountId", "==", subAccountId)
+    .where("stripePaymentIntentId", "==", paymentIntentId)
+    .limit(1)
+    .get();
+  return snap.empty ? null : snap.docs[0];
+}
+
+/** charge.refunded — reconciles the authoritative refund total from
+ *  Stripe (the refund route already writes an optimistic update; this
+ *  corrects for any drift, e.g. a refund issued directly in the Stripe
+ *  Dashboard rather than through our route). */
+export async function handleFunnelChargeRefunded(
+  charge: Stripe.Charge,
+  subAccountId: string,
+): Promise<void> {
+  const paymentIntentId =
+    typeof charge.payment_intent === "string" ? charge.payment_intent : null;
+  const doc = await findOrderByPaymentIntent(subAccountId, paymentIntentId);
+  if (!doc) return;
+  const order = doc.data() as FunnelOrderDoc;
+  const totalCents = order.mainOrderAmountCents + order.bumpAmountCents;
+  const refundedAmountCents = charge.amount_refunded ?? 0;
+  await doc.ref.update({
+    refundedAmountCents,
+    status: refundedAmountCents >= totalCents ? "refunded" : "partially_refunded",
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+}
+
+/** charge.dispute.created / charge.dispute.closed — visibility only, no
+ *  in-app evidence submission (that stays in the tenant's own Stripe
+ *  Dashboard, which they have direct access to). Best-effort Task so the
+ *  operator notices without watching the Orders dashboard. */
+export async function handleFunnelChargeDispute(
+  dispute: Stripe.Dispute,
+  subAccountId: string,
+  closed: boolean,
+): Promise<void> {
+  const paymentIntentId =
+    typeof dispute.payment_intent === "string" ? dispute.payment_intent : null;
+  const doc = await findOrderByPaymentIntent(subAccountId, paymentIntentId);
+  if (!doc) return;
+  const order = doc.data() as FunnelOrderDoc;
+
+  const nextStatus = closed
+    ? dispute.status === "won"
+      ? (order.refundedAmountCents > 0 ? "refunded" : "paid")
+      : "disputed"
+    : "disputed";
+  await doc.ref.update({ status: nextStatus, updatedAt: FieldValue.serverTimestamp() });
+
+  if (!closed) {
+    try {
+      const db = getAdminDb();
+      await db.collection("tasks").add({
+        title: `Dispute opened on funnel order (${(dispute.amount / 100).toFixed(2)} ${dispute.currency})`,
+        notes: `Stripe dispute reason: ${dispute.reason}. Respond in your Stripe Dashboard — this platform doesn't submit evidence for you.`,
+        dueAt: new Date(),
+        completed: false,
+        completedAt: null,
+        contactId: order.contactId,
+        dealId: null,
+        eventId: null,
+        agencyId: order.agencyId,
+        subAccountId,
+        createdByUid: "funnel-checkout-webhook",
+        territoryId: null,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    } catch (err) {
+      console.error(`[funnel-checkout] dispute task create failed sa=${subAccountId}`, err);
+    }
+  }
+}

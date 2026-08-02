@@ -14,6 +14,7 @@ import {
   Lock,
   Plus,
   Radio,
+  ReceiptText,
   Tag,
   Trash2,
   Users,
@@ -162,6 +163,14 @@ export function FunnelsList({ saId }: { saId: string }) {
             this platform.
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            render={<Link href={`/sa/${saId}/funnels/orders`} />}
+          >
+            <ReceiptText className="mr-1 h-4 w-4" />
+            Orders
+          </Button>
         <DropdownMenu>
           <DropdownMenuTrigger
             render={<Button type="button" disabled={creating} />}
@@ -195,6 +204,7 @@ export function FunnelsList({ saId }: { saId: string }) {
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </div>
 
       {rows === null ? (

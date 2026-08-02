@@ -3,7 +3,11 @@ import type Stripe from "stripe";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { decryptSecret } from "@/lib/crypto/secrets";
 import { getStripeForTenant } from "@/lib/stripe/tenant-server";
-import { handleFunnelCheckoutCompleted } from "@/lib/funnels/checkout-webhook";
+import {
+  handleFunnelCheckoutCompleted,
+  handleFunnelChargeRefunded,
+  handleFunnelChargeDispute,
+} from "@/lib/funnels/checkout-webhook";
 import type { SubAccountStripeConfig } from "@/types/tenancy";
 
 /**
@@ -65,8 +69,16 @@ export async function POST(
           subAccountId,
         );
         break;
-      // Remaining handlers (refunds, disputes, upsell charges) land in
-      // Slices 3-4.
+      case "charge.refunded":
+        await handleFunnelChargeRefunded(event.data.object as Stripe.Charge, subAccountId);
+        break;
+      case "charge.dispute.created":
+        await handleFunnelChargeDispute(event.data.object as Stripe.Dispute, subAccountId, false);
+        break;
+      case "charge.dispute.closed":
+        await handleFunnelChargeDispute(event.data.object as Stripe.Dispute, subAccountId, true);
+        break;
+      // Off-session upsell/downsell charges land in Slice 4.
       default:
         console.log(`[stripe/tenant/${subAccountId}] unhandled event type: ${event.type}`);
     }
