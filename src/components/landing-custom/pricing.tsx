@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Loader2, Sparkles } from "lucide-react";
+import { Check, Headset, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { openCrispChat } from "@/lib/crisp";
 import type { PublicPlanSummary } from "@/types/billing";
 
 /**
@@ -85,12 +86,13 @@ export function Pricing({
         ) : (
           <div
             className={cn(
-              "mx-auto mt-12 grid max-w-5xl gap-6",
-              plans.length === 1
-                ? "max-w-sm"
-                : plans.length === 2
-                  ? "md:grid-cols-2"
-                  : "md:grid-cols-3",
+              "mx-auto mt-12 grid max-w-6xl gap-6",
+              // Auto-fits any number of plans (unlimited tiers) instead of
+              // branching on a fixed 1/2/3 count — a 4th, 5th, ... plan
+              // just wraps to a new row instead of squeezing the grid.
+              // A static "Enterprise — contact sales" card always joins
+              // the live plans, so there are always at least 2 cards.
+              "grid-cols-[repeat(auto-fit,minmax(260px,1fr))]",
             )}
           >
             {plans.map((plan, i) => {
@@ -180,6 +182,46 @@ export function Pricing({
                 </Card>
               );
             })}
+            <Card className="flex flex-col justify-between border-dashed transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
+              <CardHeader>
+                <span className="mb-1 flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Headset className="h-4 w-4" />
+                </span>
+                <CardTitle className="text-lg">Enterprise</CardTitle>
+                <CardDescription>
+                  Higher volume, custom limits, or a white-label reseller setup.
+                </CardDescription>
+                <div className="mt-4 flex items-baseline gap-1">
+                  <span className="text-2xl font-bold tracking-tight">
+                    Let&apos;s talk
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-1">
+                <ul className="space-y-3">
+                  {["Custom contact & usage limits", "Dedicated onboarding", "Priority support"].map(
+                    (feature) => (
+                      <li key={feature} className="flex items-start gap-2 text-sm">
+                        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <Check className="h-3 w-3" />
+                        </span>
+                        <span>{feature}</span>
+                      </li>
+                    ),
+                  )}
+                </ul>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={openCrispChat}
+                >
+                  Contact sales
+                </Button>
+              </CardFooter>
+            </Card>
           </div>
         )}
       </div>
