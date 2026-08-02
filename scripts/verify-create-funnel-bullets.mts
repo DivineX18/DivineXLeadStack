@@ -26,8 +26,12 @@ for (const line of readFileSync(new URL("../.env.local", import.meta.url), "utf8
 
 const { getAdminDb, getAdminAuth } = await import("../src/lib/firebase/admin");
 const { AI_SUITE_CAPABILITIES } = await import("../src/lib/ai-suite/capabilities");
+type AiSuiteActionContext = import("../src/lib/ai-suite/capabilities").AiSuiteActionContext;
 
 const cap = AI_SUITE_CAPABILITIES.find((c) => c.name === "create_funnel")!;
+function fakeCtx(subAccountId: string, agencyId: string, uid: string): AiSuiteActionContext {
+  return { uid, email: "verify-script@example.com", displayName: "Verify Script", agencyId, subAccountId };
+}
 let failures = 0;
 function check(label: string, ok: boolean, detail?: string) {
   console.log(`${ok ? "PASS" : "FAIL"} ${label}${detail ? ` — ${detail}` : ""}`);
@@ -175,7 +179,7 @@ function check(label: string, ok: boolean, detail?: string) {
 
     if (reValidated.ok) {
       const result = await cap.execute!(
-        { subAccountId: SUB_ID, agencyId: AGENCY_ID, uid: user.uid, level: "sub-account" } as any,
+        fakeCtx(SUB_ID, AGENCY_ID, user.uid),
         reValidated.args,
       );
       check("8c. execute() creates the funnel successfully", !!result.ref?.id, result.resultText);
@@ -216,11 +220,11 @@ function check(label: string, ok: boolean, detail?: string) {
   check("9a. Challenge genre validates", validated.ok);
   if (validated.ok) {
     const result = await cap.execute!(
-      { subAccountId: SUB_ID, agencyId: AGENCY_ID, uid: user.uid, level: "sub-account" } as any,
+      fakeCtx(SUB_ID, AGENCY_ID, user.uid),
       validated.args,
     );
     const funnelSnap = result.ref?.id ? await db.doc(`funnels/${result.ref.id}`).get() : null;
-    const tierSection = funnelSnap?.data()?.sections?.find((s: any) => s.type === "ticket_tiers");
+    const tierSection = funnelSnap?.data()?.sections?.find((s: { type: string }) => s.type === "ticket_tiers");
     const tier = tierSection?.config?.tiers?.[0];
     check("9b. ticket_tiers is populated (not empty)", !!tier, JSON.stringify(tierSection?.config));
     check("9c. tier has a wired capture form", !!tier?.formId);

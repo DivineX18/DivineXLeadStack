@@ -167,6 +167,41 @@ async function withServer(
   delete process.env.AI_SUITE_MODEL_TIMEOUT_MS;
 }
 
+// 6. Regression guard for a second, separately-discovered live incident
+// (2026-08-02): create_funnel grew rich multi-paragraph fields
+// (story_paragraphs, trust_badges, faq_items, confirmation_email_body) and
+// the default max_tokens was still 1024 — a real proposal's tool-call JSON
+// routinely exceeded that, silently truncated mid-object, failed to parse,
+// and fell back to {}, which then misleadingly looked like "the model
+// won't write a headline" (every one of 4 real vertical tests failed this
+// way before the fix). This doesn't call the real model — it just asserts
+// the DEFAULT request body actually asks for enough headroom, so a future
+// edit can't silently shrink it back down without this catching it.
+{
+  let capturedMaxTokens: number | undefined;
+  await withServer(
+    (req, res) => {
+      let body = "";
+      req.on("data", (c) => (body += c));
+      req.on("end", () => {
+        capturedMaxTokens = JSON.parse(body).max_tokens;
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(okBody());
+      });
+    },
+    async (url) => {
+      process.env.AI_SUITE_MODEL_URL_OVERRIDE = url;
+      // No maxTokens override — exercises the real default.
+      await runAiSuiteTurn({ messages: [{ role: "user", content: "hi" }], tools: [] });
+      check(
+        "6. Default max_tokens has enough headroom for a rich create_funnel response",
+        (capturedMaxTokens ?? 0) >= 4096,
+        `max_tokens=${capturedMaxTokens}`,
+      );
+    },
+  );
+}
+
 delete process.env.AI_SUITE_MODEL_URL_OVERRIDE;
 
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);

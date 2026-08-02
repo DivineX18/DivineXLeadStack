@@ -101,10 +101,21 @@ interface OpenRouterChatResponse {
   error?: { message?: string };
 }
 
+// 1024 was the original default from before create_funnel grew rich,
+// multi-paragraph fields (story_paragraphs, trust_badges, faq_items,
+// confirmation_email_body, ...) — a real proposal's tool-call JSON now
+// regularly exceeds that, so the response silently truncates mid-JSON,
+// fails to parse, and falls back to {} (found live 2026-08-02: every
+// create_funnel call in a 4-vertical test failed this way, surfacing as a
+// misleading "a headline is required" ask even though the model had
+// written a full, good response that never made it back intact). 4096
+// is a ceiling, not a spend — the model only uses what the actual reply
+// needs, so this costs nothing on short replies and just stops truncating
+// long ones.
 export async function runAiSuiteTurn({
   messages,
   tools,
-  maxTokens = 1024,
+  maxTokens = 4096,
 }: {
   messages: AiSuiteLlmMessage[];
   tools: AiSuiteToolDef[];

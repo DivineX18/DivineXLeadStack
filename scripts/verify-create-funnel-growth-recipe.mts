@@ -45,8 +45,12 @@ const { FieldValue } = await import("firebase-admin/firestore");
 const { AI_SUITE_CAPABILITIES } = await import("../src/lib/ai-suite/capabilities");
 const { runStep } = await import("../src/lib/workflows/engine");
 const { createContactServerSide } = await import("../src/lib/server/contacts-service");
+type AiSuiteActionContext = import("../src/lib/ai-suite/capabilities").AiSuiteActionContext;
 
 const cap = AI_SUITE_CAPABILITIES.find((c) => c.name === "create_funnel")!;
+function fakeCtx(subAccountId: string, agencyId: string, uid: string): AiSuiteActionContext {
+  return { uid, email: "verify-script@example.com", displayName: "Verify Script", agencyId, subAccountId };
+}
 let failures = 0;
 function check(label: string, ok: boolean, detail?: string) {
   console.log(`${ok ? "PASS" : "FAIL"} ${label}${detail ? ` — ${detail}` : ""}`);
@@ -82,7 +86,7 @@ try {
   if (!validated.ok) throw new Error("validate failed, aborting");
 
   const result = await cap.execute!(
-    { subAccountId: SUB_ID, agencyId: AGENCY_ID, uid: user.uid, level: "sub-account" } as any,
+    fakeCtx(SUB_ID, AGENCY_ID, user.uid),
     validated.args,
   );
   createdIds.funnelId = result.ref?.id;
@@ -102,7 +106,7 @@ try {
   );
 
   const funnelSnap = await db.doc(`funnels/${createdIds.funnelId}`).get();
-  const offerSection = funnelSnap.data()?.sections?.find((s: any) => s.type === "offer");
+  const offerSection = funnelSnap.data()?.sections?.find((s: { type: string }) => s.type === "offer");
   createdIds.formId = offerSection?.config?.formId;
   check("3. Capture form wired into the offer section", !!createdIds.formId);
 
