@@ -70,6 +70,12 @@ import {
   updateFunnelServerSide,
   FunnelValidationError,
 } from "@/lib/server/funnels-service";
+import { createFormServerSide } from "@/lib/server/forms-service";
+import {
+  createMessageTemplateServerSide,
+  MessageTemplateValidationError,
+} from "@/lib/server/message-templates-service";
+import { updateWorkflowServerSide } from "@/lib/server/workflows-service";
 import {
   FirecrawlError,
   firecrawlIsConfigured,
@@ -3006,9 +3012,9 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     name: "create_funnel",
     level: "sub-account",
     requiredRole: "subAccountAdmin",
-    menuLabel: "Create a funnel for this workspace (via the Funnel Builder)",
+    menuLabel: "Create a funnel system for this workspace (page + form + follow-up email + workflow)",
     description:
-      "Create a funnel (a first-party single-page ClickFunnels/GHL-style landing page, hosted directly on this platform — not the website builder) — use when the user asks to build/make/create/generate a funnel, landing page, lead magnet page, webinar registration page, application page, or tripwire offer. Creates a DRAFT the user reviews and publishes themselves — never auto-publishes, since a funnel can include real Stripe checkout (real money) once the user connects one. Workflow: (1) pick the genre that best matches the request — lead_magnet (free book/PDF opt-in), vsl (high-ticket video sales page), challenge (multi-day registration), application (qualify leads before a call), tripwire (low-ticket entry offer), webinar (single-session registration), lead_gen (generic interest capture with no specific asset); (2) write a specific, concrete headline — never a generic tagline; (3) bullets must name a specific outcome or mechanism, never a vague adjective ('transformative', 'game-changing', 'cutting-edge' are banned — they say nothing); (4) ONLY include faq_items if the user gave you enough real detail to answer honestly — never invent generic filler Q&A or fabricated guarantees/stats, matching this platform's strict no-fabrication policy; (5) price_cents only applies to genres with a priced offer (tripwire, vsl, challenge) — omit for a free lead magnet. After creating, feel free to suggest one or two concrete improvements in your reply (e.g. a sharper headline angle, a stronger CTA placement, a trust element to add) — but only as a suggestion the user can act on, never as a score or grade.",
+      "Create a COMPLETE funnel system — not just a landing page — hosted directly on this platform (not the website builder): the funnel page itself, PLUS (when the funnel needs a lead-capture opt-in — most genres besides paid tripwire/vsl offers) a dedicated capture Form, a follow-up email Message Template, and a Workflow that sends it the moment someone submits. Use when the user asks to build/make/create/generate a funnel, landing page, lead magnet page, webinar registration page, application page, or tripwire offer — 'build me a webinar funnel' should produce the whole connected system in one shot, matching what an operator would expect, not just a page they still have to wire up by hand. Everything is created in DRAFT/review state — the funnel is never auto-published, the workflow is never auto-activated — since real money (Stripe) and real emails are on the other side of 'live'. If the user names a reference site, call research_website_reference FIRST and mirror its tone/services WITHOUT copying text. Workflow: (1) pick the genre — lead_magnet (free book/PDF opt-in), vsl (high-ticket video sales page), challenge (multi-day registration), application (qualify leads before a call), tripwire (low-ticket entry offer), webinar (single-session registration), lead_gen (generic interest capture); (2) write a specific, concrete headline — never a generic tagline; (3) bullets must name a specific outcome or mechanism, never a vague adjective ('transformative', 'game-changing', 'cutting-edge' are banned); (4) ONLY include faq_items if you have enough real detail to answer honestly — never invent generic filler Q&A or fabricated guarantees/stats; (5) price_cents only applies to genres with a priced offer (tripwire, vsl, challenge) — omit for a free lead magnet, and when a price IS set, skip the capture form (a paid offer needs checkout, not a lead form — the operator wires up Stripe checkout on that section afterward); (6) leave include_capture_form at its default (true) unless the user is clearly building a pure sales/checkout page with no opt-in step; (7) confirmation_email_body should read like a real, brief, human confirmation (what they'll get, what's next) — it can be genuinely short, but must never invent guarantees, stats, or promises the funnel copy itself didn't make. After creating, feel free to suggest one or two concrete improvements in your reply (e.g. a sharper headline angle, a stronger CTA placement, a trust element to add) — but only as a suggestion the user can act on, never as a score or grade.",
     parameters: {
       type: "object",
       properties: {
@@ -3065,6 +3071,20 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             required: ["question", "answer"],
             additionalProperties: false,
           },
+        },
+        include_capture_form: {
+          type: "boolean",
+          description:
+            "Create a dedicated lead-capture form and wire it into the funnel's offer section, plus a follow-up email + workflow that fires on submit. Default true — set false only for a pure paid-checkout page with no opt-in step.",
+        },
+        confirmation_email_subject: {
+          type: "string",
+          description: "Subject line for the auto-reply sent when someone submits the capture form. Omit for a sensible default.",
+        },
+        confirmation_email_body: {
+          type: "string",
+          description:
+            "Body of the auto-reply email. Short, human, no fabricated claims. The unsubscribe footer is added automatically — don't write your own.",
         },
       },
       required: ["headline", "bullets"],
@@ -3129,6 +3149,9 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           accentColor,
           theme,
           faqItems,
+          includeCaptureForm: (raw as Record<string, unknown>)?.include_capture_form !== false,
+          confirmationEmailSubject: str(raw, "confirmation_email_subject").slice(0, 120),
+          confirmationEmailBody: str(raw, "confirmation_email_body").slice(0, 2000),
         },
       };
     },
@@ -3142,9 +3165,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         webinar: "Webinar",
         lead_gen: "Lead Gen",
       };
+      const willPackage = args.includeCaptureForm !== false && args.priceCents === null;
+      const packageNote = willPackage
+        ? " Also creates a matching capture form, a confirmation email template, and a workflow that sends it on submit — all in draft/review state, nothing live automatically."
+        : "";
       return `Create a DRAFT ${genreLabels[args.genre as string] ?? args.genre} funnel “${
         args.funnelName || args.headline
-      }” with headline “${args.headline}”. You'll review and publish it yourself — nothing goes live automatically.`;
+      }” with headline “${args.headline}”.${packageNote} You'll review and publish/activate everything yourself.`;
     },
     execute: async (ctx, args) => {
       const subAccountId = ctx.subAccountId!;
@@ -3207,12 +3234,80 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         return section;
       });
 
+      let sectionsToSave = nextSections;
+
+      // Orchestration: for a lead-capture-style funnel (no price set), also
+      // create a dedicated form, a confirmation-email template, and a
+      // workflow that sends it on submit — reusing the exact same services
+      // the manual Forms/Templates/Workflow pages call, so a Zeno-built
+      // package is indistinguishable from an operator-built one. Skipped
+      // for a priced offer (tripwire/vsl/challenge with price_cents set) —
+      // that needs Stripe checkout wired up by the operator, not a lead form.
+      const wantsPackage = (args.includeCaptureForm as boolean) !== false && args.priceCents === null;
+      let createdFormId: string | null = null;
+      let createdTemplateId: string | null = null;
+      let createdWorkflowId: string | null = null;
+
+      if (wantsPackage && sectionsToSave.some((s) => s.type === "offer")) {
+        createdFormId = await createFormServerSide({
+          subAccountId,
+          createdByUid: ctx.uid,
+          name: `${(args.funnelName as string) || (args.headline as string)} — capture form`,
+        });
+        sectionsToSave = sectionsToSave.map((s) =>
+          s.type === "offer" ? { ...s, config: { ...s.config, formId: createdFormId } } : s,
+        );
+
+        const emailSubject =
+          (args.confirmationEmailSubject as string) || `You're in — ${args.headline as string}`;
+        let emailBody =
+          (args.confirmationEmailBody as string) ||
+          `Thanks for signing up! We've got your details and will be in touch shortly.`;
+        if (!emailBody.includes("{{unsubscribeLink}}")) {
+          emailBody = `${emailBody}\n\n{{unsubscribeLink}}`;
+        }
+
+        try {
+          createdTemplateId = await createMessageTemplateServerSide({
+            subAccountId,
+            createdByUid: ctx.uid,
+            name: `${(args.funnelName as string) || (args.headline as string)} — confirmation`,
+            type: "email",
+            subject: emailSubject,
+            body: emailBody,
+          });
+        } catch (err) {
+          if (err instanceof MessageTemplateValidationError) {
+            throw new CapabilityUserError(err.message);
+          }
+          throw err;
+        }
+
+        createdWorkflowId = await createWorkflowServerSide({
+          subAccountId,
+          createdByUid: ctx.uid,
+          name: `${(args.funnelName as string) || (args.headline as string)} — follow-up`,
+          template: "blank",
+        });
+        await updateWorkflowServerSide({
+          subAccountId,
+          workflowId: createdWorkflowId,
+          patch: {
+            trigger: { type: "form.submitted", filters: { all: [] }, formId: createdFormId },
+            nodes: {
+              n1: { id: "n1", type: "send_email", config: { subject: emailSubject, body: emailBody }, next: null },
+            },
+            startNodeId: "n1",
+          },
+        });
+      }
+
       try {
         await updateFunnelServerSide({
           subAccountId,
           funnelId,
           patch: {
-            sections: nextSections,
+            sections: sectionsToSave,
             ...(args.accentColor ? { accentColor: args.accentColor as string } : {}),
             ...(args.theme ? { theme: args.theme as "light" | "dark" } : {}),
           },
@@ -3224,10 +3319,21 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         throw err;
       }
 
+      const packageLines = createdFormId
+        ? [
+            `- Capture form created and wired into the offer section — Sidebar → Forms.`,
+            `- Confirmation email template drafted — Sidebar → Templates.`,
+            `- A draft workflow sends it the moment someone submits — Sidebar → Workflows (still needs Activate).`,
+          ]
+        : [];
+
       return {
-        resultText: `Created a draft funnel "${
-          (args.funnelName as string) || (args.headline as string)
-        }" — review it under Sidebar → Funnels, then hit Publish when it's ready.`,
+        resultText: [
+          `Created a draft funnel "${
+            (args.funnelName as string) || (args.headline as string)
+          }" — review it under Sidebar → Funnels, then hit Publish when it's ready.`,
+          ...packageLines,
+        ].join("\n"),
         ref: { kind: "funnel", id: funnelId },
       };
     },
