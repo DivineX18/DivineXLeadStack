@@ -88,6 +88,19 @@ try {
   createdIds.funnelId = result.ref?.id;
   check("2. execute() creates the funnel", !!createdIds.funnelId, result.resultText);
 
+  // The Growth System Summary — every checked-off line must map to a real
+  // created asset. Asserting the literal section headers here means a future
+  // edit that silently drops a real step (without updating the summary to
+  // match) gets caught, and a future edit that adds a fabricated checkmark
+  // for something NOT actually created also gets caught.
+  const summary = result.resultText;
+  check("2a. Summary has the checklist header", summary.startsWith("✅ Growth System Created"));
+  check(
+    "2b. Summary lists all real created assets under the right sections",
+    ["ASSETS", "Landing Page", "CHECKOUT", "Capture Form", "Confirmation Email", "CRM", "Opportunity Creation", "Contact Tag", "Follow-up Task", "AUTOMATION", "Workflow", "Internal Notification", "Wait Step", "STATUS", "Draft"].every((s) => summary.includes(s)),
+    summary,
+  );
+
   const funnelSnap = await db.doc(`funnels/${createdIds.funnelId}`).get();
   const offerSection = funnelSnap.data()?.sections?.find((s: any) => s.type === "offer");
   createdIds.formId = offerSection?.config?.formId;

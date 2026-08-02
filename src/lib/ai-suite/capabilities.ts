@@ -3647,21 +3647,54 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         throw err;
       }
 
-      const packageLines = createdFormId
-        ? [
-            `- Capture form created and wired into the ${hasTicketTiers ? "registration" : "offer"} section — Sidebar → Forms.`,
-            `- Confirmation email template drafted — Sidebar → Templates.`,
-            `- A draft workflow runs on submit: creates an Opportunity, tags the contact "${(args.tag as string) || `${(args.funnelName as string) || (args.headline as string)} requested`}", sends the confirmation, notifies you, waits a day, then leaves a follow-up task — Sidebar → Workflows (still needs Activate).`,
-          ]
-        : [];
+      const displayName = (args.funnelName as string) || (args.headline as string);
+      const tag = (args.tag as string) || `${displayName} requested`;
+      const formLabel = hasTicketTiers ? "Registration Form" : "Capture Form";
+
+      // Every line below maps 1:1 to something actually written to Firestore
+      // above — nothing here is aspirational or generic. When the offer is
+      // priced (no capture form/workflow package), the checklist shrinks to
+      // just what was really created rather than checking off steps that
+      // didn't run.
+      const summaryLines = [
+        "✅ Growth System Created",
+        "",
+        "ASSETS",
+        `✓ Landing Page — "${displayName}"`,
+      ];
+      if (createdFormId) {
+        summaryLines.push(
+          "",
+          "CHECKOUT",
+          `✓ ${formLabel}`,
+          "✓ Confirmation Email",
+          "",
+          "CRM",
+          "✓ Opportunity Creation",
+          `✓ Contact Tag ("${tag}")`,
+          "✓ Follow-up Task",
+          "",
+          "AUTOMATION",
+          "✓ Workflow (form submitted → Opportunity → tag → email → notify → wait → task)",
+          "✓ Internal Notification",
+          "✓ Wait Step (1 day)",
+        );
+      } else {
+        summaryLines.push(
+          "",
+          "CHECKOUT",
+          "— No capture form (this is a priced offer — wire up Stripe checkout on the offer section, no lead-form opt-in needed).",
+        );
+      }
+      summaryLines.push(
+        "",
+        "STATUS",
+        "Everything above is in Draft. Review each asset before publishing/activating — Sidebar → Funnels" +
+          (createdFormId ? " / Forms / Templates / Workflows." : "."),
+      );
 
       return {
-        resultText: [
-          `Created a draft funnel "${
-            (args.funnelName as string) || (args.headline as string)
-          }" — review it under Sidebar → Funnels, then hit Publish when it's ready.`,
-          ...packageLines,
-        ].join("\n"),
+        resultText: summaryLines.join("\n"),
         ref: { kind: "funnel", id: funnelId },
       };
     },
