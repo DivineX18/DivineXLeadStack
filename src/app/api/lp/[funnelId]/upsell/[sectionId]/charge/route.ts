@@ -99,6 +99,13 @@ export async function POST(
       currency: (config.currency ?? order.currency ?? "usd").toLowerCase(),
       customer: order.stripeCustomerId,
       payment_method: order.stripePaymentMethodId,
+      // Off-session charges must be card-only — without this, Stripe falls
+      // back to whatever payment methods are enabled in the tenant's own
+      // Dashboard, and refuses to confirm without a return_url the moment
+      // any redirect-based method (Cash App, Link, etc.) is enabled there.
+      // A saved-card off-session charge can never use a redirect flow
+      // anyway, so restricting to card is correct, not just a workaround.
+      payment_method_types: ["card"],
       off_session: true,
       confirm: true,
     });
