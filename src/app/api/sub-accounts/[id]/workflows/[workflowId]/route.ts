@@ -22,6 +22,7 @@ const NODE_TYPES: WorkflowNodeType[] = [
   "move_stage",
   "update_field",
   "create_task",
+  "create_deal",
   "notify",
   "webhook",
 ];

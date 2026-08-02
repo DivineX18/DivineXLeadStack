@@ -282,6 +282,50 @@ export function NodeConfigDialog({
             </>
           )}
 
+          {step.type === "create_deal" && (
+            <>
+              <Field label="Opportunity title" hint="Supports merge tags.">
+                <Input
+                  value={str("title")}
+                  onChange={(e) => set({ title: e.target.value })}
+                />
+              </Field>
+              <Field label="Value">
+                <Input
+                  type="number"
+                  min={0}
+                  className="w-32"
+                  value={Number(cfg.value ?? 0)}
+                  onChange={(e) => set({ value: Number(e.target.value) })}
+                />
+              </Field>
+              <Field label="Stage">
+                <select
+                  value={str("stageId") || "new"}
+                  onChange={(e) => set({ stageId: e.target.value })}
+                  className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+                >
+                  {PIPELINE_STAGES.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Priority">
+                <select
+                  value={str("priority") || "medium"}
+                  onChange={(e) => set({ priority: e.target.value })}
+                  className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </Field>
+            </>
+          )}
+
           {step.type === "notify" && (
             <>
               <Field

@@ -29,6 +29,7 @@ export const NODE_LABELS: Record<WorkflowNodeType, string> = {
   move_stage: "Move pipeline stage",
   update_field: "Update field",
   create_task: "Create task",
+  create_deal: "Create opportunity",
   notify: "Internal notification",
   webhook: "Webhook",
 };
@@ -59,6 +60,7 @@ export const ADDABLE_TYPES: WorkflowNodeType[] = [
   "move_stage",
   "update_field",
   "create_task",
+  "create_deal",
   "notify",
   "webhook",
   "if_else",
@@ -97,6 +99,8 @@ export function defaultConfig(type: WorkflowNodeType): Record<string, unknown> {
       return { field: "", value: "" };
     case "create_task":
       return { title: "", dueInDays: 1 };
+    case "create_deal":
+      return { title: "", value: 0, currency: "usd", stageId: "new", priority: "medium" };
     case "notify":
       return { recipient: "owner", to: "", subject: "", body: "" };
     case "webhook":
@@ -135,6 +139,8 @@ export function nodeSummary(step: BuilderStep): string {
       return c.field ? `${c.field} = ${c.value ?? ""}` : "No field yet";
     case "create_task":
       return (c.title as string) || "Untitled task";
+    case "create_deal":
+      return (c.title as string) || "Untitled opportunity";
     case "notify":
       return (c.subject as string) || (c.to as string) || "Notification";
     case "webhook":

@@ -1,4 +1,5 @@
 import type { Timestamp, FieldValue } from "firebase/firestore";
+import type { DealPriority, PipelineStageId } from "./deals";
 
 /**
  * Workflow Builder — the general automation engine that replaces the legacy
@@ -67,6 +68,7 @@ export type WorkflowNodeType =
   | "move_stage"
   | "update_field"
   | "create_task"
+  | "create_deal"
   | "notify"
   | "webhook";
 
@@ -168,6 +170,15 @@ export interface UpdateFieldConfig {
 export interface CreateTaskConfig {
   title: string;
   dueInDays?: number;
+}
+export interface CreateDealConfig {
+  /** Supports merge tags, same as CreateTaskConfig.title. */
+  title: string;
+  /** Dollars (not cents) — matches the Deal type's `value` field. */
+  value?: number;
+  currency?: string;
+  stageId?: PipelineStageId;
+  priority?: DealPriority;
 }
 /** Who an Internal notification step emails. Legacy configs predate this
  *  field — the engine treats a missing value like "custom" (use `to`, else

@@ -90,8 +90,16 @@ const SECTION_DEFAULTS: Record<FunnelSectionType, () => FunnelSection["config"]>
     }) satisfies UpsellOfferConfig,
 };
 
+// Deliberately does NOT trim each line. These textareas are controlled —
+// onChange feeds straight back into `value` on every keystroke — so trimming
+// the line the user is actively typing wipes out a trailing space the
+// instant they press it (the very next character then lands with no space
+// before it, fusing words together, e.g. "testing testing" -> "testingtesting").
+// Only drop lines that are ENTIRELY blank (a blank separator line), and leave
+// real content untouched; any incidental leading/trailing whitespace is
+// cosmetically harmless in the rendered output.
 function linesToArray(v: string): string[] {
-  return v.split("\n").map((s) => s.trim()).filter(Boolean);
+  return v.split("\n").filter((s) => s.trim().length > 0);
 }
 
 const fieldClass =

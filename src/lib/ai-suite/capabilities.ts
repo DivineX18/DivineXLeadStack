@@ -35,7 +35,10 @@ import {
   createSectionServerSide,
   updateLessonServerSide,
 } from "@/lib/server/community-classroom-service";
-import { createContactServerSide } from "@/lib/server/contacts-service";
+import {
+  createContactServerSide,
+  updateContactServerSide,
+} from "@/lib/server/contacts-service";
 import {
   createDealServerSide,
   updateDealServerSide,
@@ -1188,6 +1191,105 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     },
   },
   {
+    name: "update_deal",
+    level: "sub-account",
+    requiredRole: "subAccountMember",
+    menuLabel: "Edit an existing deal's title, value, or priority",
+    description:
+      "Update an existing deal's title, value, currency, or priority. Resolve the deal's id with find_deals first — never guess ids. To move a deal to a different pipeline stage, use move_deal_stage instead — this tool does not change stage.",
+    parameters: {
+      type: "object",
+      properties: {
+        dealId: {
+          type: "string",
+          description: "The deal's id, exactly as returned by find_deals.",
+        },
+        dealTitle: {
+          type: "string",
+          description: "The deal's current title, for the confirmation card.",
+        },
+        title: { type: "string", description: "New title, if changing." },
+        value: { type: "number", description: "New value, if changing." },
+        currency: { type: "string", description: "New 3-letter currency code, if changing." },
+        priority: { type: "string", enum: ["low", "medium", "high"], description: "New priority, if changing." },
+      },
+      required: ["dealId", "dealTitle"],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const dealId = str(raw, "dealId");
+      if (!dealId) {
+        return {
+          ok: false,
+          error: "the deal id is required — I need to find it first (find_deals)",
+        };
+      }
+      const rawValue = (raw as Record<string, unknown>)?.value;
+      let value: number | undefined;
+      if (rawValue !== undefined && rawValue !== null && rawValue !== "") {
+        const n = typeof rawValue === "number" ? rawValue : Number(rawValue);
+        if (!Number.isFinite(n) || n < 0 || n > 1_000_000_000) {
+          return { ok: false, error: "the deal value must be a non-negative number" };
+        }
+        value = n;
+      }
+      const currencyRaw = str(raw, "currency");
+      const currency = currencyRaw ? currencyRaw.toUpperCase() : "";
+      if (currency && !/^[A-Z]{3}$/.test(currency)) {
+        return { ok: false, error: "the currency must be a 3-letter code like USD" };
+      }
+      const priorityRaw = str(raw, "priority");
+      const priority = ["low", "medium", "high"].includes(priorityRaw) ? priorityRaw : "";
+      return {
+        ok: true,
+        args: {
+          dealId,
+          dealTitle: str(raw, "dealTitle"),
+          title: str(raw, "title"),
+          value,
+          currency,
+          priority,
+        },
+      };
+    },
+    summarize: (args) => {
+      const changes: string[] = [];
+      if (args.title) changes.push(`title → "${args.title}"`);
+      if (args.value !== undefined)
+        changes.push(`value → ${fmtMoney(args.value as number, (args.currency as string) || "USD")}`);
+      if (args.priority) changes.push(`priority → ${args.priority}`);
+      return `Update “${args.dealTitle || args.dealId}”: ${changes.join(", ") || "no changes"}.`;
+    },
+    execute: async (ctx, args) => {
+      const snap = await getAdminDb().doc(`deals/${args.dealId as string}`).get();
+      if (!snap.exists || snap.data()?.subAccountId !== ctx.subAccountId) {
+        throw new CapabilityUserError("That deal wasn't found in this workspace.");
+      }
+      const patch: Record<string, unknown> = {};
+      if (args.title) patch.title = args.title;
+      if (args.value !== undefined) patch.value = args.value;
+      if (args.currency) patch.currency = args.currency;
+      if (args.priority) patch.priority = args.priority as DealPriority;
+      if (Object.keys(patch).length === 0) {
+        return {
+          resultText: `Nothing to change on “${args.dealTitle || args.dealId}”.`,
+          ref: { kind: "deal", id: snap.id },
+        };
+      }
+      await updateDealServerSide({
+        dealId: snap.id,
+        userId: ctx.uid,
+        expectedSubAccountId: ctx.subAccountId!,
+        patch,
+      });
+      const title = (snap.data()?.title as string) || (args.dealTitle as string);
+      return {
+        resultText: `Updated “${title}”. Open the deal in Pipeline to see the change.`,
+        ref: { kind: "deal", id: snap.id },
+      };
+    },
+  },
+  {
     name: "list_webhooks",
     level: "sub-account",
     requiredRole: "subAccountAdmin",
@@ -1661,6 +1763,106 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       return {
         resultText: `Added contact “${args.name}”. Open Contacts to see the full profile.`,
         ref: { kind: "contact", id: res.id },
+      };
+    },
+  },
+  {
+    name: "update_contact",
+    level: "sub-account",
+    requiredRole: "subAccountMember",
+    menuLabel: "Edit an existing contact's details or tags",
+    description:
+      "Update an existing contact's name, email, phone, company, or tags. Resolve the contact's id with find_contacts first — never guess ids. Only send the fields that are actually changing; omitted fields are left as-is. Setting tags REPLACES the full tag list — if the user says 'add a tag', combine it with the contact's existing tags from find_contacts rather than sending just the new one.",
+    parameters: {
+      type: "object",
+      properties: {
+        contactId: {
+          type: "string",
+          description: "The contact's id, exactly as returned by find_contacts.",
+        },
+        contactName: {
+          type: "string",
+          description: "The contact's current name, for the confirmation card.",
+        },
+        name: { type: "string", description: "New name, if changing." },
+        email: { type: "string", description: "New email, if changing." },
+        phone: { type: "string", description: "New phone, if changing." },
+        company: { type: "string", description: "New company, if changing." },
+        tags: {
+          type: "array",
+          items: { type: "string" },
+          description: "Full replacement tag list, if changing tags at all.",
+        },
+      },
+      required: ["contactId", "contactName"],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const contactId = str(raw, "contactId");
+      if (!contactId) {
+        return {
+          ok: false,
+          error: "the contact id is required — I need to find it first (find_contacts)",
+        };
+      }
+      const email = str(raw, "email").toLowerCase();
+      if (email && !EMAIL_RE.test(email)) {
+        return { ok: false, error: "that email address doesn't look valid" };
+      }
+      const rawTags = (raw as Record<string, unknown>)?.tags;
+      const tags = Array.isArray(rawTags)
+        ? rawTags
+            .filter((t): t is string => typeof t === "string")
+            .map((t) => t.trim().slice(0, 40))
+            .filter(Boolean)
+            .slice(0, 10)
+        : undefined;
+      return {
+        ok: true,
+        args: {
+          contactId,
+          contactName: str(raw, "contactName"),
+          name: str(raw, "name"),
+          email,
+          phone: str(raw, "phone"),
+          company: str(raw, "company"),
+          tags,
+        },
+      };
+    },
+    summarize: (args) => {
+      const changes: string[] = [];
+      if (args.name) changes.push(`name → "${args.name}"`);
+      if (args.email) changes.push(`email → ${args.email}`);
+      if (args.phone) changes.push(`phone → ${args.phone}`);
+      if (args.company) changes.push(`company → "${args.company}"`);
+      if (args.tags) changes.push(`tags → ${(args.tags as string[]).join(", ") || "(none)"}`);
+      return `Update “${args.contactName || args.contactId}”: ${changes.join(", ") || "no changes"}.`;
+    },
+    execute: async (ctx, args) => {
+      // The contact id came from the model — verify it's in THIS workspace
+      // before writing (same guard move_deal_stage uses for deals).
+      const snap = await getAdminDb().doc(`contacts/${args.contactId as string}`).get();
+      if (!snap.exists || snap.data()?.subAccountId !== ctx.subAccountId) {
+        throw new CapabilityUserError("That contact wasn't found in this workspace.");
+      }
+      const patch: Record<string, unknown> = {};
+      if (args.name) patch.name = args.name;
+      if (args.email) patch.email = args.email;
+      if (args.phone) patch.phone = args.phone;
+      if (args.company) patch.company = args.company;
+      if (args.tags !== undefined) patch.tags = args.tags;
+      if (Object.keys(patch).length === 0) {
+        return {
+          resultText: `Nothing to change on “${args.contactName || args.contactId}”.`,
+          ref: { kind: "contact", id: snap.id },
+        };
+      }
+      await updateContactServerSide({ contactId: snap.id, patch });
+      const title = (snap.data()?.name as string) || (args.contactName as string);
+      return {
+        resultText: `Updated “${title}”. Open the contact profile to see the change.`,
+        ref: { kind: "contact", id: snap.id },
       };
     },
   },
@@ -3087,6 +3289,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           description:
             "Body of the auto-reply email. Short, human, no fabricated claims. The unsubscribe footer is added automatically — don't write your own.",
         },
+        tag: {
+          type: "string",
+          description:
+            "Tag applied to the contact when they submit the capture form, e.g. 'Website Assessment Requested'. Omit for a sensible default derived from the funnel name — this tag is what downstream broadcasts/voice-campaign audiences and other workflow triggers filter on.",
+        },
       },
       required: ["headline", "bullets"],
       additionalProperties: false,
@@ -3172,10 +3379,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         .slice(0, 10)
         .map((i) => ({ question: i.question.slice(0, 200), answer: i.answer.slice(0, 1000) }));
 
+      const funnelName = str(raw, "funnel_name").slice(0, 60);
+      const tag = (str(raw, "tag") || `${funnelName || headline} requested`).slice(0, 40);
+
       return {
         ok: true,
         args: {
-          funnelName: str(raw, "funnel_name").slice(0, 60),
+          funnelName,
           genre,
           eyebrow: str(raw, "eyebrow").slice(0, 100),
           headline,
@@ -3189,6 +3399,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           includeCaptureForm: (raw as Record<string, unknown>)?.include_capture_form !== false,
           confirmationEmailSubject: str(raw, "confirmation_email_subject").slice(0, 120),
           confirmationEmailBody: str(raw, "confirmation_email_body").slice(0, 2000),
+          tag,
         },
       };
     },
@@ -3359,10 +3570,21 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           throw err;
         }
 
+        // Full Growth System recipe — every node type here already has a
+        // real executor in lib/workflows/engine.ts's REGISTRY (the exact
+        // same engine a manually-built workflow runs on, not a parallel
+        // AI-only path): create the Opportunity, tag the contact, send the
+        // confirmation, notify the operator, wait a day, then leave a
+        // follow-up task. Mirrors what an operator builds by hand in the
+        // visual Workflow builder — a Zeno-built workflow is editable there
+        // exactly like any other.
+        const displayName = (args.funnelName as string) || (args.headline as string);
+        const tag = (args.tag as string) || `${displayName} requested`;
+
         createdWorkflowId = await createWorkflowServerSide({
           subAccountId,
           createdByUid: ctx.uid,
-          name: `${(args.funnelName as string) || (args.headline as string)} — follow-up`,
+          name: `${displayName} — follow-up`,
           template: "blank",
         });
         await updateWorkflowServerSide({
@@ -3371,7 +3593,37 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           patch: {
             trigger: { type: "form.submitted", filters: { all: [] }, formId: createdFormId },
             nodes: {
-              n1: { id: "n1", type: "send_email", config: { subject: emailSubject, body: emailBody }, next: null },
+              n1: {
+                id: "n1",
+                type: "create_deal",
+                config: { title: displayName, value: 0, currency: "usd", stageId: "new", priority: "medium" },
+                next: "n2",
+              },
+              n2: { id: "n2", type: "add_tag", config: { tag }, next: "n3" },
+              n3: {
+                id: "n3",
+                type: "send_email",
+                config: { subject: emailSubject, body: emailBody },
+                next: "n4",
+              },
+              n4: {
+                id: "n4",
+                type: "notify",
+                config: {
+                  recipient: "owner",
+                  to: "",
+                  subject: `New lead: ${displayName}`,
+                  body: `{{contact.firstName}} ({{contact.email}}) just submitted "${displayName}" and was tagged "${tag}". A follow-up task has been created.`,
+                },
+                next: "n5",
+              },
+              n5: { id: "n5", type: "wait", config: { seconds: 86_400 }, next: "n6" },
+              n6: {
+                id: "n6",
+                type: "create_task",
+                config: { title: `Follow up with {{contact.firstName}} — ${displayName}`, dueInDays: 0 },
+                next: null,
+              },
             },
             startNodeId: "n1",
           },
@@ -3399,7 +3651,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         ? [
             `- Capture form created and wired into the ${hasTicketTiers ? "registration" : "offer"} section — Sidebar → Forms.`,
             `- Confirmation email template drafted — Sidebar → Templates.`,
-            `- A draft workflow sends it the moment someone submits — Sidebar → Workflows (still needs Activate).`,
+            `- A draft workflow runs on submit: creates an Opportunity, tags the contact "${(args.tag as string) || `${(args.funnelName as string) || (args.headline as string)} requested`}", sends the confirmation, notifies you, waits a day, then leaves a follow-up task — Sidebar → Workflows (still needs Activate).`,
           ]
         : [];
 
@@ -3540,9 +3792,11 @@ const AGENCY_DELEGATED = [
   "list_webhooks",
   "list_members",
   "create_contact",
+  "update_contact",
   "create_task",
   "complete_task",
   "create_deal",
+  "update_deal",
   "move_deal_stage",
   "create_event",
   "create_workflow",

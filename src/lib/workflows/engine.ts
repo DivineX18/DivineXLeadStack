@@ -23,7 +23,9 @@ import { evalConditionGroup } from "./conditions";
 import type { Contact } from "@/types/contacts";
 import type { AgencyDoc, SubAccountDoc } from "@/types";
 import type { WhatsappTemplateDoc } from "@/types/whatsapp-templates";
+import { PIPELINE_STAGES, type DealPriority, type PipelineStageId } from "@/types/deals";
 import type {
+  CreateDealConfig,
   CreateTaskConfig,
   IfElseConfig,
   MoveStageConfig,
@@ -42,6 +44,8 @@ import type {
   WorkflowRunHistoryEntry,
   WorkflowTriggerType,
 } from "@/types/workflows";
+
+const VALID_STAGE_IDS = PIPELINE_STAGES.map((s) => s.id);
 
 const STEP_PATH = "/api/workflows/step";
 
@@ -375,6 +379,37 @@ const execCreateTask: NodeExecutor = async (ctx) => {
   return { result: { kind: "next" }, log: "task_created" };
 };
 
+const execCreateDeal: NodeExecutor = async (ctx) => {
+  const cfg = ctx.node.config as unknown as CreateDealConfig;
+  const title =
+    resolveMergeTags(cfg.title ?? "New opportunity", mergeSubject(ctx, "")) ||
+    "New opportunity";
+  const stageId = VALID_STAGE_IDS.includes(cfg.stageId as PipelineStageId)
+    ? (cfg.stageId as PipelineStageId)
+    : "new";
+  // Dynamic import (not a top-level one) deliberately: deals-service.ts
+  // itself imports fireWorkflowTrigger from THIS module (to fire
+  // pipeline.stage.changed / deal.won triggers on stage moves), so a
+  // top-level import here would be circular. Both modules only touch each
+  // other's exports inside async function bodies, never at module-eval
+  // time, so resolving the import lazily at call time is safe and avoids
+  // depending on bundler-specific circular-ESM behavior.
+  const { createDealServerSide } = await import("@/lib/server/deals-service");
+  await createDealServerSide({
+    subAccountId: ctx.subAccountId,
+    agencyId: ctx.agencyId,
+    createdByUid: ctx.createdByUid,
+    mode: "live",
+    title,
+    value: Math.max(0, Number(cfg.value ?? 0)),
+    currency: cfg.currency || "usd",
+    contactId: ctx.contact.id,
+    stageId,
+    priority: (cfg.priority as DealPriority) || "medium",
+  });
+  return { result: { kind: "next" }, log: `deal_created:${stageId}` };
+};
+
 /**
  * Resolve who an Internal notification emails. "account_contact" reads the
  * sub-account's primary contact (Settings → Admin → Account contact); a custom
@@ -488,6 +523,7 @@ const REGISTRY: Partial<Record<WorkflowNodeType, NodeExecutor>> = {
   move_stage: execMoveStage,
   update_field: execUpdateField,
   create_task: execCreateTask,
+  create_deal: execCreateDeal,
   notify: execNotify,
   webhook: execWebhook,
 };

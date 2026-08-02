@@ -9,6 +9,7 @@ import {
   Bell,
   CheckSquare,
   Clock,
+  DollarSign,
   Flag,
   GitBranch,
   Info,
@@ -85,6 +86,7 @@ const ICONS: Record<WorkflowNodeType, typeof Mail> = {
   move_stage: KanbanSquare,
   update_field: PencilLine,
   create_task: CheckSquare,
+  create_deal: DollarSign,
   notify: Bell,
   webhook: Webhook,
 };
