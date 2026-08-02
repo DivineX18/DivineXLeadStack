@@ -24,6 +24,7 @@ const SECTION_TYPES: FunnelSectionType[] = [
   "guarantee",
   "trust_badges",
   "checkout",
+  "upsell_offer",
 ];
 
 /** Defensive sanitize of a client-supplied sections array — authed staff,
@@ -112,7 +113,15 @@ export async function DELETE(
   const access = await requireSubAccountMember(request, subAccountId);
   if (access instanceof NextResponse) return access;
 
-  const ok = await deleteFunnelServerSide(subAccountId, funnelId);
+  let ok: boolean;
+  try {
+    ok = await deleteFunnelServerSide(subAccountId, funnelId);
+  } catch (err) {
+    if (err instanceof FunnelValidationError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
+    throw err;
+  }
   if (!ok) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

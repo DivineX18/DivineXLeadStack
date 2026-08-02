@@ -32,6 +32,7 @@ import type {
   StoryConfig,
   TicketTiersConfig,
   TrustBadgesConfig,
+  UpsellOfferConfig,
 } from "@/types/funnels";
 
 const GENRE_LABELS: Record<FunnelGenre, string> = {
@@ -57,6 +58,7 @@ const SECTION_LABELS: Record<FunnelSectionType, string> = {
   guarantee: "Guarantee",
   trust_badges: "Trust badges",
   checkout: "Checkout",
+  upsell_offer: "Upsell/Downsell offer",
 };
 
 const SECTION_DEFAULTS: Record<FunnelSectionType, () => FunnelSection["config"]> = {
@@ -78,6 +80,14 @@ const SECTION_DEFAULTS: Record<FunnelSectionType, () => FunnelSection["config"]>
       ctaLabel: "Buy now",
       checkoutMode: "external_link",
     }) satisfies CheckoutConfig,
+  upsell_offer: () =>
+    ({
+      headline: "Wait — add this to your order?",
+      bullets: [],
+      priceCents: 0,
+      acceptLabel: "Yes, add it!",
+      declineLabel: "No thanks",
+    }) satisfies UpsellOfferConfig,
 };
 
 function linesToArray(v: string): string[] {
@@ -302,6 +312,8 @@ export function FunnelBuilder({
                 <SectionFields
                   section={section}
                   forms={forms}
+                  saId={saId}
+                  funnelId={funnelId}
                   onChange={(config) => updateSection(section.id, config)}
                 />
               </div>
@@ -330,10 +342,14 @@ export function FunnelBuilder({
 function SectionFields({
   section,
   forms,
+  saId,
+  funnelId,
   onChange,
 }: {
   section: FunnelSection;
   forms: LeadForm[];
+  saId: string;
+  funnelId: string;
   onChange: (config: FunnelSection["config"]) => void;
 }) {
   switch (section.type) {
@@ -969,6 +985,19 @@ function SectionFields({
                   </div>
                 )}
               </div>
+
+              <div className="space-y-2">
+                <p className={labelClass}>Post-purchase flow</p>
+                <PostPurchaseFlowPanel
+                  saId={saId}
+                  parentFunnelId={funnelId}
+                  label="Upsell (shown after a successful purchase)"
+                  linkedFunnelId={c.upsellFunnelId}
+                  chainRole="upsell"
+                  onLink={(id) => onChange({ ...c, upsellFunnelId: id })}
+                  onUnlink={() => onChange({ ...c, upsellFunnelId: null })}
+                />
+              </div>
             </>
           )}
 
@@ -979,6 +1008,78 @@ function SectionFields({
               className="h-9"
             />
           </Field>
+        </div>
+      );
+    }
+    case "upsell_offer": {
+      const c = section.config as UpsellOfferConfig;
+      return (
+        <div className="space-y-3">
+          <Field label="Headline">
+            <Input
+              value={c.headline}
+              onChange={(e) => onChange({ ...c, headline: e.target.value })}
+              className="h-9"
+            />
+          </Field>
+          <Field label="Price (USD)">
+            <Input
+              type="number"
+              step="0.01"
+              value={(c.priceCents ?? 0) / 100}
+              onChange={(e) =>
+                onChange({ ...c, priceCents: Math.round(Number(e.target.value) * 100) })
+              }
+              className="h-9"
+            />
+          </Field>
+          <Field label="Bullets, one per line">
+            <Textarea
+              rows={4}
+              value={c.bullets.join("\n")}
+              onChange={(e) => onChange({ ...c, bullets: linesToArray(e.target.value) })}
+            />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Accept button label">
+              <Input
+                value={c.acceptLabel}
+                onChange={(e) => onChange({ ...c, acceptLabel: e.target.value })}
+                className="h-9"
+              />
+            </Field>
+            <Field label="Decline link label">
+              <Input
+                value={c.declineLabel}
+                onChange={(e) => onChange({ ...c, declineLabel: e.target.value })}
+                className="h-9"
+              />
+            </Field>
+          </div>
+          <div className="space-y-2">
+            <p className={labelClass}>If they accept</p>
+            <PostPurchaseFlowPanel
+              saId={saId}
+              parentFunnelId={funnelId}
+              label="Chain another upsell after this one (optional)"
+              linkedFunnelId={c.acceptNextFunnelId}
+              chainRole="upsell"
+              onLink={(id) => onChange({ ...c, acceptNextFunnelId: id })}
+              onUnlink={() => onChange({ ...c, acceptNextFunnelId: null })}
+            />
+          </div>
+          <div className="space-y-2">
+            <p className={labelClass}>If they decline</p>
+            <PostPurchaseFlowPanel
+              saId={saId}
+              parentFunnelId={funnelId}
+              label="Offer a downsell instead (optional)"
+              linkedFunnelId={c.declineFunnelId}
+              chainRole="downsell"
+              onLink={(id) => onChange({ ...c, declineFunnelId: id })}
+              onUnlink={() => onChange({ ...c, declineFunnelId: null })}
+            />
+          </div>
         </div>
       );
     }
@@ -1061,6 +1162,79 @@ function SectionFields({
     default:
       return null;
   }
+}
+
+/** Create-and-link (no reuse-existing in v1, keeps this simple) a
+ *  post-purchase chain step — an upsell or downsell page. Shown inside
+ *  a `checkout` section (linking upsellFunnelId) or an `upsell_offer`
+ *  section (linking acceptNextFunnelId/declineFunnelId — chaining
+ *  another step after this one). */
+function PostPurchaseFlowPanel({
+  saId,
+  parentFunnelId,
+  label,
+  linkedFunnelId,
+  chainRole,
+  onLink,
+  onUnlink,
+}: {
+  saId: string;
+  parentFunnelId: string;
+  label: string;
+  linkedFunnelId: string | null | undefined;
+  chainRole: "upsell" | "downsell";
+  onLink: (funnelId: string) => void;
+  onUnlink: () => void;
+}) {
+  const [creating, setCreating] = useState(false);
+
+  async function createStep() {
+    setCreating(true);
+    try {
+      const res = await fetch(`/api/sub-accounts/${saId}/funnels`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chainRole, parentFunnelId }),
+      });
+      const d = (await res.json()) as { id?: string };
+      if (!res.ok || !d.id) throw new Error();
+      onLink(d.id);
+    } catch {
+      toast.error("Couldn't create the step.");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  return (
+    <div className="rounded-lg border p-3">
+      <p className={labelClass}>{label}</p>
+      {linkedFunnelId ? (
+        <div className="flex items-center gap-2">
+          <a
+            href={`/sa/${saId}/funnels/${linkedFunnelId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm text-primary underline-offset-2 hover:underline"
+          >
+            Edit step page
+          </a>
+          <Button type="button" variant="ghost" size="sm" onClick={onUnlink}>
+            Remove
+          </Button>
+        </div>
+      ) : (
+        <Button type="button" variant="outline" size="sm" disabled={creating} onClick={createStep}>
+          {creating ? (
+            <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Plus className="mr-1 h-3.5 w-3.5" />
+          )}
+          Create {chainRole} step
+        </Button>
+      )}
+    </div>
+  );
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

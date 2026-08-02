@@ -10,6 +10,7 @@ import type {
   FunnelGenre,
   FunnelSection,
   FunnelStatus,
+  UpsellOfferConfig,
 } from "@/types/funnels";
 
 export class FunnelValidationError extends Error {}
@@ -22,14 +23,23 @@ function toMillis(v: unknown): number {
   return m && typeof m.toMillis === "function" ? m.toMillis() : 0;
 }
 
-export async function listFunnels(subAccountId: string): Promise<FunnelDoc[]> {
+/** Excludes post-purchase chain steps (chainRole "upsell"/"downsell") —
+ *  those live nested in their parent's "Post-purchase flow" panel, not
+ *  the main list. Pass includeChainSteps to get every doc (used by the
+ *  chain-cycle check). */
+export async function listFunnels(
+  subAccountId: string,
+  opts?: { includeChainSteps?: boolean },
+): Promise<FunnelDoc[]> {
   const snap = await getAdminDb()
     .collection("funnels")
     .where("subAccountId", "==", subAccountId)
     .get();
-  return snap.docs
-    .map((d) => ({ id: d.id, ...(d.data() as Omit<FunnelDoc, "id">) }))
-    .sort((a, b) => toMillis(b.updatedAt) - toMillis(a.updatedAt));
+  const all = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<FunnelDoc, "id">) }));
+  const filtered = opts?.includeChainSteps
+    ? all
+    : all.filter((f) => !f.chainRole || f.chainRole === "standalone");
+  return filtered.sort((a, b) => toMillis(b.updatedAt) - toMillis(a.updatedAt));
 }
 
 export async function getFunnel(
@@ -324,12 +334,36 @@ export async function createFunnelServerSide(opts: {
   createdByUid: string;
   name: string;
   genre: FunnelGenre;
+  /** Post-purchase chain step creation — bypasses genre seeding in favor
+   *  of a single upsell_offer section. */
+  chainRole?: "upsell" | "downsell";
+  parentFunnelId?: string;
 }): Promise<string> {
   const db = getAdminDb();
   const subSnap = await db.doc(`subAccounts/${opts.subAccountId}`).get();
   const agencyId = (subSnap.data()?.agencyId as string) ?? "";
 
-  const seed = SEEDS[opts.genre]();
+  const isChainStep = !!opts.chainRole;
+  const seed: Seed = isChainStep
+    ? {
+        sections: [
+          {
+            id: "s1",
+            type: "upsell_offer",
+            config: {
+              headline:
+                opts.chainRole === "downsell"
+                  ? "Wait — how about this instead?"
+                  : "Wait — add this to your order?",
+              bullets: [],
+              priceCents: 0,
+              acceptLabel: "Yes, add it!",
+              declineLabel: "No thanks",
+            },
+          },
+        ],
+      }
+    : SEEDS[opts.genre]();
 
   const ref = db.collection("funnels").doc();
   const doc: Omit<FunnelDoc, "id"> = {
@@ -339,9 +373,11 @@ export async function createFunnelServerSide(opts: {
     name: opts.name.trim() || "Untitled funnel",
     genre: opts.genre,
     status: "draft",
-    theme: DEFAULT_THEME[opts.genre],
-    accentColor: DEFAULT_ACCENT[opts.genre],
+    theme: isChainStep ? "light" : DEFAULT_THEME[opts.genre],
+    accentColor: isChainStep ? "#2563eb" : DEFAULT_ACCENT[opts.genre],
     sections: seed.sections,
+    chainRole: opts.chainRole ?? "standalone",
+    parentFunnelId: opts.parentFunnelId ?? null,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   };
@@ -449,6 +485,57 @@ async function materializeSectionsPrices(
   );
 }
 
+function outboundChainTargets(sections: FunnelSection[]): string[] {
+  const targets: string[] = [];
+  for (const s of sections) {
+    if (s.type === "checkout") {
+      const c = s.config as CheckoutConfig;
+      if (c.upsellFunnelId) targets.push(c.upsellFunnelId);
+    }
+    if (s.type === "upsell_offer") {
+      const c = s.config as UpsellOfferConfig;
+      if (c.acceptNextFunnelId) targets.push(c.acceptNextFunnelId);
+      if (c.declineFunnelId) targets.push(c.declineFunnelId);
+    }
+  }
+  return targets;
+}
+
+/** Rejects a save whose chain pointers would loop back to this funnel —
+ *  a real customer mid-purchase must never hit an infinite chain. Builds
+ *  the full sub-account's pointer graph in one query (cheap — funnels
+ *  are a small collection per tenant) and BFS's from the new outbound
+ *  edges, substituting the funnel-being-saved's OWN new sections for its
+ *  old ones so a self-referencing edit is caught too. */
+async function assertNoChainCycle(
+  subAccountId: string,
+  funnelId: string,
+  newSections: FunnelSection[],
+): Promise<void> {
+  const start = outboundChainTargets(newSections);
+  if (start.length === 0) return;
+
+  const all = await listFunnels(subAccountId, { includeChainSteps: true });
+  const edgesById = new Map<string, string[]>();
+  for (const f of all) {
+    edgesById.set(f.id, f.id === funnelId ? start : outboundChainTargets(f.sections));
+  }
+
+  const queue = [...start];
+  const visited = new Set<string>();
+  while (queue.length > 0) {
+    const next = queue.shift()!;
+    if (next === funnelId) {
+      throw new FunnelValidationError(
+        "This chain loops back to the funnel you're editing — a customer could get stuck. Fix the accept/decline links before saving.",
+      );
+    }
+    if (visited.has(next) || visited.size > 200) continue;
+    visited.add(next);
+    for (const n of edgesById.get(next) ?? []) queue.push(n);
+  }
+}
+
 export async function updateFunnelServerSide(opts: {
   subAccountId: string;
   funnelId: string;
@@ -468,6 +555,7 @@ export async function updateFunnelServerSide(opts: {
   if (patch.theme !== undefined) write.theme = patch.theme;
   if (patch.accentColor !== undefined) write.accentColor = patch.accentColor;
   if (patch.sections !== undefined) {
+    await assertNoChainCycle(opts.subAccountId, opts.funnelId, patch.sections);
     const oldData = snap.data() as Omit<FunnelDoc, "id">;
     write.sections = await materializeSectionsPrices(
       opts.subAccountId,
@@ -483,9 +571,23 @@ export async function deleteFunnelServerSide(
   subAccountId: string,
   funnelId: string,
 ): Promise<boolean> {
-  const ref = getAdminDb().doc(`funnels/${funnelId}`);
+  const db = getAdminDb();
+  const ref = db.doc(`funnels/${funnelId}`);
   const snap = await ref.get();
   if (!snap.exists || snap.data()!.subAccountId !== subAccountId) return false;
+
+  const linkedChildren = await db
+    .collection("funnels")
+    .where("subAccountId", "==", subAccountId)
+    .where("parentFunnelId", "==", funnelId)
+    .limit(1)
+    .get();
+  if (!linkedChildren.empty) {
+    throw new FunnelValidationError(
+      "This funnel has linked upsell/downsell steps — remove those from the Post-purchase flow panel first.",
+    );
+  }
+
   await ref.delete();
   return true;
 }

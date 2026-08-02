@@ -15,6 +15,7 @@ import { TicketTiersSection } from "./sections/ticket-tiers-section";
 import { GuaranteeSection } from "./sections/guarantee-section";
 import { TrustBadgesSection } from "./sections/trust-badges-section";
 import { CheckoutSection } from "./sections/checkout-section";
+import { UpsellOfferSection } from "./sections/upsell-offer-section";
 
 /**
  * Maps a funnel's `sections[]` to its section component, mirroring the
@@ -41,6 +42,7 @@ const SECTION_COMPONENTS: Record<FunnelSectionType, ComponentType<any>> = {
   guarantee: GuaranteeSection,
   trust_badges: TrustBadgesSection,
   checkout: CheckoutSection,
+  upsell_offer: UpsellOfferSection,
 };
 
 const SYSTEM_FONT_STACK =

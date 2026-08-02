@@ -30,7 +30,8 @@ export type FunnelSectionType =
   | "ticket_tiers"
   | "guarantee"
   | "trust_badges"
-  | "checkout";
+  | "checkout"
+  | "upsell_offer";
 
 export interface HeroConfig {
   eyebrow?: string;
@@ -154,10 +155,34 @@ export interface CheckoutConfig {
   stripePriceId?: string | null;
   stripeProductId?: string | null;
   orderBump?: OrderBumpConfig | null;
-  /** Post-purchase chain — wired up in a later slice; present now so the
-   *  config shape doesn't need another migration when it lands. */
+  /** Post-purchase flow — the checkout success redirect lands here first.
+   *  The downsell path is reached from THIS upsell's own `declineFunnelId`,
+   *  not a second pointer here — keeps one "next step" concept per page. */
   upsellFunnelId?: string | null;
-  downsellFunnelId?: string | null;
+}
+
+/**
+ * A one-click post-purchase step page — rendered by the exact same
+ * /lp/[funnelId] route as any other funnel, just with `chainRole` set on
+ * its FunnelDoc (see below). `acceptNextFunnelId`/`declineFunnelId` are
+ * per-step pointers rather than a single fixed pair on the root offer, so
+ * a chain can run upsell -> upsell -> downsell -> thank-you (or any other
+ * operator-built sequence) for free — no depth cap, no second data model.
+ */
+export interface UpsellOfferConfig {
+  productImageUrl?: string;
+  headline: string;
+  bullets: string[];
+  /** Charged via a direct off-session PaymentIntent, not a Checkout
+   *  Session line item — no pre-created Stripe Price needed. */
+  priceCents: number;
+  currency?: string;
+  acceptLabel: string;
+  declineLabel: string;
+  /** Where "Yes" goes next — another upsell, or null = thank-you/stop. */
+  acceptNextFunnelId?: string | null;
+  /** Where "No thanks" goes — a downsell step, or null = thank-you/stop. */
+  declineFunnelId?: string | null;
 }
 
 export type FunnelSectionConfig =
@@ -172,7 +197,8 @@ export type FunnelSectionConfig =
   | TicketTiersConfig
   | GuaranteeConfig
   | TrustBadgesConfig
-  | CheckoutConfig;
+  | CheckoutConfig
+  | UpsellOfferConfig;
 
 export interface FunnelSection {
   id: string;
@@ -192,6 +218,16 @@ export interface FunnelDoc {
   /** Hex string with leading #. */
   accentColor: string;
   sections: FunnelSection[];
+  /** Undefined/"standalone" = every existing funnel — appears in the main
+   *  Funnels list. "upsell"/"downsell" = a post-purchase chain step,
+   *  rendered by the same /lp/[funnelId] route but filtered out of the
+   *  main list; created/managed from its parent's "Post-purchase flow"
+   *  panel. */
+  chainRole?: "standalone" | "upsell" | "downsell";
+  /** The root checkout funnel this step belongs to. Null/undefined for
+   *  standalone funnels. Used for the delete-guard (a parent with linked
+   *  steps can't be silently orphaned) and the builder's back-link. */
+  parentFunnelId?: string | null;
   createdAt: Timestamp | FieldValue | null;
   updatedAt: Timestamp | FieldValue | null;
 }

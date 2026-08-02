@@ -39,7 +39,8 @@ export async function GET(
     );
   }
 
-  const funnels = await listFunnels(subAccountId);
+  const includeChainSteps = new URL(request.url).searchParams.get("all") === "1";
+  const funnels = await listFunnels(subAccountId, { includeChainSteps });
   return NextResponse.json({ funnels });
 }
 
@@ -58,7 +59,12 @@ export async function POST(
     );
   }
 
-  let body: { name?: string; genre?: FunnelGenre };
+  let body: {
+    name?: string;
+    genre?: FunnelGenre;
+    chainRole?: "upsell" | "downsell";
+    parentFunnelId?: string;
+  };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -67,13 +73,25 @@ export async function POST(
 
   const genre: FunnelGenre =
     body.genre && body.genre in GENRE_NAMES ? body.genre : "lead_magnet";
-  const name = body.name ?? GENRE_NAMES[genre];
+  const chainRole =
+    body.chainRole === "upsell" || body.chainRole === "downsell"
+      ? body.chainRole
+      : undefined;
+  const name =
+    body.name ??
+    (chainRole
+      ? chainRole === "upsell"
+        ? "Upsell step"
+        : "Downsell step"
+      : GENRE_NAMES[genre]);
 
   const funnelId = await createFunnelServerSide({
     subAccountId,
     createdByUid: access.uid,
     name,
     genre,
+    chainRole,
+    parentFunnelId: chainRole ? body.parentFunnelId : undefined,
   });
   return NextResponse.json({ id: funnelId });
 }

@@ -56,6 +56,19 @@ export async function handleFunnelCheckoutCompleted(
   const email = session.customer_details?.email ?? "";
   const name = session.customer_details?.name ?? "";
 
+  // Retrieve the PaymentIntent to capture the payment method actually used
+  // — needed so a later upsell/downsell hop can off-session-charge the
+  // same card without the customer re-entering details.
+  let stripePaymentMethodId: string | null = null;
+  if (typeof session.payment_intent === "string") {
+    try {
+      const pi = await stripe.paymentIntents.retrieve(session.payment_intent);
+      stripePaymentMethodId = typeof pi.payment_method === "string" ? pi.payment_method : null;
+    } catch {
+      // Non-fatal — the order still records; a later upsell just can't charge.
+    }
+  }
+
   let contactId: string | null = null;
   if (email) {
     const reconciled = await reconcileFunnelCheckoutContact({
@@ -77,7 +90,7 @@ export async function handleFunnelCheckoutCompleted(
     stripePaymentIntentId:
       typeof session.payment_intent === "string" ? session.payment_intent : null,
     stripeCustomerId: typeof session.customer === "string" ? session.customer : null,
-    stripePaymentMethodId: null,
+    stripePaymentMethodId,
     currency: (session.currency ?? "usd").toLowerCase(),
     mainOrderAmountCents,
     bumpIncluded: !!bumpLineItem,
