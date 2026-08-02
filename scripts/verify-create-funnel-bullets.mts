@@ -1,10 +1,14 @@
-// Permanent regression coverage for the create_funnel bullets round-trip
-// bug (fixed 2026-08-01): the confirm route re-validates the chat route's
-// ALREADY-normalized args (camelCase keys, bullets as a real array), and
-// validate() previously only accepted the raw LLM tool-call shape
-// (snake_case, bullets as a comma-string) — so every confirm failed with
-// "at least one bullet point is required" even when the user/model
-// supplied bullets correctly on the first turn.
+// Permanent regression coverage for create_funnel bugs found during the
+// RC 1.0 verification pass (2026-08-01):
+//  1. The confirm route re-validates the chat route's ALREADY-normalized
+//     args (camelCase keys, bullets as a real array); validate() only
+//     accepted the raw LLM tool-call shape (snake_case, bullets as a
+//     comma-string) — every confirm failed with "at least one bullet
+//     point is required".
+//  2. The challenge genre's ticket_tiers section (not offer) was left
+//     completely empty by create_funnel — a Zeno-built challenge funnel
+//     had no way to register at all until the operator manually added a
+//     tier.
 //
 // Run: NODE_OPTIONS="--conditions=react-server" npx tsx scripts/verify-create-funnel-bullets.mts
 // Pure unit-level — calls validate()/execute() directly, no network, no
@@ -158,6 +162,55 @@ function check(label: string, ok: boolean, detail?: string) {
         await db.doc(`funnels/${result.ref.id}`).delete().catch(() => {});
       }
     }
+  }
+
+  await db.doc(`subAccounts/${SUB_ID}`).delete().catch(() => {});
+  await db.doc(`agencies/${AGENCY_ID}`).delete().catch(() => {});
+  await auth.deleteUser(user.uid).catch(() => {});
+}
+
+// 9. Challenge genre: ticket_tiers must be populated with a real,
+// registrable tier + a wired capture form — not left empty.
+{
+  const db = getAdminDb();
+  const auth = getAdminAuth();
+  const RUN_ID = `challengefix${Date.now()}`;
+  const AGENCY_ID = `test-agency-${RUN_ID}`;
+  const SUB_ID = `test-sa-${RUN_ID}`;
+  await db.doc(`agencies/${AGENCY_ID}`).set({ name: "Verify Agency", createdAt: new Date() });
+  await db.doc(`subAccounts/${SUB_ID}`).set({
+    name: "Verify Sub-Account",
+    agencyId: AGENCY_ID,
+    funnelsEnabledByAgency: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+  const user = await auth.createUser({ email: `challengefix-${RUN_ID}@example.com`, password: "verify-test-pass-123!" });
+
+  const validated = cap.validate!({
+    genre: "challenge",
+    headline: "5-Day Clean Kitchen Challenge",
+    bullets: "One recipe a day, Done-for-you shopping list, Private group support",
+  });
+  check("9a. Challenge genre validates", validated.ok);
+  if (validated.ok) {
+    const result = await cap.execute!(
+      { subAccountId: SUB_ID, agencyId: AGENCY_ID, uid: user.uid, level: "sub-account" } as any,
+      validated.args,
+    );
+    const funnelSnap = result.ref?.id ? await db.doc(`funnels/${result.ref.id}`).get() : null;
+    const tierSection = funnelSnap?.data()?.sections?.find((s: any) => s.type === "ticket_tiers");
+    const tier = tierSection?.config?.tiers?.[0];
+    check("9b. ticket_tiers is populated (not empty)", !!tier, JSON.stringify(tierSection?.config));
+    check("9c. tier has a wired capture form", !!tier?.formId);
+    check("9d. tier features carry the real bullets", Array.isArray(tier?.features) && tier.features.length === 3);
+
+    if (result.ref?.id) await db.doc(`funnels/${result.ref.id}`).delete().catch(() => {});
+    if (tier?.formId) await db.doc(`forms/${tier.formId}`).delete().catch(() => {});
+    const templatesSnap = await db.collection("message_templates").where("subAccountId", "==", SUB_ID).get();
+    for (const t of templatesSnap.docs) await t.ref.delete().catch(() => {});
+    const workflowsSnap = await db.collection("workflows").where("subAccountId", "==", SUB_ID).get();
+    for (const w of workflowsSnap.docs) await w.ref.delete().catch(() => {});
   }
 
   await db.doc(`subAccounts/${SUB_ID}`).delete().catch(() => {});

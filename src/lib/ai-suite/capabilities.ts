@@ -70,6 +70,7 @@ import {
   updateFunnelServerSide,
   FunnelValidationError,
 } from "@/lib/server/funnels-service";
+import type { TicketTiersConfig } from "@/types/funnels";
 import { createFormServerSide } from "@/lib/server/forms-service";
 import {
   createMessageTemplateServerSide,
@@ -3267,6 +3268,31 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         if (section.type === "faq" && faqItems.length > 0) {
           return { ...section, config: { items: faqItems } };
         }
+        // The challenge genre's seed uses ticket_tiers (not offer) for its
+        // registration mechanism, seeded EMPTY (tiers: []) — without this,
+        // a Zeno-built challenge funnel had no way to register at all
+        // until the operator manually added a tier. Populate one default
+        // tier from the same headline/bullets/CTA every other genre uses.
+        if (section.type === "ticket_tiers") {
+          const existingTiers = (section.config as TicketTiersConfig).tiers;
+          if (existingTiers.length === 0) {
+            return {
+              ...section,
+              config: {
+                tiers: [
+                  {
+                    name: (args.funnelName as string) || "Register",
+                    priceCents: (args.priceCents as number | null) ?? 0,
+                    features: bullets,
+                    ctaLabel: (args.ctaLabel as string) || "Register now",
+                    formId: null,
+                    highlighted: true,
+                  },
+                ],
+              },
+            };
+          }
+        }
         return section;
       });
 
@@ -3280,19 +3306,33 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // for a priced offer (tripwire/vsl/challenge with price_cents set) —
       // that needs Stripe checkout wired up by the operator, not a lead form.
       const wantsPackage = (args.includeCaptureForm as boolean) !== false && args.priceCents === null;
+      const hasOffer = sectionsToSave.some((s) => s.type === "offer");
+      const hasTicketTiers = sectionsToSave.some(
+        (s) => s.type === "ticket_tiers" && (s.config as TicketTiersConfig).tiers.length > 0,
+      );
       let createdFormId: string | null = null;
       let createdTemplateId: string | null = null;
       let createdWorkflowId: string | null = null;
 
-      if (wantsPackage && sectionsToSave.some((s) => s.type === "offer")) {
+      if (wantsPackage && (hasOffer || hasTicketTiers)) {
         createdFormId = await createFormServerSide({
           subAccountId,
           createdByUid: ctx.uid,
           name: `${(args.funnelName as string) || (args.headline as string)} — capture form`,
         });
-        sectionsToSave = sectionsToSave.map((s) =>
-          s.type === "offer" ? { ...s, config: { ...s.config, formId: createdFormId } } : s,
-        );
+        sectionsToSave = sectionsToSave.map((s) => {
+          if (s.type === "offer") return { ...s, config: { ...s.config, formId: createdFormId } };
+          if (s.type === "ticket_tiers") {
+            const cfg = s.config as TicketTiersConfig;
+            return {
+              ...s,
+              config: {
+                tiers: cfg.tiers.map((t, i) => (i === 0 ? { ...t, formId: createdFormId } : t)),
+              },
+            };
+          }
+          return s;
+        });
 
         const emailSubject =
           (args.confirmationEmailSubject as string) || `You're in — ${args.headline as string}`;
@@ -3357,7 +3397,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
 
       const packageLines = createdFormId
         ? [
-            `- Capture form created and wired into the offer section — Sidebar → Forms.`,
+            `- Capture form created and wired into the ${hasTicketTiers ? "registration" : "offer"} section — Sidebar → Forms.`,
             `- Confirmation email template drafted — Sidebar → Templates.`,
             `- A draft workflow sends it the moment someone submits — Sidebar → Workflows (still needs Activate).`,
           ]
