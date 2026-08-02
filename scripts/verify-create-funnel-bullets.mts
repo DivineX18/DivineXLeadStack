@@ -1,0 +1,169 @@
+// Permanent regression coverage for the create_funnel bullets round-trip
+// bug (fixed 2026-08-01): the confirm route re-validates the chat route's
+// ALREADY-normalized args (camelCase keys, bullets as a real array), and
+// validate() previously only accepted the raw LLM tool-call shape
+// (snake_case, bullets as a comma-string) — so every confirm failed with
+// "at least one bullet point is required" even when the user/model
+// supplied bullets correctly on the first turn.
+//
+// Run: NODE_OPTIONS="--conditions=react-server" npx tsx scripts/verify-create-funnel-bullets.mts
+// Pure unit-level — calls validate()/execute() directly, no network, no
+// Stripe. Needs Firebase Admin env vars (reads .env.local) since execute()
+// writes real Firestore docs to a throwaway sub-account it creates+deletes.
+
+import { readFileSync } from "node:fs";
+for (const line of readFileSync(new URL("../.env.local", import.meta.url), "utf8").split("\n")) {
+  const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
+  if (!m) continue;
+  let v = m[2].trim();
+  if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1, -1);
+  process.env[m[1]] = v;
+}
+
+const { getAdminDb, getAdminAuth } = await import("../src/lib/firebase/admin");
+const { AI_SUITE_CAPABILITIES } = await import("../src/lib/ai-suite/capabilities");
+
+const cap = AI_SUITE_CAPABILITIES.find((c) => c.name === "create_funnel")!;
+let failures = 0;
+function check(label: string, ok: boolean, detail?: string) {
+  console.log(`${ok ? "PASS" : "FAIL"} ${label}${detail ? ` — ${detail}` : ""}`);
+  if (!ok) failures++;
+}
+
+// 1. Explicit comma-separated bullets (the raw LLM tool-call shape).
+{
+  const r = cap.validate!({
+    headline: "Test Headline One",
+    bullets: "First benefit, Second benefit, Third benefit",
+  });
+  check("1. Comma-separated string bullets -> array", r.ok && Array.isArray(r.args.bullets) && r.args.bullets.length === 3, JSON.stringify(r.ok ? r.args.bullets : r.error));
+}
+
+// 2. Natural-language benefits with no comma structure still yields at
+//    least the single sentence as one bullet, not an empty array — the
+//    capability doesn't invent structure that isn't there; Zeno's own
+//    system-prompt instructions are what push it to phrase things as
+//    short comma-separated phrases before ever calling this tool.
+{
+  const r = cap.validate!({
+    headline: "Test Headline Two",
+    bullets: "Helps you get more calls from your existing website traffic",
+  });
+  check("2. Single-sentence bullets still produce >=1 bullet", r.ok && Array.isArray(r.args.bullets) && r.args.bullets.length >= 1, JSON.stringify(r.ok ? r.args.bullets : r.error));
+}
+
+// 3 + 4 + 5. THE ROUND-TRIP BUG: validate() must accept its OWN previously
+// -normalized array output (what the confirm route actually re-validates),
+// not just the raw string the model originally sent. This is the exact
+// production failure: "Can't run that action: at least one bullet point
+// is required" on every confirm.
+{
+  const first = cap.validate!({
+    headline: "Discover What's Costing You Customers From Your Website",
+    bullets: "Free website audit, 3 concrete fixes, No sales pitch",
+  });
+  check("3. First-pass validate succeeds (raw model args)", first.ok);
+  if (first.ok) {
+    // This is EXACTLY what /api/ai-suite/confirm does: re-validate the
+    // already-normalized args object the chat route returned.
+    const roundTrip = cap.validate!(first.args);
+    check(
+      "4. Round-trip validate (confirm route re-validating chat route's output) preserves bullets",
+      roundTrip.ok && Array.isArray(roundTrip.args.bullets) && roundTrip.args.bullets.length === 3,
+      roundTrip.ok ? JSON.stringify(roundTrip.args.bullets) : roundTrip.error,
+    );
+    check("5. validate() never returns an empty required bullets array on round-trip", roundTrip.ok && (roundTrip.args.bullets as string[]).length > 0);
+  }
+}
+
+// 6. Other renamed fields must ALSO survive the same round-trip (the
+// systemic fix, not just bullets) — price_cents/accent_color/faq_items/etc.
+{
+  const first = cap.validate!({
+    headline: "Round-Trip All Fields",
+    bullets: "One, Two",
+    price_cents: 4700,
+    accent_color: "#4a7",
+    cta_label: "Buy now",
+    faq_items: [{ question: "Q1", answer: "A1" }],
+  });
+  check("6a. First pass: price_cents/accent_color/faq_items set", first.ok && first.args.priceCents === 4700 && first.args.accentColor === "#44aa77" && (first.args.faqItems as unknown[]).length === 1);
+  if (first.ok) {
+    const roundTrip = cap.validate!(first.args);
+    check(
+      "6b. Round-trip preserves price_cents/accent_color/cta_label/faq_items",
+      roundTrip.ok &&
+        roundTrip.args.priceCents === 4700 &&
+        roundTrip.args.accentColor === "#44aa77" &&
+        roundTrip.args.ctaLabel === "Buy now" &&
+        (roundTrip.args.faqItems as unknown[]).length === 1,
+      roundTrip.ok ? JSON.stringify(roundTrip.args) : roundTrip.error,
+    );
+  }
+}
+
+// 7. Anti-fabrication rules remain enforced: an unreasonably long headline
+// still rejects; faq_items with missing fields are dropped, not fabricated.
+{
+  const tooLong = cap.validate!({ headline: "x".repeat(200), bullets: "a, b" });
+  check("7a. Overlong headline still rejected", !tooLong.ok);
+  const junkFaq = cap.validate!({
+    headline: "FAQ filter test",
+    bullets: "a, b",
+    faq_items: [{ question: "Q" }, { question: "Q2", answer: "A2" }],
+  });
+  check("7b. Malformed FAQ items are dropped, not fabricated", junkFaq.ok && (junkFaq.args.faqItems as unknown[]).length === 1);
+}
+
+// Reproduce the exact user-reported failing request end-to-end (execute()
+// against a real throwaway sub-account) to prove the full path works, not
+// just validate() in isolation.
+{
+  const db = getAdminDb();
+  const auth = getAdminAuth();
+  const RUN_ID = `bulletfix${Date.now()}`;
+  const AGENCY_ID = `test-agency-${RUN_ID}`;
+  const SUB_ID = `test-sa-${RUN_ID}`;
+  await db.doc(`agencies/${AGENCY_ID}`).set({ name: "Verify Agency", createdAt: new Date() });
+  await db.doc(`subAccounts/${SUB_ID}`).set({
+    name: "Verify Sub-Account",
+    agencyId: AGENCY_ID,
+    funnelsEnabledByAgency: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+  const user = await auth.createUser({ email: `bulletfix-${RUN_ID}@example.com`, password: "verify-test-pass-123!" });
+
+  // Exact reproduction of the user's reported request.
+  const proposalArgs = cap.validate!({
+    funnel_name: "Free Website Growth Assessment",
+    genre: "lead_magnet",
+    headline: "Discover What's Costing You Customers From Your Website",
+    bullets: "Free website audit, See exactly what's costing you leads, No sales pitch",
+  });
+  check("8a. Reproduces + validates the exact reported request", proposalArgs.ok);
+
+  if (proposalArgs.ok) {
+    // Simulate the confirm route's re-validation exactly.
+    const reValidated = cap.validate!(proposalArgs.args);
+    check("8b. Confirm-route re-validation of the exact reported request succeeds", reValidated.ok, reValidated.ok ? undefined : reValidated.error);
+
+    if (reValidated.ok) {
+      const result = await cap.execute!(
+        { subAccountId: SUB_ID, agencyId: AGENCY_ID, uid: user.uid, level: "sub-account" } as any,
+        reValidated.args,
+      );
+      check("8c. execute() creates the funnel successfully", !!result.ref?.id, result.resultText);
+      if (result.ref?.id) {
+        await db.doc(`funnels/${result.ref.id}`).delete().catch(() => {});
+      }
+    }
+  }
+
+  await db.doc(`subAccounts/${SUB_ID}`).delete().catch(() => {});
+  await db.doc(`agencies/${AGENCY_ID}`).delete().catch(() => {});
+  await auth.deleteUser(user.uid).catch(() => {});
+}
+
+console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);
+if (failures > 0) process.exit(1);

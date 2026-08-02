@@ -3091,13 +3091,44 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       additionalProperties: false,
     },
     validate: (rawIn) => {
-      const raw = (rawIn ?? {}) as Record<string, unknown>;
+      // Confirm round-trips the camelCase `args` this validate() itself
+      // returns (the chat route validates the LLM's raw snake_case tool
+      // call; the confirm route then re-validates THAT already-normalized
+      // result) — so every renamed field must be read under both its
+      // original snake_case key and its own camelCase output key. Same
+      // pattern create_website's validate() uses, for the same reason.
+      const rawObj = (rawIn ?? {}) as Record<string, unknown>;
+      const camelToSnake: Record<string, string> = {
+        funnelName: "funnel_name",
+        priceCents: "price_cents",
+        ctaLabel: "cta_label",
+        accentColor: "accent_color",
+        faqItems: "faq_items",
+        includeCaptureForm: "include_capture_form",
+        confirmationEmailSubject: "confirmation_email_subject",
+        confirmationEmailBody: "confirmation_email_body",
+      };
+      const raw: Record<string, unknown> = { ...rawObj };
+      for (const [camel, snake] of Object.entries(camelToSnake)) {
+        if (raw[snake] === undefined && camel in rawObj) {
+          raw[snake] = rawObj[camel];
+        }
+      }
+
       const headline = str(raw, "headline");
       if (!headline || headline.length > 80) {
         return { ok: false, error: "a headline (max 80 characters) is required" };
       }
-      const bullets = str(raw, "bullets");
-      if (!bullets) {
+      // Accepts BOTH the LLM's original comma-separated string AND this
+      // validate()'s own previously-normalized array output.
+      const bulletsIn = raw.bullets;
+      const bulletsList = Array.isArray(bulletsIn)
+        ? bulletsIn.filter((b): b is string => typeof b === "string")
+        : str(raw, "bullets")
+            .split(",")
+            .map((b) => b.trim())
+            .filter(Boolean);
+      if (bulletsList.length === 0) {
         return { ok: false, error: "at least one bullet point is required" };
       }
       const genreRaw = str(raw, "genre");
@@ -3114,10 +3145,19 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         priceCents = Math.round(n);
       }
 
-      const accentColor = str(raw, "accent_color");
-      if (accentColor && !/^#[0-9a-f]{6}$/i.test(accentColor)) {
-        return { ok: false, error: "accent_color must be a hex color like #2563eb" };
-      }
+      // Cosmetic + optional — an invalid value (a named color, 3-digit
+      // shorthand, missing '#', etc.) degrades to "use the genre default"
+      // rather than rejecting the whole funnel, matching how
+      // create_website's enumOr() falls back instead of hard-failing on an
+      // optional design field the model got slightly wrong.
+      const accentColorRaw = str(raw, "accent_color");
+      const sixDigitMatch = accentColorRaw.match(/^#?([0-9a-f]{6})$/i);
+      const threeDigitMatch = accentColorRaw.match(/^#?([0-9a-f])([0-9a-f])([0-9a-f])$/i);
+      const accentColor = sixDigitMatch
+        ? `#${sixDigitMatch[1]}`
+        : threeDigitMatch
+          ? `#${threeDigitMatch[1]}${threeDigitMatch[1]}${threeDigitMatch[2]}${threeDigitMatch[2]}${threeDigitMatch[3]}${threeDigitMatch[3]}`
+          : "";
       const theme = str(raw, "theme") === "dark" ? "dark" : str(raw, "theme") === "light" ? "light" : null;
 
       const faqRaw = Array.isArray(raw.faq_items) ? raw.faq_items : [];
@@ -3139,11 +3179,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           eyebrow: str(raw, "eyebrow").slice(0, 100),
           headline,
           subheadline: str(raw, "subheadline").slice(0, 140),
-          bullets: bullets
-            .split(",")
-            .map((b) => b.trim())
-            .filter(Boolean)
-            .slice(0, 6),
+          bullets: bulletsList.slice(0, 6),
           priceCents,
           ctaLabel: str(raw, "cta_label").slice(0, 40),
           accentColor,
