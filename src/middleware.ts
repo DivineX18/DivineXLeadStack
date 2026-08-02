@@ -240,27 +240,62 @@ function isPublicPath(pathname: string): boolean {
 // gets rewritten to an internal resolver path that does the real Firestore
 // lookup; the browser's address bar keeps showing the client's own domain
 // throughout since this is a rewrite, not a redirect.
+// Extra known-good hostnames for the rewrite guard below, comma-separated
+// (e.g. "crm.divinex.io,www.crm.divinex.io"). A safety net independent of
+// NEXT_PUBLIC_APP_URL — see the incident note in customDomainRewrite().
+const EXTRA_SAFE_HOSTNAMES = (process.env.SAFE_APP_HOSTNAMES ?? "")
+  .split(",")
+  .map((h) => h.trim().toLowerCase())
+  .filter(Boolean);
+
+function normalizeHost(h: string): string {
+  const lower = h.toLowerCase();
+  return lower.startsWith("www.") ? lower.slice(4) : lower;
+}
+
+/**
+ * INCIDENT (see git history around this comment): a strict equality check
+ * between the incoming Host header and NEXT_PUBLIC_APP_URL's hostname took
+ * the entire production site down the moment that env var didn't exactly
+ * match live traffic — NEXT_PUBLIC_* vars are inlined at BUILD time, so any
+ * drift between what was set at build time and the domain actually serving
+ * requests (missing var, stale value, www vs. bare, a bad build) makes
+ * EVERY request look like an unrecognized custom domain and rewrites it
+ * into a 404. A misconfigured custom-domains feature must never be able to
+ * take down the primary site, so this now fails CLOSED: any ambiguity
+ * (missing/unparseable/non-production-looking NEXT_PUBLIC_APP_URL) disables
+ * the rewrite entirely rather than guessing. SAFE_APP_HOSTNAMES is an
+ * optional extra allowlist independent of NEXT_PUBLIC_APP_URL, so the
+ * primary domain can be pinned even if that var ever drifts again.
+ */
 function customDomainRewrite(request: NextRequest): NextResponse | null {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (!appUrl) return null;
-  let appHostname: string;
-  try {
-    appHostname = new URL(appUrl).hostname;
-  } catch {
-    return null;
+  let appHostname = "";
+  if (appUrl) {
+    try {
+      appHostname = new URL(appUrl).hostname.toLowerCase();
+    } catch {
+      appHostname = "";
+    }
   }
-  // request.nextUrl.hostname does NOT reflect the incoming Host header (it
-  // stays pinned to the server's own bind address) — read the real Host
-  // header directly, the standard technique for multi-tenant Next.js apps.
+  // Fail closed: if NEXT_PUBLIC_APP_URL is missing, unparseable, or clearly
+  // not a real production domain (no dot — e.g. a bare hostname or a build
+  // that baked in "localhost"), disable the whole feature rather than risk
+  // rewriting real traffic. Custom domains staying off is a minor feature
+  // gap; the primary site 404ing is a full outage — never trade the second
+  // for the first.
+  const appHostnameLooksReal = appHostname.includes(".") && appHostname !== "localhost";
+  if (!appHostnameLooksReal && EXTRA_SAFE_HOSTNAMES.length === 0) return null;
+
   const hostHeader = request.headers.get("host");
   if (!hostHeader) return null;
-  const hostname = hostHeader.split(":")[0];
-  if (
-    hostname === appHostname ||
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname.endsWith(".vercel.app")
-  ) {
+  const hostname = normalizeHost(hostHeader.split(":")[0]);
+
+  const knownGood = new Set<string>(["localhost", "127.0.0.1"]);
+  if (appHostnameLooksReal) knownGood.add(normalizeHost(appHostname));
+  for (const h of EXTRA_SAFE_HOSTNAMES) knownGood.add(normalizeHost(h));
+
+  if (knownGood.has(hostname) || hostname.endsWith(".vercel.app") || hostname.endsWith(".onrender.com")) {
     return null;
   }
   return NextResponse.rewrite(
