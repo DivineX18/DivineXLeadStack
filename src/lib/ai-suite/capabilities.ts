@@ -3217,7 +3217,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     requiredRole: "subAccountAdmin",
     menuLabel: "Create a funnel system for this workspace (page + form + follow-up email + workflow)",
     description:
-      "Create a COMPLETE funnel system — not just a landing page — hosted directly on this platform (not the website builder): the funnel page itself, PLUS (when the funnel needs a lead-capture opt-in — most genres besides paid tripwire/vsl offers) a dedicated capture Form, a follow-up email Message Template, and a Workflow that sends it the moment someone submits. Use when the user asks to build/make/create/generate a funnel, landing page, lead magnet page, webinar registration page, application page, or tripwire offer — 'build me a webinar funnel' should produce the whole connected system in one shot, matching what an operator would expect, not just a page they still have to wire up by hand. Everything is created in DRAFT/review state — the funnel is never auto-published, the workflow is never auto-activated — since real money (Stripe) and real emails are on the other side of 'live'. If the user names a reference site, call research_website_reference FIRST and mirror its tone/services WITHOUT copying text. Workflow: (1) pick the genre — lead_magnet (free book/PDF opt-in), vsl (high-ticket video sales page), challenge (multi-day registration), application (qualify leads before a call), tripwire (low-ticket entry offer), webinar (single-session registration), lead_gen (generic interest capture); (2) write a specific, concrete headline — never a generic tagline; (3) bullets must name a specific outcome or mechanism, never a vague adjective ('transformative', 'game-changing', 'cutting-edge' are banned); (4) ONLY include faq_items if you have enough real detail to answer honestly — never invent generic filler Q&A or fabricated guarantees/stats; (5) price_cents only applies to genres with a priced offer (tripwire, vsl, challenge) — omit for a free lead magnet, and when a price IS set, skip the capture form (a paid offer needs checkout, not a lead form — the operator wires up Stripe checkout on that section afterward); (6) leave include_capture_form at its default (true) unless the user is clearly building a pure sales/checkout page with no opt-in step; (7) confirmation_email_body should read like a real, brief, human confirmation (what they'll get, what's next) — it can be genuinely short, but must never invent guarantees, stats, or promises the funnel copy itself didn't make. After creating, feel free to suggest one or two concrete improvements in your reply (e.g. a sharper headline angle, a stronger CTA placement, a trust element to add) — but only as a suggestion the user can act on, never as a score or grade.",
+      "Create a COMPLETE funnel system — not just a landing page — hosted directly on this platform (not the website builder): the funnel page itself, PLUS (when the funnel needs a lead-capture opt-in — most genres besides paid tripwire/vsl offers) a dedicated capture Form, a follow-up email Message Template, and a Workflow that sends it the moment someone submits. Use when the user asks to build/make/create/generate a funnel, landing page, lead magnet page, webinar registration page, application page, or tripwire offer — 'build me a webinar funnel' should produce the whole connected system in one shot, matching what an operator would expect, not just a page they still have to wire up by hand. Everything is created in DRAFT/review state — the funnel is never auto-published, the workflow is never auto-activated — since real money (Stripe) and real emails are on the other side of 'live'. If the user names a reference site, call research_website_reference FIRST and mirror its tone/services WITHOUT copying text. IMPORTANT — write the copy yourself, don't make the user write it: headline, subheadline, bullets, story, and CTA label are all YOUR job as the copywriter, not the user's — never respond with a bare 'a headline is required, what should it be?' question. From whatever the user told you about their business/offer/audience (even a single sentence), write a specific, concrete headline/subheadline/bullets/CTA yourself. The ONLY thing you should ask the user for, if you truly have nothing to go on, is what the business/offer/audience actually IS (e.g. 'What does the business do, and what's the offer?') — never ask them to supply the marketing copy itself. The one exception is testimonials (see story_paragraphs below): those must come from the user or be written as synthesized non-testimonial copy — never invented as if from a real customer. Workflow: (1) pick the genre — lead_magnet (free book/PDF opt-in), vsl (high-ticket video sales page), challenge (multi-day registration), application (qualify leads before a call), tripwire (low-ticket entry offer), webinar (single-session registration), lead_gen (generic interest capture); (2) write a specific, concrete headline — never a generic tagline; (3) bullets must name a specific outcome or mechanism, never a vague adjective ('transformative', 'game-changing', 'cutting-edge' are banned); (4) ONLY include faq_items if you have enough real detail to answer honestly — never invent generic filler Q&A or fabricated guarantees/stats; (5) price_cents only applies to genres with a priced offer (tripwire, vsl, challenge) — omit for a free lead magnet, and when a price IS set, skip the capture form (a paid offer needs checkout, not a lead form — the operator wires up Stripe checkout on that section afterward); (6) leave include_capture_form at its default (true) unless the user is clearly building a pure sales/checkout page with no opt-in step; (7) confirmation_email_body should read like a real, brief, human confirmation (what they'll get, what's next) — it can be genuinely short, but must never invent guarantees, stats, or promises the funnel copy itself didn't make; (8) ALWAYS write story_paragraphs whenever the genre includes a Story section — a funnel with an empty Story section reads as unfinished. Two cases: if the user gave you a REAL testimonial (an actual customer's words, name, location, or result), use it close to verbatim as story_paragraphs with story_byline set to their real attribution (e.g. 'From: Jane Doe, Austin, TX') — don't rewrite their claim into something stronger than what they said. Otherwise (the common case — no testimonial offered), write 2-4 paragraphs of synthesized 'why this works' copy — the mechanism, the reasoning — from the headline/bullets you already wrote, with a generic byline like 'Why this works', and NEVER invent a fictional customer name/location/quote to make it look like a testimonial; (9) guarantee_headline/guarantee_body — ONLY when the user told you a real guarantee they actually offer, never invented; (10) trust_badges — safe generic ones (e.g. 'Secure checkout', 'Privacy protected') are fine whenever there's a form or checkout, but only add a guarantee-related badge if guarantee_headline is also set; (11) cta_banner_headline/cta_banner_subtext (VSL genre) should restate the real offer, never introduce a new claim. Every genre's full section list renders on the page regardless of which fields you fill — an unfilled Story/Guarantee/Trust-badges section shows generic placeholder copy, so fill every section the genre actually has, not just hero/offer/faq. After creating, feel free to suggest one or two concrete improvements in your reply (e.g. a sharper headline angle, a stronger CTA placement, a trust element to add) — but only as a suggestion the user can act on, never as a score or grade.",
     parameters: {
       type: "object",
       properties: {
@@ -3243,9 +3243,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           description: "One-line subheadline under the headline, max 140 chars. Optional.",
         },
         bullets: {
-          type: "string",
+          type: "array",
+          items: { type: "string" },
           description:
-            "3-5 short comma-separated phrases naming a specific outcome or mechanism, e.g. 'Done-in-a-day setup, No cold outreach, Works with any niche'. Never vague adjectives alone.",
+            "3-5 short phrases, each naming a specific outcome or mechanism, e.g. ['Done-in-a-day setup', 'No cold outreach', 'Works with any niche']. Never vague adjectives alone. Each item is ONE bullet — a phrase that itself contains a natural comma (e.g. 'Nail, ear, and paw prep') is still a single array item, not three.",
         },
         price_cents: {
           type: "number",
@@ -3294,6 +3295,41 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           description:
             "Tag applied to the contact when they submit the capture form, e.g. 'Website Assessment Requested'. Omit for a sensible default derived from the funnel name — this tag is what downstream broadcasts/voice-campaign audiences and other workflow triggers filter on.",
         },
+        story_paragraphs: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "2-4 short paragraphs of real, specific 'why this works' copy for the funnel's Story section — the mechanism, the reasoning, what makes this different. Write it whenever the funnel's genre has a Story section (most genres do); synthesize it from the headline/bullets/offer you already wrote, don't invent new facts, customer names, or case studies that weren't given to you. Omit only if you truly have nothing substantive to add beyond the offer copy.",
+        },
+        story_byline: {
+          type: "string",
+          description:
+            "Small label above the Story paragraphs, e.g. 'Why this works' or 'The story behind [business]'. NEVER a fabricated person's name/city (e.g. 'From: Jane Doe, Austin, TX') unless the user gave you a real customer to attribute it to. Omit for a sensible generic default.",
+        },
+        guarantee_headline: {
+          type: "string",
+          description:
+            "Headline for a Guarantee section, e.g. '30-Day Money-Back Guarantee'. ONLY include if the user told you a real guarantee/refund policy they actually offer — never invent one. Omit entirely otherwise.",
+        },
+        guarantee_body: {
+          type: "string",
+          description: "1-2 sentences explaining the real guarantee terms. Required if guarantee_headline is set.",
+        },
+        trust_badges: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "Short trust-signal labels for a Trust Badges row, e.g. ['Secure checkout', 'Privacy protected']. Only include badges that are actually true of this funnel — e.g. only add a money-back-guarantee badge if guarantee_headline is also set. Safe generic ones like 'Secure checkout' and 'Privacy protected' are fine whenever there's a form or checkout. Omit if the genre has no Trust Badges section.",
+        },
+        cta_banner_headline: {
+          type: "string",
+          description:
+            "Headline for a mid-page repeat-CTA banner section (VSL genre), restating the real offer/hook already established — not a new claim. Omit if the genre has no CTA Banner section.",
+        },
+        cta_banner_subtext: {
+          type: "string",
+          description: "One short supporting line under the CTA banner headline. Optional.",
+        },
       },
       required: ["headline", "bullets"],
       additionalProperties: false,
@@ -3315,6 +3351,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         includeCaptureForm: "include_capture_form",
         confirmationEmailSubject: "confirmation_email_subject",
         confirmationEmailBody: "confirmation_email_body",
+        storyParagraphs: "story_paragraphs",
+        storyByline: "story_byline",
+        guaranteeHeadline: "guarantee_headline",
+        guaranteeBody: "guarantee_body",
+        trustBadges: "trust_badges",
+        ctaBannerHeadline: "cta_banner_headline",
+        ctaBannerSubtext: "cta_banner_subtext",
       };
       const raw: Record<string, unknown> = { ...rawObj };
       for (const [camel, snake] of Object.entries(camelToSnake)) {
@@ -3382,6 +3425,28 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const funnelName = str(raw, "funnel_name").slice(0, 60);
       const tag = (str(raw, "tag") || `${funnelName || headline} requested`).slice(0, 40);
 
+      const storyRaw = raw.story_paragraphs;
+      const storyParagraphs = (
+        Array.isArray(storyRaw) ? storyRaw.filter((p): p is string => typeof p === "string") : []
+      )
+        .slice(0, 4)
+        .map((p) => p.slice(0, 800));
+
+      // guarantee_body is required whenever guarantee_headline is set — a
+      // headline with no real terms behind it is worse than no guarantee
+      // section at all, so treat a missing body as "no guarantee given."
+      const guaranteeHeadlineRaw = str(raw, "guarantee_headline").slice(0, 80);
+      const guaranteeBodyRaw = str(raw, "guarantee_body").slice(0, 500);
+      const guaranteeHeadline = guaranteeBodyRaw ? guaranteeHeadlineRaw : "";
+      const guaranteeBody = guaranteeHeadlineRaw ? guaranteeBodyRaw : "";
+
+      const trustBadgesRaw = raw.trust_badges;
+      const trustBadges = (
+        Array.isArray(trustBadgesRaw) ? trustBadgesRaw.filter((b): b is string => typeof b === "string") : []
+      )
+        .slice(0, 5)
+        .map((b) => b.slice(0, 40));
+
       return {
         ok: true,
         args: {
@@ -3400,6 +3465,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           confirmationEmailSubject: str(raw, "confirmation_email_subject").slice(0, 120),
           confirmationEmailBody: str(raw, "confirmation_email_body").slice(0, 2000),
           tag,
+          storyParagraphs,
+          storyByline: str(raw, "story_byline").slice(0, 60),
+          guaranteeHeadline,
+          guaranteeBody,
+          trustBadges,
+          ctaBannerHeadline: str(raw, "cta_banner_headline").slice(0, 80),
+          ctaBannerSubtext: str(raw, "cta_banner_subtext").slice(0, 140),
         },
       };
     },
@@ -3453,6 +3525,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
 
       const bullets = args.bullets as string[];
       const faqItems = args.faqItems as { question: string; answer: string }[];
+      const storyParagraphs = args.storyParagraphs as string[];
+      const storyByline = args.storyByline as string;
+      const guaranteeHeadline = args.guaranteeHeadline as string;
+      const guaranteeBody = args.guaranteeBody as string;
+      const trustBadges = args.trustBadges as string[];
+      const ctaBannerHeadline = args.ctaBannerHeadline as string;
+      const ctaBannerSubtext = args.ctaBannerSubtext as string;
       const nextSections = created.sections.map((section) => {
         if (section.type === "hero") {
           return {
@@ -3478,6 +3557,48 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         }
         if (section.type === "faq" && faqItems.length > 0) {
           return { ...section, config: { items: faqItems } };
+        }
+        if (section.type === "story" && storyParagraphs.length > 0) {
+          return {
+            ...section,
+            config: {
+              ...section.config,
+              paragraphs: storyParagraphs,
+              ...(storyByline ? { byline: storyByline } : {}),
+            },
+          };
+        }
+        // Deliberately excluded: proof_strip (its rating/logos variants need
+        // a real numeric score or real client logos — nothing here can fill
+        // those honestly) and countdown (a deadline the AI invents is
+        // fabricated urgency, exactly what this tool's own instructions ban
+        // elsewhere). Both stay at their neutral seed defaults.
+        if (section.type === "guarantee" && guaranteeHeadline && guaranteeBody) {
+          return { ...section, config: { ...section.config, headline: guaranteeHeadline, bodyText: guaranteeBody } };
+        }
+        if (section.type === "trust_badges" && trustBadges.length > 0) {
+          const iconFor = (label: string): "lock" | "card" | "shield" | "star" => {
+            const l = label.toLowerCase();
+            if (l.includes("secure") || l.includes("checkout") || l.includes("payment") || l.includes("card")) return "card";
+            if (l.includes("guarantee") || l.includes("refund")) return "shield";
+            if (l.includes("privacy") || l.includes("protect")) return "lock";
+            return "star";
+          };
+          return {
+            ...section,
+            config: { badges: trustBadges.map((label) => ({ label, iconType: iconFor(label) })) },
+          };
+        }
+        if (section.type === "cta_banner" && ctaBannerHeadline) {
+          return {
+            ...section,
+            config: {
+              ...section.config,
+              headline: ctaBannerHeadline,
+              ...(ctaBannerSubtext ? { subtext: ctaBannerSubtext } : {}),
+              ...(args.ctaLabel ? { ctaLabel: args.ctaLabel as string } : {}),
+            },
+          };
         }
         // The challenge genre's seed uses ticket_tiers (not offer) for its
         // registration mechanism, seeded EMPTY (tiers: []) — without this,

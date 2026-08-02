@@ -34,13 +34,34 @@ function check(label: string, ok: boolean, detail?: string) {
   if (!ok) failures++;
 }
 
-// 1. Explicit comma-separated bullets (the raw LLM tool-call shape).
+// 1. Explicit comma-separated bullets (the LEGACY raw string shape — the
+// schema itself now types bullets as a real array, but validate() keeps
+// this fallback for safety).
 {
   const r = cap.validate!({
     headline: "Test Headline One",
     bullets: "First benefit, Second benefit, Third benefit",
   });
   check("1. Comma-separated string bullets -> array", r.ok && Array.isArray(r.args.bullets) && r.args.bullets.length === 3, JSON.stringify(r.ok ? r.args.bullets : r.error));
+}
+
+// 1b. THE COMMA-IN-BULLET BUG (found live 2026-08-02): a real model response
+// gave a native array where one bullet phrase legitimately contained a
+// comma ("Nail, ear, and paw prep most owners skip"). The schema was typed
+// as a comma-joined string, so an earlier version of this fix's own naive
+// splitting would have fragmented it into 3 bullets. Bullets must now be a
+// native array end-to-end — this proves a comma INSIDE one array item
+// survives as a single bullet, not three.
+{
+  const r = cap.validate!({
+    headline: "Test Headline One-B",
+    bullets: ["Nail, ear, and paw prep most owners skip", "Second benefit"],
+  });
+  check(
+    "1b. A comma inside one array bullet item stays as ONE bullet",
+    r.ok && Array.isArray(r.args.bullets) && r.args.bullets.length === 2 && r.args.bullets[0] === "Nail, ear, and paw prep most owners skip",
+    JSON.stringify(r.ok ? r.args.bullets : r.error),
+  );
 }
 
 // 2. Natural-language benefits with no comma structure still yields at
