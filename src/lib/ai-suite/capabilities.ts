@@ -73,7 +73,7 @@ import {
   updateFunnelServerSide,
   FunnelValidationError,
 } from "@/lib/server/funnels-service";
-import type { TicketTiersConfig } from "@/types/funnels";
+import type { FunnelSectionType, TicketTiersConfig } from "@/types/funnels";
 import { createFormServerSide } from "@/lib/server/forms-service";
 import {
   createMessageTemplateServerSide,
@@ -3217,7 +3217,16 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     requiredRole: "subAccountAdmin",
     menuLabel: "Create a funnel system for this workspace (page + form + follow-up email + workflow)",
     description:
-      "Create a COMPLETE funnel system — not just a landing page — hosted directly on this platform (not the website builder): the funnel page itself, PLUS (when the funnel needs a lead-capture opt-in — most genres besides paid tripwire/vsl offers) a dedicated capture Form, a follow-up email Message Template, and a Workflow that sends it the moment someone submits. Use when the user asks to build/make/create/generate a funnel, landing page, lead magnet page, webinar registration page, application page, or tripwire offer — 'build me a webinar funnel' should produce the whole connected system in one shot, matching what an operator would expect, not just a page they still have to wire up by hand. Everything is created in DRAFT/review state — the funnel is never auto-published, the workflow is never auto-activated — since real money (Stripe) and real emails are on the other side of 'live'. If the user names a reference site, call research_website_reference FIRST and mirror its tone/services WITHOUT copying text. IMPORTANT — write the copy yourself, don't make the user write it: headline, subheadline, bullets, story, and CTA label are all YOUR job as the copywriter, not the user's — never respond with a bare 'a headline is required, what should it be?' question. From whatever the user told you about their business/offer/audience (even a single sentence), write a specific, concrete headline/subheadline/bullets/CTA yourself. The ONLY thing you should ask the user for, if you truly have nothing to go on, is what the business/offer/audience actually IS (e.g. 'What does the business do, and what's the offer?') — never ask them to supply the marketing copy itself. The one exception is testimonials (see story_paragraphs below): those must come from the user or be written as synthesized non-testimonial copy — never invented as if from a real customer. STRATEGY — before writing any copy, silently reason through (do NOT show this reasoning in your reply, just let it inform the copy): who the customer is, what problem/pain they have right now, the outcome they actually want, the objection most likely stopping them from acting, how this offer is positioned against alternatives, and what the offer itself concretely delivers. A senior conversion copywriter does this thinking before typing a single word — your headline/bullets/story/CTA should read like the output of that reasoning, not like a form filled in field-by-field. Workflow: (1) pick the genre — lead_magnet (free book/PDF opt-in), vsl (high-ticket video sales page), challenge (multi-day registration), application (qualify leads before a call), tripwire (low-ticket entry offer), webinar (single-session registration), lead_gen (generic interest capture); (2) write a specific, concrete headline — never a generic tagline; (3) bullets must name a specific outcome or mechanism, never a vague adjective ('transformative', 'game-changing', 'cutting-edge' are banned); (4) ONLY include faq_items if you have enough real detail to answer honestly — never invent generic filler Q&A or fabricated guarantees/stats; (5) price_cents only applies to genres with a priced offer (tripwire, vsl, challenge) — omit for a free lead magnet, and when a price IS set, skip the capture form (a paid offer needs checkout, not a lead form — the operator wires up Stripe checkout on that section afterward); (6) leave include_capture_form at its default (true) unless the user is clearly building a pure sales/checkout page with no opt-in step; (7) confirmation_email_body should read like a real, brief, human confirmation (what they'll get, what's next) — it can be genuinely short, but must never invent guarantees, stats, or promises the funnel copy itself didn't make; (8) ALWAYS write story_paragraphs whenever the genre includes a Story section — a funnel with an empty Story section reads as unfinished. Two cases: if the user gave you a REAL testimonial (an actual customer's words, name, location, or result), use it close to verbatim as story_paragraphs with story_byline set to their real attribution (e.g. 'From: Jane Doe, Austin, TX') — don't rewrite their claim into something stronger than what they said. Otherwise (the common case — no testimonial offered), write 2-4 paragraphs of synthesized 'why this works' copy — the mechanism, the reasoning — from the headline/bullets you already wrote, with a generic byline like 'Why this works', and NEVER invent a fictional customer name/location/quote to make it look like a testimonial; (9) guarantee_headline/guarantee_body — ONLY when the user told you a real guarantee they actually offer, never invented; (10) trust_badges — safe generic ones (e.g. 'Secure checkout', 'Privacy protected') are fine whenever there's a form or checkout, but only add a guarantee-related badge if guarantee_headline is also set; (11) cta_banner_headline/cta_banner_subtext (VSL genre) should restate the real offer, never introduce a new claim. Every genre's full section list renders on the page regardless of which fields you fill — an unfilled Story/Guarantee/Trust-badges section shows generic placeholder copy, so fill every section the genre actually has, not just hero/offer/faq. After creating, feel free to suggest one or two concrete improvements in your reply (e.g. a sharper headline angle, a stronger CTA placement, a trust element to add) — but only as a suggestion the user can act on, never as a score or grade.",
+      "Create a COMPLETE funnel system — not just a landing page — hosted directly on this platform (not the website builder): the funnel page itself, PLUS (when the funnel needs a lead-capture opt-in — most genres besides paid tripwire/vsl offers) a dedicated capture Form, a follow-up email Message Template, and a Workflow that sends it the moment someone submits. Use when the user asks to build/make/create/generate a funnel, landing page, lead magnet page, webinar registration page, application page, or tripwire offer — 'build me a webinar funnel' should produce the whole connected system in one shot, matching what an operator would expect, not just a page they still have to wire up by hand. Everything is created in DRAFT/review state — the funnel is never auto-published, the workflow is never auto-activated — since real money (Stripe) and real emails are on the other side of 'live'. If the user names a reference site, call research_website_reference FIRST and mirror its tone/services WITHOUT copying text. IMPORTANT — write the copy yourself, don't make the user write it: headline, subheadline, bullets, story, and CTA label are all YOUR job as the copywriter, not the user's — never respond with a bare 'a headline is required, what should it be?' question. From whatever the user told you about their business/offer/audience (even a single sentence), write a specific, concrete headline/subheadline/bullets/CTA yourself. The ONLY thing you should ask the user for, if you truly have nothing to go on, is what the business/offer/audience actually IS (e.g. 'What does the business do, and what's the offer?') — never ask them to supply the marketing copy itself. The one exception is testimonials (see story_paragraphs below): those must come from the user or be written as synthesized non-testimonial copy — never invented as if from a real customer. STRATEGY — before writing any copy, silently reason through (do NOT show this reasoning in your reply, just let it inform the copy): who the customer is, what problem/pain they have right now, the outcome they actually want, the objection most likely stopping them from acting, how this offer is positioned against alternatives, and what the offer itself concretely delivers. A senior conversion copywriter does this thinking before typing a single word — your headline/bullets/story/CTA should read like the output of that reasoning, not like a form filled in field-by-field. " +
+      "STRUCTURE — this is a conversion-framework generator, not a paragraph generator: every funnel follows Attention → Problem → Solution → Benefits → Process → Offer → Trust → FAQ → CTA, and each genre maps that sequence onto a recommended sequence of REUSABLE LAYOUTS (cards, grids, timelines, comparisons — favor these over walls of text): " +
+      "lead_magnet = Hero → Problem → What You'll Learn (benefits grid) → How It Works (process timeline) → What's Included (cards) → FAQ → CTA (capture form). " +
+      "vsl = Hero → Video → Problem/Solution → Offer → FAQ → CTA banner. " +
+      "webinar = Hero → Benefits (grid) → Agenda (process timeline) → Host (founder story) → FAQ → Register (capture form). " +
+      "application = Hero → Who It's For (benefits grid) → Process (timeline) → Results (before/after, or real testimonials if given) → Application (capture form). " +
+      "challenge = Hero → Problem/Solution → What You'll Get (benefits grid) → Challenge Schedule (process timeline) → Register (ticket tiers) → FAQ. " +
+      "tripwire = Hero → Problem/Solution → Offer (priced) → Trust badges → Guarantee (or testimonials, if given) → FAQ. " +
+      "lead_gen = Hero → Trust Logos → Benefits (grid) → Offer (capture form) → FAQ. " +
+      "Some stages have a fixed layout; a few (marked above with 'or') allow an alternate — use layout_choices ONLY to pick that alternate when the business/evidence genuinely calls for it (e.g. real testimonials exist), never as a default habit. Workflow: (1) pick the genre — lead_magnet (free book/PDF opt-in), vsl (high-ticket video sales page), challenge (multi-day registration), application (qualify leads before a call), tripwire (low-ticket entry offer), webinar (single-session registration), lead_gen (generic interest capture); (2) write a specific, concrete headline — never a generic tagline; (3) bullets must name a specific outcome or mechanism, never a vague adjective ('transformative', 'game-changing', 'cutting-edge' are banned); (4) ONLY include faq_items if you have enough real detail to answer honestly — never invent generic filler Q&A or fabricated guarantees/stats; (5) price_cents only applies to genres with a priced offer (tripwire, vsl, challenge) — omit for a free lead magnet, and when a price IS set, skip the capture form (a paid offer needs checkout, not a lead form — the operator wires up Stripe checkout on that section afterward); (6) leave include_capture_form at its default (true) unless the user is clearly building a pure sales/checkout page with no opt-in step; (7) confirmation_email_body should read like a real, brief, human confirmation (what they'll get, what's next) — it can be genuinely short, but must never invent guarantees, stats, or promises the funnel copy itself didn't make; (8) ALWAYS write story_paragraphs whenever the genre's framework includes a Story/Founder-Story/Host stage. Two cases: if the user gave you a REAL testimonial (an actual customer's words, name, location, or result), use it close to verbatim as story_paragraphs with story_byline set to their real attribution (e.g. 'From: Jane Doe, Austin, TX') — don't rewrite their claim into something stronger than what they said. Otherwise (the common case — no testimonial offered), write 2-4 paragraphs of synthesized 'why this works' copy — the mechanism, the reasoning — from the headline/bullets you already wrote, with a generic byline like 'Why this works' (or 'Your host: ...' for a webinar), and NEVER invent a fictional customer name/location/quote to make it look like a testimonial; (9) guarantee_headline/guarantee_body — ONLY when the user told you a real guarantee they actually offer, never invented; (10) trust_badges — safe generic ones (e.g. 'Secure checkout', 'Privacy protected') are fine whenever there's a form or checkout, but only add a guarantee-related badge if guarantee_headline is also set; (11) cta_banner_headline/cta_banner_subtext (VSL genre) should restate the real offer, never introduce a new claim; (12) process_steps — write these whenever the genre's framework includes a process-timeline stage (most do); (13) stage_content — write one entry per remaining stage the genre's framework includes (video/benefits grid/problem-solution/before-after/included/comparison), per that param's own field-mapping description; never include a testimonials entry unless the user gave you real quotes. Every genre's full stage sequence renders on the page regardless of which fields you fill — an unfilled stage shows placeholder/nothing, so fill every stage the genre actually has, not just headline/offer/faq. After creating, feel free to suggest one or two concrete improvements in your reply (e.g. a sharper headline angle, a stronger CTA placement, a trust element to add) — but only as a suggestion the user can act on, never as a score or grade.",
     parameters: {
       type: "object",
       properties: {
@@ -3330,6 +3339,71 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           type: "string",
           description: "One short supporting line under the CTA banner headline. Optional.",
         },
+        layout_choices: {
+          type: "object",
+          description:
+            "Override which layout fills a stage, where that stage allows alternates. Keys are the stage's DEFAULT section type (not a label — e.g. \"before_after\", \"guarantee\", \"problem_solution\"), values are the alternate section type to use instead. E.g. for 'application' genre, {\"before_after\": \"testimonials\"} uses real testimonials for the Results stage instead of the default Before/After — only do this when the user actually gave you real testimonials. Then describe that chosen layout's content in stage_content, keyed by the SAME resolved type (e.g. \"testimonials\", not \"before_after\"). Omit entirely to use each genre's recommended layout for every stage.",
+          additionalProperties: { type: "string" },
+        },
+        process_steps: {
+          type: "array",
+          description:
+            "Steps for the funnel's Process Timeline stage (used by most genres — 'How It Works', 'Agenda', 'Process', 'Challenge Schedule'). Each step needs a short title and 1-3 supporting bullets. Write these whenever the genre has this stage — a timeline with no steps reads as unfinished.",
+          items: {
+            type: "object",
+            properties: {
+              label: { type: "string", description: "Optional short tag, e.g. 'Day 1' or 'Step 1'." },
+              title: { type: "string" },
+              bullets: { type: "array", items: { type: "string" } },
+            },
+            required: ["title"],
+            additionalProperties: false,
+          },
+        },
+        stage_content: {
+          type: "array",
+          description:
+            "Content for the funnel's other conversion-framework stages (Video, Benefits Grid, Problem/Solution, Before/After, What's Included, Comparison, Testimonials) — write ONE entry per stage the genre's framework actually includes (see the genre descriptions above), keyed by section_type = that stage's resolved section type. If a genre's framework lists BOTH benefits_grid and included (e.g. lead_magnet: 'What You'll Learn' AND 'What's Included'), write TWO separate entries, not one — they answer different questions (benefits_grid = the outcomes/knowledge the reader gains; included = the concrete deliverables/assets they receive) and skipping either leaves that section visibly blank on the page. Each entry's fields are used differently depending on section_type: " +
+            "\"video\" — video_url (required), headline/text optional. " +
+            "\"benefits_grid\" — headline optional, items[].title + items[].description (3-6 items, each a specific outcome the reader gets, never a vague adjective). " +
+            "\"included\" — headline optional, items[].title + items[].description (3-6 concrete deliverables — what's literally in the box/download/program). " +
+            "\"problem_solution\" — headline+text describe the problem, secondary_headline+secondary_text describe the solution. " +
+            "\"before_after\" — items with group 'before' or 'after' (items[].title is the line text); headline/secondary_headline are the two column labels. " +
+            "\"comparison\" — items[].title is a feature name (assumes you have it and the generic alternative doesn't — never claim something false); headline is the section title. " +
+            "\"testimonials\" — ONLY include this entry if the user gave you REAL customer quotes. items[].quote/name/detail, verbatim, never invented. Omit the whole entry (not just leave items empty) if you have no real testimonials — do not choose the testimonials layout via layout_choices without this.",
+          items: {
+            type: "object",
+            properties: {
+              section_type: {
+                type: "string",
+                enum: ["video", "benefits_grid", "problem_solution", "before_after", "included", "comparison", "testimonials"],
+                description: "Which layout this content is for — must match a section that will actually be in the funnel (a genre default, or what you chose via layout_choices).",
+              },
+              headline: { type: "string" },
+              text: { type: "string" },
+              secondary_headline: { type: "string" },
+              secondary_text: { type: "string" },
+              video_url: { type: "string" },
+              items: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    title: { type: "string" },
+                    description: { type: "string" },
+                    quote: { type: "string" },
+                    name: { type: "string" },
+                    detail: { type: "string" },
+                    group: { type: "string", enum: ["before", "after"] },
+                  },
+                  additionalProperties: false,
+                },
+              },
+            },
+            required: ["section_type"],
+            additionalProperties: false,
+          },
+        },
       },
       required: ["headline", "bullets"],
       additionalProperties: false,
@@ -3358,6 +3432,9 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         trustBadges: "trust_badges",
         ctaBannerHeadline: "cta_banner_headline",
         ctaBannerSubtext: "cta_banner_subtext",
+        layoutChoices: "layout_choices",
+        processSteps: "process_steps",
+        stageContent: "stage_content",
       };
       const raw: Record<string, unknown> = { ...rawObj };
       for (const [camel, snake] of Object.entries(camelToSnake)) {
@@ -3447,6 +3524,68 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         .slice(0, 5)
         .map((b) => b.slice(0, 40));
 
+      // Sanitized only — the actual per-stage alternates check happens in
+      // buildFrameworkSections() at execute() time (an invalid/unknown
+      // stage id or layout silently falls back to that stage's default),
+      // so this just bounds size/type.
+      const layoutChoicesRaw = raw.layout_choices;
+      const layoutChoices: Record<string, string> =
+        layoutChoicesRaw && typeof layoutChoicesRaw === "object" && !Array.isArray(layoutChoicesRaw)
+          ? Object.fromEntries(
+              Object.entries(layoutChoicesRaw as Record<string, unknown>)
+                .filter((e): e is [string, string] => typeof e[1] === "string")
+                .slice(0, 9)
+                .map(([k, v]) => [k.slice(0, 40), v.slice(0, 40)]),
+            )
+          : {};
+
+      const processStepsRaw = Array.isArray(raw.process_steps) ? raw.process_steps : [];
+      const processSteps = processStepsRaw
+        .filter(
+          (s): s is { label?: string; title: string; bullets?: string[] } =>
+            !!s && typeof (s as Record<string, unknown>).title === "string",
+        )
+        .slice(0, 8)
+        .map((s) => ({
+          label: typeof s.label === "string" ? s.label.slice(0, 20) : "",
+          title: s.title.slice(0, 80),
+          bullets: Array.isArray(s.bullets)
+            ? s.bullets.filter((b): b is string => typeof b === "string").slice(0, 5).map((b) => b.slice(0, 200))
+            : [],
+        }));
+
+      // Round-trip note: array-item fields hit the same camelCase-vs-snake_case
+      // issue as top-level params (the confirm route re-validates THIS
+      // function's own camelCase output) — read each multi-word field under
+      // both spellings, same reasoning as the top-level camelToSnake block.
+      const s1 = (s: Record<string, unknown>, snake: string, camel: string): string => {
+        const v = s[snake] ?? s[camel];
+        return typeof v === "string" ? v : "";
+      };
+      const stageContentRaw = Array.isArray(raw.stage_content) ? raw.stage_content : [];
+      const stageContent = stageContentRaw
+        .filter((s): s is Record<string, unknown> => !!s && !!s1(s as Record<string, unknown>, "section_type", "sectionType"))
+        .slice(0, 9)
+        .map((s) => ({
+          sectionType: s1(s, "section_type", "sectionType").slice(0, 40),
+          headline: s1(s, "headline", "headline").slice(0, 100),
+          text: s1(s, "text", "text").slice(0, 800),
+          secondaryHeadline: s1(s, "secondary_headline", "secondaryHeadline").slice(0, 100),
+          secondaryText: s1(s, "secondary_text", "secondaryText").slice(0, 800),
+          videoUrl: s1(s, "video_url", "videoUrl").slice(0, 500),
+          items: (Array.isArray(s.items) ? s.items : [])
+            .filter((i): i is Record<string, unknown> => !!i && typeof i === "object")
+            .slice(0, 8)
+            .map((i) => ({
+              title: typeof i.title === "string" ? i.title.slice(0, 80) : "",
+              description: typeof i.description === "string" ? i.description.slice(0, 300) : "",
+              quote: typeof i.quote === "string" ? i.quote.slice(0, 500) : "",
+              name: typeof i.name === "string" ? i.name.slice(0, 60) : "",
+              detail: typeof i.detail === "string" ? i.detail.slice(0, 100) : "",
+              group: i.group === "before" || i.group === "after" ? i.group : undefined,
+            })),
+        }));
+
       return {
         ok: true,
         args: {
@@ -3472,6 +3611,9 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           trustBadges,
           ctaBannerHeadline: str(raw, "cta_banner_headline").slice(0, 80),
           ctaBannerSubtext: str(raw, "cta_banner_subtext").slice(0, 140),
+          layoutChoices,
+          processSteps,
+          stageContent,
         },
       };
     },
@@ -3511,17 +3653,37 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         | "tripwire"
         | "webinar"
         | "lead_gen";
+      const layoutChoices = (args.layoutChoices as Record<string, string>) ?? {};
       const funnelId = await createFunnelServerSide({
         subAccountId,
         createdByUid: ctx.uid,
         name: (args.funnelName as string) || (args.headline as string),
         genre,
+        stageOverrides: layoutChoices as Record<string, FunnelSectionType>,
       });
 
       const created = await getFunnel(subAccountId, funnelId);
       if (!created) {
         throw new CapabilityUserError("Something went wrong creating the funnel.");
       }
+
+      // stage_content entries are keyed by the RESOLVED section type (not an
+      // opaque stage id the model would have to invent correctly) — every
+      // genre framework uses each section type at most once, so this is an
+      // unambiguous match. An earlier stage-id-keyed design reliably failed
+      // in live testing (2026-08-02): the model never had a way to know the
+      // exact id strings, so every new-layout section came back empty.
+      const stageContent = (args.stageContent as {
+        sectionType: string;
+        headline: string;
+        text: string;
+        secondaryHeadline: string;
+        secondaryText: string;
+        videoUrl: string;
+        items: { title: string; description: string; quote: string; name: string; detail: string; group?: "before" | "after" }[];
+      }[]) ?? [];
+      const contentFor = (sectionType: string) => stageContent.find((c) => c.sectionType === sectionType);
+      const processSteps = (args.processSteps as { label: string; title: string; bullets: string[] }[]) ?? [];
 
       const bullets = args.bullets as string[];
       const faqItems = args.faqItems as { question: string; answer: string }[];
@@ -3533,6 +3695,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const ctaBannerHeadline = args.ctaBannerHeadline as string;
       const ctaBannerSubtext = args.ctaBannerSubtext as string;
       const nextSections = created.sections.map((section) => {
+        const content = contentFor(section.type);
         if (section.type === "hero") {
           return {
             ...section,
@@ -3597,6 +3760,78 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               headline: ctaBannerHeadline,
               ...(ctaBannerSubtext ? { subtext: ctaBannerSubtext } : {}),
               ...(args.ctaLabel ? { ctaLabel: args.ctaLabel as string } : {}),
+            },
+          };
+        }
+        if (section.type === "agenda" && processSteps.length > 0) {
+          return { ...section, config: { days: processSteps.map((s) => ({ label: s.label, title: s.title, bullets: s.bullets })) } };
+        }
+        if (section.type === "video" && content?.videoUrl) {
+          return {
+            ...section,
+            config: {
+              embedUrl: content.videoUrl,
+              ...(content.headline ? { headline: content.headline } : {}),
+              ...(content.text ? { subtext: content.text } : {}),
+            },
+          };
+        }
+        if ((section.type === "benefits_grid" || section.type === "included") && content && content.items.length > 0) {
+          return {
+            ...section,
+            config: {
+              ...(content.headline ? { headline: content.headline } : {}),
+              items: content.items
+                .filter((it) => it.title)
+                .map((it) => ({ title: it.title, ...(it.description ? { description: it.description } : {}) })),
+            },
+          };
+        }
+        if (section.type === "problem_solution" && content && (content.text || content.secondaryText)) {
+          return {
+            ...section,
+            config: {
+              problemHeadline: content.headline,
+              problemText: content.text,
+              solutionHeadline: content.secondaryHeadline,
+              solutionText: content.secondaryText,
+            },
+          };
+        }
+        if (section.type === "before_after" && content && content.items.length > 0) {
+          return {
+            ...section,
+            config: {
+              ...(content.headline ? { beforeHeadline: content.headline } : {}),
+              ...(content.secondaryHeadline ? { afterHeadline: content.secondaryHeadline } : {}),
+              beforeItems: content.items.filter((it) => it.group === "before" && it.title).map((it) => it.title),
+              afterItems: content.items.filter((it) => it.group === "after" && it.title).map((it) => it.title),
+            },
+          };
+        }
+        if (section.type === "comparison" && content && content.items.length > 0) {
+          return {
+            ...section,
+            config: {
+              ...(content.headline ? { headline: content.headline } : {}),
+              usLabel: "Us",
+              themLabel: content.secondaryHeadline || "The old way",
+              rows: content.items.filter((it) => it.title).map((it) => ({ feature: it.title, us: true, them: false })),
+            },
+          };
+        }
+        // Testimonials are the one layout that requires real evidence —
+        // the tool description tells the model to omit this stage_content
+        // entry entirely (not just leave items empty) unless the user gave
+        // real quotes, so an empty/missing entry here correctly leaves the
+        // section at its safe "renders nothing" default.
+        if (section.type === "testimonials" && content && content.items.length > 0) {
+          return {
+            ...section,
+            config: {
+              items: content.items
+                .filter((it) => it.quote && it.name)
+                .map((it) => ({ quote: it.quote, name: it.name, ...(it.detail ? { detail: it.detail } : {}) })),
             },
           };
         }

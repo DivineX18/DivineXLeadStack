@@ -25,6 +25,13 @@ const SECTION_TYPES: FunnelSectionType[] = [
   "trust_badges",
   "checkout",
   "upsell_offer",
+  "video",
+  "benefits_grid",
+  "problem_solution",
+  "before_after",
+  "included",
+  "comparison",
+  "testimonials",
 ];
 
 /** Defensive sanitize of a client-supplied sections array — authed staff,

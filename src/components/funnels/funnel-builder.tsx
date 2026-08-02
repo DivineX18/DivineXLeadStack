@@ -17,7 +17,10 @@ import { FunnelDomainsSection } from "@/components/funnels/funnel-domains-sectio
 import type { LeadForm } from "@/types/forms";
 import type {
   AgendaConfig,
+  BeforeAfterConfig,
+  BenefitsGridConfig,
   CheckoutConfig,
+  ComparisonConfig,
   CountdownConfig,
   CtaBannerConfig,
   FaqConfig,
@@ -27,12 +30,16 @@ import type {
   FunnelSectionType,
   GuaranteeConfig,
   HeroConfig,
+  IncludedConfig,
   OfferConfig,
+  ProblemSolutionConfig,
   ProofStripConfig,
   StoryConfig,
+  TestimonialsConfig,
   TicketTiersConfig,
   TrustBadgesConfig,
   UpsellOfferConfig,
+  VideoConfig,
 } from "@/types/funnels";
 
 const GENRE_LABELS: Record<FunnelGenre, string> = {
@@ -47,18 +54,25 @@ const GENRE_LABELS: Record<FunnelGenre, string> = {
 
 const SECTION_LABELS: Record<FunnelSectionType, string> = {
   hero: "Hero",
-  proof_strip: "Proof strip",
+  proof_strip: "Trust logos / rating",
   offer: "Offer",
-  story: "Story",
+  story: "Founder story",
   faq: "FAQ",
   cta_banner: "CTA banner",
   countdown: "Countdown",
-  agenda: "Agenda",
+  agenda: "Process timeline",
   ticket_tiers: "Ticket tiers",
   guarantee: "Guarantee",
   trust_badges: "Trust badges",
   checkout: "Checkout",
   upsell_offer: "Upsell/Downsell offer",
+  video: "Video",
+  benefits_grid: "Benefits grid",
+  problem_solution: "Problem / solution split",
+  before_after: "Before / after",
+  included: "What's included",
+  comparison: "Comparison",
+  testimonials: "Testimonials",
 };
 
 const SECTION_DEFAULTS: Record<FunnelSectionType, () => FunnelSection["config"]> = {
@@ -88,6 +102,19 @@ const SECTION_DEFAULTS: Record<FunnelSectionType, () => FunnelSection["config"]>
       acceptLabel: "Yes, add it!",
       declineLabel: "No thanks",
     }) satisfies UpsellOfferConfig,
+  video: () => ({ embedUrl: "" }) satisfies VideoConfig,
+  benefits_grid: () => ({ items: [] }) satisfies BenefitsGridConfig,
+  problem_solution: () =>
+    ({
+      problemHeadline: "",
+      problemText: "",
+      solutionHeadline: "",
+      solutionText: "",
+    }) satisfies ProblemSolutionConfig,
+  before_after: () => ({ beforeItems: [], afterItems: [] }) satisfies BeforeAfterConfig,
+  included: () => ({ items: [] }) satisfies IncludedConfig,
+  comparison: () => ({ usLabel: "Us", themLabel: "Doing it yourself", rows: [] }) satisfies ComparisonConfig,
+  testimonials: () => ({ items: [] }) satisfies TestimonialsConfig,
 };
 
 // Deliberately does NOT trim each line. These textareas are controlled —
@@ -1164,6 +1191,288 @@ function SectionFields({
             </div>
           )}
           addLabel="Add badge"
+        />
+      );
+    }
+    case "video": {
+      const c = section.config as VideoConfig;
+      return (
+        <div className="space-y-3">
+          <Field label="Embed URL (YouTube/Vimeo/Wistia)">
+            <Input
+              value={c.embedUrl}
+              onChange={(e) => onChange({ ...c, embedUrl: e.target.value })}
+              className="h-9"
+            />
+          </Field>
+          <Field label="Headline (optional)">
+            <Input
+              value={c.headline ?? ""}
+              onChange={(e) => onChange({ ...c, headline: e.target.value })}
+              className="h-9"
+            />
+          </Field>
+          <Field label="Subtext (optional)">
+            <Input
+              value={c.subtext ?? ""}
+              onChange={(e) => onChange({ ...c, subtext: e.target.value })}
+              className="h-9"
+            />
+          </Field>
+        </div>
+      );
+    }
+    case "benefits_grid": {
+      const c = section.config as BenefitsGridConfig;
+      return (
+        <div className="space-y-3">
+          <Field label="Headline (optional)">
+            <Input
+              value={c.headline ?? ""}
+              onChange={(e) => onChange({ ...c, headline: e.target.value })}
+              className="h-9"
+            />
+          </Field>
+          <ListEditor
+            items={c.items}
+            onChange={(items) => onChange({ ...c, items })}
+            empty={{ title: "", description: "", iconType: "check" } as BenefitsGridConfig["items"][number]}
+            renderRow={(item, update) => (
+              <div className="space-y-2">
+                <Input
+                  placeholder="Title"
+                  value={item.title}
+                  onChange={(e) => update({ ...item, title: e.target.value })}
+                  className="h-9"
+                />
+                <Input
+                  placeholder="Description (optional)"
+                  value={item.description ?? ""}
+                  onChange={(e) => update({ ...item, description: e.target.value })}
+                  className="h-9"
+                />
+                <select
+                  value={item.iconType ?? "check"}
+                  onChange={(e) =>
+                    update({ ...item, iconType: e.target.value as BenefitsGridConfig["items"][number]["iconType"] })
+                  }
+                  className={fieldClass}
+                >
+                  {["check", "clock", "target", "trending", "shield", "zap", "users", "star"].map((i) => (
+                    <option key={i} value={i}>
+                      {i}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            addLabel="Add benefit"
+          />
+        </div>
+      );
+    }
+    case "problem_solution": {
+      const c = section.config as ProblemSolutionConfig;
+      return (
+        <div className="space-y-3">
+          <Field label="Problem headline">
+            <Input
+              value={c.problemHeadline}
+              onChange={(e) => onChange({ ...c, problemHeadline: e.target.value })}
+              className="h-9"
+            />
+          </Field>
+          <Field label="Problem text">
+            <Textarea
+              rows={3}
+              value={c.problemText}
+              onChange={(e) => onChange({ ...c, problemText: e.target.value })}
+            />
+          </Field>
+          <Field label="Solution headline">
+            <Input
+              value={c.solutionHeadline}
+              onChange={(e) => onChange({ ...c, solutionHeadline: e.target.value })}
+              className="h-9"
+            />
+          </Field>
+          <Field label="Solution text">
+            <Textarea
+              rows={3}
+              value={c.solutionText}
+              onChange={(e) => onChange({ ...c, solutionText: e.target.value })}
+            />
+          </Field>
+        </div>
+      );
+    }
+    case "before_after": {
+      const c = section.config as BeforeAfterConfig;
+      return (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Before label">
+              <Input
+                value={c.beforeHeadline ?? ""}
+                onChange={(e) => onChange({ ...c, beforeHeadline: e.target.value })}
+                className="h-9"
+              />
+            </Field>
+            <Field label="After label">
+              <Input
+                value={c.afterHeadline ?? ""}
+                onChange={(e) => onChange({ ...c, afterHeadline: e.target.value })}
+                className="h-9"
+              />
+            </Field>
+          </div>
+          <Field label="Before items, one per line">
+            <Textarea
+              rows={4}
+              value={c.beforeItems.join("\n")}
+              onChange={(e) => onChange({ ...c, beforeItems: linesToArray(e.target.value) })}
+            />
+          </Field>
+          <Field label="After items, one per line">
+            <Textarea
+              rows={4}
+              value={c.afterItems.join("\n")}
+              onChange={(e) => onChange({ ...c, afterItems: linesToArray(e.target.value) })}
+            />
+          </Field>
+        </div>
+      );
+    }
+    case "included": {
+      const c = section.config as IncludedConfig;
+      return (
+        <div className="space-y-3">
+          <Field label="Headline (optional)">
+            <Input
+              value={c.headline ?? ""}
+              onChange={(e) => onChange({ ...c, headline: e.target.value })}
+              className="h-9"
+            />
+          </Field>
+          <ListEditor
+            items={c.items}
+            onChange={(items) => onChange({ ...c, items })}
+            empty={{ title: "", description: "" } as IncludedConfig["items"][number]}
+            renderRow={(item, update) => (
+              <div className="space-y-2">
+                <Input
+                  placeholder="Title"
+                  value={item.title}
+                  onChange={(e) => update({ ...item, title: e.target.value })}
+                  className="h-9"
+                />
+                <Input
+                  placeholder="Description (optional)"
+                  value={item.description ?? ""}
+                  onChange={(e) => update({ ...item, description: e.target.value })}
+                  className="h-9"
+                />
+              </div>
+            )}
+            addLabel="Add item"
+          />
+        </div>
+      );
+    }
+    case "comparison": {
+      const c = section.config as ComparisonConfig;
+      return (
+        <div className="space-y-3">
+          <Field label="Headline (optional)">
+            <Input
+              value={c.headline ?? ""}
+              onChange={(e) => onChange({ ...c, headline: e.target.value })}
+              className="h-9"
+            />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Our column label">
+              <Input
+                value={c.usLabel}
+                onChange={(e) => onChange({ ...c, usLabel: e.target.value })}
+                className="h-9"
+              />
+            </Field>
+            <Field label="Their column label">
+              <Input
+                value={c.themLabel}
+                onChange={(e) => onChange({ ...c, themLabel: e.target.value })}
+                className="h-9"
+              />
+            </Field>
+          </div>
+          <ListEditor
+            items={c.rows}
+            onChange={(rows) => onChange({ ...c, rows })}
+            empty={{ feature: "", us: true, them: false } as ComparisonConfig["rows"][number]}
+            renderRow={(row, update) => (
+              <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2">
+                <Input
+                  placeholder="Feature"
+                  value={row.feature}
+                  onChange={(e) => update({ ...row, feature: e.target.value })}
+                  className="h-9"
+                />
+                <label className="flex items-center gap-1.5 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={row.us}
+                    onChange={(e) => update({ ...row, us: e.target.checked })}
+                  />
+                  Us
+                </label>
+                <label className="flex items-center gap-1.5 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={row.them}
+                    onChange={(e) => update({ ...row, them: e.target.checked })}
+                  />
+                  Them
+                </label>
+              </div>
+            )}
+            addLabel="Add row"
+          />
+        </div>
+      );
+    }
+    case "testimonials": {
+      const c = section.config as TestimonialsConfig;
+      return (
+        <ListEditor
+          items={c.items}
+          onChange={(items) => onChange({ items })}
+          empty={{ quote: "", name: "", detail: "" } as TestimonialsConfig["items"][number]}
+          renderRow={(t, update) => (
+            <div className="space-y-2">
+              <Textarea
+                placeholder="The real quote, as they said it"
+                rows={2}
+                value={t.quote}
+                onChange={(e) => update({ ...t, quote: e.target.value })}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="Name"
+                  value={t.name}
+                  onChange={(e) => update({ ...t, name: e.target.value })}
+                  className="h-9"
+                />
+                <Input
+                  placeholder="Detail (e.g. company, city)"
+                  value={t.detail ?? ""}
+                  onChange={(e) => update({ ...t, detail: e.target.value })}
+                  className="h-9"
+                />
+              </div>
+            </div>
+          )}
+          addLabel="Add testimonial"
         />
       );
     }

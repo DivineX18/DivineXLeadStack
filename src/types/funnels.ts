@@ -31,7 +31,14 @@ export type FunnelSectionType =
   | "guarantee"
   | "trust_badges"
   | "checkout"
-  | "upsell_offer";
+  | "upsell_offer"
+  | "video"
+  | "benefits_grid"
+  | "problem_solution"
+  | "before_after"
+  | "included"
+  | "comparison"
+  | "testimonials";
 
 export interface HeroConfig {
   eyebrow?: string;
@@ -185,6 +192,80 @@ export interface UpsellOfferConfig {
   declineFunnelId?: string | null;
 }
 
+/** A single embed (YouTube/Vimeo/Wistia/etc.) — distinct from hero's
+ *  optional inline media, for genres (VSL) where the video IS the pitch,
+ *  not a decoration beside the headline. */
+export interface VideoConfig {
+  embedUrl: string;
+  headline?: string;
+  subtext?: string;
+}
+
+/** Icon+title+description cards — the generic "here's what you get /
+ *  here's who this is for" grid. Reused across multiple framework stages
+ *  (Benefits, What You'll Learn, Who It's For) via a different headline,
+ *  not a different section type. */
+export interface BenefitsGridConfig {
+  headline?: string;
+  items: { title: string; description?: string; iconType?: BenefitIconType }[];
+}
+export type BenefitIconType =
+  | "check"
+  | "clock"
+  | "target"
+  | "trending"
+  | "shield"
+  | "zap"
+  | "users"
+  | "star";
+
+/** Two-column split — the problem the reader has right now vs. how this
+ *  offer solves it. Covers both the "Problem" and "Solution" framework
+ *  stages in one section (splitting them into two separate sections read
+ *  as redundant in practice). */
+export interface ProblemSolutionConfig {
+  problemHeadline: string;
+  problemText: string;
+  solutionHeadline: string;
+  solutionText: string;
+}
+
+/** Two-column (or stacked) before/after contrast — real, concrete
+ *  differences the reader will recognize, not fabricated statistics. */
+export interface BeforeAfterConfig {
+  beforeHeadline?: string;
+  beforeItems: string[];
+  afterHeadline?: string;
+  afterItems: string[];
+}
+
+/** "What's Included" cards — distinct from BenefitsGrid in intent (this is
+ *  an inventory of concrete deliverables, not persuasive benefit framing)
+ *  even though the visual shape is similar. */
+export interface IncludedConfig {
+  headline?: string;
+  items: { title: string; description?: string }[];
+}
+
+/** Us vs. the alternative — rows are our own real offer facts vs. a
+ *  generic "the old way" / "doing it yourself" comparison, never a named
+ *  real competitor's specific claims (which we have no way to verify). */
+export interface ComparisonConfig {
+  headline?: string;
+  usLabel: string;
+  themLabel: string;
+  rows: { feature: string; us: boolean; them: boolean }[];
+}
+
+/** Real customer quotes ONLY — renders nothing when empty, exactly like
+ *  TrustBadgesConfig/ProofStripConfig's logos variant. Distinct from
+ *  StoryConfig, which is the operator's own synthesized narrative and is
+ *  always safe to write; a testimonial is someone else's claim and must
+ *  never be invented. */
+export interface TestimonialsConfig {
+  items: { quote: string; name: string; detail?: string }[];
+}
+
 export type FunnelSectionConfig =
   | HeroConfig
   | ProofStripConfig
@@ -198,7 +279,14 @@ export type FunnelSectionConfig =
   | GuaranteeConfig
   | TrustBadgesConfig
   | CheckoutConfig
-  | UpsellOfferConfig;
+  | UpsellOfferConfig
+  | VideoConfig
+  | BenefitsGridConfig
+  | ProblemSolutionConfig
+  | BeforeAfterConfig
+  | IncludedConfig
+  | ComparisonConfig
+  | TestimonialsConfig;
 
 export interface FunnelSection {
   id: string;

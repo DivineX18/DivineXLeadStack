@@ -1,0 +1,54 @@
+import { PackageCheck } from "lucide-react";
+import type { IncludedConfig } from "@/types/funnels";
+
+export function IncludedSection({
+  config,
+  accentColor,
+}: {
+  config: IncludedConfig;
+  accentColor: string;
+}) {
+  if (config.items.length === 0) return null;
+  return (
+    <section className="px-4 py-12">
+      <div className="mx-auto max-w-3xl">
+        {config.headline && (
+          <h2
+            className="mb-8 text-balance text-center font-extrabold tracking-tight"
+            style={{ fontSize: "clamp(1.5rem, 4vw, 2.25rem)", lineHeight: 1.15 }}
+          >
+            {config.headline}
+          </h2>
+        )}
+        <div className="space-y-3">
+          {config.items.map((item, i) => (
+            <div
+              key={i}
+              className="flex items-start gap-4 rounded-2xl border bg-[var(--card-bg)] p-5 ring-1 ring-black/[0.04] dark:ring-white/[0.06]"
+              style={
+                {
+                  "--card-bg": "color-mix(in oklab, currentColor 2.5%, transparent)",
+                } as React.CSSProperties
+              }
+            >
+              <span
+                className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: `${accentColor}1a`, color: accentColor }}
+              >
+                <PackageCheck className="h-4 w-4" />
+              </span>
+              <div>
+                <p className="font-semibold tracking-tight">{item.title}</p>
+                {item.description && (
+                  <p className="mt-1 text-sm leading-relaxed opacity-75">
+                    {item.description}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

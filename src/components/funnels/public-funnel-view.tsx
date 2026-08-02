@@ -16,6 +16,13 @@ import { GuaranteeSection } from "./sections/guarantee-section";
 import { TrustBadgesSection } from "./sections/trust-badges-section";
 import { CheckoutSection } from "./sections/checkout-section";
 import { UpsellOfferSection } from "./sections/upsell-offer-section";
+import { VideoSection } from "./sections/video-section";
+import { BenefitsGridSection } from "./sections/benefits-grid-section";
+import { ProblemSolutionSection } from "./sections/problem-solution-section";
+import { BeforeAfterSection } from "./sections/before-after-section";
+import { IncludedSection } from "./sections/included-section";
+import { ComparisonSection } from "./sections/comparison-section";
+import { TestimonialsSection } from "./sections/testimonials-section";
 
 /**
  * Maps a funnel's `sections[]` to its section component, mirroring the
@@ -43,6 +50,13 @@ const SECTION_COMPONENTS: Record<FunnelSectionType, ComponentType<any>> = {
   trust_badges: TrustBadgesSection,
   checkout: CheckoutSection,
   upsell_offer: UpsellOfferSection,
+  video: VideoSection,
+  benefits_grid: BenefitsGridSection,
+  problem_solution: ProblemSolutionSection,
+  before_after: BeforeAfterSection,
+  included: IncludedSection,
+  comparison: ComparisonSection,
+  testimonials: TestimonialsSection,
 };
 
 const SYSTEM_FONT_STACK =

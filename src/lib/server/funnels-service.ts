@@ -4,6 +4,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { getStripeForTenant } from "@/lib/stripe/tenant-server";
 import { materializeCheckoutPrice } from "@/lib/funnels/materialize-price";
+import { buildFrameworkSections } from "@/lib/funnels/frameworks";
 import type {
   CheckoutConfig,
   FunnelDoc,
@@ -74,260 +75,14 @@ const DEFAULT_THEME: Record<FunnelGenre, "light" | "dark"> = {
   lead_gen: "light",
 };
 
-function leadMagnetSeed(): Seed {
-  const sections: FunnelSection[] = [
-    {
-      id: "s1",
-      type: "hero",
-      config: {
-        eyebrow: "Your FREE copy will show you how to:",
-        headline: "Write your headline here",
-        subheadline: "",
-        mediaType: "video",
-        mediaUrl: "",
-      },
-    },
-    {
-      id: "s2",
-      type: "proof_strip",
-      config: { variant: "rating", rating: { score: 4.8, reviewCount: 0, scale: 5 } },
-    },
-    {
-      id: "s3",
-      type: "offer",
-      config: {
-        headline: "Get your free copy today",
-        priceCents: 0,
-        strikethroughPriceCents: null,
-        bullets: [],
-        formId: null,
-        ctaLabel: "Send me my copy",
-      },
-    },
-    { id: "s4", type: "proof_strip", config: { variant: "logos", logos: [] } },
-    {
-      id: "s5",
-      type: "story",
-      config: { byline: "From: Your Name, Your City", paragraphs: [] },
-    },
-    { id: "s6", type: "faq", config: { items: [] } },
-  ];
-  return { sections };
-}
-
-function vslSeed(): Seed {
-  const sections: FunnelSection[] = [
-    {
-      id: "s1",
-      type: "countdown",
-      config: { endsAt: new Date(Date.now() + 3 * 86_400_000).toISOString() },
-    },
-    {
-      id: "s2",
-      type: "hero",
-      config: {
-        headline: "Write your headline here",
-        subheadline: "",
-        mediaType: "video",
-        mediaUrl: "",
-      },
-    },
-    {
-      id: "s3",
-      type: "offer",
-      config: {
-        headline: "",
-        priceCents: 0,
-        strikethroughPriceCents: null,
-        bullets: [],
-        formId: null,
-        ctaLabel: "Get instant access",
-        ctaHref: "",
-      },
-    },
-    {
-      id: "s4",
-      type: "cta_banner",
-      config: { headline: "Ready to get started?", ctaLabel: "Get instant access", ctaHref: "" },
-    },
-  ];
-  return { sections };
-}
-
-function challengeSeed(): Seed {
-  const sections: FunnelSection[] = [
-    {
-      id: "s1",
-      type: "countdown",
-      config: { endsAt: new Date(Date.now() + 3 * 86_400_000).toISOString() },
-    },
-    {
-      id: "s2",
-      type: "hero",
-      config: {
-        headline: "Write your headline here",
-        subheadline: "",
-        mediaType: "none",
-      },
-    },
-    { id: "s3", type: "agenda", config: { days: [] } },
-    { id: "s4", type: "ticket_tiers", config: { tiers: [] } },
-    { id: "s5", type: "faq", config: { items: [] } },
-  ];
-  return { sections };
-}
-
-function applicationSeed(): Seed {
-  const sections: FunnelSection[] = [
-    {
-      id: "s1",
-      type: "hero",
-      config: {
-        eyebrow: "Apply now — limited spots",
-        headline: "Write your headline here",
-        subheadline: "",
-        mediaType: "none",
-      },
-    },
-    {
-      id: "s2",
-      type: "proof_strip",
-      config: { variant: "rating", rating: { score: 4.9, reviewCount: 0, scale: 5 } },
-    },
-    {
-      id: "s3",
-      type: "story",
-      config: { byline: "Why this works", paragraphs: [] },
-    },
-    {
-      id: "s4",
-      type: "guarantee",
-      config: { headline: "", bodyText: "", badgeIcon: "shield" },
-    },
-    {
-      id: "s5",
-      type: "offer",
-      config: {
-        headline: "Apply for a spot",
-        priceCents: null,
-        strikethroughPriceCents: null,
-        bullets: [],
-        formId: null,
-        ctaLabel: "Apply now",
-      },
-    },
-    { id: "s6", type: "faq", config: { items: [] } },
-  ];
-  return { sections };
-}
-
-/** Low-ticket entry-product funnel — the natural home for the checkout +
- *  order-bump + upsell/downsell work landing in later slices. Seeded with
- *  a plain `offer` section for now; revisit once the `checkout` section
- *  type ships (Slice 2) to seed `checkoutMode: "stripe_checkout"` instead. */
-function tripwireSeed(): Seed {
-  const sections: FunnelSection[] = [
-    {
-      id: "s1",
-      type: "hero",
-      config: { headline: "Write your headline here", subheadline: "", mediaType: "none" },
-    },
-    {
-      id: "s2",
-      type: "proof_strip",
-      config: { variant: "rating", rating: { score: 4.8, reviewCount: 0, scale: 5 } },
-    },
-    {
-      id: "s3",
-      type: "offer",
-      config: {
-        headline: "",
-        priceCents: 700,
-        strikethroughPriceCents: null,
-        bullets: [],
-        formId: null,
-        ctaLabel: "Get instant access",
-        ctaHref: "",
-      },
-    },
-    { id: "s4", type: "trust_badges", config: { badges: [] } },
-    {
-      id: "s5",
-      type: "guarantee",
-      config: { headline: "", bodyText: "", badgeIcon: "shield" },
-    },
-    { id: "s6", type: "faq", config: { items: [] } },
-  ];
-  return { sections };
-}
-
-function webinarSeed(): Seed {
-  const sections: FunnelSection[] = [
-    {
-      id: "s1",
-      type: "countdown",
-      config: { endsAt: new Date(Date.now() + 3 * 86_400_000).toISOString() },
-    },
-    {
-      id: "s2",
-      type: "hero",
-      config: { headline: "Write your headline here", subheadline: "", mediaType: "none" },
-    },
-    { id: "s3", type: "agenda", config: { days: [] } },
-    {
-      id: "s4",
-      type: "offer",
-      config: {
-        headline: "Save your seat",
-        priceCents: 0,
-        strikethroughPriceCents: null,
-        bullets: [],
-        formId: null,
-        ctaLabel: "Register now",
-      },
-    },
-    { id: "s5", type: "faq", config: { items: [] } },
-  ];
-  return { sections };
-}
-
-/** Generic interest capture — no specific magnet asset, distinct from
- *  lead_magnet's "free book/PDF" framing. */
-function leadGenSeed(): Seed {
-  const sections: FunnelSection[] = [
-    {
-      id: "s1",
-      type: "hero",
-      config: { headline: "Write your headline here", subheadline: "", mediaType: "none" },
-    },
-    { id: "s2", type: "proof_strip", config: { variant: "logos", logos: [] } },
-    {
-      id: "s3",
-      type: "offer",
-      config: {
-        headline: "",
-        priceCents: null,
-        strikethroughPriceCents: null,
-        bullets: [],
-        formId: null,
-        ctaLabel: "Get in touch",
-      },
-    },
-    { id: "s4", type: "trust_badges", config: { badges: [] } },
-    { id: "s5", type: "faq", config: { items: [] } },
-  ];
-  return { sections };
-}
-
-const SEEDS: Record<FunnelGenre, () => Seed> = {
-  lead_magnet: leadMagnetSeed,
-  vsl: vslSeed,
-  challenge: challengeSeed,
-  application: applicationSeed,
-  tripwire: tripwireSeed,
-  webinar: webinarSeed,
-  lead_gen: leadGenSeed,
-};
+// Genre seeding used to be 7 hand-written, structurally-fixed section
+// arrays (one per genre). The "Landing Page Generator RC" replaced that
+// with FUNNEL_FRAMEWORKS (lib/funnels/frameworks.ts) — an ordered stage
+// list per genre where each stage has a recommended layout plus, for some
+// stages, a small set of alternates. buildFrameworkSections() resolves that
+// into a real FunnelSection[], optionally letting a caller (the AI Suite)
+// override individual stages within their allowed alternates. See that
+// module for the full stage-by-genre definitions.
 
 export async function createFunnelServerSide(opts: {
   subAccountId: string;
@@ -338,6 +93,10 @@ export async function createFunnelServerSide(opts: {
    *  of a single upsell_offer section. */
   chainRole?: "upsell" | "downsell";
   parentFunnelId?: string;
+  /** AI Suite layout choices, keyed by framework stage id — see
+   *  FUNNEL_FRAMEWORKS. Ignored for chain steps. Omitted/invalid stages
+   *  fall back to that stage's recommended layout. */
+  stageOverrides?: Record<string, FunnelSection["type"]>;
 }): Promise<string> {
   const db = getAdminDb();
   const subSnap = await db.doc(`subAccounts/${opts.subAccountId}`).get();
@@ -363,7 +122,7 @@ export async function createFunnelServerSide(opts: {
           },
         ],
       }
-    : SEEDS[opts.genre]();
+    : { sections: buildFrameworkSections(opts.genre, opts.stageOverrides) };
 
   const ref = db.collection("funnels").doc();
   const doc: Omit<FunnelDoc, "id"> = {
