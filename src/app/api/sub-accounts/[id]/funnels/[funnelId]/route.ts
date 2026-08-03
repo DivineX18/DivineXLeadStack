@@ -8,6 +8,7 @@ import {
   type FunnelPatch,
 } from "@/lib/server/funnels-service";
 import type { FunnelSection, FunnelSectionType } from "@/types/funnels";
+import { DESIGN_PACKS } from "@/lib/funnels/design-packs";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,10 @@ const SECTION_TYPES: FunnelSectionType[] = [
   "included",
   "comparison",
   "testimonials",
+  "stats",
+  "callout",
+  "team",
+  "image_text",
 ];
 
 /** Defensive sanitize of a client-supplied sections array — authed staff,
@@ -91,6 +96,9 @@ export async function PATCH(
   }
   if (body.theme === "light" || body.theme === "dark") patch.theme = body.theme;
   if (typeof body.accentColor === "string") patch.accentColor = body.accentColor;
+  if (typeof body.designPack === "string" && body.designPack in DESIGN_PACKS) {
+    patch.designPack = body.designPack as FunnelPatch["designPack"];
+  }
   if (body.sections !== undefined) {
     const sections = sanitizeSections(body.sections);
     if (sections === null) {

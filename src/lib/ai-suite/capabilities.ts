@@ -73,7 +73,8 @@ import {
   updateFunnelServerSide,
   FunnelValidationError,
 } from "@/lib/server/funnels-service";
-import type { FunnelSectionType, TicketTiersConfig } from "@/types/funnels";
+import type { FunnelSectionType, HeroConfig, TicketTiersConfig } from "@/types/funnels";
+import type { DesignPackId } from "@/lib/funnels/design-packs";
 import { createFormServerSide } from "@/lib/server/forms-service";
 import {
   createMessageTemplateServerSide,
@@ -3218,15 +3219,16 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     menuLabel: "Create a funnel system for this workspace (page + form + follow-up email + workflow)",
     description:
       "Create a COMPLETE funnel system — not just a landing page — hosted directly on this platform (not the website builder): the funnel page itself, PLUS (when the funnel needs a lead-capture opt-in — most genres besides paid tripwire/vsl offers) a dedicated capture Form, a follow-up email Message Template, and a Workflow that sends it the moment someone submits. Use when the user asks to build/make/create/generate a funnel, landing page, lead magnet page, webinar registration page, application page, or tripwire offer — 'build me a webinar funnel' should produce the whole connected system in one shot, matching what an operator would expect, not just a page they still have to wire up by hand. Everything is created in DRAFT/review state — the funnel is never auto-published, the workflow is never auto-activated — since real money (Stripe) and real emails are on the other side of 'live'. If the user names a reference site, call research_website_reference FIRST and mirror its tone/services WITHOUT copying text. IMPORTANT — write the copy yourself, don't make the user write it: headline, subheadline, bullets, story, and CTA label are all YOUR job as the copywriter, not the user's — never respond with a bare 'a headline is required, what should it be?' question. From whatever the user told you about their business/offer/audience (even a single sentence), write a specific, concrete headline/subheadline/bullets/CTA yourself. The ONLY thing you should ask the user for, if you truly have nothing to go on, is what the business/offer/audience actually IS (e.g. 'What does the business do, and what's the offer?') — never ask them to supply the marketing copy itself. The one exception is testimonials (see story_paragraphs below): those must come from the user or be written as synthesized non-testimonial copy — never invented as if from a real customer. STRATEGY — before writing any copy, silently reason through (do NOT show this reasoning in your reply, just let it inform the copy): who the customer is, what problem/pain they have right now, the outcome they actually want, the objection most likely stopping them from acting, how this offer is positioned against alternatives, and what the offer itself concretely delivers. A senior conversion copywriter does this thinking before typing a single word — your headline/bullets/story/CTA should read like the output of that reasoning, not like a form filled in field-by-field. " +
+      "DESIGN — you are both the conversion strategist AND the landing-page designer. Pick a design_pack that matches the business's audience (or omit for 'classic', the safe default when nothing about the business signals a pack): executive (consultants, healthcare, law, finance, enterprise — clean, white, minimal, blue accents), bold (agencies, creators, marketing, sales — dark sections, bright gradients, large type, high contrast), premium (executive coaching, luxury, high-ticket consulting — cream, serif headings, gold accents, spacious), startup (SaaS/AI/tech — bright gradients, modern, floating-card feel), local_business (dentists, roofing, HVAC, real estate, restaurants — friendly, bright, trust-first, simple), wellness (health, fitness, life coaching, spiritual — soft colors, calming, spacious). The pack sets accent color/theme/typography/section-background rhythm automatically — don't also try to set accent_color when you've picked a real pack, they'd conflict. hero_layout (centered/split/background_image/founder_image) and cta_style (inline/popup_form/dual/sticky_desktop/floating_mobile) are additional choices within a pack — pick what fits (e.g. founder_image for premium/coaching, split for startup with a product screenshot, dual CTA for application funnels offering both 'apply' and 'learn more'). " +
       "STRUCTURE — this is a conversion-framework generator, not a paragraph generator: every funnel follows Attention → Problem → Solution → Benefits → Process → Offer → Trust → FAQ → CTA, and each genre maps that sequence onto a recommended sequence of REUSABLE LAYOUTS (cards, grids, timelines, comparisons — favor these over walls of text): " +
       "lead_magnet = Hero → Problem → What You'll Learn (benefits grid) → How It Works (process timeline) → What's Included (cards) → FAQ → CTA (capture form). " +
       "vsl = Hero → Video → Problem/Solution → Offer → FAQ → CTA banner. " +
-      "webinar = Hero → Benefits (grid) → Agenda (process timeline) → Host (founder story) → FAQ → Register (capture form). " +
-      "application = Hero → Who It's For (benefits grid) → Process (timeline) → Results (before/after, or real testimonials if given) → Application (capture form). " +
+      "webinar = Hero → Agenda (process timeline) → Benefits (grid) → Host (founder story) → FAQ → Register (capture form). " +
+      "application = Hero → Who It's For (benefits grid) → Who This Isn't For (cards — real disqualifying criteria, not a vague adjective) → Process (timeline) → Results (before/after, or real testimonials if given) → Application (capture form). " +
       "challenge = Hero → Problem/Solution → What You'll Get (benefits grid) → Challenge Schedule (process timeline) → Register (ticket tiers) → FAQ. " +
-      "tripwire = Hero → Problem/Solution → Offer (priced) → Trust badges → Guarantee (or testimonials, if given) → FAQ. " +
+      "tripwire (sales-page style) = Hero → Problem/Solution → Opportunity (callout — why this matters now) → Features (benefits grid) → Trust badges (or real testimonials, if given) → Offer (priced) → Guarantee → FAQ. " +
       "lead_gen = Hero → Trust Logos → Benefits (grid) → Offer (capture form) → FAQ. " +
-      "Some stages have a fixed layout; a few (marked above with 'or') allow an alternate — use layout_choices ONLY to pick that alternate when the business/evidence genuinely calls for it (e.g. real testimonials exist), never as a default habit. Workflow: (1) pick the genre — lead_magnet (free book/PDF opt-in), vsl (high-ticket video sales page), challenge (multi-day registration), application (qualify leads before a call), tripwire (low-ticket entry offer), webinar (single-session registration), lead_gen (generic interest capture); (2) write a specific, concrete headline — never a generic tagline; (3) bullets must name a specific outcome or mechanism, never a vague adjective ('transformative', 'game-changing', 'cutting-edge' are banned); (4) ONLY include faq_items if you have enough real detail to answer honestly — never invent generic filler Q&A or fabricated guarantees/stats; (5) price_cents only applies to genres with a priced offer (tripwire, vsl, challenge) — omit for a free lead magnet, and when a price IS set, skip the capture form (a paid offer needs checkout, not a lead form — the operator wires up Stripe checkout on that section afterward); (6) leave include_capture_form at its default (true) unless the user is clearly building a pure sales/checkout page with no opt-in step; (7) confirmation_email_body should read like a real, brief, human confirmation (what they'll get, what's next) — it can be genuinely short, but must never invent guarantees, stats, or promises the funnel copy itself didn't make; (8) ALWAYS write story_paragraphs whenever the genre's framework includes a Story/Founder-Story/Host stage. Two cases: if the user gave you a REAL testimonial (an actual customer's words, name, location, or result), use it close to verbatim as story_paragraphs with story_byline set to their real attribution (e.g. 'From: Jane Doe, Austin, TX') — don't rewrite their claim into something stronger than what they said. Otherwise (the common case — no testimonial offered), write 2-4 paragraphs of synthesized 'why this works' copy — the mechanism, the reasoning — from the headline/bullets you already wrote, with a generic byline like 'Why this works' (or 'Your host: ...' for a webinar), and NEVER invent a fictional customer name/location/quote to make it look like a testimonial; (9) guarantee_headline/guarantee_body — ONLY when the user told you a real guarantee they actually offer, never invented; (10) trust_badges — safe generic ones (e.g. 'Secure checkout', 'Privacy protected') are fine whenever there's a form or checkout, but only add a guarantee-related badge if guarantee_headline is also set; (11) cta_banner_headline/cta_banner_subtext (VSL genre) should restate the real offer, never introduce a new claim; (12) process_steps — write these whenever the genre's framework includes a process-timeline stage (most do); (13) stage_content — write one entry per remaining stage the genre's framework includes (video/benefits grid/problem-solution/before-after/included/comparison), per that param's own field-mapping description; never include a testimonials entry unless the user gave you real quotes. Every genre's full stage sequence renders on the page regardless of which fields you fill — an unfilled stage shows placeholder/nothing, so fill every stage the genre actually has, not just headline/offer/faq. After creating, feel free to suggest one or two concrete improvements in your reply (e.g. a sharper headline angle, a stronger CTA placement, a trust element to add) — but only as a suggestion the user can act on, never as a score or grade.",
+      "Some stages have a fixed layout; a few (marked above with 'or') allow an alternate — use layout_choices ONLY to pick that alternate when the business/evidence genuinely calls for it (e.g. real testimonials exist), never as a default habit. Workflow: (1) pick the genre — lead_magnet (free book/PDF opt-in), vsl (high-ticket video sales page), challenge (multi-day registration), application (qualify leads before a call), tripwire (low-ticket entry offer), webinar (single-session registration), lead_gen (generic interest capture); (2) write a specific, concrete headline — never a generic tagline; (3) bullets must name a specific outcome or mechanism, never a vague adjective ('transformative', 'game-changing', 'cutting-edge' are banned); (4) ONLY include faq_items if you have enough real detail to answer honestly — never invent generic filler Q&A or fabricated guarantees/stats; (5) price_cents only applies to genres with a priced offer (tripwire, vsl, challenge) — omit for a free lead magnet, and when a price IS set, skip the capture form (a paid offer needs checkout, not a lead form — the operator wires up Stripe checkout on that section afterward); (6) leave include_capture_form at its default (true) unless the user is clearly building a pure sales/checkout page with no opt-in step; (7) confirmation_email_body should read like a real, brief, human confirmation (what they'll get, what's next) — it can be genuinely short, but must never invent guarantees, stats, or promises the funnel copy itself didn't make; (8) ALWAYS write story_paragraphs whenever the genre's framework includes a Story/Founder-Story/Host stage. Two cases: if the user gave you a REAL testimonial (an actual customer's words, name, location, or result), use it close to verbatim as story_paragraphs with story_byline set to their real attribution (e.g. 'From: Jane Doe, Austin, TX') — don't rewrite their claim into something stronger than what they said. Otherwise (the common case — no testimonial offered), write 2-4 paragraphs of synthesized 'why this works' copy — the mechanism, the reasoning — from the headline/bullets you already wrote, with a generic byline like 'Why this works' (or 'Your host: ...' for a webinar), and NEVER invent a fictional customer name/location/quote to make it look like a testimonial; (9) guarantee_headline/guarantee_body — ONLY when the user told you a real guarantee they actually offer, never invented; (10) trust_badges — safe generic ones (e.g. 'Secure checkout', 'Privacy protected') are fine whenever there's a form or checkout, but only add a guarantee-related badge if guarantee_headline is also set; (11) cta_banner_headline/cta_banner_subtext (VSL genre) should restate the real offer, never introduce a new claim; (12) process_steps — write these whenever the genre's framework includes a process-timeline stage (most do); (13) stage_content — write one entry per remaining stage the genre's framework includes (video/benefits grid/problem-solution/before-after/included/comparison/callout), per that param's own field-mapping description; never include a testimonials entry unless the user gave you real quotes; (14) design_pack — pick the pack that matches this business's audience (see the design-pack descriptions), or omit to let 'classic' apply; only override with layout_choices/design_pack when you have a genuine reason from what the user told you, not by default habit. Every genre's full stage sequence renders on the page regardless of which fields you fill — an unfilled stage shows placeholder/nothing, so fill every stage the genre actually has, not just headline/offer/faq. After creating, feel free to suggest one or two concrete improvements in your reply (e.g. a sharper headline angle, a stronger CTA placement, a trust element to add) — but only as a suggestion the user can act on, never as a score or grade.",
     parameters: {
       type: "object",
       properties: {
@@ -3363,20 +3365,21 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         stage_content: {
           type: "array",
           description:
-            "Content for the funnel's other conversion-framework stages (Video, Benefits Grid, Problem/Solution, Before/After, What's Included, Comparison, Testimonials) — write ONE entry per stage the genre's framework actually includes (see the genre descriptions above), keyed by section_type = that stage's resolved section type. If a genre's framework lists BOTH benefits_grid and included (e.g. lead_magnet: 'What You'll Learn' AND 'What's Included'), write TWO separate entries, not one — they answer different questions (benefits_grid = the outcomes/knowledge the reader gains; included = the concrete deliverables/assets they receive) and skipping either leaves that section visibly blank on the page. Each entry's fields are used differently depending on section_type: " +
+            "Content for the funnel's other conversion-framework stages (Video, Benefits Grid, Problem/Solution, Before/After, What's Included, Comparison, Testimonials, Callout) — write ONE entry per stage the genre's framework actually includes (see the genre descriptions above), keyed by section_type = that stage's resolved section type. If a genre's framework lists BOTH benefits_grid and included (e.g. lead_magnet: 'What You'll Learn' AND 'What's Included'), write TWO separate entries, not one — they answer different questions (benefits_grid = the outcomes/knowledge the reader gains; included = the concrete deliverables/assets they receive) and skipping either leaves that section visibly blank on the page. Each entry's fields are used differently depending on section_type: " +
             "\"video\" — video_url (required), headline/text optional. " +
             "\"benefits_grid\" — headline optional, items[].title + items[].description (3-6 items, each a specific outcome the reader gets, never a vague adjective). " +
-            "\"included\" — headline optional, items[].title + items[].description (3-6 concrete deliverables — what's literally in the box/download/program). " +
+            "\"included\" — headline optional, items[].title + items[].description (3-6 concrete deliverables — what's literally in the box/download/program, OR for application genre's 'Who This Isn't For' stage, real disqualifying criteria). " +
             "\"problem_solution\" — headline+text describe the problem, secondary_headline+secondary_text describe the solution. " +
             "\"before_after\" — items with group 'before' or 'after' (items[].title is the line text); headline/secondary_headline are the two column labels. " +
             "\"comparison\" — items[].title is a feature name (assumes you have it and the generic alternative doesn't — never claim something false); headline is the section title. " +
+            "\"callout\" — text is a single highlighted sentence restating something already established (e.g. the market opportunity/why-now) — not a new factual claim. " +
             "\"testimonials\" — ONLY include this entry if the user gave you REAL customer quotes. items[].quote/name/detail, verbatim, never invented. Omit the whole entry (not just leave items empty) if you have no real testimonials — do not choose the testimonials layout via layout_choices without this.",
           items: {
             type: "object",
             properties: {
               section_type: {
                 type: "string",
-                enum: ["video", "benefits_grid", "problem_solution", "before_after", "included", "comparison", "testimonials"],
+                enum: ["video", "benefits_grid", "problem_solution", "before_after", "included", "comparison", "testimonials", "callout"],
                 description: "Which layout this content is for — must match a section that will actually be in the funnel (a genre default, or what you chose via layout_choices).",
               },
               headline: { type: "string" },
@@ -3404,6 +3407,23 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             additionalProperties: false,
           },
         },
+        design_pack: {
+          type: "string",
+          enum: ["classic", "executive", "bold", "premium", "startup", "local_business", "wellness"],
+          description: "The visual design pack — see the DESIGN section above for which pack fits which audience. Omit for 'classic'.",
+        },
+        hero_layout: {
+          type: "string",
+          enum: ["centered", "split", "background_image", "founder_image"],
+          description: "Hero section layout. 'split'/'background_image' need real media (a video/image URL) to look right — only pick them when you have one. Omit for 'centered'.",
+        },
+        cta_style: {
+          type: "string",
+          enum: ["inline", "popup_form", "dual", "sticky_desktop", "floating_mobile"],
+          description: "How the primary capture/offer CTA behaves. 'dual' needs cta_secondary_label + cta_secondary_href. Omit for plain inline (today's default behavior).",
+        },
+        cta_secondary_label: { type: "string", description: "Only used with cta_style 'dual'." },
+        cta_secondary_href: { type: "string", description: "Only used with cta_style 'dual'." },
       },
       required: ["headline", "bullets"],
       additionalProperties: false,
@@ -3435,6 +3455,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         layoutChoices: "layout_choices",
         processSteps: "process_steps",
         stageContent: "stage_content",
+        designPack: "design_pack",
+        heroLayout: "hero_layout",
+        ctaStyle: "cta_style",
+        ctaSecondaryLabel: "cta_secondary_label",
+        ctaSecondaryHref: "cta_secondary_href",
       };
       const raw: Record<string, unknown> = { ...rawObj };
       for (const [camel, snake] of Object.entries(camelToSnake)) {
@@ -3586,6 +3611,18 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             })),
         }));
 
+      const DESIGN_PACK_IDS = ["classic", "executive", "bold", "premium", "startup", "local_business", "wellness"];
+      const designPackRaw = str(raw, "design_pack");
+      const designPack = DESIGN_PACK_IDS.includes(designPackRaw) ? designPackRaw : "classic";
+
+      const HERO_LAYOUTS = ["centered", "split", "background_image", "founder_image"];
+      const heroLayoutRaw = str(raw, "hero_layout");
+      const heroLayout = HERO_LAYOUTS.includes(heroLayoutRaw) ? heroLayoutRaw : "";
+
+      const CTA_STYLES = ["inline", "popup_form", "dual", "sticky_desktop", "floating_mobile"];
+      const ctaStyleRaw = str(raw, "cta_style");
+      const ctaStyle = CTA_STYLES.includes(ctaStyleRaw) ? ctaStyleRaw : "";
+
       return {
         ok: true,
         args: {
@@ -3614,6 +3651,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           layoutChoices,
           processSteps,
           stageContent,
+          designPack,
+          heroLayout,
+          ctaStyle,
+          ctaSecondaryLabel: str(raw, "cta_secondary_label").slice(0, 40),
+          ctaSecondaryHref: str(raw, "cta_secondary_href").slice(0, 500),
         },
       };
     },
@@ -3654,12 +3696,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         | "webinar"
         | "lead_gen";
       const layoutChoices = (args.layoutChoices as Record<string, string>) ?? {};
+      const designPack = (args.designPack as DesignPackId) || "classic";
       const funnelId = await createFunnelServerSide({
         subAccountId,
         createdByUid: ctx.uid,
         name: (args.funnelName as string) || (args.headline as string),
         genre,
         stageOverrides: layoutChoices as Record<string, FunnelSectionType>,
+        designPack,
       });
 
       const created = await getFunnel(subAccountId, funnelId);
@@ -3694,6 +3738,20 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const trustBadges = args.trustBadges as string[];
       const ctaBannerHeadline = args.ctaBannerHeadline as string;
       const ctaBannerSubtext = args.ctaBannerSubtext as string;
+      const heroLayout = args.heroLayout as string;
+      const ctaStyle = args.ctaStyle as string;
+      const ctaExtras =
+        ctaStyle && ctaStyle !== "inline"
+          ? {
+              style: ctaStyle as NonNullable<HeroConfig["cta"]>["style"],
+              ...(ctaStyle === "dual"
+                ? {
+                    secondaryLabel: (args.ctaSecondaryLabel as string) || "Learn more",
+                    secondaryHref: (args.ctaSecondaryHref as string) || "#",
+                  }
+                : {}),
+            }
+          : undefined;
       const nextSections = created.sections.map((section) => {
         const content = contentFor(section.type);
         if (section.type === "hero") {
@@ -3704,6 +3762,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               ...(args.eyebrow ? { eyebrow: args.eyebrow as string } : {}),
               headline: args.headline as string,
               ...(args.subheadline ? { subheadline: args.subheadline as string } : {}),
+              ...(heroLayout ? { layout: heroLayout as HeroConfig["layout"] } : {}),
             },
           };
         }
@@ -3715,6 +3774,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               bullets,
               ...(args.priceCents !== null ? { priceCents: args.priceCents as number } : {}),
               ...(args.ctaLabel ? { ctaLabel: args.ctaLabel as string } : {}),
+              ...(ctaExtras ? { cta: ctaExtras } : {}),
             },
           };
         }
@@ -3765,6 +3825,9 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         }
         if (section.type === "agenda" && processSteps.length > 0) {
           return { ...section, config: { days: processSteps.map((s) => ({ label: s.label, title: s.title, bullets: s.bullets })) } };
+        }
+        if (section.type === "callout" && content?.text) {
+          return { ...section, config: { text: content.text, tone: "highlight" as const } };
         }
         if (section.type === "video" && content?.videoUrl) {
           return {

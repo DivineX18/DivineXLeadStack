@@ -19,6 +19,7 @@ import type {
   AgendaConfig,
   BeforeAfterConfig,
   BenefitsGridConfig,
+  CalloutConfig,
   CheckoutConfig,
   ComparisonConfig,
   CountdownConfig,
@@ -30,17 +31,21 @@ import type {
   FunnelSectionType,
   GuaranteeConfig,
   HeroConfig,
+  ImageTextConfig,
   IncludedConfig,
   OfferConfig,
   ProblemSolutionConfig,
   ProofStripConfig,
+  StatsConfig,
   StoryConfig,
+  TeamConfig,
   TestimonialsConfig,
   TicketTiersConfig,
   TrustBadgesConfig,
   UpsellOfferConfig,
   VideoConfig,
 } from "@/types/funnels";
+import { DESIGN_PACKS, type DesignPackId } from "@/lib/funnels/design-packs";
 
 const GENRE_LABELS: Record<FunnelGenre, string> = {
   lead_magnet: "Lead Magnet",
@@ -73,6 +78,10 @@ const SECTION_LABELS: Record<FunnelSectionType, string> = {
   included: "What's included",
   comparison: "Comparison",
   testimonials: "Testimonials",
+  stats: "Stats",
+  callout: "Callout banner",
+  team: "Team",
+  image_text: "Image + text",
 };
 
 const SECTION_DEFAULTS: Record<FunnelSectionType, () => FunnelSection["config"]> = {
@@ -115,6 +124,10 @@ const SECTION_DEFAULTS: Record<FunnelSectionType, () => FunnelSection["config"]>
   included: () => ({ items: [] }) satisfies IncludedConfig,
   comparison: () => ({ usLabel: "Us", themLabel: "Doing it yourself", rows: [] }) satisfies ComparisonConfig,
   testimonials: () => ({ items: [] }) satisfies TestimonialsConfig,
+  stats: () => ({ items: [] }) satisfies StatsConfig,
+  callout: () => ({ text: "" }) satisfies CalloutConfig,
+  team: () => ({ members: [] }) satisfies TeamConfig,
+  image_text: () => ({ blocks: [] }) satisfies ImageTextConfig,
 };
 
 // Deliberately does NOT trim each line. These textareas are controlled —
@@ -145,6 +158,7 @@ export function FunnelBuilder({
   const [status, setStatus] = useState<"draft" | "published">("draft");
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [accentColor, setAccentColor] = useState("#2563eb");
+  const [designPack, setDesignPack] = useState<DesignPackId>("classic");
   const [sections, setSections] = useState<FunnelSection[]>([]);
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -161,6 +175,7 @@ export function FunnelBuilder({
         setStatus(d.funnel.status);
         setTheme(d.funnel.theme);
         setAccentColor(d.funnel.accentColor);
+        setDesignPack(d.funnel.designPack ?? "classic");
         setSections(d.funnel.sections);
       }
     })();
@@ -208,6 +223,7 @@ export function FunnelBuilder({
           status: patchStatus ?? status,
           theme,
           accentColor,
+          designPack,
           sections,
         }),
       });
@@ -294,6 +310,21 @@ export function FunnelBuilder({
               className="h-9"
             />
           </div>
+        </div>
+        <div className="col-span-2">
+          <label className={labelClass}>Design pack</label>
+          <select
+            value={designPack}
+            onChange={(e) => setDesignPack(e.target.value as DesignPackId)}
+            className={fieldClass}
+          >
+            {(Object.keys(DESIGN_PACKS) as DesignPackId[]).map((id) => (
+              <option key={id} value={id}>
+                {DESIGN_PACKS[id].label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-muted-foreground">{DESIGN_PACKS[designPack].audienceHint}</p>
         </div>
       </div>
 
@@ -445,6 +476,8 @@ function SectionFields({
                 >
                   <option value="centered">Centered — media below text</option>
                   <option value="split">Split — media beside text</option>
+                  <option value="background_image">Background — full-bleed media, text overlay</option>
+                  <option value="founder_image">Founder — small framed photo above text</option>
                 </select>
               </Field>
             </>
@@ -606,6 +639,52 @@ function SectionFields({
               className="h-9"
             />
           </Field>
+          <Field label="CTA experience">
+            <select
+              value={c.cta?.style ?? "inline"}
+              onChange={(e) =>
+                onChange({
+                  ...c,
+                  cta: { ...c.cta, style: e.target.value as NonNullable<OfferConfig["cta"]>["style"] },
+                })
+              }
+              className={fieldClass}
+            >
+              <option value="inline">Inline — form/button on the page</option>
+              <option value="popup_form">Popup — opens the form in a modal</option>
+              <option value="popup_calendar">Popup calendar — opens a booking page</option>
+              <option value="dual">Dual — primary + secondary button</option>
+              <option value="sticky_desktop">Sticky (desktop) — always-visible bar</option>
+              <option value="floating_mobile">Floating (mobile) — persistent bottom button</option>
+            </select>
+          </Field>
+          {c.cta?.style === "popup_calendar" && (
+            <Field label="Booking page slug (from /b/[subAccountId]/[slug])">
+              <Input
+                value={c.cta?.bookingPageSlug ?? ""}
+                onChange={(e) => onChange({ ...c, cta: { ...c.cta, bookingPageSlug: e.target.value } })}
+                className="h-9"
+              />
+            </Field>
+          )}
+          {c.cta?.style === "dual" && (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Secondary label">
+                <Input
+                  value={c.cta?.secondaryLabel ?? ""}
+                  onChange={(e) => onChange({ ...c, cta: { ...c.cta, secondaryLabel: e.target.value } })}
+                  className="h-9"
+                />
+              </Field>
+              <Field label="Secondary link">
+                <Input
+                  value={c.cta?.secondaryHref ?? ""}
+                  onChange={(e) => onChange({ ...c, cta: { ...c.cta, secondaryHref: e.target.value } })}
+                  className="h-9"
+                />
+              </Field>
+            </div>
+          )}
         </div>
       );
     }

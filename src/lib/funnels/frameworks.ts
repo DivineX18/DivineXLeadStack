@@ -65,8 +65,8 @@ export const FUNNEL_FRAMEWORKS: Record<FunnelGenre, FrameworkStage[]> = {
   ],
   webinar: [
     { id: "attention", label: "Hero", section: "hero" },
-    { id: "benefits", label: "Benefits", section: "benefits_grid" },
     { id: "agenda", label: "Agenda", section: "agenda" },
+    { id: "benefits", label: "Benefits", section: "benefits_grid" },
     { id: "host", label: "Host", section: "story" },
     { id: "faq", label: "FAQ", section: "faq" },
     { id: "register", label: "Register", section: "offer", isCapture: true },
@@ -74,6 +74,10 @@ export const FUNNEL_FRAMEWORKS: Record<FunnelGenre, FrameworkStage[]> = {
   application: [
     { id: "attention", label: "Hero", section: "hero" },
     { id: "who_for", label: "Who It's For", section: "benefits_grid" },
+    // Distinct section type from "who_for" on purpose — stage_content
+    // matches by resolved type, so two stages can never share one
+    // (see the uniqueness check in verify-funnel-frameworks.mts).
+    { id: "who_not_for", label: "Who This Isn't For", section: "included" },
     { id: "process", label: "Process", section: "agenda" },
     {
       id: "results",
@@ -96,22 +100,31 @@ export const FUNNEL_FRAMEWORKS: Record<FunnelGenre, FrameworkStage[]> = {
     { id: "register", label: "Register", section: "ticket_tiers", isCapture: true },
     { id: "faq", label: "FAQ", section: "faq" },
   ],
+  // Enriched to the "Sales Page" sequence (RC 1.1): Problem/Opportunity/
+  // Solution collapse into problem_solution + a callout ("the opportunity"
+  // — why now) rather than 3 separate sections, since problem_solution
+  // already covers Problem+Solution in one honest, non-fragmented section.
+  // Trust Rules: the social-proof stage defaults to trust_badges (always
+  // safe/generic) and only becomes real testimonials when the operator
+  // gave real quotes — never a testimonials section left silently empty.
   tripwire: [
     { id: "attention", label: "Hero", section: "hero" },
     {
       id: "problem",
-      label: "Problem",
+      label: "Problem / Solution",
       section: "problem_solution",
       alternates: ["before_after"],
     },
-    { id: "offer", label: "Offer", section: "offer" },
-    { id: "trust", label: "Trust", section: "trust_badges" },
+    { id: "opportunity", label: "Opportunity", section: "callout" },
+    { id: "features", label: "Features", section: "benefits_grid" },
     {
-      id: "guarantee",
-      label: "Guarantee",
-      section: "guarantee",
+      id: "trust",
+      label: "Trust / Testimonials",
+      section: "trust_badges",
       alternates: ["testimonials"],
     },
+    { id: "offer", label: "Offer", section: "offer" },
+    { id: "guarantee", label: "Guarantee", section: "guarantee" },
     { id: "faq", label: "FAQ", section: "faq" },
   ],
   lead_gen: [
@@ -190,6 +203,14 @@ export function defaultSectionConfig(type: FunnelSectionType): FunnelSectionConf
       return { usLabel: "Us", themLabel: "Doing it yourself", rows: [] };
     case "testimonials":
       return { items: [] };
+    case "stats":
+      return { items: [] };
+    case "callout":
+      return { text: "" };
+    case "team":
+      return { members: [] };
+    case "image_text":
+      return { blocks: [] };
   }
 }
 

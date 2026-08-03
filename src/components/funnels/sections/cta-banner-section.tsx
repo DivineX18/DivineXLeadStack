@@ -1,11 +1,14 @@
 import type { CtaBannerConfig } from "@/types/funnels";
+import { CtaButton } from "./cta-button";
 
 export function CtaBannerSection({
   config,
   accentColor,
+  subAccountId,
 }: {
   config: CtaBannerConfig;
   accentColor: string;
+  subAccountId?: string;
 }) {
   return (
     <section className="px-4 py-16">
@@ -27,13 +30,15 @@ export function CtaBannerSection({
         {config.subtext && (
           <p className="mx-auto mt-2.5 max-w-md opacity-70">{config.subtext}</p>
         )}
-        <a
-          href={config.ctaHref}
-          className="mt-7 inline-flex items-center gap-2 rounded-xl px-9 py-4 text-base font-bold text-white shadow-[0_8px_24px_-6px_var(--accent-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-6px_var(--accent-shadow)]"
-          style={{ backgroundColor: accentColor }}
-        >
-          {config.ctaLabel}
-        </a>
+        <div className="mt-7">
+          <CtaButton
+            label={config.ctaLabel}
+            href={config.ctaHref}
+            cta={config.cta}
+            accentColor={accentColor}
+            subAccountId={subAccountId}
+          />
+        </div>
       </div>
     </section>
   );

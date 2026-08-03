@@ -38,7 +38,30 @@ export type FunnelSectionType =
   | "before_after"
   | "included"
   | "comparison"
-  | "testimonials";
+  | "testimonials"
+  | "stats"
+  | "callout"
+  | "team"
+  | "image_text";
+
+/**
+ * Shared CTA-experience config, embedded (optional) on any section that
+ * carries a primary call-to-action (hero, offer, cta_banner). Additive —
+ * every field is optional and absent = today's plain inline behavior, so
+ * every already-published funnel keeps rendering exactly as before.
+ */
+export interface CtaExtras {
+  style?: "inline" | "popup_form" | "popup_calendar" | "dual" | "sticky_desktop" | "floating_mobile";
+  /** "dual" style's secondary button. */
+  secondaryLabel?: string;
+  secondaryHref?: string;
+  /** "popup_calendar" style — opens this sub-account's booking page in the
+   *  modal. Slug only (not a full URL) — the renderer builds
+   *  /b/[subAccountId]/[slug] itself so this stays portable across a
+   *  custom-domain deploy without the AI/operator needing to know the URL
+   *  shape. */
+  bookingPageSlug?: string;
+}
 
 export interface HeroConfig {
   eyebrow?: string;
@@ -48,11 +71,14 @@ export interface HeroConfig {
   mediaUrl?: string;
   ctaLabel?: string;
   ctaHref?: string;
-  /** "split" places media beside the text (desktop) instead of below it —
-   *  the default "centered" layout reads templated at scale; split is the
-   *  standard modern-funnel pattern. Falls back to centered when no media
-   *  is set, since split has nothing to put in the second column. */
-  layout?: "centered" | "split";
+  /** "split" places media beside the text (desktop) instead of below it.
+   *  "background_image"/"founder_image" reuse the same mediaUrl as a
+   *  full-bleed backdrop or a small framed portrait respectively — no new
+   *  media field needed, just a different treatment of the existing one.
+   *  Falls back to centered when no media is set (split/background_image/
+   *  founder_image all have nothing to render without it). */
+  layout?: "centered" | "split" | "background_image" | "founder_image";
+  cta?: CtaExtras;
 }
 
 export interface ProofStripConfig {
@@ -72,6 +98,7 @@ export interface OfferConfig {
   ctaLabel: string;
   /** External checkout/booking link — only used when formId is null. */
   ctaHref?: string;
+  cta?: CtaExtras;
 }
 
 export interface StoryConfig {
@@ -90,6 +117,7 @@ export interface CtaBannerConfig {
   subtext?: string;
   ctaLabel: string;
   ctaHref: string;
+  cta?: CtaExtras;
 }
 
 export interface CountdownConfig {
@@ -266,6 +294,36 @@ export interface TestimonialsConfig {
   items: { quote: string; name: string; detail?: string }[];
 }
 
+/** Real numbers ONLY — same "renders nothing unless supplied" discipline
+ *  as TestimonialsConfig. A fabricated stat ("10,000+ customers served")
+ *  is exactly the kind of fake social proof this whole system exists to
+ *  prevent, so this section is never AI-populated without real evidence. */
+export interface StatsConfig {
+  items: { value: string; label: string }[];
+}
+
+/** A single highlighted statement — a pull-quote/emphasis of something
+ *  already established elsewhere on the page, not a new factual claim, so
+ *  it's safe for the AI to write (unlike Stats/Testimonials). */
+export interface CalloutConfig {
+  text: string;
+  tone?: "info" | "highlight";
+}
+
+/** Multiple people — distinct from StoryConfig, which is one operator's
+ *  own narrative. Useful for agencies/teams; photos are optional (a real
+ *  headshot only, never a stock/fabricated one). */
+export interface TeamConfig {
+  headline?: string;
+  members: { name: string; role: string; photoUrl?: string; bio?: string }[];
+}
+
+/** Alternating (or single) image+text blocks — a versatile layout reused
+ *  across genres for "how it works in detail," feature deep-dives, etc. */
+export interface ImageTextConfig {
+  blocks: { headline: string; text: string; imageUrl?: string; imagePosition: "left" | "right" }[];
+}
+
 export type FunnelSectionConfig =
   | HeroConfig
   | ProofStripConfig
@@ -286,7 +344,11 @@ export type FunnelSectionConfig =
   | BeforeAfterConfig
   | IncludedConfig
   | ComparisonConfig
-  | TestimonialsConfig;
+  | TestimonialsConfig
+  | StatsConfig
+  | CalloutConfig
+  | TeamConfig
+  | ImageTextConfig;
 
 export interface FunnelSection {
   id: string;
@@ -305,6 +367,13 @@ export interface FunnelDoc {
   theme: "light" | "dark";
   /** Hex string with leading #. */
   accentColor: string;
+  /** Landing Page Design System (RC 1.1) — optional so every pre-existing
+   *  funnel (created before this shipped) keeps rendering exactly as
+   *  before: undefined resolves to the "classic" pack (today's plain
+   *  white-background rendering, zero visual change). Set at creation by
+   *  Zeno's design-pack selection or an operator override; editable
+   *  afterward in the builder. */
+  designPack?: import("@/lib/funnels/design-packs").DesignPackId;
   sections: FunnelSection[];
   /** Undefined/"standalone" = every existing funnel — appears in the main
    *  Funnels list. "upsell"/"downsell" = a post-purchase chain step,

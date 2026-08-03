@@ -1,7 +1,7 @@
 import { CheckCircle2 } from "lucide-react";
-import { PublicForm } from "@/components/forms/public-form";
 import type { OfferConfig } from "@/types/funnels";
 import type { LeadForm } from "@/types/forms";
+import { CtaButton } from "./cta-button";
 
 function formatPrice(cents: number | null | undefined): string | null {
   if (cents === null || cents === undefined) return null;
@@ -17,11 +17,13 @@ export function OfferSection({
   config,
   accentColor,
   forms,
+  subAccountId,
 }: {
   config: OfferConfig;
   accentColor: string;
   theme: "light" | "dark";
   forms: Record<string, LeadForm>;
+  subAccountId?: string;
 }) {
   const price = formatPrice(config.priceCents);
   const strikePrice = formatPrice(config.strikethroughPriceCents);
@@ -93,22 +95,15 @@ export function OfferSection({
         )}
 
         <div className="mt-7">
-          {form ? (
-            <PublicForm form={form} />
-          ) : (
-            <a
-              href={config.ctaHref || "#"}
-              className="block rounded-xl px-6 py-4 text-center text-base font-bold text-white shadow-[0_8px_24px_-6px_var(--accent-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-6px_var(--accent-shadow)]"
-              style={
-                {
-                  backgroundColor: accentColor,
-                  "--accent-shadow": `${accentColor}80`,
-                } as React.CSSProperties
-              }
-            >
-              {config.ctaLabel}
-            </a>
-          )}
+          <CtaButton
+            label={config.ctaLabel}
+            href={config.ctaHref}
+            form={form}
+            cta={config.cta}
+            accentColor={accentColor}
+            subAccountId={subAccountId}
+            className="block w-full rounded-xl px-6 py-4 text-center text-base font-bold text-white shadow-[0_8px_24px_-6px_var(--accent-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-6px_var(--accent-shadow)]"
+          />
         </div>
       </div>
     </section>

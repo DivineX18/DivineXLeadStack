@@ -5,6 +5,7 @@ import { getAdminDb } from "@/lib/firebase/admin";
 import { getStripeForTenant } from "@/lib/stripe/tenant-server";
 import { materializeCheckoutPrice } from "@/lib/funnels/materialize-price";
 import { buildFrameworkSections } from "@/lib/funnels/frameworks";
+import { resolveDesignPack, type DesignPackId } from "@/lib/funnels/design-packs";
 import type {
   CheckoutConfig,
   FunnelDoc,
@@ -97,10 +98,21 @@ export async function createFunnelServerSide(opts: {
    *  FUNNEL_FRAMEWORKS. Ignored for chain steps. Omitted/invalid stages
    *  fall back to that stage's recommended layout. */
   stageOverrides?: Record<string, FunnelSection["type"]>;
+  /** Landing Page Design System (RC 1.1) pack — when set, its
+   *  defaultAccentColor/defaultTheme take priority over the genre's plain
+   *  DEFAULT_ACCENT/DEFAULT_THEME (a design pack's whole point is a
+   *  coherent, audience-matched palette). Omitted = "classic", today's
+   *  genre-only defaults, unchanged. */
+  designPack?: DesignPackId;
 }): Promise<string> {
   const db = getAdminDb();
   const subSnap = await db.doc(`subAccounts/${opts.subAccountId}`).get();
   const agencyId = (subSnap.data()?.agencyId as string) ?? "";
+  // "classic" is the do-nothing default (same rendering as no pack at all)
+  // — treat it like "no preference" so an AI-authored funnel with no real
+  // design signal stays structurally identical to one an operator built by
+  // hand, rather than gaining a designPack field that changes nothing.
+  const pack = opts.designPack && opts.designPack !== "classic" ? resolveDesignPack(opts.designPack) : null;
 
   const isChainStep = !!opts.chainRole;
   const seed: Seed = isChainStep
@@ -132,8 +144,9 @@ export async function createFunnelServerSide(opts: {
     name: opts.name.trim() || "Untitled funnel",
     genre: opts.genre,
     status: "draft",
-    theme: isChainStep ? "light" : DEFAULT_THEME[opts.genre],
-    accentColor: isChainStep ? "#2563eb" : DEFAULT_ACCENT[opts.genre],
+    theme: isChainStep ? "light" : (pack?.defaultTheme ?? DEFAULT_THEME[opts.genre]),
+    accentColor: isChainStep ? "#2563eb" : (pack?.defaultAccentColor ?? DEFAULT_ACCENT[opts.genre]),
+    ...(pack && !isChainStep ? { designPack: pack.id } : {}),
     sections: seed.sections,
     chainRole: opts.chainRole ?? "standalone",
     parentFunnelId: opts.parentFunnelId ?? null,
@@ -149,6 +162,7 @@ export interface FunnelPatch {
   status?: FunnelStatus;
   theme?: "light" | "dark";
   accentColor?: string;
+  designPack?: DesignPackId;
   sections?: FunnelSection[];
 }
 
@@ -313,6 +327,7 @@ export async function updateFunnelServerSide(opts: {
   if (patch.status !== undefined) write.status = patch.status;
   if (patch.theme !== undefined) write.theme = patch.theme;
   if (patch.accentColor !== undefined) write.accentColor = patch.accentColor;
+  if (patch.designPack !== undefined) write.designPack = patch.designPack;
   if (patch.sections !== undefined) {
     await assertNoChainCycle(opts.subAccountId, opts.funnelId, patch.sections);
     const oldData = snap.data() as Omit<FunnelDoc, "id">;

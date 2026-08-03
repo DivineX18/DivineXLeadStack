@@ -61,16 +61,16 @@ function check(label: string, ok: boolean, detail?: string) {
 {
   const sections = buildFrameworkSections("webinar");
   check(
-    "1c. webinar default sequence matches the spec exactly",
-    sections.map((s) => s.type).join(",") === "hero,benefits_grid,agenda,story,faq,offer",
+    "1c. webinar default sequence matches the spec exactly (RC 1.1: Agenda before Benefits)",
+    sections.map((s) => s.type).join(",") === "hero,agenda,benefits_grid,story,faq,offer",
     sections.map((s) => s.type).join(","),
   );
 }
 {
   const sections = buildFrameworkSections("application");
   check(
-    "1d. application default sequence matches the spec exactly",
-    sections.map((s) => s.type).join(",") === "hero,benefits_grid,agenda,before_after,offer",
+    "1d. application default sequence matches the spec exactly (RC 1.1: adds Who This Isn't For)",
+    sections.map((s) => s.type).join(",") === "hero,benefits_grid,included,agenda,before_after,offer",
     sections.map((s) => s.type).join(","),
   );
 }
@@ -95,11 +95,32 @@ function check(label: string, ok: boolean, detail?: string) {
   );
 }
 {
-  // guarantee stage's real alternates are ["testimonials"] — "comparison" isn't one.
+  // tripwire's "guarantee" stage (RC 1.1 sales-page framework) has no
+  // alternates at all — "comparison" must be rejected.
   const sections = buildFrameworkSections("tripwire", { guarantee: "comparison" });
   check(
     "2c. An override to a NON-allowed alternate is rejected (falls back to default)",
     sections.some((s) => s.type === "guarantee") && !sections.some((s) => s.type === "comparison"),
+    sections.map((s) => s.type).join(","),
+  );
+}
+{
+  // tripwire's "trust" stage's real alternate is ["testimonials"] — the
+  // Trust Rules default (trust_badges, always safe/generic) only becomes
+  // real testimonials when the operator/model has real quotes.
+  const sections = buildFrameworkSections("tripwire", { trust_badges: "testimonials" });
+  check(
+    "2d. tripwire's trust stage swaps to testimonials via its real alternate",
+    sections.some((s) => s.type === "testimonials") && !sections.some((s) => s.type === "trust_badges"),
+    sections.map((s) => s.type).join(","),
+  );
+}
+{
+  const sections = buildFrameworkSections("tripwire");
+  check(
+    "2e. tripwire's enriched sales-page sequence matches spec (RC 1.1)",
+    sections.map((s) => s.type).join(",") ===
+      "hero,problem_solution,callout,benefits_grid,trust_badges,offer,guarantee,faq",
     sections.map((s) => s.type).join(","),
   );
 }
@@ -232,7 +253,7 @@ try {
     headline: "Test Anti-Fabrication",
     bullets: ["Real benefit one"],
     price_cents: 4700,
-    layout_choices: { guarantee: "testimonials" },
+    layout_choices: { trust_badges: "testimonials" },
     stage_content: [{ section_type: "testimonials", items: [] }],
   });
   check("4g. Tripwire-with-testimonials-override validates", tripwireValidated.ok);
@@ -247,8 +268,8 @@ try {
       !!testimonials && (testimonials.config.items as unknown[]).length === 0,
       JSON.stringify(testimonials?.config),
     );
-    const proofStrip = sections.find((s) => s.type === "proof_strip");
-    check("4i. proof_strip is never in the resolved sections for tripwire's guarantee override (only guarantee/testimonials compete for that slot)", !proofStrip);
+    const trustBadges = sections.find((s) => s.type === "trust_badges");
+    check("4i. trust_badges is never in the resolved sections once overridden to testimonials (only one of the two competes for that slot)", !trustBadges);
   }
 } finally {
   for (const id of createdFunnelIds) await db.doc(`funnels/${id}`).delete().catch(() => {});

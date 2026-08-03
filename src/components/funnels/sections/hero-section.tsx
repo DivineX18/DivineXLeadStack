@@ -1,5 +1,6 @@
-import { Play } from "lucide-react";
+import { Play, User } from "lucide-react";
 import type { HeroConfig } from "@/types/funnels";
+import { CtaButton } from "./cta-button";
 
 function MediaBlock({
   config,
@@ -49,12 +50,15 @@ function MediaBlock({
 export function HeroSection({
   config,
   accentColor,
+  subAccountId,
 }: {
   config: HeroConfig;
   accentColor: string;
+  theme?: "light" | "dark";
+  subAccountId?: string;
 }) {
   const hasMedia = config.mediaType !== "none" && !!config.mediaUrl;
-  const isSplit = config.layout === "split" && hasMedia;
+  const layout = hasMedia ? (config.layout ?? "centered") : "centered";
 
   const eyebrow = config.eyebrow && (
     <p
@@ -69,22 +73,103 @@ export function HeroSection({
     </p>
   );
 
-  const cta = config.ctaLabel && config.ctaHref && (
-    <a
-      href={config.ctaHref}
-      className="mt-10 inline-flex items-center gap-2 rounded-xl px-9 py-4 text-base font-bold text-white shadow-[0_8px_24px_-6px_var(--accent-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-6px_var(--accent-shadow)]"
-      style={
-        {
-          backgroundColor: accentColor,
-          "--accent-shadow": `${accentColor}80`,
-        } as React.CSSProperties
-      }
-    >
-      {config.ctaLabel}
-    </a>
+  const cta = config.ctaLabel && (
+    <div className="mt-10">
+      <CtaButton
+        label={config.ctaLabel}
+        href={config.ctaHref}
+        cta={config.cta}
+        accentColor={accentColor}
+        subAccountId={subAccountId}
+      />
+    </div>
   );
 
-  if (isSplit) {
+  if (layout === "background_image" && config.mediaUrl) {
+    return (
+      <section className="relative overflow-hidden px-4 py-24 sm:py-32">
+        {config.mediaType === "video" ? (
+          <video
+            src={config.mediaUrl}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={config.mediaUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        )}
+        <div className="absolute inset-0 bg-black/55" />
+        <div className="relative mx-auto max-w-3xl text-center text-white">
+          {eyebrow}
+          <h1
+            className="text-balance font-extrabold tracking-tight"
+            style={{ fontSize: "clamp(2.25rem, 6vw, 4.25rem)", lineHeight: 1.08 }}
+          >
+            {config.headline}
+          </h1>
+          {config.subheadline && (
+            <p
+              className="mx-auto mt-5 max-w-xl leading-relaxed opacity-90"
+              style={{ fontSize: "clamp(1.05rem, 2vw, 1.25rem)" }}
+            >
+              {config.subheadline}
+            </p>
+          )}
+          {cta}
+        </div>
+      </section>
+    );
+  }
+
+  if (layout === "founder_image") {
+    return (
+      <section
+        className="relative overflow-hidden px-4 pb-16 pt-20 sm:pt-28"
+        style={{
+          backgroundImage: `linear-gradient(180deg, ${accentColor}22 0%, ${accentColor}0a 45%, transparent 80%), radial-gradient(ellipse 70% 50% at 50% 0%, ${accentColor}30, transparent)`,
+        }}
+      >
+        <div className="relative mx-auto max-w-2xl text-center">
+          {config.mediaUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={config.mediaUrl}
+              alt=""
+              className="mx-auto mb-6 h-20 w-20 rounded-full object-cover shadow-lg ring-4 ring-white/40 dark:ring-black/30"
+            />
+          ) : (
+            <span
+              className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full shadow-lg"
+              style={{ backgroundColor: `${accentColor}1a`, color: accentColor }}
+            >
+              <User className="h-9 w-9" />
+            </span>
+          )}
+          {eyebrow}
+          <h1
+            className="text-balance font-extrabold tracking-tight"
+            style={{ fontSize: "clamp(2rem, 5.5vw, 3.5rem)", lineHeight: 1.1 }}
+          >
+            {config.headline}
+          </h1>
+          {config.subheadline && (
+            <p
+              className="mx-auto mt-5 max-w-xl leading-relaxed opacity-70"
+              style={{ fontSize: "clamp(1.05rem, 2vw, 1.25rem)" }}
+            >
+              {config.subheadline}
+            </p>
+          )}
+          {cta}
+        </div>
+      </section>
+    );
+  }
+
+  if (layout === "split") {
     return (
       <section
         className="relative overflow-hidden px-4 pb-16 pt-20 sm:pt-28"
