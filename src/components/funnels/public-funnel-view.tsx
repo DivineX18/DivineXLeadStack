@@ -130,6 +130,14 @@ export function PublicFunnelView({
   const fg = dark ? "#f5f5f5" : "#0a0a0a";
   const tokens = resolveEffectiveDesignTokens(funnel);
   const fontStack = tokens.headingFont === "serif" ? SERIF_FONT_STACK : SYSTEM_FONT_STACK;
+  // A sticky/floating CTA is a fixed-position bar overlaying the bottom of
+  // the viewport — without this, it silently covers the last section's
+  // content (FAQ answers, fine print) on short pages. Cheap to check
+  // upfront and pad for, rather than leaving it to chance per-funnel.
+  const hasFixedBottomCta = funnel.sections.some((s) => {
+    const cta = (s.config as { cta?: { style?: string } }).cta;
+    return cta?.style === "sticky_desktop" || cta?.style === "floating_mobile";
+  });
 
   return (
     <>
@@ -147,7 +155,7 @@ export function PublicFunnelView({
             "--flow-radius": RADIUS_TO_PX[tokens.borderRadiusStyle] ?? "0.75rem",
           } as React.CSSProperties
         }
-        className="min-h-screen"
+        className={`min-h-screen${hasFixedBottomCta ? " pb-24" : ""}`}
       >
         {funnel.logoUrl && (
           <div className="flex justify-center px-4 pt-8">

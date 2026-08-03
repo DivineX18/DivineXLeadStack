@@ -43,7 +43,7 @@ export function PhotoGallerySection({
               <figure key={i} className="overflow-hidden" style={{ borderRadius: "var(--flow-radius, 1rem)" }}>
                 <div className="relative">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img.url} alt={img.caption ?? ""} className="aspect-[4/3] w-full object-cover" />
+                  <img src={img.url} alt={img.caption ?? ""} loading="lazy" className="aspect-[4/3] w-full object-cover" />
                   <span
                     className="absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide text-white"
                     style={{ backgroundColor: accentColor }}
@@ -63,6 +63,7 @@ export function PhotoGallerySection({
                 <img
                   src={img.url}
                   alt={img.caption ?? ""}
+                  loading="lazy"
                   className="aspect-[4/3] w-full object-cover shadow-sm"
                   style={{ borderRadius: "var(--flow-radius, 1rem)" }}
                 />
@@ -78,6 +79,7 @@ export function PhotoGallerySection({
                 <img
                   src={img.url}
                   alt={img.caption ?? ""}
+                  loading="lazy"
                   className="w-full object-cover shadow-sm"
                   style={{ borderRadius: "var(--flow-radius, 1rem)" }}
                 />
@@ -93,6 +95,7 @@ export function PhotoGallerySection({
                 <img
                   src={img.url}
                   alt={img.caption ?? ""}
+                  loading="lazy"
                   className="aspect-square w-full object-cover shadow-sm"
                   style={{ borderRadius: "var(--flow-radius, 1rem)" }}
                 />

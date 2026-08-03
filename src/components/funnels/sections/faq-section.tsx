@@ -22,10 +22,11 @@ export function FaqSection({
           {config.items.map((item, i) => (
             <details
               key={i}
-              className="group rounded-2xl border bg-[var(--card-bg)] p-5 shadow-sm transition-shadow open:shadow-md"
+              className="group border bg-[var(--card-bg)] p-5 shadow-sm transition-shadow open:shadow-md"
               style={
                 {
                   "--card-bg": "color-mix(in oklab, currentColor 2%, transparent)",
+                  borderRadius: "var(--flow-radius, 1rem)",
                 } as React.CSSProperties
               }
             >

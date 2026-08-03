@@ -12,7 +12,10 @@ export function ProblemSolutionSection({
   return (
     <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
       <div className="mx-auto grid max-w-5xl gap-5 sm:grid-cols-2">
-        <div className="rounded-2xl border border-black/[0.06] bg-black/[0.02] p-7 dark:border-white/[0.08] dark:bg-white/[0.03]">
+        <div
+          className="border border-black/[0.06] bg-black/[0.02] p-7 dark:border-white/[0.08] dark:bg-white/[0.03]"
+          style={{ borderRadius: "var(--flow-radius, 1rem)" }}
+        >
           <span className="mb-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/[0.06] dark:bg-white/[0.08]">
             <X className="h-4 w-4 opacity-60" />
           </span>
@@ -27,8 +30,8 @@ export function ProblemSolutionSection({
           <p className="mt-3 text-sm leading-relaxed opacity-75">{config.problemText}</p>
         </div>
         <div
-          className="rounded-2xl border p-7"
-          style={{ borderColor: `${accentColor}33`, backgroundColor: `${accentColor}0d` }}
+          className="border p-7"
+          style={{ borderColor: `${accentColor}33`, backgroundColor: `${accentColor}0d`, borderRadius: "var(--flow-radius, 1rem)" }}
         >
           <span
             className="mb-4 flex h-9 w-9 items-center justify-center rounded-full"

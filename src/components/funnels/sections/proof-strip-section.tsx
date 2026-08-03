@@ -45,7 +45,7 @@ export function ProofStripSection({ config }: { config: ProofStripConfig }) {
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-x-12 gap-y-6 opacity-60 grayscale transition-opacity hover:opacity-80">
           {config.logos.map((logo, i) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={i} src={logo.url} alt={logo.alt} className="h-6 sm:h-7" />
+            <img key={i} src={logo.url} alt={logo.alt} loading="lazy" className="h-6 sm:h-7" />
           ))}
         </div>
       </section>

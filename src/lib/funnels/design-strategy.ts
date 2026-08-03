@@ -458,19 +458,4 @@ export function resolveEffectiveDesignTokens(funnel: {
   return renderTokensFromPack(resolveDesignPack(funnel.designPack));
 }
 
-/** Maps a legacy DesignPackId to its closest Phase-2 archetype — used so a
- *  model call that still sends the old `design_pack` param (backward
- *  compatible tool schema) gets a sensible archetype-equivalent rather than
- *  silently losing the new axes. Not used for rendering (designPack alone
- *  still renders fine via the fallback branch above). */
-export const LEGACY_PACK_TO_ARCHETYPE: Record<string, VisualArchetype> = {
-  classic: "professional_enterprise",
-  executive: "professional_enterprise",
-  bold: "agency_creative",
-  premium: "luxury_premium",
-  startup: "saas_technology",
-  local_business: "local_service",
-  wellness: "wellness",
-};
-
 export const VISUAL_ARCHETYPE_IDS = Object.keys(VISUAL_ARCHETYPES) as VisualArchetype[];

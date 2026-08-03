@@ -14,8 +14,8 @@ export function CalloutSection({
   return (
     <section className="px-4 py-10">
       <div
-        className="mx-auto flex max-w-2xl items-start gap-4 rounded-2xl border p-7"
-        style={{ borderColor: `${accentColor}33`, backgroundColor: `${accentColor}0d` }}
+        className="mx-auto flex max-w-2xl items-start gap-4 border p-7"
+        style={{ borderColor: `${accentColor}33`, backgroundColor: `${accentColor}0d`, borderRadius: "var(--flow-radius, 1rem)" }}
       >
         <Icon className="mt-1 h-6 w-6 shrink-0" style={{ color: accentColor }} />
         <p

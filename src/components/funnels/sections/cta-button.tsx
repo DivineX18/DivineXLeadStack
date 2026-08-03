@@ -57,10 +57,11 @@ export function CtaButton({
   const buttonStyle = {
     backgroundColor: accentColor,
     "--accent-shadow": `${accentColor}80`,
+    borderRadius: "var(--flow-radius, 0.75rem)",
   } as React.CSSProperties;
   const btnClass =
     (className ??
-      "inline-flex items-center justify-center gap-2 rounded-xl px-9 py-4 text-base font-bold text-white shadow-[0_8px_24px_-6px_var(--accent-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-6px_var(--accent-shadow)]") +
+      "inline-flex items-center justify-center gap-2 px-9 py-4 text-base font-bold text-white shadow-[0_8px_24px_-6px_var(--accent-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-6px_var(--accent-shadow)]") +
     pulseClass;
 
   const openModal = () => setModalOpen(true);
@@ -99,8 +100,8 @@ export function CtaButton({
   const secondaryButton = style === "dual" && cta?.secondaryLabel && cta?.secondaryHref && (
     <a
       href={cta.secondaryHref}
-      className="inline-flex items-center justify-center rounded-xl border px-9 py-4 text-base font-bold transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.06]"
-      style={{ borderColor: `${accentColor}55`, color: accentColor }}
+      className="inline-flex items-center justify-center border px-9 py-4 text-base font-bold transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.06]"
+      style={{ borderColor: `${accentColor}55`, color: accentColor, borderRadius: "var(--flow-radius, 0.75rem)" }}
     >
       {cta.secondaryLabel}
     </a>
@@ -126,7 +127,7 @@ export function CtaButton({
         <div className="grid sm:grid-cols-2">
           <div className="hidden sm:block">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={cta.popupImageUrl} alt="" className="h-full w-full object-cover" />
+            <img src={cta.popupImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
           </div>
           <div className="p-6 sm:p-7">
             <PublicForm form={form} onSuccess={closeAfterSuccess} />
@@ -178,8 +179,13 @@ export function CtaButton({
 
       {style === "sticky_desktop" && (
         <div
-          className="fixed inset-x-0 bottom-0 z-40 hidden border-t bg-[var(--card-bg)] px-4 py-3 backdrop-blur sm:flex sm:items-center sm:justify-center"
-          style={{ "--card-bg": "color-mix(in oklab, currentColor 4%, transparent)" } as React.CSSProperties}
+          className="fixed inset-x-0 bottom-0 z-40 hidden border-t bg-[var(--card-bg)] px-4 pt-3 backdrop-blur sm:flex sm:items-center sm:justify-center"
+          style={
+            {
+              "--card-bg": "color-mix(in oklab, currentColor 4%, transparent)",
+              paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))",
+            } as React.CSSProperties
+          }
         >
           {cta?.style === "phone" && cta?.phoneNumber ? (
             <a href={`tel:${cta.phoneNumber}`} className={btnClass} style={buttonStyle}>
@@ -197,7 +203,10 @@ export function CtaButton({
         </div>
       )}
       {style === "floating_mobile" && (
-        <div className="fixed inset-x-4 bottom-4 z-40 sm:hidden">
+        <div
+          className="fixed inset-x-4 z-40 sm:hidden"
+          style={{ bottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
+        >
           {cta?.style === "phone" && cta?.phoneNumber ? (
             <a
               href={`tel:${cta.phoneNumber}`}
@@ -220,7 +229,14 @@ export function CtaButton({
       )}
 
       {(style === "popup_form" || style === "popup_calendar") && (
-        <Modal open={modalOpen} onClose={closeModal} theme={pageTheme} accentColor={accentColor} maxWidthClassName={modalWidth}>
+        <Modal
+          open={modalOpen}
+          onClose={closeModal}
+          theme={pageTheme}
+          accentColor={accentColor}
+          maxWidthClassName={modalWidth}
+          ariaLabel={cta?.popupHeadline || label}
+        >
           {modalBody()}
         </Modal>
       )}

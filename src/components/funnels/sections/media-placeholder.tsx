@@ -19,9 +19,13 @@ export function MediaPlaceholder({
   return (
     <div
       className={`flex items-center justify-center gap-2 border-2 border-dashed text-center text-xs font-semibold opacity-60 ${
-        shape === "circle" ? "rounded-full" : "rounded-xl"
+        shape === "circle" ? "rounded-full" : ""
       } ${className ?? ""}`}
-      style={{ borderColor: `${accentColor}55`, color: accentColor }}
+      style={{
+        borderColor: `${accentColor}55`,
+        color: accentColor,
+        ...(shape === "circle" ? {} : { borderRadius: "var(--flow-radius, 0.75rem)" }),
+      }}
     >
       <span className="px-2">{label}</span>
     </div>

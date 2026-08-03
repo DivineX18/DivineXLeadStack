@@ -16,11 +16,12 @@ export function GuaranteeSection({
   return (
     <section className="px-4 py-10">
       <div
-        className="mx-auto flex max-w-xl items-start gap-4 rounded-2xl border bg-[var(--card-bg)] p-6 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.25)] sm:items-center sm:p-7"
+        className="mx-auto flex max-w-xl items-start gap-4 border bg-[var(--card-bg)] p-6 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.25)] sm:items-center sm:p-7"
         style={
           {
             "--card-bg": "color-mix(in oklab, currentColor 3%, transparent)",
             borderColor: `${accentColor}26`,
+            borderRadius: "var(--flow-radius, 1rem)",
           } as React.CSSProperties
         }
       >

@@ -1,5 +1,6 @@
 import { User } from "lucide-react";
 import type { TeamConfig } from "@/types/funnels";
+import { MediaPlaceholder } from "./media-placeholder";
 
 export function TeamSection({
   config,
@@ -30,9 +31,12 @@ export function TeamSection({
                 <img
                   src={m.photoUrl}
                   alt=""
+                  loading="lazy"
                   className="mx-auto h-24 w-24 rounded-full object-cover shadow-md ring-2"
                   style={{ borderColor: accentColor } as React.CSSProperties}
                 />
+              ) : m.photoPlaceholderLabel ? (
+                <MediaPlaceholder label={m.photoPlaceholderLabel} accentColor={accentColor} shape="circle" className="mx-auto h-24 w-24" />
               ) : (
                 <span
                   className="mx-auto flex h-24 w-24 items-center justify-center rounded-full"

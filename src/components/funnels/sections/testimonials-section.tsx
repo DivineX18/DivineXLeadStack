@@ -21,10 +21,11 @@ export function TestimonialsSection({
           {config.items.map((t, i) => (
             <div
               key={i}
-              className="rounded-2xl border bg-[var(--card-bg)] p-6 shadow-sm ring-1 ring-black/[0.04] dark:ring-white/[0.06]"
+              className="border bg-[var(--card-bg)] p-6 shadow-sm ring-1 ring-black/[0.04] dark:ring-white/[0.06]"
               style={
                 {
                   "--card-bg": "color-mix(in oklab, currentColor 2.5%, transparent)",
+                  borderRadius: "var(--flow-radius, 1rem)",
                 } as React.CSSProperties
               }
             >

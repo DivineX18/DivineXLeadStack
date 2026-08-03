@@ -21,8 +21,8 @@ export function ComparisonSection({
           </h2>
         )}
         <div
-          className="overflow-hidden rounded-2xl border ring-1 ring-black/[0.04] dark:ring-white/[0.06]"
-          style={{ borderColor: `${accentColor}26` }}
+          className="overflow-hidden border ring-1 ring-black/[0.04] dark:ring-white/[0.06]"
+          style={{ borderColor: `${accentColor}26`, borderRadius: "var(--flow-radius, 1rem)" }}
         >
           <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 gap-y-0 bg-[var(--card-bg)] px-5 py-3 text-xs font-bold tracking-wide uppercase opacity-60"
             style={{ "--card-bg": "color-mix(in oklab, currentColor 3%, transparent)" } as React.CSSProperties}

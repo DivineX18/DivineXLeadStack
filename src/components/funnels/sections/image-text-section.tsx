@@ -1,4 +1,5 @@
 import type { ImageTextConfig } from "@/types/funnels";
+import { MediaPlaceholder } from "./media-placeholder";
 
 export function ImageTextSection({
   config,
@@ -32,13 +33,12 @@ export function ImageTextSection({
                 <img
                   src={b.imageUrl}
                   alt=""
-                  className="aspect-[4/3] w-full rounded-2xl object-cover shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] ring-1 ring-black/5 dark:ring-white/10"
+                  loading="lazy"
+                  className="aspect-[4/3] w-full object-cover shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] ring-1 ring-black/5 dark:ring-white/10"
+                  style={{ borderRadius: "var(--flow-radius, 1rem)" }}
                 />
               ) : (
-                <div
-                  className="aspect-[4/3] w-full rounded-2xl"
-                  style={{ background: `linear-gradient(135deg, ${accentColor}33, ${accentColor}0d)` }}
-                />
+                <MediaPlaceholder label="Add an image" accentColor={accentColor} className="aspect-[4/3] w-full" />
               )}
             </div>
           </div>

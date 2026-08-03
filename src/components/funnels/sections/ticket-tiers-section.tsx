@@ -40,7 +40,7 @@ export function TicketTiersSection({
             return (
               <div
                 key={i}
-                className="relative overflow-hidden rounded-2xl border bg-[var(--card-bg)] p-7 shadow-[0_16px_40px_-18px_rgba(0,0,0,0.3)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_24px_55px_-20px_rgba(0,0,0,0.4)]"
+                className="relative overflow-hidden border bg-[var(--card-bg)] p-7 shadow-[0_16px_40px_-18px_rgba(0,0,0,0.3)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_24px_55px_-20px_rgba(0,0,0,0.4)]"
                 style={
                   {
                     "--card-bg": "color-mix(in oklab, currentColor 2%, transparent)",
@@ -48,6 +48,7 @@ export function TicketTiersSection({
                       ? accentColor
                       : "rgba(128,128,128,0.18)",
                     borderWidth: tier.highlighted ? 2 : 1,
+                    borderRadius: "var(--flow-radius, 1rem)",
                   } as unknown as React.CSSProperties
                 }
               >

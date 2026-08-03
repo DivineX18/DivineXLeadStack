@@ -18,6 +18,7 @@ export function Modal({
   accentColor,
   blurBackdrop = true,
   maxWidthClassName = "max-w-lg",
+  ariaLabel,
   children,
 }: {
   open: boolean;
@@ -30,6 +31,9 @@ export function Modal({
   accentColor: string;
   blurBackdrop?: boolean;
   maxWidthClassName?: string;
+  /** Screen-reader label for the dialog — pass the popup's own headline or
+   *  the triggering button's label; falls back to a generic "Dialog". */
+  ariaLabel?: string;
   children: React.ReactNode;
 }) {
   // Kept mounted slightly past `open=false` so the exit transition can
@@ -39,6 +43,8 @@ export function Modal({
   const [rendered, setRendered] = useState(open);
   const [visible, setVisible] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -57,17 +63,50 @@ export function Modal({
     };
   }, [open]);
 
+  // Focus management: remember what had focus before the modal opened (the
+  // CTA button, almost always), move focus INTO the modal on open so a
+  // keyboard/screen-reader user isn't left on a now-obscured trigger, trap
+  // Tab/Shift+Tab within the modal while it's open, and restore focus to
+  // the trigger on close — the same contract Stripe/Calendly-style modals
+  // follow, not a plain unmanaged HTML dialog.
   useEffect(() => {
     if (!rendered) return;
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    const focusTimer = setTimeout(() => {
+      const first = panelRef.current?.querySelector<HTMLElement>(
+        'button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      (first ?? panelRef.current)?.focus();
+    }, 0);
+
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !panelRef.current) return;
+      const focusable = panelRef.current.querySelectorAll<HTMLElement>(
+        'button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     }
     document.addEventListener("keydown", onKeyDown);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
+      clearTimeout(focusTimer);
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = prevOverflow;
+      previouslyFocused.current?.focus?.();
     };
   }, [rendered, onClose]);
 
@@ -86,11 +125,14 @@ export function Modal({
         opacity: visible ? 1 : 0,
       }}
       onClick={onClose}
-      role="dialog"
-      aria-modal="true"
     >
       <div
-        className={`relative max-h-[90vh] w-full overflow-y-auto rounded-2xl shadow-2xl transition-all duration-200 ${maxWidthClassName}`}
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={ariaLabel || "Dialog"}
+        tabIndex={-1}
+        className={`relative max-h-[90vh] w-full overflow-y-auto rounded-2xl shadow-2xl outline-none transition-all duration-200 ${maxWidthClassName}`}
         style={{
           backgroundColor: surfaceBg,
           color: surfaceFg,
@@ -103,7 +145,7 @@ export function Modal({
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-4 top-4 z-10 rounded-full p-1.5 opacity-60 transition-opacity hover:opacity-100"
+          className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full opacity-60 transition-opacity hover:opacity-100"
           style={{ backgroundColor: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)" }}
         >
           <X className="h-4 w-4" />

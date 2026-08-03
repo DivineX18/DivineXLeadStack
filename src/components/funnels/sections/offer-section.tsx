@@ -35,11 +35,12 @@ export function OfferSection({
   return (
     <section className="px-4 py-8">
       <div
-        className="relative mx-auto max-w-md overflow-hidden rounded-2xl border bg-[var(--card-bg)] p-7 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.3)] ring-1 ring-black/[0.04] dark:ring-white/[0.06] sm:p-9"
+        className="relative mx-auto max-w-md overflow-hidden border bg-[var(--card-bg)] p-7 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.3)] ring-1 ring-black/[0.04] dark:ring-white/[0.06] sm:p-9"
         style={
           {
             "--card-bg": "color-mix(in oklab, currentColor 3%, transparent)",
             borderColor: `${accentColor}26`,
+            borderRadius: "var(--flow-radius, 1rem)",
           } as React.CSSProperties
         }
       >
@@ -53,6 +54,7 @@ export function OfferSection({
           <img
             src={config.productImageUrl}
             alt=""
+            loading="lazy"
             className="mx-auto mb-6 max-h-52 rounded-lg shadow-lg"
           />
         )}

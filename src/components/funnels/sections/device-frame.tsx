@@ -28,7 +28,7 @@ export function DeviceFrame({
       />
     ) : (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={mediaUrl} alt="" className="h-full w-full object-cover object-top" />
+      <img src={mediaUrl} alt="" loading="lazy" className="h-full w-full object-cover object-top" />
     )
   ) : (
     <div
