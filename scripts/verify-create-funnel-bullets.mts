@@ -68,6 +68,48 @@ function check(label: string, ok: boolean, detail?: string) {
   );
 }
 
+// 1c. THE LITERAL-BACKSLASH-N BUG (found live 2026-08-02): a real model
+// response wrote the confirmation email body with the literal two-character
+// text "\n" between numbered steps instead of an actual newline — the send
+// dialog showed "...next:\n\n1. We'll review...\n2. We'll reach out..." as
+// visible backslash-n text. Model JSON-escaping slips aren't something a
+// tool description can fully prevent, so validate() now normalizes literal
+// "\n"/"\r\n" sequences to real newlines in every multi-line free-text
+// field. This check reproduces the exact reported shape directly (bypassing
+// whatever the live model happens to do this run) to prove the fix holds
+// regardless of model behavior.
+{
+  const r = cap.validate!({
+    headline: "Test Literal Newline Fix",
+    bullets: ["Real benefit one"],
+    confirmation_email_body:
+      "Thank you for requesting your Leadership Growth Assessment.\\n\\nHere's what happens next:\\n\\n1. We'll review what you shared.\\n2. We'll reach out to schedule a call.",
+  });
+  check(
+    "1c. Literal backslash-n in confirmation_email_body is normalized to a real newline, not left as visible text",
+    r.ok && !(r.args.confirmationEmailBody as string).includes("\\n") && /\n\s*\n/.test(r.args.confirmationEmailBody as string),
+    JSON.stringify(r.ok ? r.args.confirmationEmailBody : r.error),
+  );
+}
+{
+  // Same fix applied to story_paragraphs, guarantee_body, and stage_content
+  // text fields — not just the one field the user happened to report.
+  const r = cap.validate!({
+    headline: "Test Literal Newline Fix — Other Fields",
+    bullets: ["Real benefit one"],
+    story_paragraphs: ["First line.\\nSecond line, same paragraph in the model's mind."],
+    guarantee_headline: "30-Day Guarantee",
+    guarantee_body: "Try it.\\nIf it doesn't work, full refund.",
+  });
+  check(
+    "1d. Literal backslash-n normalized in story_paragraphs and guarantee_body too",
+    r.ok &&
+      !(r.args.storyParagraphs as string[])[0]?.includes("\\n") &&
+      !(r.args.guaranteeBody as string).includes("\\n"),
+    JSON.stringify(r.ok ? { story: r.args.storyParagraphs, guarantee: r.args.guaranteeBody } : r.error),
+  );
+}
+
 // 2. Natural-language benefits with no comma structure still yields at
 //    least the single sentence as one bullet, not an empty array — the
 //    capability doesn't invent structure that isn't there; Zeno's own

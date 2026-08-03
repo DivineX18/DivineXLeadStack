@@ -210,6 +210,22 @@ function str(raw: unknown, key: string): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
+/**
+ * Some model responses write the literal two-character sequence "\n" as
+ * TEXT inside a multi-paragraph string (rather than a real newline
+ * character) — found live 2026-08-02: a generated confirmation email's
+ * numbered list rendered as "...next:\n\n1. We'll review...\n2. We'll
+ * reach out..." with the backslash-n visible as literal text in the send
+ * dialog. This isn't something a tool description can reliably prevent —
+ * it's a JSON-escaping slip on the model's side — so normalize
+ * defensively wherever free text can contain intended line breaks. A
+ * literal "\n"/"\r\n" substring has no legitimate reason to appear in
+ * real prose, so this can't misfire on genuine content.
+ */
+function fixLiteralNewlines(text: string): string {
+  return text.replace(/\\r\\n|\\n/g, "\n");
+}
+
 /** Escape model/user-supplied text before it lands in a bodyHtml field. */
 function escapeHtml(text: string): string {
   return text
@@ -3299,7 +3315,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         confirmation_email_body: {
           type: "string",
           description:
-            "Body of the auto-reply email. Short, human, no fabricated claims. The unsubscribe footer is added automatically — don't write your own.",
+            "Body of the auto-reply email. Short, human, no fabricated claims. Format as 2-4 short paragraphs (1-3 sentences each) SEPARATED BY A REAL BLANK LINE — never one dense block of text, and never a numbered list crammed onto consecutive lines with no space between items; give each step/point its own line with a blank line before and after so it's easy to scan. Use an ACTUAL newline character between paragraphs — never write the literal two-character text \"\\n\" as part of the sentence itself (a real line break is what a blank line in the string produces, not typed backslash-n characters). The unsubscribe footer is added automatically — don't write your own.",
         },
         tag: {
           type: "string",
@@ -3532,13 +3548,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         Array.isArray(storyRaw) ? storyRaw.filter((p): p is string => typeof p === "string") : []
       )
         .slice(0, 4)
-        .map((p) => p.slice(0, 800));
+        .map((p) => fixLiteralNewlines(p).slice(0, 800));
 
       // guarantee_body is required whenever guarantee_headline is set — a
       // headline with no real terms behind it is worse than no guarantee
       // section at all, so treat a missing body as "no guarantee given."
       const guaranteeHeadlineRaw = str(raw, "guarantee_headline").slice(0, 80);
-      const guaranteeBodyRaw = str(raw, "guarantee_body").slice(0, 500);
+      const guaranteeBodyRaw = fixLiteralNewlines(str(raw, "guarantee_body")).slice(0, 500);
       const guaranteeHeadline = guaranteeBodyRaw ? guaranteeHeadlineRaw : "";
       const guaranteeBody = guaranteeHeadlineRaw ? guaranteeBodyRaw : "";
 
@@ -3594,17 +3610,17 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         .map((s) => ({
           sectionType: s1(s, "section_type", "sectionType").slice(0, 40),
           headline: s1(s, "headline", "headline").slice(0, 100),
-          text: s1(s, "text", "text").slice(0, 800),
+          text: fixLiteralNewlines(s1(s, "text", "text")).slice(0, 800),
           secondaryHeadline: s1(s, "secondary_headline", "secondaryHeadline").slice(0, 100),
-          secondaryText: s1(s, "secondary_text", "secondaryText").slice(0, 800),
+          secondaryText: fixLiteralNewlines(s1(s, "secondary_text", "secondaryText")).slice(0, 800),
           videoUrl: s1(s, "video_url", "videoUrl").slice(0, 500),
           items: (Array.isArray(s.items) ? s.items : [])
             .filter((i): i is Record<string, unknown> => !!i && typeof i === "object")
             .slice(0, 8)
             .map((i) => ({
               title: typeof i.title === "string" ? i.title.slice(0, 80) : "",
-              description: typeof i.description === "string" ? i.description.slice(0, 300) : "",
-              quote: typeof i.quote === "string" ? i.quote.slice(0, 500) : "",
+              description: typeof i.description === "string" ? fixLiteralNewlines(i.description).slice(0, 300) : "",
+              quote: typeof i.quote === "string" ? fixLiteralNewlines(i.quote).slice(0, 500) : "",
               name: typeof i.name === "string" ? i.name.slice(0, 60) : "",
               detail: typeof i.detail === "string" ? i.detail.slice(0, 100) : "",
               group: i.group === "before" || i.group === "after" ? i.group : undefined,
@@ -3639,7 +3655,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           faqItems,
           includeCaptureForm: (raw as Record<string, unknown>)?.include_capture_form !== false,
           confirmationEmailSubject: str(raw, "confirmation_email_subject").slice(0, 120),
-          confirmationEmailBody: str(raw, "confirmation_email_body").slice(0, 2000),
+          confirmationEmailBody: fixLiteralNewlines(str(raw, "confirmation_email_body")).slice(0, 2000),
           tag,
           storyParagraphs,
           storyByline: str(raw, "story_byline").slice(0, 60),
