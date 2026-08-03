@@ -25,6 +25,7 @@ export function BenefitsGridSection({
   config,
   accentColor,
   iconPalette,
+  iconStyle,
 }: {
   config: BenefitsGridConfig;
   accentColor: string;
@@ -32,6 +33,10 @@ export function BenefitsGridSection({
    *  card reusing the single accent color. Omitted = monochrome (today's
    *  behavior). */
   iconPalette?: string[];
+  /** "duotone" (default, today's behavior) = tinted bg + colored icon.
+   *  "filled" = solid accent bg + white icon (agency/bold). "outline" = no
+   *  bg, colored icon only (luxury/professional, minimal icon usage). */
+  iconStyle?: "outline" | "duotone" | "filled";
 }) {
   if (config.items.length === 0) return null;
   const cols =
@@ -42,7 +47,7 @@ export function BenefitsGridSection({
         : "sm:grid-cols-2 lg:grid-cols-3";
 
   return (
-    <section className="px-4 py-12">
+    <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
       <div className="mx-auto max-w-5xl">
         {config.headline && (
           <h2
@@ -56,19 +61,26 @@ export function BenefitsGridSection({
           {config.items.map((item, i) => {
             const Icon = ICONS[item.iconType ?? "check"];
             const badgeColor = iconPalette && iconPalette.length > 0 ? iconPalette[i % iconPalette.length] : accentColor;
+            const badgeStyle: React.CSSProperties =
+              iconStyle === "filled"
+                ? { backgroundColor: badgeColor, color: "#fff" }
+                : iconStyle === "outline"
+                  ? { backgroundColor: "transparent", color: badgeColor, boxShadow: `inset 0 0 0 1.5px ${badgeColor}55` }
+                  : { backgroundColor: `${badgeColor}1a`, color: badgeColor };
             return (
               <div
                 key={i}
-                className="rounded-2xl border bg-[var(--card-bg)] p-6 shadow-sm ring-1 ring-black/[0.04] transition-shadow hover:shadow-md dark:ring-white/[0.06]"
+                className="border bg-[var(--card-bg)] p-6 shadow-sm ring-1 ring-black/[0.04] transition-shadow hover:shadow-md dark:ring-white/[0.06]"
                 style={
                   {
                     "--card-bg": "color-mix(in oklab, currentColor 2.5%, transparent)",
+                    borderRadius: "var(--flow-radius, 1rem)",
                   } as React.CSSProperties
                 }
               >
                 <span
                   className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl"
-                  style={{ backgroundColor: `${badgeColor}1a`, color: badgeColor }}
+                  style={badgeStyle}
                 >
                   <Icon className="h-5 w-5" />
                 </span>

@@ -9,7 +9,7 @@ export function StorySection({
 }) {
   if (config.paragraphs.length === 0) return null;
   return (
-    <section className="px-4 py-12">
+    <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
       <div className="mx-auto max-w-xl">
         <div
           className="mb-5 h-px w-12"

@@ -27,7 +27,9 @@ import { StatsSection } from "./sections/stats-section";
 import { CalloutSection } from "./sections/callout-section";
 import { TeamSection } from "./sections/team-section";
 import { ImageTextSection } from "./sections/image-text-section";
-import { resolveDesignPack, backgroundForIndex, type SectionBackground } from "@/lib/funnels/design-packs";
+import { AnimatedSection } from "./sections/animated-section";
+import { backgroundForIndex, type SectionBackground } from "@/lib/funnels/design-packs";
+import { resolveEffectiveDesignTokens } from "@/lib/funnels/design-strategy";
 
 /**
  * Maps a funnel's `sections[]` to its section component, mirroring the
@@ -71,19 +73,22 @@ const SECTION_COMPONENTS: Record<FunnelSectionType, ComponentType<any>> = {
 const SERIF_FONT_STACK = '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif';
 
 /** Section-background wrapper — the "avoid five white sections in a row"
- *  rule. Pure presentation, computed from the pack + section index; no
- *  schema field, so it costs nothing to change per-pack and can't drift
- *  out of sync with stored data. "dark"/"gray" locally invert text color
- *  only when that would actually contrast against the page's own base
- *  theme (kept as a safety net — none of the current packs' rhythms
- *  produce that combination, since a pack's "dark" entries only appear
- *  when the pack's own defaultTheme is already dark). */
+ *  rule. Pure presentation, computed from the resolved tokens + section
+ *  index; no schema field, so it costs nothing to change per-archetype and
+ *  can't drift out of sync with stored data. "dark"/"gray"/"elevated"
+ *  locally invert text color only when that would actually contrast
+ *  against the page's own base theme. */
 function backgroundWrapStyle(bg: SectionBackground, pageDark: boolean, accentColor: string): React.CSSProperties {
   switch (bg) {
     case "white":
       return {};
     case "gray":
       return { backgroundColor: pageDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.025)" };
+    case "elevated":
+      return {
+        backgroundColor: pageDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.02)",
+        boxShadow: pageDark ? "inset 0 1px 0 rgba(255,255,255,0.06)" : "inset 0 1px 0 rgba(0,0,0,0.04)",
+      };
     case "gradient":
       return { backgroundImage: `linear-gradient(180deg, ${accentColor}14 0%, transparent 100%)` };
     case "dark":
@@ -93,6 +98,23 @@ function backgroundWrapStyle(bg: SectionBackground, pageDark: boolean, accentCol
 
 const SYSTEM_FONT_STACK =
   'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+
+/** Vertical section padding per visual-density token — consumed via the
+ *  `--flow-py` custom property every section component's outer <section>
+ *  now reads (see sections/*.tsx). Sections without this token default to
+ *  3rem (today's fixed py-12), so anything not yet wired stays unchanged. */
+const DENSITY_TO_PY: Record<string, string> = {
+  low: "5rem",
+  medium: "3rem",
+  high: "2rem",
+};
+
+/** Border-radius per geometry token — consumed via `--flow-radius`. */
+const RADIUS_TO_PX: Record<string, string> = {
+  square: "0.25rem",
+  soft: "0.75rem",
+  rounded: "1.25rem",
+};
 
 export function PublicFunnelView({
   funnel,
@@ -104,8 +126,8 @@ export function PublicFunnelView({
   const dark = funnel.theme === "dark";
   const bg = dark ? "#0a0a0a" : "#ffffff";
   const fg = dark ? "#f5f5f5" : "#0a0a0a";
-  const pack = resolveDesignPack(funnel.designPack);
-  const fontStack = pack.headingFont === "serif" ? SERIF_FONT_STACK : SYSTEM_FONT_STACK;
+  const tokens = resolveEffectiveDesignTokens(funnel);
+  const fontStack = tokens.headingFont === "serif" ? SERIF_FONT_STACK : SYSTEM_FONT_STACK;
 
   return (
     <>
@@ -114,7 +136,15 @@ export function PublicFunnelView({
        *  same fix the public form page (/f/[formId]) already applies. */}
       <style>{`html, body { background: ${bg} !important; background-color: ${bg} !important; }`}</style>
       <div
-        style={{ background: bg, color: fg, fontFamily: fontStack }}
+        style={
+          {
+            background: bg,
+            color: fg,
+            fontFamily: fontStack,
+            "--flow-py": DENSITY_TO_PY[tokens.visualDensity] ?? "3rem",
+            "--flow-radius": RADIUS_TO_PX[tokens.borderRadiusStyle] ?? "0.75rem",
+          } as React.CSSProperties
+        }
         className="min-h-screen"
       >
         {funnel.logoUrl && (
@@ -126,20 +156,23 @@ export function PublicFunnelView({
         {funnel.sections.map((section, i) => {
           const Component = SECTION_COMPONENTS[section.type];
           if (!Component) return null;
-          const bgStyle = backgroundWrapStyle(backgroundForIndex(pack, i), dark, funnel.accentColor);
+          const bgStyle = backgroundWrapStyle(backgroundForIndex(tokens, i), dark, funnel.accentColor);
           return (
             <div key={section.id} style={bgStyle}>
-              <Component
-                config={section.config}
-                accentColor={funnel.accentColor}
-                theme={funnel.theme}
-                forms={forms}
-                funnelId={funnel.id}
-                sectionId={section.id}
-                subAccountId={funnel.subAccountId}
-                iconPalette={pack.iconPalette}
-                headlineGradient={pack.headlineGradient}
-              />
+              <AnimatedSection level={tokens.animationLevel} index={i}>
+                <Component
+                  config={section.config}
+                  accentColor={funnel.accentColor}
+                  theme={funnel.theme}
+                  forms={forms}
+                  funnelId={funnel.id}
+                  sectionId={section.id}
+                  subAccountId={funnel.subAccountId}
+                  iconPalette={tokens.iconPalette}
+                  headlineGradient={tokens.headlineGradient}
+                  iconStyle={tokens.iconStyle}
+                />
+              </AnimatedSection>
             </div>
           );
         })}

@@ -46,6 +46,14 @@ import type {
   VideoConfig,
 } from "@/types/funnels";
 import { DESIGN_PACKS, type DesignPackId } from "@/lib/funnels/design-packs";
+import {
+  VISUAL_ARCHETYPES,
+  VISUAL_ARCHETYPE_IDS,
+  TYPOGRAPHY_PAIRINGS,
+  resolveDesignStrategy,
+  type VisualArchetype,
+  type DesignStrategy,
+} from "@/lib/funnels/design-strategy";
 
 const GENRE_LABELS: Record<FunnelGenre, string> = {
   lead_magnet: "Lead Magnet",
@@ -159,6 +167,19 @@ export function FunnelBuilder({
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [accentColor, setAccentColor] = useState("#2563eb");
   const [designPack, setDesignPack] = useState<DesignPackId>("classic");
+  // Flow Phase 2 — Design Intelligence. "" = no archetype (legacy
+  // designPack path, the select above stays live). A real archetype id
+  // takes over rendering; the whole strategy is re-resolved through
+  // resolveDesignStrategy() on every change so the UI never sends a
+  // hand-assembled/unvalidated token combination — same discipline as the
+  // server-side PATCH route.
+  const [archetype, setArchetype] = useState<VisualArchetype | "">("");
+  const [paletteId, setPaletteId] = useState("");
+  const [colorMode, setColorMode] = useState<DesignStrategy["colorMode"] | "">("");
+  const [typographyPairing, setTypographyPairing] = useState<DesignStrategy["typographyPairing"] | "">("");
+  const [animationLevel, setAnimationLevel] = useState<DesignStrategy["animationLevel"] | "">("");
+  const [visualDensity, setVisualDensity] = useState<DesignStrategy["visualDensity"] | "">("");
+  const [ctaStrategy, setCtaStrategy] = useState<DesignStrategy["ctaStrategy"] | "">("");
   const [logoUrl, setLogoUrl] = useState("");
   const [sections, setSections] = useState<FunnelSection[]>([]);
   const [saving, setSaving] = useState(false);
@@ -177,6 +198,14 @@ export function FunnelBuilder({
         setTheme(d.funnel.theme);
         setAccentColor(d.funnel.accentColor);
         setDesignPack(d.funnel.designPack ?? "classic");
+        const strategy = d.funnel.designStrategy;
+        setArchetype(strategy?.visualArchetype ?? "");
+        setPaletteId(strategy?.paletteId ?? "");
+        setColorMode(strategy?.colorMode ?? "");
+        setTypographyPairing(strategy?.typographyPairing ?? "");
+        setAnimationLevel(strategy?.animationLevel ?? "");
+        setVisualDensity(strategy?.visualDensity ?? "");
+        setCtaStrategy(strategy?.ctaStrategy ?? "");
         setLogoUrl(d.funnel.logoUrl ?? "");
         setSections(d.funnel.sections);
       }
@@ -217,6 +246,21 @@ export function FunnelBuilder({
   async function save(patchStatus?: "draft" | "published") {
     setSaving(true);
     try {
+      // Re-resolved client-side too (not just server-side) so the "Visual
+      // style" panel's own accent/theme preview and the saved accentColor/
+      // theme fields never drift apart — the PATCH route re-validates this
+      // exact shape regardless, so a forged payload still can't smuggle an
+      // unapproved combination through.
+      const resolvedStrategy = archetype
+        ? resolveDesignStrategy(archetype, {
+            paletteId: paletteId || undefined,
+            colorMode: colorMode || undefined,
+            typographyPairing: typographyPairing || undefined,
+            animationLevel: animationLevel || undefined,
+            visualDensity: visualDensity || undefined,
+            ctaStrategy: ctaStrategy || undefined,
+          })
+        : null;
       const res = await fetch(`/api/sub-accounts/${saId}/funnels/${funnelId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -226,6 +270,7 @@ export function FunnelBuilder({
           theme,
           accentColor,
           designPack,
+          designStrategy: resolvedStrategy,
           logoUrl,
           sections,
         }),
@@ -315,20 +360,141 @@ export function FunnelBuilder({
           </div>
         </div>
         <div className="col-span-2">
-          <label className={labelClass}>Design pack</label>
+          <label className={labelClass}>Visual style</label>
           <select
-            value={designPack}
-            onChange={(e) => setDesignPack(e.target.value as DesignPackId)}
+            value={archetype}
+            onChange={(e) => {
+              const next = e.target.value as VisualArchetype | "";
+              setArchetype(next);
+              // Reset the sub-choices when switching archetype — a
+              // palette/typography id from a DIFFERENT archetype would
+              // just be silently ignored by resolveDesignStrategy anyway,
+              // but starting clean avoids a confusing "selected but not
+              // actually applied" state in the UI.
+              if (next) {
+                setPaletteId("");
+                setColorMode("");
+                setTypographyPairing("");
+                setCtaStrategy("");
+              }
+            }}
             className={fieldClass}
           >
-            {(Object.keys(DESIGN_PACKS) as DesignPackId[]).map((id) => (
+            <option value="">Legacy design pack (below)</option>
+            {VISUAL_ARCHETYPE_IDS.map((id) => (
               <option key={id} value={id}>
-                {DESIGN_PACKS[id].label}
+                {VISUAL_ARCHETYPES[id].label}
               </option>
             ))}
           </select>
-          <p className="mt-1 text-xs text-muted-foreground">{DESIGN_PACKS[designPack].audienceHint}</p>
+          {archetype ? (
+            <p className="mt-1 text-xs text-muted-foreground">{VISUAL_ARCHETYPES[archetype].audienceHint}</p>
+          ) : (
+            <p className="mt-1 text-xs text-muted-foreground">Industry-aware design system — palette, typography, cards, motion, and CTA resolved together. Pick &ldquo;Legacy design pack&rdquo; to use the older single-token system instead.</p>
+          )}
         </div>
+
+        {archetype ? (
+          <>
+            <div>
+              <label className={labelClass}>Palette</label>
+              <select value={paletteId} onChange={(e) => setPaletteId(e.target.value)} className={fieldClass}>
+                <option value="">Default for this style</option>
+                {VISUAL_ARCHETYPES[archetype].palettes.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>Color mode</label>
+              <select
+                value={colorMode}
+                onChange={(e) => setColorMode(e.target.value as DesignStrategy["colorMode"] | "")}
+                className={fieldClass}
+              >
+                <option value="">Default for this palette</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+                <option value="mixed">Mixed</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>Typography</label>
+              <select
+                value={typographyPairing}
+                onChange={(e) => setTypographyPairing(e.target.value as DesignStrategy["typographyPairing"] | "")}
+                className={fieldClass}
+              >
+                <option value="">Default for this style</option>
+                {VISUAL_ARCHETYPES[archetype].typography.map((id) => (
+                  <option key={id} value={id}>
+                    {TYPOGRAPHY_PAIRINGS[id].label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>Animation</label>
+              <select
+                value={animationLevel}
+                onChange={(e) => setAnimationLevel(e.target.value as DesignStrategy["animationLevel"] | "")}
+                className={fieldClass}
+              >
+                <option value="">Default for this style</option>
+                <option value="none">None</option>
+                <option value="minimal">Minimal</option>
+                <option value="moderate">Moderate</option>
+                <option value="expressive">Expressive</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>Density</label>
+              <select
+                value={visualDensity}
+                onChange={(e) => setVisualDensity(e.target.value as DesignStrategy["visualDensity"] | "")}
+                className={fieldClass}
+              >
+                <option value="">Default for this style</option>
+                <option value="low">Low — spacious</option>
+                <option value="medium">Medium</option>
+                <option value="high">High — compact</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>Default CTA</label>
+              <select
+                value={ctaStrategy}
+                onChange={(e) => setCtaStrategy(e.target.value as DesignStrategy["ctaStrategy"] | "")}
+                className={fieldClass}
+              >
+                <option value="">Default for this style</option>
+                {VISUAL_ARCHETYPES[archetype].recommendedCtaStyles.map((id) => (
+                  <option key={id} value={id}>
+                    {id.replace(/_/g, " ")}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        ) : (
+          <div className="col-span-2">
+            <select
+              value={designPack}
+              onChange={(e) => setDesignPack(e.target.value as DesignPackId)}
+              className={fieldClass}
+            >
+              {(Object.keys(DESIGN_PACKS) as DesignPackId[]).map((id) => (
+                <option key={id} value={id}>
+                  {DESIGN_PACKS[id].label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">{DESIGN_PACKS[designPack].audienceHint}</p>
+          </div>
+        )}
+
         <div className="col-span-2">
           <label className={labelClass}>Logo URL (optional)</label>
           <Input
@@ -491,10 +657,30 @@ function SectionFields({
                   <option value="split">Split — media beside text</option>
                   <option value="background_image">Background — full-bleed media, text overlay</option>
                   <option value="founder_image">Founder — small framed photo above text</option>
+                  <option value="browser_mockup">Browser mockup — media in a browser frame</option>
+                  <option value="phone_mockup">Phone mockup — media in a phone frame</option>
                 </select>
               </Field>
             </>
           )}
+          {c.mediaType !== "none" && !c.mediaUrl && (
+            <Field label="Media placeholder label (optional)">
+              <Input
+                value={c.mediaPlaceholderLabel ?? ""}
+                onChange={(e) => onChange({ ...c, mediaPlaceholderLabel: e.target.value })}
+                placeholder="e.g. Add a dashboard screenshot"
+                className="h-9"
+              />
+            </Field>
+          )}
+          <Field label="Bullets (one per line, optional)">
+            <Textarea
+              value={(c.bullets ?? []).join("\n")}
+              onChange={(e) => onChange({ ...c, bullets: linesToArray(e.target.value) })}
+              rows={3}
+              className="text-sm"
+            />
+          </Field>
           <Field label="CTA label (optional)">
             <Input
               value={c.ctaLabel ?? ""}
@@ -509,6 +695,62 @@ function SectionFields({
               className="h-9"
             />
           </Field>
+          <Field label="CTA experience">
+            <select
+              value={c.cta?.style ?? "inline"}
+              onChange={(e) =>
+                onChange({
+                  ...c,
+                  cta: { ...c.cta, style: e.target.value as NonNullable<HeroConfig["cta"]>["style"] },
+                })
+              }
+              className={fieldClass}
+            >
+              <option value="inline">Inline — form/button on the page</option>
+              <option value="popup_form">Popup — opens the form in a modal</option>
+              <option value="popup_calendar">Popup calendar — opens a booking page</option>
+              <option value="dual">Dual — primary + secondary button</option>
+              <option value="sticky_desktop">Sticky (desktop) — always-visible bar</option>
+              <option value="floating_mobile">Floating (mobile) — persistent bottom button</option>
+              <option value="phone">Phone — tel: link</option>
+            </select>
+          </Field>
+          {c.cta?.style === "popup_calendar" && (
+            <Field label="Booking page slug (from /b/[subAccountId]/[slug])">
+              <Input
+                value={c.cta?.bookingPageSlug ?? ""}
+                onChange={(e) => onChange({ ...c, cta: { ...c.cta, bookingPageSlug: e.target.value } })}
+                className="h-9"
+              />
+            </Field>
+          )}
+          {c.cta?.style === "phone" && (
+            <Field label="Phone number (tel: link, e.g. +15551234567)">
+              <Input
+                value={c.cta?.phoneNumber ?? ""}
+                onChange={(e) => onChange({ ...c, cta: { ...c.cta, phoneNumber: e.target.value } })}
+                className="h-9"
+              />
+            </Field>
+          )}
+          {c.cta?.style === "dual" && (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Secondary label">
+                <Input
+                  value={c.cta?.secondaryLabel ?? ""}
+                  onChange={(e) => onChange({ ...c, cta: { ...c.cta, secondaryLabel: e.target.value } })}
+                  className="h-9"
+                />
+              </Field>
+              <Field label="Secondary link">
+                <Input
+                  value={c.cta?.secondaryHref ?? ""}
+                  onChange={(e) => onChange({ ...c, cta: { ...c.cta, secondaryHref: e.target.value } })}
+                  className="h-9"
+                />
+              </Field>
+            </div>
+          )}
         </div>
       );
     }

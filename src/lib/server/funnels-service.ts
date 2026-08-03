@@ -6,6 +6,7 @@ import { getStripeForTenant } from "@/lib/stripe/tenant-server";
 import { materializeCheckoutPrice } from "@/lib/funnels/materialize-price";
 import { buildFrameworkSections } from "@/lib/funnels/frameworks";
 import { resolveDesignPack, type DesignPackId } from "@/lib/funnels/design-packs";
+import { resolveEffectiveDesignTokens, type DesignStrategy } from "@/lib/funnels/design-strategy";
 import type {
   CheckoutConfig,
   FunnelDoc,
@@ -102,8 +103,15 @@ export async function createFunnelServerSide(opts: {
    *  defaultAccentColor/defaultTheme take priority over the genre's plain
    *  DEFAULT_ACCENT/DEFAULT_THEME (a design pack's whole point is a
    *  coherent, audience-matched palette). Omitted = "classic", today's
-   *  genre-only defaults, unchanged. */
+   *  genre-only defaults, unchanged. Superseded by `designStrategy` below
+   *  when both are given. */
   designPack?: DesignPackId;
+  /** Flow Phase 2 — Design Intelligence. When set, takes priority over
+   *  `designPack` for BOTH the stored accent/theme (resolved from the
+   *  strategy's palette below) and the render-time tokens (icon style,
+   *  radius, density, animation — resolved live by resolveEffectiveDesignTokens,
+   *  not stored). Omitted = today's designPack/classic behavior, unchanged. */
+  designStrategy?: DesignStrategy | null;
 }): Promise<string> {
   const db = getAdminDb();
   const subSnap = await db.doc(`subAccounts/${opts.subAccountId}`).get();
@@ -113,6 +121,7 @@ export async function createFunnelServerSide(opts: {
   // design signal stays structurally identical to one an operator built by
   // hand, rather than gaining a designPack field that changes nothing.
   const pack = opts.designPack && opts.designPack !== "classic" ? resolveDesignPack(opts.designPack) : null;
+  const strategyTokens = opts.designStrategy ? resolveEffectiveDesignTokens({ designStrategy: opts.designStrategy }) : null;
 
   const isChainStep = !!opts.chainRole;
   const seed: Seed = isChainStep
@@ -144,9 +153,12 @@ export async function createFunnelServerSide(opts: {
     name: opts.name.trim() || "Untitled funnel",
     genre: opts.genre,
     status: "draft",
-    theme: isChainStep ? "light" : (pack?.defaultTheme ?? DEFAULT_THEME[opts.genre]),
-    accentColor: isChainStep ? "#2563eb" : (pack?.defaultAccentColor ?? DEFAULT_ACCENT[opts.genre]),
-    ...(pack && !isChainStep ? { designPack: pack.id } : {}),
+    theme: isChainStep ? "light" : (strategyTokens?.theme ?? pack?.defaultTheme ?? DEFAULT_THEME[opts.genre]),
+    accentColor: isChainStep
+      ? "#2563eb"
+      : (strategyTokens?.accentColor ?? pack?.defaultAccentColor ?? DEFAULT_ACCENT[opts.genre]),
+    ...(opts.designStrategy && !isChainStep ? { designStrategy: opts.designStrategy } : {}),
+    ...(pack && !opts.designStrategy && !isChainStep ? { designPack: pack.id } : {}),
     sections: seed.sections,
     chainRole: opts.chainRole ?? "standalone",
     parentFunnelId: opts.parentFunnelId ?? null,
@@ -163,6 +175,7 @@ export interface FunnelPatch {
   theme?: "light" | "dark";
   accentColor?: string;
   designPack?: DesignPackId;
+  designStrategy?: DesignStrategy | null;
   logoUrl?: string;
   sections?: FunnelSection[];
 }
@@ -329,6 +342,7 @@ export async function updateFunnelServerSide(opts: {
   if (patch.theme !== undefined) write.theme = patch.theme;
   if (patch.accentColor !== undefined) write.accentColor = patch.accentColor;
   if (patch.designPack !== undefined) write.designPack = patch.designPack;
+  if (patch.designStrategy !== undefined) write.designStrategy = patch.designStrategy;
   if (patch.logoUrl !== undefined) write.logoUrl = patch.logoUrl;
   if (patch.sections !== undefined) {
     await assertNoChainCycle(opts.subAccountId, opts.funnelId, patch.sections);

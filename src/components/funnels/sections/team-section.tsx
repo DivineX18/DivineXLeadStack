@@ -12,7 +12,7 @@ export function TeamSection({
   const cols = config.members.length === 1 ? "sm:grid-cols-1" : config.members.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3";
 
   return (
-    <section className="px-4 py-12">
+    <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
       <div className="mx-auto max-w-4xl">
         {config.headline && (
           <h2

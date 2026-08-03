@@ -10,7 +10,7 @@ export function ProblemSolutionSection({
 }) {
   if (!config.problemText && !config.solutionText) return null;
   return (
-    <section className="px-4 py-12">
+    <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
       <div className="mx-auto grid max-w-5xl gap-5 sm:grid-cols-2">
         <div className="rounded-2xl border border-black/[0.06] bg-black/[0.02] p-7 dark:border-white/[0.08] dark:bg-white/[0.03]">
           <span className="mb-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/[0.06] dark:bg-white/[0.08]">

@@ -10,7 +10,7 @@ export function ImageTextSection({
   if (config.blocks.length === 0) return null;
 
   return (
-    <section className="px-4 py-12">
+    <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
       <div className="mx-auto flex max-w-5xl flex-col gap-16">
         {config.blocks.map((b, i) => (
           <div

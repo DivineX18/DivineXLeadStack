@@ -10,7 +10,7 @@ export function FaqSection({
 }) {
   if (config.items.length === 0) return null;
   return (
-    <section className="px-4 py-12">
+    <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
       <div className="mx-auto max-w-2xl">
         <h2
           className="mb-7 text-balance text-center font-extrabold tracking-tight"

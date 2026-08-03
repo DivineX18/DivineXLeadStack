@@ -15,7 +15,7 @@ export function TestimonialsSection({
   const cols = config.items.length === 1 ? "sm:grid-cols-1" : "sm:grid-cols-2";
 
   return (
-    <section className="px-4 py-12">
+    <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
       <div className="mx-auto max-w-4xl">
         <div className={`grid grid-cols-1 gap-5 ${cols}`}>
           {config.items.map((t, i) => (

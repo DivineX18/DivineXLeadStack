@@ -76,6 +76,20 @@ import {
 import type { FunnelSectionType, HeroConfig, TicketTiersConfig } from "@/types/funnels";
 import type { DesignPackId } from "@/lib/funnels/design-packs";
 import { FUNNEL_FRAMEWORKS } from "@/lib/funnels/frameworks";
+import {
+  VISUAL_ARCHETYPE_IDS,
+  VISUAL_ARCHETYPES,
+  TYPOGRAPHY_PAIRINGS,
+  resolveDesignStrategy,
+  type VisualArchetype,
+  type MediaStrategyId,
+  type ColorMode,
+  type TypographyPairingId,
+  type HeroLayoutId,
+  type AnimationLevel,
+  type VisualDensity,
+  type CtaStrategyId,
+} from "@/lib/funnels/design-strategy";
 import { createFormServerSide } from "@/lib/server/forms-service";
 import {
   createMessageTemplateServerSide,
@@ -3236,7 +3250,17 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     menuLabel: "Create a funnel system for this workspace (page + form + follow-up email + workflow)",
     description:
       "Create a COMPLETE funnel system — not just a landing page — hosted directly on this platform (not the website builder): the funnel page itself, PLUS (when the funnel needs a lead-capture opt-in — most genres besides paid tripwire/vsl offers) a dedicated capture Form, a follow-up email Message Template, and a Workflow that sends it the moment someone submits. Use when the user asks to build/make/create/generate a funnel, landing page, lead magnet page, webinar registration page, application page, or tripwire offer — 'build me a webinar funnel' should produce the whole connected system in one shot, matching what an operator would expect, not just a page they still have to wire up by hand. Everything is created in DRAFT/review state — the funnel is never auto-published, the workflow is never auto-activated — since real money (Stripe) and real emails are on the other side of 'live'. If the user names a reference site, call research_website_reference FIRST and mirror its tone/services WITHOUT copying text. IMPORTANT — write the copy yourself, don't make the user write it: headline, subheadline, bullets, story, and CTA label are all YOUR job as the copywriter, not the user's — never respond with a bare 'a headline is required, what should it be?' question. From whatever the user told you about their business/offer/audience (even a single sentence), write a specific, concrete headline/subheadline/bullets/CTA yourself. The ONLY thing you should ask the user for, if you truly have nothing to go on, is what the business/offer/audience actually IS (e.g. 'What does the business do, and what's the offer?') — never ask them to supply the marketing copy itself. The one exception is testimonials (see story_paragraphs below): those must come from the user or be written as synthesized non-testimonial copy — never invented as if from a real customer. STRATEGY — before writing any copy, silently reason through (do NOT show this reasoning in your reply, just let it inform the copy): who the customer is, what problem/pain they have right now, the outcome they actually want, the objection most likely stopping them from acting, how this offer is positioned against alternatives, and what the offer itself concretely delivers. A senior conversion copywriter does this thinking before typing a single word — your headline/bullets/story/CTA should read like the output of that reasoning, not like a form filled in field-by-field. " +
-      "DESIGN — you are both the conversion strategist AND the landing-page designer. Pick a design_pack that matches the business's audience (or omit for 'classic', the safe default when nothing about the business signals a pack): executive (consultants, healthcare, law, finance, enterprise — clean, white, minimal, blue accents), bold (agencies, creators, marketing, sales — dark sections, bright gradients, large type, high contrast), premium (executive coaching, luxury, high-ticket consulting — cream, serif headings, gold accents, spacious), startup (SaaS/AI/tech — bright gradients, modern, floating-card feel), local_business (dentists, roofing, HVAC, real estate, restaurants — friendly, bright, trust-first, simple), wellness (health, fitness, life coaching, spiritual — soft colors, calming, spacious). The pack sets accent color/theme/typography/section-background rhythm automatically — don't also try to set accent_color when you've picked a real pack, they'd conflict. hero_layout (centered/split/background_image/founder_image) and cta_style (inline/popup_form/dual/sticky_desktop/floating_mobile) are additional choices within a pack — pick what fits (e.g. founder_image for premium/coaching, split for startup with a product screenshot, dual CTA for application funnels offering both 'apply' and 'learn more'). " +
+      "DESIGN — you are both the conversion strategist AND the landing-page designer. This is Phase 2's job, not the user's: NEVER ask what color/font/template/border-radius/layout they want — infer a visual_archetype from the business/audience/offer you already have, and only ask when a real fact is genuinely missing and unsafe to guess (existing brand colors, whether a named person is the founder, whether a testimonial may be published, a video URL, which booking calendar). Pick ONE visual_archetype: " +
+      "local_service (home services, automotive, clinics, contractors, appointment-driven local businesses — warm/high-trust palette, friendly sans, rounded cards, low complexity, minimal motion, phone/booking/estimate CTAs). " +
+      "saas_technology (SaaS, AI, dev tools, platforms, apps — high-contrast light/dark/mixed, controlled gradients, dashboard/browser mockups, modern type, moderate motion, tight geometry). " +
+      "luxury_premium (executive consulting, luxury services, wealth, premium professional services — cream/charcoal/deep-neutral, restrained gold/metallic accents, serif display, editorial imagery, generous whitespace, minimal icons, subtle motion). " +
+      "nonprofit_mission (nonprofits, causes, community/mission-driven programs — story-led, community/impact imagery, human-centered hierarchy, warm-but-credible palette, highly accessible). " +
+      "coach_consultant (coaches, consultants, personal brands, mastermind/mentorship — founder-forward, founder photo/video, methodology/journey sections, strong booking/application CTA, authority without fabricated proof). " +
+      "wellness (health, fitness, life coaching, spiritual/holistic — soft natural palette, organic/rounded shapes, calmer spacing, gentle animation, lower density). " +
+      "agency_creative (marketing/creative agencies, freelance studios, sales-led creative services — bold type, strong contrast, layered cards, higher energy, moderate/expressive motion, strategy-call CTA). " +
+      "professional_enterprise (consultants, healthcare, law, finance, enterprise B2B — structured grids, restrained color, data/process visuals, conservative motion, clear comparison sections). " +
+      "Each archetype resolves a FULL token set automatically (palette, color mode, typography, card geometry, icon style, density, background rhythm, animation level, hero layout, CTA strategy) — never hand-pick these individually; instead nudge them via the optional overrides below, which are only honored when they're one of that archetype's own approved options (an invalid override is silently ignored, never an arbitrary color/font): palette_variant (that archetype's own named palette, e.g. 'trust_blue' for local_service — omit to use its first/default), color_mode (light/dark/mixed, only if the archetype supports more than one), typography_pairing, hero_layout, animation_level (none/minimal/moderate/expressive — omit to use the archetype's own default; never crank this up just because you can), visual_density (low/medium/high), media_strategy (what kind of media the hero/founder area wants — e.g. dashboard_screenshot for SaaS, founder_photo for coach_consultant), cta_style (inline/popup_form/popup_calendar/dual/sticky_desktop/floating_mobile/phone — omit to use the archetype's own recommended CTA, e.g. local_service defaults to popup_calendar/phone, luxury_premium to popup_calendar). If the user gave you a REAL media asset (a screenshot/photo URL), pass it as hero_media_url (+ hero_media_type); if the archetype's media_strategy calls for real media you don't have, Zeno leaves an honest labeled placeholder automatically — never fabricate a fake dashboard/photo. For a 'phone' cta_style, pass the real number as cta_phone_number (E.164, e.g. '+15551234567') — omit if you don't have one and the CTA falls back to inline rather than a dead tel: link. " +
+      "Legacy design_pack (classic/executive/bold/premium/startup/local_business/wellness) still works if you use it instead, but visual_archetype is the current, richer system — prefer it for every new funnel. Don't set BOTH design_pack and accent_color when you've picked a real archetype/pack — they'd conflict. " +
       "STRUCTURE — this is a conversion-framework generator, not a paragraph generator: every funnel follows Attention → Problem → Solution → Benefits → Process → Offer → Trust → FAQ → CTA, and each genre maps that sequence onto a recommended sequence of REUSABLE LAYOUTS (cards, grids, timelines, comparisons — favor these over walls of text): " +
       "lead_magnet = Hero ONLY — one fold, no scrolling required. A free lead magnet is a low-commitment ask; the hero itself carries the value prop, 3-5 bullets (what they get), and the capture form as a popup behind the CTA button. Write MORE into eyebrow/headline/subheadline/bullets than you would for a multi-section genre, since the hero is the entire page — but still no separate sections below it. " +
       "vsl = Hero → Video → Problem/Solution → Offer → FAQ → CTA banner. " +
@@ -3246,7 +3270,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       "tripwire (sales-page style) = Hero → Problem/Solution → Opportunity (callout — why this matters now) → Features (benefits grid) → Trust badges (or real testimonials, if given) → Offer (priced) → Guarantee → FAQ. " +
       "lead_gen = Hero → Trust Logos → Benefits (grid) → Offer (capture form) → FAQ. " +
       "LENGTH — match page length to commitment level, not a fixed habit: lead_magnet is the one exception at a true single fold (above); every other genre's stage count already reflects what its ask requires, so use the full sequence rather than trimming it. A free download needs zero persuasion runway; a webinar/lead_gen registration (6/5 stages) needs a little context before someone hands over their email; a multi-day challenge or a qualify-before-you-can-apply application (6 stages each) needs to show the process and set expectations; a priced tripwire offer (8 stages, sales-page style) needs the most — problem, proof, guarantee, objection-handling — because asking for a card number is the highest-commitment ask on this list. For an especially high-ticket / SaaS-style offer within any priced genre, lean into writing MORE substantive copy per stage (richer stage_content, fuller story_paragraphs) rather than adding new sections — the framework's stage count is fixed per genre; depth of copy is where 'long-form' actually lives. " +
-      "Some stages have a fixed layout; a few (marked above with 'or') allow an alternate — use layout_choices ONLY to pick that alternate when the business/evidence genuinely calls for it (e.g. real testimonials exist), never as a default habit. Workflow: (1) pick the genre — lead_magnet (free book/PDF opt-in, one-fold), vsl (high-ticket video sales page), challenge (multi-day registration), application (qualify leads before a call), tripwire (low-ticket entry offer), webinar (single-session registration), lead_gen (generic interest capture); (2) write a specific, concrete headline — never a generic tagline; (3) bullets must name a specific outcome or mechanism, never a vague adjective ('transformative', 'game-changing', 'cutting-edge' are banned); (4) ONLY include faq_items if you have enough real detail to answer honestly — never invent generic filler Q&A or fabricated guarantees/stats; (5) price_cents only applies to genres with a priced offer (tripwire, vsl, challenge) — omit for a free lead magnet, and when a price IS set, skip the capture form (a paid offer needs checkout, not a lead form — the operator wires up Stripe checkout on that section afterward); (6) leave include_capture_form at its default (true) unless the user is clearly building a pure sales/checkout page with no opt-in step; (7) confirmation_email_body should read like a real, brief, human confirmation (what they'll get, what's next) — it can be genuinely short, but must never invent guarantees, stats, or promises the funnel copy itself didn't make; (8) ALWAYS write story_paragraphs whenever the genre's framework includes a Story/Founder-Story/Host stage. Two cases: if the user gave you a REAL testimonial (an actual customer's words, name, location, or result), use it close to verbatim as story_paragraphs with story_byline set to their real attribution (e.g. 'From: Jane Doe, Austin, TX') — don't rewrite their claim into something stronger than what they said. Otherwise (the common case — no testimonial offered), write 2-4 paragraphs of synthesized 'why this works' copy — the mechanism, the reasoning — from the headline/bullets you already wrote, with a generic byline like 'Why this works' (or 'Your host: ...' for a webinar), and NEVER invent a fictional customer name/location/quote to make it look like a testimonial; (9) guarantee_headline/guarantee_body — ONLY when the user told you a real guarantee they actually offer, never invented; (10) trust_badges — safe generic ones (e.g. 'Secure checkout', 'Privacy protected') are fine whenever there's a form or checkout, but only add a guarantee-related badge if guarantee_headline is also set; (11) cta_banner_headline/cta_banner_subtext (VSL genre) should restate the real offer, never introduce a new claim; (12) process_steps — write these whenever the genre's framework includes a process-timeline stage (most do); (13) stage_content — write one entry per remaining stage the genre's framework includes (video/benefits grid/problem-solution/before-after/included/comparison/callout), per that param's own field-mapping description; never include a testimonials entry unless the user gave you real quotes; (14) design_pack — pick the pack that matches this business's audience (see the design-pack descriptions), or omit to let 'classic' apply; only override with layout_choices/design_pack when you have a genuine reason from what the user told you, not by default habit. Every genre's full stage sequence renders on the page regardless of which fields you fill — an unfilled stage shows placeholder/nothing, so fill every stage the genre actually has, not just headline/offer/faq. After creating, feel free to suggest one or two concrete improvements in your reply (e.g. a sharper headline angle, a stronger CTA placement, a trust element to add) — but only as a suggestion the user can act on, never as a score or grade.",
+      "Some stages have a fixed layout; a few (marked above with 'or') allow an alternate — use layout_choices ONLY to pick that alternate when the business/evidence genuinely calls for it (e.g. real testimonials exist), never as a default habit. Workflow: (1) pick the genre — lead_magnet (free book/PDF opt-in, one-fold), vsl (high-ticket video sales page), challenge (multi-day registration), application (qualify leads before a call), tripwire (low-ticket entry offer), webinar (single-session registration), lead_gen (generic interest capture); (2) write a specific, concrete headline — never a generic tagline; (3) bullets must name a specific outcome or mechanism, never a vague adjective ('transformative', 'game-changing', 'cutting-edge' are banned); (4) ONLY include faq_items if you have enough real detail to answer honestly — never invent generic filler Q&A or fabricated guarantees/stats; (5) price_cents only applies to genres with a priced offer (tripwire, vsl, challenge) — omit for a free lead magnet, and when a price IS set, skip the capture form (a paid offer needs checkout, not a lead form — the operator wires up Stripe checkout on that section afterward); (6) leave include_capture_form at its default (true) unless the user is clearly building a pure sales/checkout page with no opt-in step; (7) confirmation_email_body should read like a real, brief, human confirmation (what they'll get, what's next) — it can be genuinely short, but must never invent guarantees, stats, or promises the funnel copy itself didn't make; (8) ALWAYS write story_paragraphs whenever the genre's framework includes a Story/Founder-Story/Host stage. Two cases: if the user gave you a REAL testimonial (an actual customer's words, name, location, or result), use it close to verbatim as story_paragraphs with story_byline set to their real attribution (e.g. 'From: Jane Doe, Austin, TX') — don't rewrite their claim into something stronger than what they said. Otherwise (the common case — no testimonial offered), write 2-4 paragraphs of synthesized 'why this works' copy — the mechanism, the reasoning — from the headline/bullets you already wrote, with a generic byline like 'Why this works' (or 'Your host: ...' for a webinar), and NEVER invent a fictional customer name/location/quote to make it look like a testimonial; (9) guarantee_headline/guarantee_body — ONLY when the user told you a real guarantee they actually offer, never invented; (10) trust_badges — safe generic ones (e.g. 'Secure checkout', 'Privacy protected') are fine whenever there's a form or checkout, but only add a guarantee-related badge if guarantee_headline is also set; (11) cta_banner_headline/cta_banner_subtext (VSL genre) should restate the real offer, never introduce a new claim; (12) process_steps — write these whenever the genre's framework includes a process-timeline stage (most do); (13) stage_content — write one entry per remaining stage the genre's framework includes (video/benefits grid/problem-solution/before-after/included/comparison/callout), per that param's own field-mapping description; never include a testimonials entry unless the user gave you real quotes; (14) visual_archetype — ALWAYS pick one that matches this business's audience (see the DESIGN section above); omitting it skips Phase 2's design intelligence entirely and falls back to a plain, generic look, which defeats the point — only override its palette/typography/animation/CTA defaults when you have a genuine reason from what the user told you, not by default habit. Every genre's full stage sequence renders on the page regardless of which fields you fill — an unfilled stage shows placeholder/nothing, so fill every stage the genre actually has, not just headline/offer/faq. After creating, feel free to suggest one or two concrete improvements in your reply (e.g. a sharper headline angle, a stronger CTA placement, a trust element to add) — but only as a suggestion the user can act on, never as a score or grade.",
     parameters: {
       type: "object",
       properties: {
@@ -3432,16 +3456,81 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         },
         hero_layout: {
           type: "string",
-          enum: ["centered", "split", "background_image", "founder_image"],
-          description: "Hero section layout. 'split'/'background_image' need real media (a video/image URL) to look right — only pick them when you have one. Omit for 'centered'.",
+          enum: ["centered", "split", "background_image", "founder_image", "browser_mockup", "phone_mockup"],
+          description: "Hero section layout. Prefer omitting this and letting visual_archetype pick it — only set explicitly when you have a genuine reason (e.g. real media on hand) to deviate from the archetype's own recommendation. 'split'/'background_image'/'browser_mockup'/'phone_mockup' look best with real media (hero_media_url) but render an honest placeholder without one — never a fabricated screenshot.",
         },
         cta_style: {
           type: "string",
-          enum: ["inline", "popup_form", "dual", "sticky_desktop", "floating_mobile"],
-          description: "How the primary capture/offer CTA behaves. 'dual' needs cta_secondary_label + cta_secondary_href. Omit to default to 'popup_form' — the CTA opens the capture form in a modal instead of embedding it inline, the preferred experience across every genre. Set explicitly to 'inline' only when the user asks for the form embedded directly on the page instead of a popup.",
+          enum: ["inline", "popup_form", "popup_calendar", "dual", "sticky_desktop", "floating_mobile", "phone"],
+          description: "How the primary capture/offer CTA behaves. Prefer omitting this and letting visual_archetype pick its own recommended CTA (e.g. local_service defaults to booking/phone, most others to popup_form). 'dual' needs cta_secondary_label + cta_secondary_href. 'popup_calendar' needs a real booking page slug (ask the user which one, or omit). 'phone' needs cta_phone_number.",
         },
         cta_secondary_label: { type: "string", description: "Only used with cta_style 'dual'." },
         cta_secondary_href: { type: "string", description: "Only used with cta_style 'dual'." },
+        cta_phone_number: {
+          type: "string",
+          description: "Real phone number in E.164 format (e.g. '+15551234567'), only used with cta_style 'phone'. Never invent one — ask the user if they want a phone CTA but haven't given a number.",
+        },
+        visual_archetype: {
+          type: "string",
+          enum: [
+            "local_service",
+            "saas_technology",
+            "luxury_premium",
+            "nonprofit_mission",
+            "coach_consultant",
+            "wellness",
+            "agency_creative",
+            "professional_enterprise",
+          ],
+          description: "The industry-aware visual design system for the whole page — see the DESIGN section above. ALWAYS set this for a new funnel; it resolves a full, professionally-constrained token set (palette, typography, card geometry, icon style, density, background rhythm, animation, hero layout, CTA) in one shot.",
+        },
+        palette_variant: {
+          type: "string",
+          description: "One of the chosen archetype's own named palettes (see the DESIGN section, e.g. 'trust_blue'/'warm_amber'/'grounded_green' for local_service). Omit to use the archetype's first/default palette. An id that doesn't belong to the chosen archetype is ignored.",
+        },
+        color_mode: {
+          type: "string",
+          enum: ["light", "dark", "mixed"],
+          description: "Only meaningful for archetypes that support more than one (mainly saas_technology, luxury_premium). Omit to use the chosen palette's own default.",
+        },
+        typography_pairing: {
+          type: "string",
+          enum: ["sans_classic", "sans_modern", "serif_editorial", "serif_display", "mono_technical"],
+          description: "Only honored if it's one of the chosen archetype's approved pairings. Omit to use the archetype's default.",
+        },
+        animation_level: {
+          type: "string",
+          enum: ["none", "minimal", "moderate", "expressive"],
+          description: "Reveal-on-scroll animation intensity. Omit to use the archetype's own default (most are minimal/none; agency_creative defaults to expressive, saas_technology to moderate). Never pick a level higher than the archetype's own character calls for.",
+        },
+        visual_density: {
+          type: "string",
+          enum: ["low", "medium", "high"],
+          description: "Section spacing/breathing room. Omit to use the archetype's own default.",
+        },
+        media_strategy: {
+          type: "string",
+          enum: [
+            "founder_photo",
+            "team_photo",
+            "community_photo",
+            "service_photo",
+            "product_screenshot",
+            "dashboard_screenshot",
+            "browser_mockup",
+            "phone_mockup",
+            "video",
+            "illustration",
+            "abstract",
+            "none",
+          ],
+          description: "What kind of media the hero/founder area wants. Omit to use the archetype's own default. When real media isn't available (see hero_media_url), Zeno shows an honest labeled placeholder for this media type rather than nothing or a fabricated image.",
+        },
+        hero_media_url: {
+          type: "string",
+          description: "A REAL image/video URL the user gave you (screenshot, founder photo, product shot). Never invent or guess a URL. Omit if you don't have one — the hero shows an honest placeholder instead.",
+        },
+        hero_media_type: { type: "string", enum: ["image", "video"], description: "Only used with hero_media_url. Omit to default to 'image'." },
       },
       required: ["headline", "bullets"],
       additionalProperties: false,
@@ -3478,6 +3567,16 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         ctaStyle: "cta_style",
         ctaSecondaryLabel: "cta_secondary_label",
         ctaSecondaryHref: "cta_secondary_href",
+        ctaPhoneNumber: "cta_phone_number",
+        visualArchetype: "visual_archetype",
+        paletteVariant: "palette_variant",
+        colorMode: "color_mode",
+        typographyPairing: "typography_pairing",
+        animationLevel: "animation_level",
+        visualDensity: "visual_density",
+        mediaStrategy: "media_strategy",
+        heroMediaUrl: "hero_media_url",
+        heroMediaType: "hero_media_type",
       };
       const raw: Record<string, unknown> = { ...rawObj };
       for (const [camel, snake] of Object.entries(camelToSnake)) {
@@ -3633,7 +3732,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const designPackRaw = str(raw, "design_pack");
       const designPack = DESIGN_PACK_IDS.includes(designPackRaw) ? designPackRaw : "classic";
 
-      const HERO_LAYOUTS = ["centered", "split", "background_image", "founder_image"];
+      const HERO_LAYOUTS = ["centered", "split", "background_image", "founder_image", "browser_mockup", "phone_mockup"];
       const heroLayoutRaw = str(raw, "hero_layout");
       const heroLayout = HERO_LAYOUTS.includes(heroLayoutRaw) ? heroLayoutRaw : "";
 
@@ -3641,9 +3740,48 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // standing preference ("I like the popup form on all pages really").
       // CtaButton degrades to plain inline on its own when no form is
       // wired to a given section, so this is safe to apply everywhere.
-      const CTA_STYLES = ["inline", "popup_form", "dual", "sticky_desktop", "floating_mobile"];
+      // (An archetype's own recommended CTA, when one is resolved, takes
+      // priority over this raw default — see execute().)
+      const CTA_STYLES = ["inline", "popup_form", "popup_calendar", "dual", "sticky_desktop", "floating_mobile", "phone"];
       const ctaStyleRaw = str(raw, "cta_style");
       const ctaStyle = CTA_STYLES.includes(ctaStyleRaw) ? ctaStyleRaw : "popup_form";
+
+      // Phase 2 — Design Intelligence. Every value here is either a real
+      // enum member (validated against the archetype catalog's own lists)
+      // or ignored, same discipline as every other enum param on this tool.
+      const visualArchetypeRaw = str(raw, "visual_archetype");
+      const visualArchetype = VISUAL_ARCHETYPE_IDS.includes(visualArchetypeRaw as VisualArchetype) ? visualArchetypeRaw : "";
+      const paletteVariant = str(raw, "palette_variant").slice(0, 60);
+      const colorModeRaw = str(raw, "color_mode");
+      const colorMode = colorModeRaw === "light" || colorModeRaw === "dark" || colorModeRaw === "mixed" ? colorModeRaw : "";
+      const typographyPairingRaw = str(raw, "typography_pairing");
+      const typographyPairing = typographyPairingRaw in TYPOGRAPHY_PAIRINGS ? typographyPairingRaw : "";
+      const ANIMATION_LEVELS = ["none", "minimal", "moderate", "expressive"];
+      const animationLevelRaw = str(raw, "animation_level");
+      const animationLevel = ANIMATION_LEVELS.includes(animationLevelRaw) ? animationLevelRaw : "";
+      const VISUAL_DENSITIES = ["low", "medium", "high"];
+      const visualDensityRaw = str(raw, "visual_density");
+      const visualDensity = VISUAL_DENSITIES.includes(visualDensityRaw) ? visualDensityRaw : "";
+      const MEDIA_STRATEGIES = [
+        "founder_photo",
+        "team_photo",
+        "community_photo",
+        "service_photo",
+        "product_screenshot",
+        "dashboard_screenshot",
+        "browser_mockup",
+        "phone_mockup",
+        "video",
+        "illustration",
+        "abstract",
+        "none",
+      ];
+      const mediaStrategyRaw = str(raw, "media_strategy");
+      const mediaStrategy = MEDIA_STRATEGIES.includes(mediaStrategyRaw) ? mediaStrategyRaw : "";
+      const heroMediaUrl = str(raw, "hero_media_url").trim().slice(0, 1000);
+      const heroMediaTypeRaw = str(raw, "hero_media_type");
+      const heroMediaType = heroMediaTypeRaw === "video" ? "video" : "image";
+      const ctaPhoneNumber = str(raw, "cta_phone_number").trim().slice(0, 20);
 
       return {
         ok: true,
@@ -3678,6 +3816,16 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           ctaStyle,
           ctaSecondaryLabel: str(raw, "cta_secondary_label").slice(0, 40),
           ctaSecondaryHref: str(raw, "cta_secondary_href").slice(0, 500),
+          ctaPhoneNumber,
+          visualArchetype,
+          paletteVariant,
+          colorMode,
+          typographyPairing,
+          animationLevel,
+          visualDensity,
+          mediaStrategy,
+          heroMediaUrl,
+          heroMediaType,
         },
       };
     },
@@ -3719,6 +3867,25 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         | "lead_gen";
       const layoutChoices = (args.layoutChoices as Record<string, string>) ?? {};
       const designPack = (args.designPack as DesignPackId) || "classic";
+      // Phase 2 — Design Intelligence. When the model picked a
+      // visual_archetype, resolve the FULL token set here (once) so both
+      // creation (accent/theme) and the section-content pass below (hero
+      // layout, CTA strategy, media placeholders) read from the same
+      // resolved strategy — never two independent decisions that could
+      // disagree with each other.
+      const visualArchetypeArg = (args.visualArchetype as string) || "";
+      const designStrategy = visualArchetypeArg
+        ? resolveDesignStrategy(visualArchetypeArg as VisualArchetype, {
+            paletteId: (args.paletteVariant as string) || undefined,
+            colorMode: ((args.colorMode as string) || undefined) as ColorMode | undefined,
+            typographyPairing: ((args.typographyPairing as string) || undefined) as TypographyPairingId | undefined,
+            heroLayout: ((args.heroLayout as string) || undefined) as HeroLayoutId | undefined,
+            animationLevel: ((args.animationLevel as string) || undefined) as AnimationLevel | undefined,
+            visualDensity: ((args.visualDensity as string) || undefined) as VisualDensity | undefined,
+            mediaStrategy: ((args.mediaStrategy as string) || undefined) as MediaStrategyId | undefined,
+            ctaStrategy: ((args.ctaStyle as string) || undefined) as CtaStrategyId | undefined,
+          })
+        : null;
       const funnelId = await createFunnelServerSide({
         subAccountId,
         createdByUid: ctx.uid,
@@ -3726,6 +3893,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         genre,
         stageOverrides: layoutChoices as Record<string, FunnelSectionType>,
         designPack,
+        designStrategy,
       });
 
       const created = await getFunnel(subAccountId, funnelId);
@@ -3760,8 +3928,12 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const trustBadges = args.trustBadges as string[];
       const ctaBannerHeadline = args.ctaBannerHeadline as string;
       const ctaBannerSubtext = args.ctaBannerSubtext as string;
-      const heroLayout = args.heroLayout as string;
-      const ctaStyle = args.ctaStyle as string;
+      // An archetype's own resolved hero layout/CTA strategy takes priority
+      // over the raw params (which resolveDesignStrategy already folded in
+      // as overrides above) — falling back to the raw values, unchanged,
+      // when no archetype was resolved (today's exact pre-Phase-2 behavior).
+      const heroLayout = designStrategy?.heroLayout ?? (args.heroLayout as string);
+      const ctaStyle = designStrategy?.ctaStrategy ?? (args.ctaStyle as string);
       // Some genres (currently just lead_magnet, RC 1.1's one-fold length
       // pass) put isCapture on the hero stage itself rather than a
       // separate offer/ticket_tiers stage — the hero IS the whole page.
@@ -3776,8 +3948,29 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
                     secondaryHref: (args.ctaSecondaryHref as string) || "#",
                   }
                 : {}),
+              ...(ctaStyle === "phone" && args.ctaPhoneNumber ? { phoneNumber: args.ctaPhoneNumber as string } : {}),
             }
           : undefined;
+      // Media strategy — an honest labeled placeholder when the archetype
+      // expects real media but none was supplied (never a fabricated
+      // screenshot/photo). Only kicks in when a strategy was actually
+      // resolved; a plain (no-archetype) funnel behaves exactly as before.
+      const MEDIA_PLACEHOLDER_LABELS: Partial<Record<MediaStrategyId, string>> = {
+        founder_photo: "Add your photo",
+        team_photo: "Add a team photo",
+        community_photo: "Add a community photo",
+        service_photo: "Add a photo of your work",
+        product_screenshot: "Add a product screenshot",
+        dashboard_screenshot: "Add a dashboard screenshot",
+        browser_mockup: "Add a product screenshot",
+        phone_mockup: "Add a screenshot",
+        video: "Add a video",
+      };
+      const heroMediaUrl = (args.heroMediaUrl as string) || "";
+      const heroMediaType = (args.heroMediaType as string) === "video" ? "video" : "image";
+      const resolvedMediaStrategy = designStrategy?.mediaStrategy;
+      const heroMediaPlaceholder =
+        !heroMediaUrl && resolvedMediaStrategy ? MEDIA_PLACEHOLDER_LABELS[resolvedMediaStrategy] : undefined;
       const nextSections = created.sections.map((section) => {
         const content = contentFor(section.type);
         if (section.type === "hero") {
@@ -3795,6 +3988,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               // to hold them.
               ...(heroIsCaptureStage ? { bullets, ...(args.ctaLabel ? { ctaLabel: args.ctaLabel as string } : {}) } : {}),
               ...(ctaExtras ? { cta: ctaExtras } : {}),
+              ...(heroMediaUrl
+                ? { mediaUrl: heroMediaUrl, mediaType: heroMediaType as HeroConfig["mediaType"] }
+                : heroMediaPlaceholder
+                  ? { mediaType: heroMediaType as HeroConfig["mediaType"], mediaPlaceholderLabel: heroMediaPlaceholder }
+                  : {}),
             },
           };
         }
@@ -3820,6 +4018,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               ...section.config,
               paragraphs: storyParagraphs,
               ...(storyByline ? { byline: storyByline } : {}),
+              // Founder-forward archetypes (coach_consultant) want a real
+              // founder photo here; an honest placeholder when none was
+              // given, reusing the same media signal as the hero's.
+              ...(heroMediaUrl
+                ? { photoUrl: heroMediaUrl }
+                : resolvedMediaStrategy === "founder_photo" && heroMediaPlaceholder
+                  ? { photoPlaceholderLabel: heroMediaPlaceholder }
+                  : {}),
             },
           };
         }
@@ -4116,6 +4322,21 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         "ASSETS",
         `✓ Landing Page — "${displayName}"`,
       ];
+      // Phase 2 — a concise, honest design rationale (never chain-of-thought,
+      // never a score/grade) so the operator knows WHY this look was chosen
+      // and can act on it (change the archetype/palette/CTA in the builder)
+      // without having to guess what Zeno was thinking.
+      if (designStrategy) {
+        const archetypeDef = VISUAL_ARCHETYPES[designStrategy.visualArchetype];
+        const heroLayoutLabel = designStrategy.heroLayout.replace(/_/g, " ");
+        const ctaLabel = designStrategy.ctaStrategy.replace(/_/g, " ");
+        const animationLabel = designStrategy.animationLevel === "none" ? "no animation" : `${designStrategy.animationLevel} animation`;
+        summaryLines.push(
+          "",
+          "DESIGN",
+          `${archetypeDef.label} style — chosen for ${archetypeDef.audienceHint.split(",")[0].toLowerCase()}. ${heroLayoutLabel} hero, ${animationLabel}, ${ctaLabel} CTA. Change the style, palette, hero, or CTA anytime without touching the copy.`,
+        );
+      }
       if (createdFormId) {
         summaryLines.push(
           "",

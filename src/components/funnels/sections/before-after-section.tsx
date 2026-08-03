@@ -10,7 +10,7 @@ export function BeforeAfterSection({
 }) {
   if (config.beforeItems.length === 0 && config.afterItems.length === 0) return null;
   return (
-    <section className="px-4 py-12">
+    <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
       <div className="mx-auto grid max-w-4xl items-stretch gap-4 sm:grid-cols-[1fr_auto_1fr]">
         <div className="rounded-2xl border border-black/[0.06] bg-black/[0.02] p-7 dark:border-white/[0.08] dark:bg-white/[0.03]">
           <p className="mb-4 text-xs font-bold tracking-wide uppercase opacity-50">

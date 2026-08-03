@@ -10,7 +10,7 @@ export function ComparisonSection({
 }) {
   if (config.rows.length === 0) return null;
   return (
-    <section className="px-4 py-12">
+    <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
       <div className="mx-auto max-w-2xl">
         {config.headline && (
           <h2

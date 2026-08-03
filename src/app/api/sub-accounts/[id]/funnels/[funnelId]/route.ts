@@ -9,6 +9,17 @@ import {
 } from "@/lib/server/funnels-service";
 import type { FunnelSection, FunnelSectionType } from "@/types/funnels";
 import { DESIGN_PACKS } from "@/lib/funnels/design-packs";
+import {
+  VISUAL_ARCHETYPE_IDS,
+  resolveDesignStrategy,
+  type VisualArchetype,
+  type TypographyPairingId,
+  type HeroLayoutId,
+  type AnimationLevel,
+  type VisualDensity,
+  type MediaStrategyId,
+  type CtaStrategyId,
+} from "@/lib/funnels/design-strategy";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +72,36 @@ function sanitizeSections(raw: unknown): FunnelSection[] | null {
   return out;
 }
 
+/** Re-resolves a client-supplied design-strategy payload through
+ *  resolveDesignStrategy() rather than trusting it verbatim — the client
+ *  only ever needs to send the archetype + which axes it wants to
+ *  override; every derived token (cardStyle, iconStyle, backgroundRhythm,
+ *  etc.) always comes from the server's own archetype catalog, never from
+ *  the request body, so a malformed/forged payload can't smuggle an
+ *  unapproved combination onto a live page. Returns `undefined` for an
+ *  invalid/missing archetype (caller treats that as "field not present"),
+ *  `null` when the client explicitly wants to clear it back to designPack.
+ */
+function sanitizeDesignStrategy(raw: unknown): ReturnType<typeof resolveDesignStrategy> | null | undefined {
+  if (raw === null) return null;
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+  const archetype = typeof r.visualArchetype === "string" && VISUAL_ARCHETYPE_IDS.includes(r.visualArchetype as VisualArchetype)
+    ? (r.visualArchetype as VisualArchetype)
+    : undefined;
+  if (!archetype) return undefined;
+  return resolveDesignStrategy(archetype, {
+    paletteId: typeof r.paletteId === "string" ? r.paletteId : undefined,
+    colorMode: r.colorMode === "light" || r.colorMode === "dark" || r.colorMode === "mixed" ? r.colorMode : undefined,
+    typographyPairing: typeof r.typographyPairing === "string" ? (r.typographyPairing as TypographyPairingId) : undefined,
+    heroLayout: typeof r.heroLayout === "string" ? (r.heroLayout as HeroLayoutId) : undefined,
+    animationLevel: typeof r.animationLevel === "string" ? (r.animationLevel as AnimationLevel) : undefined,
+    visualDensity: typeof r.visualDensity === "string" ? (r.visualDensity as VisualDensity) : undefined,
+    mediaStrategy: typeof r.mediaStrategy === "string" ? (r.mediaStrategy as MediaStrategyId) : undefined,
+    ctaStrategy: typeof r.ctaStrategy === "string" ? (r.ctaStrategy as CtaStrategyId) : undefined,
+  });
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string; funnelId: string }> },
@@ -98,6 +139,10 @@ export async function PATCH(
   if (typeof body.accentColor === "string") patch.accentColor = body.accentColor;
   if (typeof body.designPack === "string" && body.designPack in DESIGN_PACKS) {
     patch.designPack = body.designPack as FunnelPatch["designPack"];
+  }
+  if ("designStrategy" in body) {
+    const strategy = sanitizeDesignStrategy(body.designStrategy);
+    if (strategy !== undefined) patch.designStrategy = strategy;
   }
   if (typeof body.logoUrl === "string") patch.logoUrl = body.logoUrl.trim().slice(0, 1000);
   if (body.sections !== undefined) {

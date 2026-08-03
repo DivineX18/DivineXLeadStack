@@ -2,6 +2,8 @@ import { Check, Play, User } from "lucide-react";
 import type { HeroConfig } from "@/types/funnels";
 import type { LeadForm } from "@/types/forms";
 import { CtaButton } from "./cta-button";
+import { DeviceFrame } from "./device-frame";
+import { MediaPlaceholder } from "./media-placeholder";
 
 function MediaBlock({
   config,
@@ -34,6 +36,8 @@ function MediaBlock({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={config.mediaUrl} alt="" className="h-full w-full object-cover" />
         )
+      ) : config.mediaPlaceholderLabel ? (
+        <MediaPlaceholder label={config.mediaPlaceholderLabel} accentColor={accentColor} className="h-full w-full" />
       ) : (
         <div className="flex h-full w-full items-center justify-center">
           <span
@@ -97,8 +101,12 @@ export function HeroSection({
   subAccountId?: string;
   headlineGradient?: [string, string];
 }) {
-  const hasMedia = config.mediaType !== "none" && !!config.mediaUrl;
-  const layout = hasMedia ? (config.layout ?? "centered") : "centered";
+  // A device-mockup/split/background/founder layout still renders (with an
+  // honest labeled placeholder) when Zeno set mediaPlaceholderLabel but has
+  // no real asset yet — but never for a plain funnel with neither signal,
+  // which stays the exact today's-behavior centered fallback.
+  const hasMediaIntent = config.mediaType !== "none" && (!!config.mediaUrl || !!config.mediaPlaceholderLabel);
+  const layout = hasMediaIntent ? (config.layout ?? "centered") : "centered";
   const form = config.formId && forms ? forms[config.formId] : null;
 
   const eyebrow = config.eyebrow && (
@@ -198,6 +206,13 @@ export function HeroSection({
               alt=""
               className="mx-auto mb-6 h-20 w-20 rounded-full object-cover shadow-lg ring-4 ring-white/40 dark:ring-black/30"
             />
+          ) : config.mediaPlaceholderLabel ? (
+            <MediaPlaceholder
+              label={config.mediaPlaceholderLabel}
+              accentColor={accentColor}
+              shape="circle"
+              className="mx-auto mb-6 h-20 w-20"
+            />
           ) : (
             <span
               className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full shadow-lg"
@@ -257,6 +272,46 @@ export function HeroSection({
             {cta}
           </div>
           <MediaBlock config={config} accentColor={accentColor} className="aspect-video w-full" />
+        </div>
+      </section>
+    );
+  }
+
+  if (layout === "browser_mockup" || layout === "phone_mockup") {
+    return (
+      <section
+        className="relative overflow-hidden px-4 pb-16 pt-20 sm:pt-28"
+        style={{
+          backgroundImage: `linear-gradient(180deg, ${accentColor}22 0%, ${accentColor}0a 45%, transparent 80%), radial-gradient(ellipse 70% 50% at 50% 0%, ${accentColor}30, transparent)`,
+        }}
+      >
+        <div className="relative mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-2 lg:gap-16">
+          <div className="text-center lg:text-left">
+            {eyebrow}
+            <h1
+              className="text-balance font-extrabold tracking-tight"
+              style={{ fontSize: "clamp(2.25rem, 5vw, 3.5rem)", lineHeight: 1.08 }}
+            >
+              {headlineNode}
+            </h1>
+            {config.subheadline && (
+              <p
+                className="mx-auto mt-5 max-w-xl opacity-70 lg:mx-0"
+                style={{ fontSize: "clamp(1.05rem, 2vw, 1.25rem)" }}
+              >
+                {config.subheadline}
+              </p>
+            )}
+            {bulletsNode}
+            {cta}
+          </div>
+          <DeviceFrame
+            kind={layout === "phone_mockup" ? "phone" : "browser"}
+            mediaUrl={config.mediaUrl}
+            mediaType={config.mediaType === "video" ? "video" : "image"}
+            placeholderLabel={config.mediaPlaceholderLabel || "Add a product screenshot"}
+            accentColor={accentColor}
+          />
         </div>
       </section>
     );

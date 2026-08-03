@@ -59,8 +59,16 @@ export function CtaButton({
         </button>
       );
     }
-    // "inline" (default), or a popup style missing its prerequisite —
-    // degrade to plain inline rather than a dead button.
+    if (style === "phone" && cta?.phoneNumber) {
+      return (
+        <a href={`tel:${cta.phoneNumber}`} className={btnClass} style={buttonStyle}>
+          {label}
+        </a>
+      );
+    }
+    // "inline" (default), or a style missing its prerequisite (a "phone"
+    // CTA with no phone number, a "popup_calendar" with no booking slug,
+    // etc.) — degrade to plain inline rather than a dead/misleading button.
     if (form) return <PublicForm form={form} />;
     return (
       <a href={href || "#"} className={btnClass} style={buttonStyle}>

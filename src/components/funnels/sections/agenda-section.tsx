@@ -4,6 +4,7 @@ export function AgendaSection({
   config,
   accentColor,
   iconPalette,
+  iconStyle,
 }: {
   config: AgendaConfig;
   accentColor: string;
@@ -11,10 +12,13 @@ export function AgendaSection({
    *  Soulware-reference "1/2/3" step treatment) — omitted = monochrome
    *  accent circles, today's behavior. */
   iconPalette?: string[];
+  /** "outline" renders a bordered, transparent number circle instead of a
+   *  solid one — luxury/professional archetypes' "minimal icon usage." */
+  iconStyle?: "outline" | "duotone" | "filled";
 }) {
   if (config.days.length === 0) return null;
   return (
-    <section className="px-4 py-12">
+    <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
       <div className="mx-auto max-w-4xl">
         <h2
           className="mb-7 text-balance text-center font-extrabold tracking-tight"
@@ -25,21 +29,26 @@ export function AgendaSection({
         <div className="grid gap-5 sm:grid-cols-2">
           {config.days.map((day, i) => {
             const stepColor = iconPalette && iconPalette.length > 0 ? iconPalette[i % iconPalette.length] : accentColor;
+            const stepBadgeStyle: React.CSSProperties =
+              iconStyle === "outline"
+                ? { backgroundColor: "transparent", color: stepColor, boxShadow: `inset 0 0 0 1.5px ${stepColor}` }
+                : { backgroundColor: stepColor, color: "#fff" };
             return (
             <div
               key={i}
-              className="rounded-2xl border bg-[var(--card-bg)] p-6 shadow-[0_12px_30px_-15px_rgba(0,0,0,0.25)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_20px_45px_-18px_rgba(0,0,0,0.35)]"
+              className="border bg-[var(--card-bg)] p-6 shadow-[0_12px_30px_-15px_rgba(0,0,0,0.25)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_20px_45px_-18px_rgba(0,0,0,0.35)]"
               style={
                 {
                   "--card-bg": "color-mix(in oklab, currentColor 2%, transparent)",
                   borderColor: `${accentColor}26`,
+                  borderRadius: "var(--flow-radius, 1rem)",
                 } as React.CSSProperties
               }
             >
               <div className="flex items-center gap-3">
                 <span
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-base font-extrabold"
-                  style={{ backgroundColor: stepColor, color: "#fff" }}
+                  style={stepBadgeStyle}
                 >
                   {i + 1}
                 </span>

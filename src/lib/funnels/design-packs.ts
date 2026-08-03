@@ -20,7 +20,11 @@ export type DesignPackId =
   | "local_business"
   | "wellness";
 
-export type SectionBackground = "white" | "gray" | "gradient" | "dark";
+// "elevated" added in Phase 2 (design-strategy.ts) — a raised, bordered/
+// shadowed card-like surface, distinct from "gray"'s flat muted tint.
+// Every existing DESIGN_PACKS rhythm below only uses the original four
+// values, so this addition can't change any pre-Phase-2 funnel's render.
+export type SectionBackground = "white" | "gray" | "gradient" | "dark" | "elevated";
 export type CardStyle = "soft" | "sharp" | "elegant" | "floating";
 export type SpacingDensity = "compact" | "comfortable" | "spacious";
 
@@ -144,8 +148,11 @@ export function resolveDesignPack(id: DesignPackId | undefined): DesignPackToken
 /** Cyclical background per section index — the "avoid five white sections
  *  in a row" rule. Index 0 (hero) and the last section both bias toward
  *  the rhythm's own natural start/end rather than being special-cased,
- *  since every pack's rhythm is already authored to read well end-to-end. */
-export function backgroundForIndex(pack: DesignPackTokens, index: number): SectionBackground {
+ *  since every pack's rhythm is already authored to read well end-to-end.
+ *  Structurally typed (not DesignPackTokens specifically) so Phase 2's
+ *  ResolvedRenderTokens — a different shape that also carries a
+ *  backgroundRhythm array — can reuse this same rhythm engine. */
+export function backgroundForIndex(pack: { backgroundRhythm: SectionBackground[] }, index: number): SectionBackground {
   const rhythm = pack.backgroundRhythm;
   return rhythm[index % rhythm.length];
 }

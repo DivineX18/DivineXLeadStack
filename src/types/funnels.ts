@@ -51,7 +51,7 @@ export type FunnelSectionType =
  * every already-published funnel keeps rendering exactly as before.
  */
 export interface CtaExtras {
-  style?: "inline" | "popup_form" | "popup_calendar" | "dual" | "sticky_desktop" | "floating_mobile";
+  style?: "inline" | "popup_form" | "popup_calendar" | "dual" | "sticky_desktop" | "floating_mobile" | "phone";
   /** "dual" style's secondary button. */
   secondaryLabel?: string;
   secondaryHref?: string;
@@ -61,6 +61,9 @@ export interface CtaExtras {
    *  custom-domain deploy without the AI/operator needing to know the URL
    *  shape. */
   bookingPageSlug?: string;
+  /** "phone" style — tel: link, e.g. "+15551234567". Degrades to plain
+   *  inline (no dead tel: link) when absent. */
+  phoneNumber?: string;
 }
 
 export interface HeroConfig {
@@ -90,10 +93,17 @@ export interface HeroConfig {
    *  "background_image"/"founder_image" reuse the same mediaUrl as a
    *  full-bleed backdrop or a small framed portrait respectively — no new
    *  media field needed, just a different treatment of the existing one.
-   *  Falls back to centered when no media is set (split/background_image/
-   *  founder_image all have nothing to render without it). */
-  layout?: "centered" | "split" | "background_image" | "founder_image";
+   *  "browser_mockup"/"phone_mockup" (Phase 2) wrap mediaUrl in a
+   *  DeviceFrame instead of a plain rounded box — the SaaS/product-led
+   *  treatment. Falls back to centered when no media is set (every
+   *  media-dependent layout has nothing to render without it). */
+  layout?: "centered" | "split" | "background_image" | "founder_image" | "browser_mockup" | "phone_mockup";
   cta?: CtaExtras;
+  /** Phase 2 — an honest labeled placeholder ("Add a product screenshot")
+   *  shown in the media slot when the archetype calls for real media but
+   *  none was supplied. Ignored once mediaUrl is set. Never auto-filled
+   *  with stock imagery — see CLAUDE.md's anti-fabrication rules. */
+  mediaPlaceholderLabel?: string;
 }
 
 export interface ProofStripConfig {
@@ -121,6 +131,10 @@ export interface StoryConfig {
   byline: string;
   paragraphs: string[];
   photoUrl?: string;
+  /** Honest labeled placeholder ("Add founder photo") shown when the
+   *  archetype expects a founder photo but none was supplied. Ignored once
+   *  photoUrl is set. */
+  photoPlaceholderLabel?: string;
 }
 
 export interface FaqConfig {
@@ -330,7 +344,7 @@ export interface CalloutConfig {
  *  headshot only, never a stock/fabricated one). */
 export interface TeamConfig {
   headline?: string;
-  members: { name: string; role: string; photoUrl?: string; bio?: string }[];
+  members: { name: string; role: string; photoUrl?: string; bio?: string; photoPlaceholderLabel?: string }[];
 }
 
 /** Alternating (or single) image+text blocks — a versatile layout reused
@@ -389,6 +403,13 @@ export interface FunnelDoc {
    *  Zeno's design-pack selection or an operator override; editable
    *  afterward in the builder. */
   designPack?: import("@/lib/funnels/design-packs").DesignPackId;
+  /** Flow Phase 2 — Design Intelligence. Supersedes `designPack` when
+   *  present (see resolveEffectiveDesignTokens in design-strategy.ts);
+   *  absent for every funnel created before this shipped, which keeps
+   *  rendering through the designPack/"classic" chain unchanged. Set by
+   *  Zeno's industry-aware archetype selection at creation; editable
+   *  afterward in the builder. */
+  designStrategy?: import("@/lib/funnels/design-strategy").DesignStrategy | null;
   /** Small brand mark shown at the very top of the public page, above the
    *  hero — not a nav bar (funnels intentionally have no navigation away
    *  from the CTA), just a real logo for recognition/trust. Always
