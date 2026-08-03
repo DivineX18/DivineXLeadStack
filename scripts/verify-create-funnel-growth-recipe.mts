@@ -105,10 +105,13 @@ try {
     summary,
   );
 
+  // lead_magnet is one-fold (RC 1.1 length pass, 2026-08-02) — the capture
+  // form wires directly into the hero section now, there's no separate
+  // offer stage for it to live on.
   const funnelSnap = await db.doc(`funnels/${createdIds.funnelId}`).get();
-  const offerSection = funnelSnap.data()?.sections?.find((s: { type: string }) => s.type === "offer");
-  createdIds.formId = offerSection?.config?.formId;
-  check("3. Capture form wired into the offer section", !!createdIds.formId);
+  const heroSection = funnelSnap.data()?.sections?.find((s: { type: string }) => s.type === "hero");
+  createdIds.formId = heroSection?.config?.formId;
+  check("3. Capture form wired into the one-fold hero section", !!createdIds.formId);
 
   const workflowsSnap = await db.collection("workflows").where("subAccountId", "==", SUB_ID).get();
   check("4. Exactly one follow-up workflow created", workflowsSnap.size === 1, `count=${workflowsSnap.size}`);

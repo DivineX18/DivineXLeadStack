@@ -1,5 +1,6 @@
-import { Play, User } from "lucide-react";
+import { Check, Play, User } from "lucide-react";
 import type { HeroConfig } from "@/types/funnels";
+import type { LeadForm } from "@/types/forms";
 import { CtaButton } from "./cta-button";
 
 function MediaBlock({
@@ -47,18 +48,58 @@ function MediaBlock({
   );
 }
 
+/** Renders `headline`, wrapping `accentPhrase` (if it's a real substring) in
+ *  the design pack's gradient. Falls back to plain text when there's no
+ *  gradient token or no match — never breaks the headline. */
+function GradientHeadline({
+  headline,
+  accentPhrase,
+  gradient,
+}: {
+  headline: string;
+  accentPhrase?: string;
+  gradient?: [string, string];
+}) {
+  if (!accentPhrase || !gradient) return <>{headline}</>;
+  const idx = headline.indexOf(accentPhrase);
+  if (idx === -1) return <>{headline}</>;
+  const before = headline.slice(0, idx);
+  const after = headline.slice(idx + accentPhrase.length);
+  return (
+    <>
+      {before}
+      <span
+        style={{
+          backgroundImage: `linear-gradient(90deg, ${gradient[0]}, ${gradient[1]})`,
+          WebkitBackgroundClip: "text",
+          backgroundClip: "text",
+          color: "transparent",
+        }}
+      >
+        {accentPhrase}
+      </span>
+      {after}
+    </>
+  );
+}
+
 export function HeroSection({
   config,
   accentColor,
+  forms,
   subAccountId,
+  headlineGradient,
 }: {
   config: HeroConfig;
   accentColor: string;
   theme?: "light" | "dark";
+  forms?: Record<string, LeadForm>;
   subAccountId?: string;
+  headlineGradient?: [string, string];
 }) {
   const hasMedia = config.mediaType !== "none" && !!config.mediaUrl;
   const layout = hasMedia ? (config.layout ?? "centered") : "centered";
+  const form = config.formId && forms ? forms[config.formId] : null;
 
   const eyebrow = config.eyebrow && (
     <p
@@ -73,11 +114,27 @@ export function HeroSection({
     </p>
   );
 
-  const cta = config.ctaLabel && (
+  const headlineNode = (
+    <GradientHeadline headline={config.headline} accentPhrase={config.headlineAccent} gradient={headlineGradient} />
+  );
+
+  const bulletsNode = config.bullets && config.bullets.length > 0 && (
+    <ul className="mx-auto mt-6 flex max-w-xl flex-col items-center gap-2 text-left sm:items-start">
+      {config.bullets.map((b, i) => (
+        <li key={i} className="flex items-start gap-2.5 text-sm opacity-85">
+          <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: accentColor }} />
+          <span>{b}</span>
+        </li>
+      ))}
+    </ul>
+  );
+
+  const cta = (config.ctaLabel || form) && (
     <div className="mt-10">
       <CtaButton
-        label={config.ctaLabel}
+        label={config.ctaLabel || "Get it now"}
         href={config.ctaHref}
+        form={form}
         cta={config.cta}
         accentColor={accentColor}
         subAccountId={subAccountId}
@@ -108,7 +165,7 @@ export function HeroSection({
             className="text-balance font-extrabold tracking-tight"
             style={{ fontSize: "clamp(2.25rem, 6vw, 4.25rem)", lineHeight: 1.08 }}
           >
-            {config.headline}
+            {headlineNode}
           </h1>
           {config.subheadline && (
             <p
@@ -118,6 +175,7 @@ export function HeroSection({
               {config.subheadline}
             </p>
           )}
+          {bulletsNode}
           {cta}
         </div>
       </section>
@@ -153,7 +211,7 @@ export function HeroSection({
             className="text-balance font-extrabold tracking-tight"
             style={{ fontSize: "clamp(2rem, 5.5vw, 3.5rem)", lineHeight: 1.1 }}
           >
-            {config.headline}
+            {headlineNode}
           </h1>
           {config.subheadline && (
             <p
@@ -163,6 +221,7 @@ export function HeroSection({
               {config.subheadline}
             </p>
           )}
+          {bulletsNode}
           {cta}
         </div>
       </section>
@@ -184,7 +243,7 @@ export function HeroSection({
               className="text-balance font-extrabold tracking-tight"
               style={{ fontSize: "clamp(2.25rem, 5vw, 3.5rem)", lineHeight: 1.08 }}
             >
-              {config.headline}
+              {headlineNode}
             </h1>
             {config.subheadline && (
               <p
@@ -194,6 +253,7 @@ export function HeroSection({
                 {config.subheadline}
               </p>
             )}
+            {bulletsNode}
             {cta}
           </div>
           <MediaBlock config={config} accentColor={accentColor} className="aspect-video w-full" />
@@ -215,7 +275,7 @@ export function HeroSection({
           className="text-balance font-extrabold tracking-tight"
           style={{ fontSize: "clamp(2.25rem, 6vw, 4.25rem)", lineHeight: 1.08 }}
         >
-          {config.headline}
+          {headlineNode}
         </h1>
         {config.subheadline && (
           <p
@@ -234,6 +294,7 @@ export function HeroSection({
           />
         )}
 
+        {bulletsNode}
         {cta}
       </div>
     </section>

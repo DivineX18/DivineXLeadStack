@@ -128,8 +128,10 @@ try {
     );
     const hero = (funnel.sections as { type: string; config: Record<string, unknown> }[]).find((s) => s.type === "hero");
     check("4e. Hero layout override applied", hero?.config.layout === "founder_image", hero?.config.layout as string);
-    const offer = (funnel.sections as { type: string; config: Record<string, unknown> }[]).find((s) => s.type === "offer");
-    const cta = offer?.config.cta as { style?: string; secondaryLabel?: string } | undefined;
+    // No genre was specified, so this defaults to lead_magnet — one-fold
+    // (RC 1.1 length pass, 2026-08-02), meaning the hero itself is the
+    // capture/CTA surface now (there's no separate offer section).
+    const cta = hero?.config.cta as { style?: string; secondaryLabel?: string } | undefined;
     check("4f. CTA style + secondary label applied to the capture section", cta?.style === "dual" && cta?.secondaryLabel === "Book a call", JSON.stringify(cta));
   }
 

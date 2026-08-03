@@ -117,6 +117,12 @@ export function PublicFunnelView({
         style={{ background: bg, color: fg, fontFamily: fontStack }}
         className="min-h-screen"
       >
+        {funnel.logoUrl && (
+          <div className="flex justify-center px-4 pt-8">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={funnel.logoUrl} alt="" className="h-8 w-auto object-contain sm:h-10" />
+          </div>
+        )}
         {funnel.sections.map((section, i) => {
           const Component = SECTION_COMPONENTS[section.type];
           if (!Component) return null;
@@ -131,6 +137,8 @@ export function PublicFunnelView({
                 funnelId={funnel.id}
                 sectionId={section.id}
                 subAccountId={funnel.subAccountId}
+                iconPalette={pack.iconPalette}
+                headlineGradient={pack.headlineGradient}
               />
             </div>
           );

@@ -41,15 +41,15 @@ export interface FrameworkStage {
 }
 
 export const FUNNEL_FRAMEWORKS: Record<FunnelGenre, FrameworkStage[]> = {
-  lead_magnet: [
-    { id: "attention", label: "Hero", section: "hero" },
-    { id: "problem", label: "Problem", section: "problem_solution" },
-    { id: "learn", label: "What You'll Learn", section: "benefits_grid" },
-    { id: "process", label: "How It Works", section: "agenda" },
-    { id: "included", label: "What's Included", section: "included" },
-    { id: "faq", label: "FAQ", section: "faq" },
-    { id: "cta", label: "CTA", section: "offer", isCapture: true },
-  ],
+  // One-fold by design (RC 1.1 length pass, 2026-08-02): a free lead magnet
+  // is a low-commitment ask — the visitor either wants the free thing or
+  // doesn't, and nothing below the fold changes that decision the way it
+  // does for a paid offer. The single hero stage IS the whole page: it
+  // carries the value prop, the bullets a scrollable "What You'll Learn"
+  // section would otherwise hold, and the capture form itself (via
+  // HeroConfig.formId, rendered as a popup by default — see cta_style's
+  // "popup_form" default in capabilities.ts). No scroll required to convert.
+  lead_magnet: [{ id: "attention", label: "Hero", section: "hero", isCapture: true }],
   vsl: [
     { id: "attention", label: "Hero", section: "hero" },
     { id: "video", label: "Video", section: "video" },

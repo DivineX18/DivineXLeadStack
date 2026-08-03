@@ -42,12 +42,18 @@ function check(label: string, ok: boolean, detail?: string) {
 // --- 1. Pure structural checks on buildFrameworkSections (no Firestore) ---
 
 {
+  // One-fold by design (RC 1.1 length pass, 2026-08-02): lead_magnet is a
+  // low-commitment ask, so the hero IS the whole page — no scroll required
+  // to convert. See frameworks.ts's lead_magnet comment.
   const sections = buildFrameworkSections("lead_magnet");
   check(
-    "1a. lead_magnet default sequence matches the spec exactly",
-    sections.map((s) => s.type).join(",") ===
-      "hero,problem_solution,benefits_grid,agenda,included,faq,offer",
+    "1a. lead_magnet default sequence is a single one-fold hero stage",
+    sections.map((s) => s.type).join(",") === "hero",
     sections.map((s) => s.type).join(","),
+  );
+  check(
+    "1a2. lead_magnet's hero stage is marked as the capture surface",
+    FUNNEL_FRAMEWORKS.lead_magnet[0]?.isCapture === true,
   );
 }
 {
@@ -176,8 +182,11 @@ const createdFunnelIds: string[] = [];
 try {
   // 4a. A hand-fed proposal (mirrors the real shape verified live against
   // the model) exercises every new content-mapping branch in execute().
+  // Uses "challenge" (hero, problem_solution, benefits_grid, agenda,
+  // ticket_tiers, faq) since the one-fold lead_magnet no longer has these
+  // stages — see the dedicated one-fold block (5) below for that genre.
   const validated = cap.validate!({
-    genre: "lead_magnet",
+    genre: "challenge",
     headline: "The First Groom Checklist",
     bullets: ["Nail and ear prep before the appointment", "How to spot matting early"],
     process_steps: [
@@ -200,11 +209,6 @@ try {
           { title: "Spotting mats early", description: "Before they mean a shave-down." },
         ],
       },
-      {
-        section_type: "included",
-        headline: "What's included",
-        items: [{ title: "Printable checklist", description: "One page, ready to go." }],
-      },
     ],
   });
   check("4a. Hand-fed proposal (mirrors real model output shape) validates", validated.ok);
@@ -223,14 +227,8 @@ try {
 
     const benefitsGrid = sections.find((s) => s.type === "benefits_grid");
     check(
-      "4c. benefits_grid content lands separately from included (not conflated)",
+      "4c. benefits_grid content lands correctly",
       (benefitsGrid?.config.items as unknown[])?.length === 2,
-    );
-
-    const included = sections.find((s) => s.type === "included");
-    check(
-      "4d. included content is distinct from benefits_grid",
-      (included?.config.items as { title: string }[])?.[0]?.title === "Printable checklist",
     );
 
     const agenda = sections.find((s) => s.type === "agenda");
@@ -238,10 +236,72 @@ try {
       "4e. process_steps lands in the agenda/process-timeline section",
       (agenda?.config.days as unknown[])?.length === 2,
     );
+  }
 
-    // proof_strip/countdown are never in lead_magnet's framework anyway, but
-    // confirm no section in the output is one create_funnel doesn't
-    // recognize as safe to author — the important negative check is (4f).
+  // 4d. benefits_grid vs included conflation check — "application" pairs
+  // these two stages exactly like the old lead_magnet did (the original bug
+  // this block guards against), so it's the natural home for this check now.
+  const conflationValidated = cap.validate!({
+    genre: "application",
+    headline: "Apply for the Mastermind",
+    bullets: ["Real accountability", "Weekly coaching calls"],
+    stage_content: [
+      {
+        section_type: "benefits_grid",
+        headline: "Who it's for",
+        items: [{ title: "Committed operators", description: "Ready to put in the work." }],
+      },
+      {
+        section_type: "included",
+        headline: "What's included",
+        items: [{ title: "Printable checklist", description: "One page, ready to go." }],
+      },
+    ],
+  });
+  check("4d1. application benefits_grid/included proposal validates", conflationValidated.ok);
+  if (conflationValidated.ok) {
+    const result = await cap.execute!(fakeCtx(), conflationValidated.args);
+    createdFunnelIds.push(result.ref!.id);
+    const snap = await db.doc(`funnels/${result.ref!.id}`).get();
+    const sections = snap.data()?.sections as { type: string; config: Record<string, unknown> }[];
+    const benefitsGrid = sections.find((s) => s.type === "benefits_grid");
+    const included = sections.find((s) => s.type === "included");
+    check(
+      "4d2. included content is distinct from benefits_grid (not conflated)",
+      (included?.config.items as { title: string }[])?.[0]?.title === "Printable checklist" &&
+        (benefitsGrid?.config.items as { title: string }[])?.[0]?.title === "Committed operators",
+    );
+  }
+
+  // 5. One-fold lead_magnet: the hero IS the whole page, and it must be a
+  // real capture surface — a dedicated form wired to the hero itself (not
+  // an offer/ticket_tiers section, since lead_magnet no longer has one),
+  // plus the same form/template/workflow package every other capture-style
+  // genre gets. Also confirms cta_style defaults to "popup_form" (not
+  // "inline") per the operator's standing "popup form on all pages" ask.
+  const leadMagnetValidated = cap.validate!({
+    genre: "lead_magnet",
+    headline: "The First Groom Checklist",
+    bullets: ["Nail and ear prep before the appointment", "How to spot matting early"],
+  });
+  check("5a. One-fold lead_magnet proposal validates", leadMagnetValidated.ok);
+  if (leadMagnetValidated.ok) {
+    check("5b. cta_style defaults to popup_form when omitted", leadMagnetValidated.args.ctaStyle === "popup_form");
+    const result = await cap.execute!(fakeCtx(), leadMagnetValidated.args);
+    createdFunnelIds.push(result.ref!.id);
+    const snap = await db.doc(`funnels/${result.ref!.id}`).get();
+    const sections = snap.data()?.sections as { type: string; config: Record<string, unknown> }[];
+    check("5c. lead_magnet funnel has exactly one section (the hero)", sections.length === 1 && sections[0]?.type === "hero");
+    const hero = sections[0];
+    check("5d. hero carries the bullets directly (no separate benefits section to hold them)", (hero?.config.bullets as string[])?.length === 2);
+    check("5e. hero's CTA defaults to a popup form", (hero?.config.cta as { style?: string } | undefined)?.style === "popup_form");
+    check("5f. hero is wired to a real capture form (formId set)", typeof hero?.config.formId === "string" && (hero?.config.formId as string).length > 0);
+    if (typeof hero?.config.formId === "string") {
+      const formSnap = await db.doc(`forms/${hero.config.formId}`).get();
+      check("5g. the wired form actually exists in Firestore", formSnap.exists);
+      if (formSnap.exists) await formSnap.ref.delete().catch(() => {});
+    }
+    check("5h. summary confirms the Growth System package was built (not skipped as a priced offer)", result.resultText.includes("Capture Form"));
   }
 
   // 4f. Anti-fabrication: a testimonials stage_content entry with NO real

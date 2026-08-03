@@ -163,6 +163,7 @@ export interface FunnelPatch {
   theme?: "light" | "dark";
   accentColor?: string;
   designPack?: DesignPackId;
+  logoUrl?: string;
   sections?: FunnelSection[];
 }
 
@@ -328,6 +329,7 @@ export async function updateFunnelServerSide(opts: {
   if (patch.theme !== undefined) write.theme = patch.theme;
   if (patch.accentColor !== undefined) write.accentColor = patch.accentColor;
   if (patch.designPack !== undefined) write.designPack = patch.designPack;
+  if (patch.logoUrl !== undefined) write.logoUrl = patch.logoUrl;
   if (patch.sections !== undefined) {
     await assertNoChainCycle(opts.subAccountId, opts.funnelId, patch.sections);
     const oldData = snap.data() as Omit<FunnelDoc, "id">;

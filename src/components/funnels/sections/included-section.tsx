@@ -4,9 +4,11 @@ import type { IncludedConfig } from "@/types/funnels";
 export function IncludedSection({
   config,
   accentColor,
+  iconPalette,
 }: {
   config: IncludedConfig;
   accentColor: string;
+  iconPalette?: string[];
 }) {
   if (config.items.length === 0) return null;
   return (
@@ -21,7 +23,9 @@ export function IncludedSection({
           </h2>
         )}
         <div className="space-y-3">
-          {config.items.map((item, i) => (
+          {config.items.map((item, i) => {
+            const badgeColor = iconPalette && iconPalette.length > 0 ? iconPalette[i % iconPalette.length] : accentColor;
+            return (
             <div
               key={i}
               className="flex items-start gap-4 rounded-2xl border bg-[var(--card-bg)] p-5 ring-1 ring-black/[0.04] dark:ring-white/[0.06]"
@@ -33,7 +37,7 @@ export function IncludedSection({
             >
               <span
                 className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-                style={{ backgroundColor: `${accentColor}1a`, color: accentColor }}
+                style={{ backgroundColor: `${badgeColor}1a`, color: badgeColor }}
               >
                 <PackageCheck className="h-4 w-4" />
               </span>
@@ -46,7 +50,8 @@ export function IncludedSection({
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

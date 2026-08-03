@@ -71,6 +71,21 @@ export interface HeroConfig {
   mediaUrl?: string;
   ctaLabel?: string;
   ctaHref?: string;
+  /** Lets the hero itself BE the capture surface — a real one-fold page
+   *  (lead_magnet's default framework) needs no separate scrollable Offer
+   *  section; the hero's CTA button opens the capture form directly (via
+   *  cta.style "popup_form", the recommended default). Null/absent =
+   *  today's plain link-button hero. */
+  formId?: string | null;
+  /** Short outcome phrases shown under the subheadline — the one-fold
+   *  page's substitute for a separate Benefits/Included section, since it
+   *  has none. Optional; renders nothing extra when omitted. */
+  bullets?: string[];
+  /** A substring of `headline` to render in the design pack's gradient
+   *  accent (packs without headlineGradient ignore this — plain text).
+   *  Must match the headline text exactly (case-sensitive) or it's a
+   *  no-op. */
+  headlineAccent?: string;
   /** "split" places media beside the text (desktop) instead of below it.
    *  "background_image"/"founder_image" reuse the same mediaUrl as a
    *  full-bleed backdrop or a small framed portrait respectively — no new
@@ -374,6 +389,14 @@ export interface FunnelDoc {
    *  Zeno's design-pack selection or an operator override; editable
    *  afterward in the builder. */
   designPack?: import("@/lib/funnels/design-packs").DesignPackId;
+  /** Small brand mark shown at the very top of the public page, above the
+   *  hero — not a nav bar (funnels intentionally have no navigation away
+   *  from the CTA), just a real logo for recognition/trust. Always
+   *  operator-provided: Zeno never sets this (same reasoning as
+   *  Testimonials — a real logo isn't something the AI has access to or
+   *  can honestly invent). Absent = no logo bar rendered, unchanged from
+   *  today. */
+  logoUrl?: string;
   sections: FunnelSection[];
   /** Undefined/"standalone" = every existing funnel — appears in the main
    *  Funnels list. "upsell"/"downsell" = a post-purchase chain step,

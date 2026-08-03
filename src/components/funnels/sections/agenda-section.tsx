@@ -3,9 +3,14 @@ import type { AgendaConfig } from "@/types/funnels";
 export function AgendaSection({
   config,
   accentColor,
+  iconPalette,
 }: {
   config: AgendaConfig;
   accentColor: string;
+  /** Cycled per-step circle color when a design pack provides one (the
+   *  Soulware-reference "1/2/3" step treatment) — omitted = monochrome
+   *  accent circles, today's behavior. */
+  iconPalette?: string[];
 }) {
   if (config.days.length === 0) return null;
   return (
@@ -18,7 +23,9 @@ export function AgendaSection({
           Everything you&apos;ll learn
         </h2>
         <div className="grid gap-5 sm:grid-cols-2">
-          {config.days.map((day, i) => (
+          {config.days.map((day, i) => {
+            const stepColor = iconPalette && iconPalette.length > 0 ? iconPalette[i % iconPalette.length] : accentColor;
+            return (
             <div
               key={i}
               className="rounded-2xl border bg-[var(--card-bg)] p-6 shadow-[0_12px_30px_-15px_rgba(0,0,0,0.25)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_20px_45px_-18px_rgba(0,0,0,0.35)]"
@@ -29,12 +36,22 @@ export function AgendaSection({
                 } as React.CSSProperties
               }
             >
-              <span
-                className="inline-block rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide"
-                style={{ backgroundColor: `${accentColor}1a`, color: accentColor }}
-              >
-                {day.label}
-              </span>
+              <div className="flex items-center gap-3">
+                <span
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-base font-extrabold"
+                  style={{ backgroundColor: stepColor, color: "#fff" }}
+                >
+                  {i + 1}
+                </span>
+                {day.label && (
+                  <span
+                    className="inline-block rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide"
+                    style={{ backgroundColor: `${stepColor}1a`, color: stepColor }}
+                  >
+                    {day.label}
+                  </span>
+                )}
+              </div>
               <h3 className="mt-3.5 text-lg font-bold tracking-tight">
                 {day.title}
               </h3>
@@ -51,7 +68,8 @@ export function AgendaSection({
                 </ul>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

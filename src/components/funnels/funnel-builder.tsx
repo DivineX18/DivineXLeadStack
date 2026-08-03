@@ -159,6 +159,7 @@ export function FunnelBuilder({
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [accentColor, setAccentColor] = useState("#2563eb");
   const [designPack, setDesignPack] = useState<DesignPackId>("classic");
+  const [logoUrl, setLogoUrl] = useState("");
   const [sections, setSections] = useState<FunnelSection[]>([]);
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -176,6 +177,7 @@ export function FunnelBuilder({
         setTheme(d.funnel.theme);
         setAccentColor(d.funnel.accentColor);
         setDesignPack(d.funnel.designPack ?? "classic");
+        setLogoUrl(d.funnel.logoUrl ?? "");
         setSections(d.funnel.sections);
       }
     })();
@@ -224,6 +226,7 @@ export function FunnelBuilder({
           theme,
           accentColor,
           designPack,
+          logoUrl,
           sections,
         }),
       });
@@ -325,6 +328,16 @@ export function FunnelBuilder({
             ))}
           </select>
           <p className="mt-1 text-xs text-muted-foreground">{DESIGN_PACKS[designPack].audienceHint}</p>
+        </div>
+        <div className="col-span-2">
+          <label className={labelClass}>Logo URL (optional)</label>
+          <Input
+            value={logoUrl}
+            onChange={(e) => setLogoUrl(e.target.value)}
+            placeholder="https://…"
+            className="h-9"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">Shown as a small mark above the hero. Never set by Zeno — your real logo, not a generated one.</p>
         </div>
       </div>
 
@@ -566,6 +579,14 @@ function SectionFields({
       const c = section.config as OfferConfig;
       return (
         <div className="space-y-3">
+          <Field label="Product image URL (optional)">
+            <Input
+              value={c.productImageUrl ?? ""}
+              onChange={(e) => onChange({ ...c, productImageUrl: e.target.value })}
+              placeholder="https://…"
+              className="h-9"
+            />
+          </Field>
           <Field label="Headline (optional)">
             <Input
               value={c.headline ?? ""}
@@ -704,6 +725,14 @@ function SectionFields({
               rows={6}
               value={c.paragraphs.join("\n")}
               onChange={(e) => onChange({ ...c, paragraphs: linesToArray(e.target.value) })}
+            />
+          </Field>
+          <Field label="Photo URL (optional)">
+            <Input
+              value={c.photoUrl ?? ""}
+              onChange={(e) => onChange({ ...c, photoUrl: e.target.value })}
+              placeholder="https://…"
+              className="h-9"
             />
           </Field>
         </div>
@@ -1552,6 +1581,148 @@ function SectionFields({
             </div>
           )}
           addLabel="Add testimonial"
+        />
+      );
+    }
+    case "stats": {
+      const c = section.config as StatsConfig;
+      return (
+        <ListEditor
+          items={c.items}
+          onChange={(items) => onChange({ items })}
+          empty={{ value: "", label: "" } as StatsConfig["items"][number]}
+          renderRow={(item, update) => (
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                placeholder="Value (e.g. 500+)"
+                value={item.value}
+                onChange={(e) => update({ ...item, value: e.target.value })}
+                className="h-9"
+              />
+              <Input
+                placeholder="Label (e.g. Clients served)"
+                value={item.label}
+                onChange={(e) => update({ ...item, label: e.target.value })}
+                className="h-9"
+              />
+            </div>
+          )}
+          addLabel="Add stat"
+        />
+      );
+    }
+    case "callout": {
+      const c = section.config as CalloutConfig;
+      return (
+        <div className="space-y-3">
+          <Field label="Text">
+            <Textarea
+              rows={2}
+              value={c.text}
+              onChange={(e) => onChange({ ...c, text: e.target.value })}
+            />
+          </Field>
+          <Field label="Tone">
+            <select
+              value={c.tone ?? "highlight"}
+              onChange={(e) => onChange({ ...c, tone: e.target.value as CalloutConfig["tone"] })}
+              className={fieldClass}
+            >
+              <option value="highlight">Highlight</option>
+              <option value="info">Info</option>
+            </select>
+          </Field>
+        </div>
+      );
+    }
+    case "team": {
+      const c = section.config as TeamConfig;
+      return (
+        <div className="space-y-3">
+          <Field label="Headline (optional)">
+            <Input
+              value={c.headline ?? ""}
+              onChange={(e) => onChange({ ...c, headline: e.target.value })}
+              className="h-9"
+            />
+          </Field>
+          <ListEditor
+            items={c.members}
+            onChange={(members) => onChange({ ...c, members })}
+            empty={{ name: "", role: "", photoUrl: "", bio: "" } as TeamConfig["members"][number]}
+            renderRow={(m, update) => (
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    placeholder="Name"
+                    value={m.name}
+                    onChange={(e) => update({ ...m, name: e.target.value })}
+                    className="h-9"
+                  />
+                  <Input
+                    placeholder="Role"
+                    value={m.role}
+                    onChange={(e) => update({ ...m, role: e.target.value })}
+                    className="h-9"
+                  />
+                </div>
+                <Input
+                  placeholder="Photo URL (optional — their real photo)"
+                  value={m.photoUrl ?? ""}
+                  onChange={(e) => update({ ...m, photoUrl: e.target.value })}
+                  className="h-9"
+                />
+                <Input
+                  placeholder="Short bio (optional)"
+                  value={m.bio ?? ""}
+                  onChange={(e) => update({ ...m, bio: e.target.value })}
+                  className="h-9"
+                />
+              </div>
+            )}
+            addLabel="Add team member"
+          />
+        </div>
+      );
+    }
+    case "image_text": {
+      const c = section.config as ImageTextConfig;
+      return (
+        <ListEditor
+          items={c.blocks}
+          onChange={(blocks) => onChange({ blocks })}
+          empty={{ headline: "", text: "", imageUrl: "", imagePosition: "left" } as ImageTextConfig["blocks"][number]}
+          renderRow={(b, update) => (
+            <div className="space-y-2">
+              <Input
+                placeholder="Headline"
+                value={b.headline}
+                onChange={(e) => update({ ...b, headline: e.target.value })}
+                className="h-9"
+              />
+              <Textarea
+                placeholder="Text"
+                rows={3}
+                value={b.text}
+                onChange={(e) => update({ ...b, text: e.target.value })}
+              />
+              <Input
+                placeholder="Image URL (optional)"
+                value={b.imageUrl ?? ""}
+                onChange={(e) => update({ ...b, imageUrl: e.target.value })}
+                className="h-9"
+              />
+              <select
+                value={b.imagePosition}
+                onChange={(e) => update({ ...b, imagePosition: e.target.value as ImageTextConfig["blocks"][number]["imagePosition"] })}
+                className={fieldClass}
+              >
+                <option value="left">Image on the left</option>
+                <option value="right">Image on the right</option>
+              </select>
+            </div>
+          )}
+          addLabel="Add block"
         />
       );
     }

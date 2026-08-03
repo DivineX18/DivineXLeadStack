@@ -24,9 +24,14 @@ const ICONS: Record<BenefitIconType, typeof Check> = {
 export function BenefitsGridSection({
   config,
   accentColor,
+  iconPalette,
 }: {
   config: BenefitsGridConfig;
   accentColor: string;
+  /** Design-pack icon-badge colors, cycled one-per-card instead of every
+   *  card reusing the single accent color. Omitted = monochrome (today's
+   *  behavior). */
+  iconPalette?: string[];
 }) {
   if (config.items.length === 0) return null;
   const cols =
@@ -50,6 +55,7 @@ export function BenefitsGridSection({
         <div className={`grid grid-cols-1 gap-5 ${cols}`}>
           {config.items.map((item, i) => {
             const Icon = ICONS[item.iconType ?? "check"];
+            const badgeColor = iconPalette && iconPalette.length > 0 ? iconPalette[i % iconPalette.length] : accentColor;
             return (
               <div
                 key={i}
@@ -62,7 +68,7 @@ export function BenefitsGridSection({
               >
                 <span
                   className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl"
-                  style={{ backgroundColor: `${accentColor}1a`, color: accentColor }}
+                  style={{ backgroundColor: `${badgeColor}1a`, color: badgeColor }}
                 >
                   <Icon className="h-5 w-5" />
                 </span>

@@ -99,6 +99,7 @@ export async function PATCH(
   if (typeof body.designPack === "string" && body.designPack in DESIGN_PACKS) {
     patch.designPack = body.designPack as FunnelPatch["designPack"];
   }
+  if (typeof body.logoUrl === "string") patch.logoUrl = body.logoUrl.trim().slice(0, 1000);
   if (body.sections !== undefined) {
     const sections = sanitizeSections(body.sections);
     if (sections === null) {

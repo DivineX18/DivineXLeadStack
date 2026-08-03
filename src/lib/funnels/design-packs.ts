@@ -39,6 +39,17 @@ export interface DesignPackTokens {
    *  every pack's rhythm starting and (for most) ending "white" so the
    *  hero and final CTA read cleanly regardless of section count. */
   backgroundRhythm: SectionBackground[];
+  /** Icon-badge colors for card grids (Benefits, Included, etc.), cycled
+   *  one-per-card instead of every card reusing the single accent color —
+   *  the difference between a page that reads flat/templated and one with
+   *  real visual variety. Omitted = monochrome (today's behavior, and the
+   *  right call for restrained packs like executive/premium where variety
+   *  would undercut the "clean/minimal" character). */
+  iconPalette?: string[];
+  /** Two-stop gradient for the hero's accented headline phrase (HeroConfig.
+   *  headlineAccent) — the "Turn Your Purpose Into [Profit]" treatment.
+   *  Omitted = plain solid text (today's behavior). */
+  headlineGradient?: [string, string];
 }
 
 export const DESIGN_PACKS: Record<DesignPackId, DesignPackTokens> = {
@@ -74,6 +85,8 @@ export const DESIGN_PACKS: Record<DesignPackId, DesignPackTokens> = {
     cardStyle: "sharp",
     spacing: "comfortable",
     backgroundRhythm: ["dark", "gradient", "dark", "gray", "dark"],
+    iconPalette: ["#ec4899", "#3b82f6", "#a855f7", "#f97316", "#22c55e", "#06b6d4"],
+    headlineGradient: ["#22d3ee", "#a855f7"],
   },
   premium: {
     id: "premium",
@@ -85,6 +98,7 @@ export const DESIGN_PACKS: Record<DesignPackId, DesignPackTokens> = {
     cardStyle: "elegant",
     spacing: "spacious",
     backgroundRhythm: ["white", "gray", "white", "gray", "white"],
+    headlineGradient: ["#b45309", "#d97706"],
   },
   startup: {
     id: "startup",
@@ -96,6 +110,8 @@ export const DESIGN_PACKS: Record<DesignPackId, DesignPackTokens> = {
     cardStyle: "floating",
     spacing: "comfortable",
     backgroundRhythm: ["white", "gradient", "white", "gray", "white"],
+    iconPalette: ["#4f46e5", "#0ea5e9", "#8b5cf6", "#f59e0b", "#10b981"],
+    headlineGradient: ["#4f46e5", "#0ea5e9"],
   },
   local_business: {
     id: "local_business",
