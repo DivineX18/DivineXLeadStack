@@ -73,7 +73,7 @@ import {
   updateFunnelServerSide,
   FunnelValidationError,
 } from "@/lib/server/funnels-service";
-import type { FunnelSectionType, HeroConfig, TicketTiersConfig } from "@/types/funnels";
+import type { FunnelSection, FunnelSectionType, HeroConfig, PhotoGalleryConfig, TicketTiersConfig } from "@/types/funnels";
 import type { DesignPackId } from "@/lib/funnels/design-packs";
 import { FUNNEL_FRAMEWORKS } from "@/lib/funnels/frameworks";
 import {
@@ -3249,7 +3249,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     requiredRole: "subAccountAdmin",
     menuLabel: "Create a funnel system for this workspace (page + form + follow-up email + workflow)",
     description:
-      "Create a COMPLETE funnel system — not just a landing page — hosted directly on this platform (not the website builder): the funnel page itself, PLUS (when the funnel needs a lead-capture opt-in — most genres besides paid tripwire/vsl offers) a dedicated capture Form, a follow-up email Message Template, and a Workflow that sends it the moment someone submits. Use when the user asks to build/make/create/generate a funnel, landing page, lead magnet page, webinar registration page, application page, or tripwire offer — 'build me a webinar funnel' should produce the whole connected system in one shot, matching what an operator would expect, not just a page they still have to wire up by hand. Everything is created in DRAFT/review state — the funnel is never auto-published, the workflow is never auto-activated — since real money (Stripe) and real emails are on the other side of 'live'. If the user names a reference site, call research_website_reference FIRST and mirror its tone/services WITHOUT copying text. IMPORTANT — write the copy yourself, don't make the user write it: headline, subheadline, bullets, story, and CTA label are all YOUR job as the copywriter, not the user's — never respond with a bare 'a headline is required, what should it be?' question. From whatever the user told you about their business/offer/audience (even a single sentence), write a specific, concrete headline/subheadline/bullets/CTA yourself. The ONLY thing you should ask the user for is a genuine BUSINESS FACT you truly have nothing to go on for AND cannot safely infer or draft around — e.g. what the business actually does, whether a named person is really the founder, whether a testimonial may be published, a real video/media URL, or which booking calendar/phone number to wire into a CTA. Never ask the user to define marketing copy, visual choices, funnel structure, or offer wording — that includes the specific lead-magnet/consultation MECHANISM (e.g. 'should this be a free assessment, a downloadable checklist, or a generic consultation request?' is exactly the kind of question you must NOT ask). When the business, audience, and objective already give you enough context (which a one-sentence business description almost always does), pick the single most conversion-appropriate mechanism yourself — for a B2B/professional/consultative business with no named lead magnet, default to a free consultation/scoping-call/assessment offer, worded specifically to the business, not generically — build the complete DRAFT with that assumption, and say so plainly in your reply (e.g. 'I've drafted this around a free scoping-call offer, since none was specified — easy to swap for a different lead magnet before you publish'). A draft in review beats a blocking question every time; the user can always edit or regenerate. The one exception where asking instead of drafting stays correct: the funnel genuinely cannot be safely configured without a specific real-world fact — a real price for a paid offer, a real booking-page slug for a calendar CTA, a real phone number for a phone CTA, or real payment configuration — because guessing those isn't a draft assumption, it's a broken or misleading live page. The one exception on copy specifically is testimonials (see story_paragraphs below): those must come from the user or be written as synthesized non-testimonial copy — never invented as if from a real customer. STRATEGY — before writing any copy, silently reason through (do NOT show this reasoning in your reply, just let it inform the copy): who the customer is, what problem/pain they have right now, the outcome they actually want, the objection most likely stopping them from acting, how this offer is positioned against alternatives, and what the offer itself concretely delivers. A senior conversion copywriter does this thinking before typing a single word — your headline/bullets/story/CTA should read like the output of that reasoning, not like a form filled in field-by-field. " +
+      "Create a COMPLETE funnel system — not just a landing page — hosted directly on this platform (not the website builder): the funnel page itself, PLUS (when the funnel needs a lead-capture opt-in — most genres besides paid tripwire/vsl offers) a dedicated capture Form, a follow-up email Message Template, and a Workflow that sends it the moment someone submits. Use when the user asks to build/make/create/generate a funnel, landing page, lead magnet page, webinar registration page, application page, or tripwire offer — 'build me a webinar funnel' should produce the whole connected system in one shot, matching what an operator would expect, not just a page they still have to wire up by hand. Everything is created in DRAFT/review state — the funnel is never auto-published, the workflow is never auto-activated — since real money (Stripe) and real emails are on the other side of 'live'. If the user names a reference site, call research_website_reference FIRST and mirror its tone/services WITHOUT copying text. IMPORTANT — write the copy yourself, don't make the user write it: headline, subheadline, bullets, story, and CTA label are all YOUR job as the copywriter, not the user's — never respond with a bare 'a headline is required, what should it be?' question. From whatever the user told you about their business/offer/audience (even a single sentence), write a specific, concrete headline/subheadline/bullets/CTA yourself. The ONLY thing you should ask the user for is a genuine BUSINESS FACT you truly have nothing to go on for AND cannot safely infer or draft around — realistically just: what the business actually does (if even that wasn't said), whether a named person is really the founder, or whether a testimonial may be published. That's close to the full list — do NOT ask for the business/clinic/practice NAME (use whatever the user called it, or write around it generically — 'this clinic', 'your practice' — the operator can rename it in seconds), a CITY or location (skip locality-specific copy rather than ask), a real media URL (use media_subject/hero_media_url's honest-placeholder path instead of asking), or a booking calendar/phone number (cta_style silently falls back to a working popup_form when neither cta_booking_page_slug nor cta_phone_number is available — see those params — so there is NOTHING to ask about there either). Never ask the user to define marketing copy, visual choices, funnel structure, offer wording, or WHICH GENRE/PRICING MODEL to use — that includes the specific lead-magnet/consultation MECHANISM (e.g. 'should this be a free assessment, a downloadable checklist, or a generic consultation request?' is exactly the kind of question you must NOT ask) and 'should this be free or a paid offer?' (default to a free genre — lead_gen or lead_magnet — whenever the user didn't mention pricing; only pick a priced genre — tripwire/vsl/challenge — when they told you a real price). When the business, audience, and objective already give you enough context (which a one-sentence business description almost always does), pick the single most conversion-appropriate mechanism yourself — for a B2B/professional/consultative business with no named lead magnet, default to a free consultation/scoping-call/assessment offer, worded specifically to the business, not generically — build the complete DRAFT with that assumption, and say so plainly in your reply (e.g. 'I've drafted this around a free scoping-call offer, since none was specified — easy to swap for a different lead magnet before you publish'). A draft in review beats a blocking question every time; the user can always edit or regenerate. The one exception where asking instead of drafting stays correct: the user has explicitly requested something this tool structurally cannot configure without a specific real-world fact they haven't given — e.g. they said 'charge $49 for this' but never told you the actual price, or 'send people to my calendar' but never gave a real booking-page slug — because guessing those isn't a draft assumption, it's a broken or misleading live page. Absent such an explicit request, always take the safe free/self-contained default instead of asking. The one exception on copy specifically is testimonials (see story_paragraphs below): those must come from the user or be written as synthesized non-testimonial copy — never invented as if from a real customer. STRATEGY — before writing any copy, silently reason through (do NOT show this reasoning in your reply, just let it inform the copy): who the customer is, what problem/pain they have right now, the outcome they actually want, the objection most likely stopping them from acting, how this offer is positioned against alternatives, and what the offer itself concretely delivers. A senior conversion copywriter does this thinking before typing a single word — your headline/bullets/story/CTA should read like the output of that reasoning, not like a form filled in field-by-field. " +
       "DESIGN — you are both the conversion strategist AND the landing-page designer. This is Phase 2's job, not the user's: NEVER ask what color/font/template/border-radius/layout they want — infer a visual_archetype from the business/audience/offer you already have, and only ask when a real fact is genuinely missing and unsafe to guess (existing brand colors, whether a named person is the founder, whether a testimonial may be published, a video URL, which booking calendar). Pick ONE visual_archetype: " +
       "local_service (home services, automotive, clinics, contractors, appointment-driven local businesses — warm/high-trust palette, friendly sans, rounded cards, low complexity, minimal motion, phone/booking/estimate CTAs). " +
       "saas_technology (SaaS, AI, dev tools, platforms, apps — high-contrast light/dark/mixed, controlled gradients, dashboard/browser mockups, modern type, moderate motion, tight geometry). " +
@@ -3259,7 +3259,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       "wellness (health, fitness, life coaching, spiritual/holistic — soft natural palette, organic/rounded shapes, calmer spacing, gentle animation, lower density). " +
       "agency_creative (marketing/creative agencies, freelance studios, sales-led creative services — bold type, strong contrast, layered cards, higher energy, moderate/expressive motion, strategy-call CTA). " +
       "professional_enterprise (consultants, healthcare, law, finance, enterprise B2B — structured grids, restrained color, data/process visuals, conservative motion, clear comparison sections). " +
-      "Each archetype resolves a FULL token set automatically (palette, color mode, typography, card geometry, icon style, density, background rhythm, animation level, hero layout, CTA strategy) — never hand-pick these individually; instead nudge them via the optional overrides below, which are only honored when they're one of that archetype's own approved options (an invalid override is silently ignored, never an arbitrary color/font): palette_variant (that archetype's own named palette, e.g. 'trust_blue' for local_service — omit to use its first/default), color_mode (light/dark/mixed, only if the archetype supports more than one), typography_pairing, hero_layout, animation_level (none/minimal/moderate/expressive — omit to use the archetype's own default; never crank this up just because you can), visual_density (low/medium/high), media_strategy (what kind of media the hero/founder area wants — e.g. dashboard_screenshot for SaaS, founder_photo for coach_consultant), cta_style (inline/popup_form/popup_calendar/dual/sticky_desktop/floating_mobile/phone — omit to use the archetype's own recommended CTA, e.g. local_service defaults to popup_calendar/phone, luxury_premium to popup_calendar). If the user gave you a REAL media asset (a screenshot/photo URL), pass it as hero_media_url (+ hero_media_type); if the archetype's media_strategy calls for real media you don't have, Zeno leaves an honest labeled placeholder automatically — never fabricate a fake dashboard/photo. For a 'phone' cta_style, pass the real number as cta_phone_number (E.164, e.g. '+15551234567') — omit if you don't have one and the CTA falls back to inline rather than a dead tel: link. " +
+      "Each archetype resolves a FULL token set automatically (palette, color mode, typography, card geometry, icon style, density, background rhythm, animation level, hero layout, CTA strategy) — never hand-pick these individually; instead nudge them via the optional overrides below, which are only honored when they're one of that archetype's own approved options (an invalid override is silently ignored, never an arbitrary color/font): palette_variant (that archetype's own named palette, e.g. 'trust_blue' for local_service — omit to use its first/default), color_mode (light/dark/mixed, only if the archetype supports more than one), typography_pairing, hero_layout, animation_level (none/minimal/moderate/expressive — omit to use the archetype's own default; never crank this up just because you can), visual_density (low/medium/high), media_strategy (what kind of media the hero/founder area wants — e.g. dashboard_screenshot for SaaS, founder_photo for coach_consultant), cta_style (inline/popup_form/popup_calendar/dual/sticky_desktop/floating_mobile/phone — omit to use the archetype's own recommended CTA, e.g. local_service defaults to popup_calendar/phone, luxury_premium to popup_calendar). If the user gave you a REAL media asset (a screenshot/photo URL), pass it as hero_media_url (+ hero_media_type); if the archetype's media_strategy calls for real media you don't have, Zeno leaves an honest labeled placeholder automatically — never fabricate a fake dashboard/photo. Write media_subject whenever media_strategy implies a real photo (service_photo/team_photo/community_photo/founder_photo) with no hero_media_url given — a SPECIFIC shooting brief for the operator (e.g. 'Technician repairing an HVAC unit'), not a generic 'add a photo'; skip it for screenshot-type strategies (dashboard_screenshot/browser_mockup/product_screenshot — nothing to 'shoot'). When media_strategy is service_photo/team_photo/community_photo (i.e. the business would show MULTIPLE real examples, not one), Zeno automatically adds a dedicated photo-gallery section instead of cramming everything into the hero — the hero stays a clean headline (with room for the operator's real logo above it); gallery_layout optionally overrides which layout that gallery uses (grid/masonry/carousel/before_after), omit to use the archetype's own recommendation. For a 'phone' cta_style, pass the real number as cta_phone_number (E.164, e.g. '+15551234567') — omit if you don't have one and the CTA falls back to inline rather than a dead tel: link. " +
       "Legacy design_pack (classic/executive/bold/premium/startup/local_business/wellness) still works if you use it instead, but visual_archetype is the current, richer system — prefer it for every new funnel. Don't set BOTH design_pack and accent_color when you've picked a real archetype/pack — they'd conflict. " +
       "STRUCTURE — this is a conversion-framework generator, not a paragraph generator: every funnel follows Attention → Problem → Solution → Benefits → Process → Offer → Trust → FAQ → CTA, and each genre maps that sequence onto a recommended sequence of REUSABLE LAYOUTS (cards, grids, timelines, comparisons — favor these over walls of text): " +
       "lead_magnet = Hero ONLY — one fold, no scrolling required. A free lead magnet is a low-commitment ask; the hero itself carries the value prop, 3-5 bullets (what they get), and the capture form as a popup behind the CTA button. Write MORE into eyebrow/headline/subheadline/bullets than you would for a multi-section genre, since the hero is the entire page — but still no separate sections below it. " +
@@ -3462,13 +3462,17 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         cta_style: {
           type: "string",
           enum: ["inline", "popup_form", "popup_calendar", "dual", "sticky_desktop", "floating_mobile", "phone"],
-          description: "How the primary capture/offer CTA behaves. Prefer omitting this and letting visual_archetype pick its own recommended CTA (e.g. local_service defaults to booking/phone, most others to popup_form). 'dual' needs cta_secondary_label + cta_secondary_href. 'popup_calendar' needs a real booking page slug (ask the user which one, or omit). 'phone' needs cta_phone_number.",
+          description: "How the primary capture/offer CTA behaves. NEVER ask the user for a booking-page slug or phone number before building — that's exactly the kind of blocking question the tool's top-level instructions ban. Only set this to 'popup_calendar' or 'phone' when the user has ALREADY volunteered a real slug/number earlier in the conversation; otherwise omit this entirely (or set 'popup_form') and the funnel safely defaults to a lead-capture form + follow-up email — the operator connects their calendar/number afterward, no live page is ever broken by omitting it. 'dual' needs cta_secondary_label + cta_secondary_href.",
         },
         cta_secondary_label: { type: "string", description: "Only used with cta_style 'dual'." },
         cta_secondary_href: { type: "string", description: "Only used with cta_style 'dual'." },
         cta_phone_number: {
           type: "string",
-          description: "Real phone number in E.164 format (e.g. '+15551234567'), only used with cta_style 'phone'. Never invent one — ask the user if they want a phone CTA but haven't given a number.",
+          description: "Real phone number in E.164 format (e.g. '+15551234567'), only used with cta_style 'phone'. Never ask for one before building — omit cta_style/leave it as popup_form if you don't have a real number; only set cta_style to 'phone' when the user already gave you one.",
+        },
+        cta_booking_page_slug: {
+          type: "string",
+          description: "A real booking-page slug the user already gave you (from /b/[subAccountId]/[slug]), only used with cta_style 'popup_calendar'. Never ask for one before building. Without it, 'popup_calendar' is impossible to configure from this tool, so the CTA falls back to popup_form regardless of what cta_style/the archetype recommends — the operator can switch to a real calendar in the builder once they have a booking page.",
         },
         visual_archetype: {
           type: "string",
@@ -3531,6 +3535,15 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           description: "A REAL image/video URL the user gave you (screenshot, founder photo, product shot). Never invent or guess a URL. Omit if you don't have one — the hero shows an honest placeholder instead.",
         },
         hero_media_type: { type: "string", enum: ["image", "video"], description: "Only used with hero_media_url. Omit to default to 'image'." },
+        media_subject: {
+          type: "string",
+          description: "A SPECIFIC description of what the placeholder photo should show, written for the operator, not the visitor — e.g. 'Technician repairing an HVAC unit' or 'You speaking at a recent event', not a generic 'a photo'. Only used when hero_media_url is omitted (no real media yet); shown next to the placeholder in the builder as a shooting brief, never on the public page. Write this whenever media_strategy implies a real photo (service_photo/team_photo/community_photo/founder_photo) — skip for dashboard/product screenshots (there's nothing to 'shoot').",
+        },
+        gallery_layout: {
+          type: "string",
+          enum: ["grid", "masonry", "carousel", "before_after"],
+          description: "Only relevant when the archetype's media strategy calls for MULTIPLE real photos (service_photo/team_photo/community_photo) — Zeno then adds a dedicated photo-gallery section (see media_strategy) instead of a single hero image, freeing the hero for a clean headline/logo. Omit to use the archetype's own recommended gallery layout.",
+        },
       },
       required: ["headline", "bullets"],
       additionalProperties: false,
@@ -3568,6 +3581,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         ctaSecondaryLabel: "cta_secondary_label",
         ctaSecondaryHref: "cta_secondary_href",
         ctaPhoneNumber: "cta_phone_number",
+        ctaBookingPageSlug: "cta_booking_page_slug",
         visualArchetype: "visual_archetype",
         paletteVariant: "palette_variant",
         colorMode: "color_mode",
@@ -3577,6 +3591,8 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         mediaStrategy: "media_strategy",
         heroMediaUrl: "hero_media_url",
         heroMediaType: "hero_media_type",
+        mediaSubject: "media_subject",
+        galleryLayout: "gallery_layout",
       };
       const raw: Record<string, unknown> = { ...rawObj };
       for (const [camel, snake] of Object.entries(camelToSnake)) {
@@ -3736,15 +3752,19 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const heroLayoutRaw = str(raw, "hero_layout");
       const heroLayout = HERO_LAYOUTS.includes(heroLayoutRaw) ? heroLayoutRaw : "";
 
-      // Default is "popup_form", not "inline" — the operator's explicit
-      // standing preference ("I like the popup form on all pages really").
-      // CtaButton degrades to plain inline on its own when no form is
-      // wired to a given section, so this is safe to apply everywhere.
-      // (An archetype's own recommended CTA, when one is resolved, takes
-      // priority over this raw default — see execute().)
+      // Left "" (not defaulted here) when omitted/invalid — execute() is
+      // the one place that decides the effective default, since the RIGHT
+      // default depends on whether an archetype resolved: an archetype's
+      // OWN recommended CTA (e.g. local_service -> popup_calendar) must
+      // win over the generic "popup_form everywhere" fallback, which only
+      // applies when no archetype was resolved at all. Defaulting to
+      // "popup_form" here (as an earlier version did) would make every
+      // omitted cta_style look like an EXPLICIT "popup_form" request by
+      // the time resolveDesignStrategy sees it — silently overriding every
+      // archetype's own CTA recommendation, which is exactly backwards.
       const CTA_STYLES = ["inline", "popup_form", "popup_calendar", "dual", "sticky_desktop", "floating_mobile", "phone"];
       const ctaStyleRaw = str(raw, "cta_style");
-      const ctaStyle = CTA_STYLES.includes(ctaStyleRaw) ? ctaStyleRaw : "popup_form";
+      const ctaStyle = CTA_STYLES.includes(ctaStyleRaw) ? ctaStyleRaw : "";
 
       // Phase 2 — Design Intelligence. Every value here is either a real
       // enum member (validated against the archetype catalog's own lists)
@@ -3782,6 +3802,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const heroMediaTypeRaw = str(raw, "hero_media_type");
       const heroMediaType = heroMediaTypeRaw === "video" ? "video" : "image";
       const ctaPhoneNumber = str(raw, "cta_phone_number").trim().slice(0, 20);
+      const ctaBookingPageSlug = str(raw, "cta_booking_page_slug").trim().slice(0, 80);
+      const mediaSubject = str(raw, "media_subject").trim().slice(0, 100);
+      const GALLERY_LAYOUTS = ["grid", "masonry", "carousel", "before_after"];
+      const galleryLayoutRaw = str(raw, "gallery_layout");
+      const galleryLayout = GALLERY_LAYOUTS.includes(galleryLayoutRaw) ? galleryLayoutRaw : "";
 
       return {
         ok: true,
@@ -3817,6 +3842,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           ctaSecondaryLabel: str(raw, "cta_secondary_label").slice(0, 40),
           ctaSecondaryHref: str(raw, "cta_secondary_href").slice(0, 500),
           ctaPhoneNumber,
+          ctaBookingPageSlug,
           visualArchetype,
           paletteVariant,
           colorMode,
@@ -3826,6 +3852,8 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           mediaStrategy,
           heroMediaUrl,
           heroMediaType,
+          mediaSubject,
+          galleryLayout,
         },
       };
     },
@@ -3933,7 +3961,28 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // as overrides above) — falling back to the raw values, unchanged,
       // when no archetype was resolved (today's exact pre-Phase-2 behavior).
       const heroLayout = designStrategy?.heroLayout ?? (args.heroLayout as string);
-      const ctaStyle = designStrategy?.ctaStrategy ?? (args.ctaStyle as string);
+      // designStrategy.ctaStrategy (when an archetype resolved) already
+      // incorporated any explicit args.ctaStyle override during
+      // resolveDesignStrategy() above, and always returns a real value —
+      // so it wins outright. Only the NO-archetype legacy path falls back
+      // to the standing "popup_form everywhere" default when ctaStyle
+      // wasn't explicitly set.
+      const rawCtaStyle = designStrategy?.ctaStrategy ?? ((args.ctaStyle as string) || "popup_form");
+      // create_funnel can only ever make "popup_calendar"/"phone" fully
+      // functional when the user already gave a real slug/number in this
+      // conversation (cta_booking_page_slug / cta_phone_number) — without
+      // one, storing that style anyway would look configured in the
+      // builder but silently do nothing until the operator fixes it.
+      // Falling back to "popup_form" here (rather than asking the user for
+      // the missing slug/number before building) is what lets the model
+      // omit cta_style entirely and never have to block on it — the
+      // funnel is always fully working the moment it's created.
+      const ctaStyle =
+        rawCtaStyle === "popup_calendar" && !args.ctaBookingPageSlug
+          ? "popup_form"
+          : rawCtaStyle === "phone" && !args.ctaPhoneNumber
+            ? "popup_form"
+            : rawCtaStyle;
       // Some genres (currently just lead_magnet, RC 1.1's one-fold length
       // pass) put isCapture on the hero stage itself rather than a
       // separate offer/ticket_tiers stage — the hero IS the whole page.
@@ -3949,6 +3998,22 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
                   }
                 : {}),
               ...(ctaStyle === "phone" && args.ctaPhoneNumber ? { phoneNumber: args.ctaPhoneNumber as string } : {}),
+              ...(ctaStyle === "popup_calendar" && args.ctaBookingPageSlug ? { bookingPageSlug: args.ctaBookingPageSlug as string } : {}),
+              // Popup-style intelligence: reinforce the offer with the
+              // bullets Zeno already wrote instead of a bare form-in-a-box
+              // — free, since the copy already exists. Gated to
+              // medium/high-density archetypes only (saas_technology,
+              // agency_creative, nonprofit_mission, coach_consultant,
+              // professional_enterprise) — low-density archetypes
+              // (luxury_premium, wellness, local_service) keep a plain
+              // centered popup, matching their restrained/minimal
+              // character; no archetype at all (legacy path) also stays
+              // plain, unchanged from pre-Phase-3 behavior.
+              ...(ctaStyle === "popup_form" &&
+              bullets.length > 0 &&
+              (designStrategy?.visualDensity === "medium" || designStrategy?.visualDensity === "high")
+                ? { popupLayout: "split_benefits" as const, popupBenefits: bullets.slice(0, 4), popupHeadline: args.headline as string }
+                : {}),
             }
           : undefined;
       // Media strategy — an honest labeled placeholder when the archetype
@@ -3966,18 +4031,62 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         phone_mockup: "Add a screenshot",
         video: "Add a video",
       };
+      // Shooting-brief purpose/size — fixed per media strategy (not
+      // model-authored; these don't vary business to business the way the
+      // SUBJECT does). Only strategies with a real placeholder above need
+      // an entry.
+      const MEDIA_PURPOSE: Partial<Record<MediaStrategyId, string>> = {
+        founder_photo: "Establish credibility and a real face behind the business",
+        team_photo: "Show the real people the visitor would work with",
+        community_photo: "Build trust through real, specific proof",
+        service_photo: "Build trust before the CTA",
+        product_screenshot: "Show the product in action",
+        dashboard_screenshot: "Show the product in action",
+        browser_mockup: "Show the product in action",
+        phone_mockup: "Show the product in action",
+      };
+      const MEDIA_SIZE: Partial<Record<MediaStrategyId, string>> = {
+        founder_photo: "800×800",
+        team_photo: "800×800",
+        community_photo: "1600×900",
+        service_photo: "1600×900",
+        product_screenshot: "1600×1000",
+        dashboard_screenshot: "1600×1000",
+        browser_mockup: "1600×1000",
+        phone_mockup: "750×1334",
+      };
+      const mediaSubject = (args.mediaSubject as string) || "";
+      function mediaBrief(strategy: MediaStrategyId | undefined): string | undefined {
+        if (!strategy) return undefined;
+        const purpose = MEDIA_PURPOSE[strategy];
+        const size = MEDIA_SIZE[strategy];
+        const parts = [mediaSubject || undefined, purpose ? `Purpose: ${purpose}` : undefined, size ? `Recommended ${size}` : undefined].filter(
+          Boolean,
+        );
+        return parts.length > 0 ? parts.join(" · ") : undefined;
+      }
       const heroMediaUrl = (args.heroMediaUrl as string) || "";
       const heroMediaType = (args.heroMediaType as string) === "video" ? "video" : "image";
       const resolvedMediaStrategy = designStrategy?.mediaStrategy;
+      // These three strategies mean "show MULTIPLE real examples," not one
+      // hero image — Zeno routes them to a dedicated photo_gallery section
+      // instead (added below, after `nextSections` is built) so the hero
+      // stays a clean headline with room for the operator's real logo
+      // above it, and the operator can keep adding photos independently.
+      const MULTI_PHOTO_STRATEGIES: MediaStrategyId[] = ["service_photo", "team_photo", "community_photo"];
+      const wantsGallerySection = !!resolvedMediaStrategy && MULTI_PHOTO_STRATEGIES.includes(resolvedMediaStrategy);
       const heroMediaPlaceholder =
-        !heroMediaUrl && resolvedMediaStrategy ? MEDIA_PLACEHOLDER_LABELS[resolvedMediaStrategy] : undefined;
-      const nextSections = created.sections.map((section) => {
+        !heroMediaUrl && resolvedMediaStrategy && !wantsGallerySection
+          ? MEDIA_PLACEHOLDER_LABELS[resolvedMediaStrategy]
+          : undefined;
+      const heroMediaBrief = heroMediaPlaceholder ? mediaBrief(resolvedMediaStrategy) : undefined;
+      const nextSections = created.sections.map((section): FunnelSection => {
         const content = contentFor(section.type);
         if (section.type === "hero") {
           return {
             ...section,
             config: {
-              ...section.config,
+              ...(section.config as HeroConfig),
               ...(args.eyebrow ? { eyebrow: args.eyebrow as string } : {}),
               headline: args.headline as string,
               ...(args.subheadline ? { subheadline: args.subheadline as string } : {}),
@@ -3991,7 +4100,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               ...(heroMediaUrl
                 ? { mediaUrl: heroMediaUrl, mediaType: heroMediaType as HeroConfig["mediaType"] }
                 : heroMediaPlaceholder
-                  ? { mediaType: heroMediaType as HeroConfig["mediaType"], mediaPlaceholderLabel: heroMediaPlaceholder }
+                  ? {
+                      mediaType: heroMediaType as HeroConfig["mediaType"],
+                      mediaPlaceholderLabel: heroMediaPlaceholder,
+                      ...(heroMediaBrief ? { mediaPlaceholderBrief: heroMediaBrief } : {}),
+                    }
                   : {}),
             },
           };
@@ -4024,7 +4137,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               ...(heroMediaUrl
                 ? { photoUrl: heroMediaUrl }
                 : resolvedMediaStrategy === "founder_photo" && heroMediaPlaceholder
-                  ? { photoPlaceholderLabel: heroMediaPlaceholder }
+                  ? {
+                      photoPlaceholderLabel: heroMediaPlaceholder,
+                      ...(heroMediaBrief ? { photoPlaceholderBrief: heroMediaBrief } : {}),
+                    }
                   : {}),
             },
           };
@@ -4165,6 +4281,33 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       });
 
       let sectionsToSave = nextSections;
+
+      // "More than one photo" — when the archetype's media strategy is one
+      // of the multi-photo kinds (service_photo/team_photo/community_photo)
+      // Zeno adds a real, independently-growable Photo Gallery section
+      // right after the hero, with an honest placeholder (never fabricated
+      // photos) — see wantsGallerySection above for why this replaces the
+      // hero's own single-image placeholder rather than stacking both.
+      if (wantsGallerySection && resolvedMediaStrategy) {
+        const galleryPlaceholderLabel = MEDIA_PLACEHOLDER_LABELS[resolvedMediaStrategy] ?? "Add photos of your work";
+        const galleryPlaceholderBrief = mediaBrief(resolvedMediaStrategy);
+        const heroIndex = sectionsToSave.findIndex((s) => s.type === "hero");
+        const gallerySection: FunnelSection = {
+          id: `s_gallery_${Date.now()}`,
+          type: "photo_gallery",
+          config: {
+            images: [],
+            layout: ((args.galleryLayout as string) || designStrategy?.galleryLayout || "grid") as PhotoGalleryConfig["layout"],
+            placeholderLabel: galleryPlaceholderLabel,
+            ...(galleryPlaceholderBrief ? { placeholderBrief: galleryPlaceholderBrief } : {}),
+          },
+        };
+        sectionsToSave = [
+          ...sectionsToSave.slice(0, heroIndex + 1),
+          gallerySection,
+          ...sectionsToSave.slice(heroIndex + 1),
+        ];
+      }
 
       // Orchestration: for a lead-capture-style funnel (no price set), also
       // create a dedicated form, a confirmation-email template, and a
@@ -4334,7 +4477,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         summaryLines.push(
           "",
           "DESIGN",
-          `${archetypeDef.label} style — chosen for ${archetypeDef.audienceHint.split(",")[0].toLowerCase()}. ${heroLayoutLabel} hero, ${animationLabel}, ${ctaLabel} CTA. Change the style, palette, hero, or CTA anytime without touching the copy.`,
+          `${archetypeDef.label} style — chosen for ${archetypeDef.audienceHint.split(",")[0].toLowerCase()}. ${heroLayoutLabel} hero, ${animationLabel}, ${ctaLabel} CTA. Change the style, palette, hero, or CTA anytime without touching the copy.` +
+            (wantsGallerySection
+              ? ` Added a Photo Gallery section for real work photos — the hero stays a clean headline with room for your logo above it.`
+              : ""),
         );
       }
       if (createdFormId) {

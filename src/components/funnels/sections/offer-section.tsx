@@ -16,14 +16,17 @@ function formatPrice(cents: number | null | undefined): string | null {
 export function OfferSection({
   config,
   accentColor,
+  theme,
   forms,
   subAccountId,
+  ctaAnimationLevel,
 }: {
   config: OfferConfig;
   accentColor: string;
   theme: "light" | "dark";
   forms: Record<string, LeadForm>;
   subAccountId?: string;
+  ctaAnimationLevel?: "none" | "minimal" | "moderate" | "expressive";
 }) {
   const price = formatPrice(config.priceCents);
   const strikePrice = formatPrice(config.strikethroughPriceCents);
@@ -102,6 +105,8 @@ export function OfferSection({
             cta={config.cta}
             accentColor={accentColor}
             subAccountId={subAccountId}
+            pageTheme={theme}
+            animationLevel={ctaAnimationLevel}
             className="block w-full rounded-xl px-6 py-4 text-center text-base font-bold text-white shadow-[0_8px_24px_-6px_var(--accent-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-6px_var(--accent-shadow)]"
           />
         </div>

@@ -306,7 +306,7 @@ function check(label: string, ok: boolean, detail?: string) {
 {
   check(
     "10a. Description explicitly bans asking about the lead-magnet/offer MECHANISM",
-    cap.description.includes("Never ask the user to define marketing copy, visual choices, funnel structure, or offer wording") &&
+    cap.description.includes("Never ask the user to define marketing copy, visual choices, funnel structure, offer wording") &&
       cap.description.toLowerCase().includes("lead-magnet/consultation mechanism"),
   );
   check(
@@ -315,8 +315,19 @@ function check(label: string, ok: boolean, detail?: string) {
       cap.description.includes("A draft in review beats a blocking question every time"),
   );
   check(
-    "10c. The narrow legitimate ask-instead-of-draft exception is still documented (real price/calendar/phone/payment)",
-    cap.description.includes("a real price for a paid offer, a real booking-page slug for a calendar CTA, a real phone number for a phone CTA, or real payment configuration"),
+    "10c. The narrow legitimate ask-instead-of-draft exception is still documented (only for an EXPLICIT request the tool can't configure)",
+    cap.description.includes("the user has explicitly requested something this tool structurally cannot configure without a specific real-world fact they haven't given") &&
+      cap.description.includes("Absent such an explicit request, always take the safe free/self-contained default instead of asking"),
+  );
+  check(
+    "10f. Description explicitly bans asking for business name, city, or booking/phone details before building",
+    cap.description.includes("do NOT ask for the business/clinic/practice NAME") &&
+      cap.description.includes("cta_style silently falls back to a working popup_form when neither cta_booking_page_slug nor cta_phone_number is available"),
+  );
+  check(
+    "10g. Description explicitly bans asking which genre/pricing model to use — defaults to free",
+    cap.description.includes("WHICH GENRE/PRICING MODEL to use") &&
+      cap.description.includes("default to a free genre — lead_gen or lead_magnet — whenever the user didn't mention pricing"),
   );
 }
 {
@@ -349,6 +360,56 @@ function check(label: string, ok: boolean, detail?: string) {
   if (validated.ok) {
     const result = await cap.execute!(fakeCtx(SUB_ID, AGENCY_ID, user.uid), validated.args);
     check("10e. execute() creates a complete funnel from the drafted mechanism", !!result.ref?.id, result.resultText);
+    if (result.ref?.id) await db.doc(`funnels/${result.ref.id}`).delete().catch(() => {});
+  }
+
+  // 10h/10i/10j — the chiropractic-clinic edge case (found live
+  // 2026-08-03, Phase 3 verification): the model was asking for a booking
+  // link/phone number before building at all, even though local_service's
+  // archetype default is popup_calendar. Fixed by making create_funnel
+  // itself fall back to popup_form whenever it wasn't given a REAL
+  // cta_booking_page_slug/cta_phone_number — never a half-configured
+  // "popup_calendar with no calendar" stored on the doc.
+  const noSlugValidated = cap.validate!({
+    genre: "lead_gen",
+    headline: "Same-Day Chiropractic Care, No Long Wait",
+    bullets: ["Walk-ins welcome", "Most visits covered by insurance"],
+    visual_archetype: "local_service", // archetype default cta is popup_calendar
+  });
+  check("10h. Local-service proposal with no booking slug validates", noSlugValidated.ok);
+  if (noSlugValidated.ok) {
+    const result = await cap.execute!(fakeCtx(SUB_ID, AGENCY_ID, user.uid), noSlugValidated.args);
+    const snap = result.ref?.id ? await db.doc(`funnels/${result.ref.id}`).get() : null;
+    const sections = snap?.data()?.sections as { type: string; config: Record<string, unknown> }[] | undefined;
+    const ctaBearing = sections?.find((s) => (s.config as { cta?: { style?: string } }).cta);
+    const cta = ctaBearing?.config.cta as { style?: string; bookingPageSlug?: string } | undefined;
+    check(
+      "10i. No real slug given -> CTA falls back to popup_form (never a non-functional popup_calendar)",
+      cta?.style === "popup_form" && !cta?.bookingPageSlug,
+      JSON.stringify(cta),
+    );
+    if (result.ref?.id) await db.doc(`funnels/${result.ref.id}`).delete().catch(() => {});
+  }
+
+  const withSlugValidated = cap.validate!({
+    genre: "lead_gen",
+    headline: "Same-Day Chiropractic Care, No Long Wait",
+    bullets: ["Walk-ins welcome", "Most visits covered by insurance"],
+    visual_archetype: "local_service",
+    cta_booking_page_slug: "acme-chiro-consult",
+  });
+  check("10j. Local-service proposal WITH a real booking slug validates", withSlugValidated.ok);
+  if (withSlugValidated.ok) {
+    const result = await cap.execute!(fakeCtx(SUB_ID, AGENCY_ID, user.uid), withSlugValidated.args);
+    const snap = result.ref?.id ? await db.doc(`funnels/${result.ref.id}`).get() : null;
+    const sections = snap?.data()?.sections as { type: string; config: Record<string, unknown> }[] | undefined;
+    const ctaBearing = sections?.find((s) => (s.config as { cta?: { style?: string } }).cta);
+    const cta = ctaBearing?.config.cta as { style?: string; bookingPageSlug?: string } | undefined;
+    check(
+      "10k. A real slug IS honored -> CTA becomes a working popup_calendar",
+      cta?.style === "popup_calendar" && cta?.bookingPageSlug === "acme-chiro-consult",
+      JSON.stringify(cta),
+    );
     if (result.ref?.id) await db.doc(`funnels/${result.ref.id}`).delete().catch(() => {});
   }
 

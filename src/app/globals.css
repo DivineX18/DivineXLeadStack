@@ -263,6 +263,34 @@ body {
   animation: cta-glow-pulse 2.6s ease-in-out infinite;
 }
 
+/*
+ * Flow Phase 3 — funnel CTA pulse. Same "breathing glow" idea as
+ * .cta-glow above, but driven by the funnel's own --accent-shadow custom
+ * property (set inline per-button in cta-button.tsx) instead of a fixed
+ * brand gradient, so it works for any archetype's accent color. Only
+ * applied when the resolved animationLevel is moderate/expressive —
+ * archetypes like luxury_premium/professional_enterprise never get it.
+ */
+@keyframes flow-cta-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--accent-shadow, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in oklab, var(--accent-shadow, transparent) 35%, transparent);
+  }
+}
+
+.flow-cta-pulse {
+  animation: flow-cta-pulse 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-cta-pulse {
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cta-glow {
     animation: none;

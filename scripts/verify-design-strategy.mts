@@ -178,9 +178,11 @@ try {
     check("5f. Summary includes a DESIGN rationale section", result.resultText.includes("DESIGN") && result.resultText.includes("SaaS & Technology"));
   }
 
-  // 5g. Local-service archetype with NO real media — an honest placeholder
-  // must appear (media_strategy defaults to service_photo), and a "phone"
-  // CTA with a real number should wire cta.phoneNumber onto the hero.
+  // 5g. Local-service archetype with NO real media — media_strategy
+  // defaults to service_photo, which Phase 3 routes to a dedicated Photo
+  // Gallery section (not a single hero placeholder — "more than one
+  // photo," and the hero stays clean for a real logo). A "phone" CTA with
+  // a real number should still wire cta.phoneNumber onto the hero.
   const localValidated = cap.validate!({
     genre: "lead_gen",
     headline: "Same-Day Roof Repair You Can Trust",
@@ -195,14 +197,18 @@ try {
     createdFunnelIds.push(result.ref!.id);
     const snap = await db.doc(`funnels/${result.ref!.id}`).get();
     const data = snap.data()!;
-    const hero = (data.sections as { type: string; config: Record<string, unknown> }[]).find((s) => s.type === "hero");
+    const sections = data.sections as { type: string; config: Record<string, unknown> }[];
+    const hero = sections.find((s) => s.type === "hero");
+    const gallery = sections.find((s) => s.type === "photo_gallery");
     const cta = hero?.config.cta as { style?: string; phoneNumber?: string } | undefined;
     check("5h. Phone CTA style + real number wired onto the hero", cta?.style === "phone" && cta?.phoneNumber === "+15551234567", JSON.stringify(cta));
     check(
-      "5i. No real media given -> an honest labeled placeholder (never nothing, never fabricated)",
-      typeof hero?.config.mediaPlaceholderLabel === "string" && (hero?.config.mediaPlaceholderLabel as string).length > 0,
-      hero?.config.mediaPlaceholderLabel as string,
+      "5i. A Photo Gallery section was added with an honest labeled placeholder (never nothing, never fabricated)",
+      !!gallery && typeof gallery.config.placeholderLabel === "string" && (gallery.config.placeholderLabel as string).length > 0,
+      JSON.stringify(gallery?.config),
     );
+    check("5i2. The gallery lands right after the hero", sections.findIndex((s) => s.type === "photo_gallery") === sections.findIndex((s) => s.type === "hero") + 1);
+    check("5i3. The hero itself carries NO media placeholder (freed up for a real logo, per the multi-photo redirect)", !hero?.config.mediaPlaceholderLabel);
     check("5j. local_service's low visual density / minimal animation applied", data.designStrategy?.visualDensity === "low" && data.designStrategy?.animationLevel === "minimal");
   }
 

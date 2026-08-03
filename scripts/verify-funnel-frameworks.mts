@@ -286,7 +286,12 @@ try {
   });
   check("5a. One-fold lead_magnet proposal validates", leadMagnetValidated.ok);
   if (leadMagnetValidated.ok) {
-    check("5b. cta_style defaults to popup_form when omitted", leadMagnetValidated.args.ctaStyle === "popup_form");
+    // validate() leaves ctaStyle "" (not defaulted) when omitted — the
+    // effective default is resolved inside execute() (see 5e below),
+    // since the RIGHT default depends on whether an archetype resolved a
+    // different CTA of its own. Checking the raw arg here would just
+    // re-test validate()'s parsing, not the actual default behavior.
+    check("5b. cta_style is left unresolved by validate() (execute() decides the real default)", leadMagnetValidated.args.ctaStyle === "");
     const result = await cap.execute!(fakeCtx(), leadMagnetValidated.args);
     createdFunnelIds.push(result.ref!.id);
     const snap = await db.doc(`funnels/${result.ref!.id}`).get();

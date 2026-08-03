@@ -211,6 +211,8 @@ export function defaultSectionConfig(type: FunnelSectionType): FunnelSectionConf
       return { members: [] };
     case "image_text":
       return { blocks: [] };
+    case "photo_gallery":
+      return { images: [], layout: "grid" };
   }
 }
 

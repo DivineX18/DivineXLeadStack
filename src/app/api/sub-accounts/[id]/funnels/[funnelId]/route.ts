@@ -48,6 +48,7 @@ const SECTION_TYPES: FunnelSectionType[] = [
   "callout",
   "team",
   "image_text",
+  "photo_gallery",
 ];
 
 /** Defensive sanitize of a client-supplied sections array — authed staff,

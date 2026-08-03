@@ -90,9 +90,11 @@ function GradientHeadline({
 export function HeroSection({
   config,
   accentColor,
+  theme,
   forms,
   subAccountId,
   headlineGradient,
+  ctaAnimationLevel,
 }: {
   config: HeroConfig;
   accentColor: string;
@@ -100,6 +102,7 @@ export function HeroSection({
   forms?: Record<string, LeadForm>;
   subAccountId?: string;
   headlineGradient?: [string, string];
+  ctaAnimationLevel?: "none" | "minimal" | "moderate" | "expressive";
 }) {
   // A device-mockup/split/background/founder layout still renders (with an
   // honest labeled placeholder) when Zeno set mediaPlaceholderLabel but has
@@ -146,6 +149,8 @@ export function HeroSection({
         cta={config.cta}
         accentColor={accentColor}
         subAccountId={subAccountId}
+        pageTheme={theme}
+        animationLevel={ctaAnimationLevel}
       />
     </div>
   );

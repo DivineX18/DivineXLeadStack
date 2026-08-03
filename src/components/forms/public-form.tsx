@@ -15,9 +15,13 @@ import {
 
 interface PublicFormProps {
   form: LeadForm;
+  /** Fired once, right when the success state renders (not on redirect —
+   *  the page is navigating away at that point anyway). Lets a modal
+   *  auto-dismiss a moment after a successful submission. */
+  onSuccess?: () => void;
 }
 
-export function PublicForm({ form }: PublicFormProps) {
+export function PublicForm({ form, onSuccess }: PublicFormProps) {
   const [values, setValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
     for (const f of form.fields) initial[f.id] = "";
@@ -99,6 +103,7 @@ export function PublicForm({ form }: PublicFormProps) {
         message: data.thankYouMessage ?? "Thanks — we'll be in touch shortly.",
         redirectUrl: null,
       });
+      onSuccess?.();
     } catch (err) {
       console.error(err);
       setApiError("Network error. Please try again.");

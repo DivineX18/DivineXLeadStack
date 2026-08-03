@@ -1,16 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
+import { Check } from "lucide-react";
 import { PublicForm } from "@/components/forms/public-form";
 import type { CtaExtras } from "@/types/funnels";
 import type { LeadForm } from "@/types/forms";
+import { Modal } from "./modal";
 
 /**
  * Shared CTA-experience renderer — hero/offer/cta_banner all delegate here
  * instead of each re-implementing popup/sticky/floating logic. The `cta`
  * prop is optional and additive (see CtaExtras' doc comment); omitted =
  * today's plain inline `<a>`/embedded-form behavior, unchanged.
+ *
+ * Phase 3 rewrite: popups now render through the real Modal component
+ * (fixed overlay, page never reflows, fade+scale, ESC/outside/X close) and
+ * pick up `pageTheme` from the funnel itself — the pre-Phase-3 version used
+ * the CSS `Canvas` system color, which tracked the visitor's OS/browser
+ * dark-mode setting instead of the page's own theme, so a light-themed
+ * funnel could pop a jarring dark card (or vice versa) depending on the
+ * visitor's OS, unrelated to the operator's design choice.
  */
 export function CtaButton({
   label,
@@ -19,6 +28,8 @@ export function CtaButton({
   cta,
   accentColor,
   subAccountId,
+  pageTheme = "light",
+  animationLevel = "none",
   className,
 }: {
   label: string;
@@ -29,30 +40,38 @@ export function CtaButton({
   cta?: CtaExtras;
   accentColor: string;
   subAccountId?: string;
+  /** The FUNNEL's own theme (not the visitor's OS preference) — sets the
+   *  popup modal's surface colors so it never mismatches the page. */
+  pageTheme?: "light" | "dark";
+  /** Phase 3 — "moderate"/"expressive" adds a subtle breathing glow (see
+   *  .flow-cta-pulse in globals.css) around the primary button. Respects
+   *  prefers-reduced-motion via CSS, same as every other Flow animation. */
+  animationLevel?: "none" | "minimal" | "moderate" | "expressive";
   className?: string;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
   const style = cta?.style ?? "inline";
+  const hasPopupTarget = style === "popup_calendar" ? !!(cta?.bookingPageSlug && subAccountId) : !!form;
+  const pulseClass = animationLevel === "moderate" || animationLevel === "expressive" ? " flow-cta-pulse" : "";
 
   const buttonStyle = {
     backgroundColor: accentColor,
     "--accent-shadow": `${accentColor}80`,
   } as React.CSSProperties;
   const btnClass =
-    className ??
-    "inline-flex items-center justify-center gap-2 rounded-xl px-9 py-4 text-base font-bold text-white shadow-[0_8px_24px_-6px_var(--accent-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-6px_var(--accent-shadow)]";
+    (className ??
+      "inline-flex items-center justify-center gap-2 rounded-xl px-9 py-4 text-base font-bold text-white shadow-[0_8px_24px_-6px_var(--accent-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-6px_var(--accent-shadow)]") +
+    pulseClass;
 
   const openModal = () => setModalOpen(true);
+  const closeModal = () => setModalOpen(false);
+  // A visitor gets ~2.2s to read the "thanks" confirmation before the
+  // modal dismisses itself — long enough to register, short enough not to
+  // feel stuck. Cleared implicitly: the modal unmounts on close anyway.
+  const closeAfterSuccess = () => setTimeout(closeModal, 2200);
 
   const primaryButton = () => {
-    if (style === "popup_form" && form) {
-      return (
-        <button type="button" onClick={openModal} className={btnClass} style={buttonStyle}>
-          {label}
-        </button>
-      );
-    }
-    if (style === "popup_calendar" && cta?.bookingPageSlug && subAccountId) {
+    if ((style === "popup_form" || style === "popup_calendar") && hasPopupTarget) {
       return (
         <button type="button" onClick={openModal} className={btnClass} style={buttonStyle}>
           {label}
@@ -87,6 +106,69 @@ export function CtaButton({
     </a>
   );
 
+  const modalBody = () => {
+    if (style === "popup_calendar" && cta?.bookingPageSlug && subAccountId) {
+      return (
+        <div className="p-2">
+          <iframe
+            src={`/b/${subAccountId}/${cta.bookingPageSlug}`}
+            className="h-[70vh] w-full rounded-xl"
+            title="Book a time"
+          />
+        </div>
+      );
+    }
+    if (!form) return null;
+    const layout = cta?.popupLayout ?? "centered";
+
+    if (layout === "split_image" && cta?.popupImageUrl) {
+      return (
+        <div className="grid sm:grid-cols-2">
+          <div className="hidden sm:block">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={cta.popupImageUrl} alt="" className="h-full w-full object-cover" />
+          </div>
+          <div className="p-6 sm:p-7">
+            <PublicForm form={form} onSuccess={closeAfterSuccess} />
+          </div>
+        </div>
+      );
+    }
+
+    if (layout === "split_benefits" && cta?.popupBenefits && cta.popupBenefits.length > 0) {
+      return (
+        <div className="grid sm:grid-cols-2">
+          <div className="p-6 sm:p-7" style={{ backgroundColor: `${accentColor}0d` }}>
+            {cta.popupHeadline && <p className="mb-4 font-bold tracking-tight">{cta.popupHeadline}</p>}
+            <ul className="space-y-2.5">
+              {cta.popupBenefits.map((b, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: accentColor }} />
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="p-6 sm:p-7">
+            <PublicForm form={form} onSuccess={closeAfterSuccess} />
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="p-6">
+        {cta?.popupHeadline && <p className="mb-4 font-bold tracking-tight">{cta.popupHeadline}</p>}
+        <PublicForm form={form} onSuccess={closeAfterSuccess} />
+      </div>
+    );
+  };
+
+  const modalWidth =
+    style === "popup_form" && (cta?.popupLayout === "split_image" || cta?.popupLayout === "split_benefits")
+      ? "max-w-2xl"
+      : "max-w-lg";
+
   return (
     <>
       <div className="flex flex-wrap items-center justify-center gap-3">
@@ -95,51 +177,52 @@ export function CtaButton({
       </div>
 
       {style === "sticky_desktop" && (
-        <div className="fixed inset-x-0 bottom-0 z-40 hidden border-t bg-[var(--card-bg)] px-4 py-3 backdrop-blur sm:flex sm:items-center sm:justify-center" style={{ "--card-bg": "color-mix(in oklab, currentColor 4%, transparent)" } as React.CSSProperties}>
-          <button type="button" onClick={form ? undefined : openModal} className={btnClass} style={buttonStyle}>
-            {label}
-          </button>
+        <div
+          className="fixed inset-x-0 bottom-0 z-40 hidden border-t bg-[var(--card-bg)] px-4 py-3 backdrop-blur sm:flex sm:items-center sm:justify-center"
+          style={{ "--card-bg": "color-mix(in oklab, currentColor 4%, transparent)" } as React.CSSProperties}
+        >
+          {cta?.style === "phone" && cta?.phoneNumber ? (
+            <a href={`tel:${cta.phoneNumber}`} className={btnClass} style={buttonStyle}>
+              {label}
+            </a>
+          ) : hasPopupTarget ? (
+            <button type="button" onClick={openModal} className={btnClass} style={buttonStyle}>
+              {label}
+            </button>
+          ) : (
+            <a href={href || "#"} className={btnClass} style={buttonStyle}>
+              {label}
+            </a>
+          )}
         </div>
       )}
       {style === "floating_mobile" && (
         <div className="fixed inset-x-4 bottom-4 z-40 sm:hidden">
-          <button
-            type="button"
-            onClick={openModal}
-            className="block w-full rounded-xl px-6 py-4 text-center text-base font-bold text-white shadow-[0_8px_24px_-6px_var(--accent-shadow)]"
-            style={buttonStyle}
-          >
-            {label}
-          </button>
+          {cta?.style === "phone" && cta?.phoneNumber ? (
+            <a
+              href={`tel:${cta.phoneNumber}`}
+              className="block w-full rounded-xl px-6 py-4 text-center text-base font-bold text-white shadow-[0_8px_24px_-6px_var(--accent-shadow)]"
+              style={buttonStyle}
+            >
+              {label}
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={openModal}
+              className="block w-full rounded-xl px-6 py-4 text-center text-base font-bold text-white shadow-[0_8px_24px_-6px_var(--accent-shadow)]"
+              style={buttonStyle}
+            >
+              {label}
+            </button>
+          )}
         </div>
       )}
 
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setModalOpen(false)}>
-          <div
-            className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-[var(--modal-bg)] p-6 shadow-2xl"
-            style={{ "--modal-bg": "Canvas" } as React.CSSProperties}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              onClick={() => setModalOpen(false)}
-              aria-label="Close"
-              className="absolute right-4 top-4 rounded-full p-1 opacity-60 hover:opacity-100"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            {style === "popup_calendar" && cta?.bookingPageSlug && subAccountId ? (
-              <iframe
-                src={`/b/${subAccountId}/${cta.bookingPageSlug}`}
-                className="h-[70vh] w-full rounded-lg"
-                title="Book a time"
-              />
-            ) : form ? (
-              <PublicForm form={form} />
-            ) : null}
-          </div>
-        </div>
+      {(style === "popup_form" || style === "popup_calendar") && (
+        <Modal open={modalOpen} onClose={closeModal} theme={pageTheme} accentColor={accentColor} maxWidthClassName={modalWidth}>
+          {modalBody()}
+        </Modal>
       )}
     </>
   );

@@ -4,11 +4,15 @@ import { CtaButton } from "./cta-button";
 export function CtaBannerSection({
   config,
   accentColor,
+  theme,
   subAccountId,
+  ctaAnimationLevel,
 }: {
   config: CtaBannerConfig;
   accentColor: string;
+  theme?: "light" | "dark";
   subAccountId?: string;
+  ctaAnimationLevel?: "none" | "minimal" | "moderate" | "expressive";
 }) {
   return (
     <section className="px-4 py-16">
@@ -37,6 +41,8 @@ export function CtaBannerSection({
             cta={config.cta}
             accentColor={accentColor}
             subAccountId={subAccountId}
+            pageTheme={theme}
+            animationLevel={ctaAnimationLevel}
           />
         </div>
       </div>

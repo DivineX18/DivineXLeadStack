@@ -27,6 +27,7 @@ import { StatsSection } from "./sections/stats-section";
 import { CalloutSection } from "./sections/callout-section";
 import { TeamSection } from "./sections/team-section";
 import { ImageTextSection } from "./sections/image-text-section";
+import { PhotoGallerySection } from "./sections/photo-gallery-section";
 import { AnimatedSection } from "./sections/animated-section";
 import { backgroundForIndex, type SectionBackground } from "@/lib/funnels/design-packs";
 import { resolveEffectiveDesignTokens } from "@/lib/funnels/design-strategy";
@@ -68,6 +69,7 @@ const SECTION_COMPONENTS: Record<FunnelSectionType, ComponentType<any>> = {
   callout: CalloutSection,
   team: TeamSection,
   image_text: ImageTextSection,
+  photo_gallery: PhotoGallerySection,
 };
 
 const SERIF_FONT_STACK = '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif';
@@ -171,6 +173,7 @@ export function PublicFunnelView({
                   iconPalette={tokens.iconPalette}
                   headlineGradient={tokens.headlineGradient}
                   iconStyle={tokens.iconStyle}
+                  ctaAnimationLevel={tokens.animationLevel}
                 />
               </AnimatedSection>
             </div>

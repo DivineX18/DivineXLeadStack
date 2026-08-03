@@ -57,6 +57,9 @@ export type MediaStrategyId =
   | "illustration"
   | "abstract"
   | "none";
+/** Phase 3 — which photo_gallery layout this archetype reaches for when
+ *  Zeno adds one (see capabilities.ts's create_funnel gallery insertion). */
+export type GalleryLayoutId = "grid" | "masonry" | "carousel" | "before_after";
 export type CtaStrategyId =
   | "inline"
   | "popup_form"
@@ -118,6 +121,7 @@ export interface VisualArchetypeDefinition {
   recommendedHeroLayouts: HeroLayoutId[];
   recommendedCtaStyles: CtaStrategyId[];
   recommendedMedia: MediaStrategyId[];
+  galleryLayout: GalleryLayoutId;
 }
 
 export const VISUAL_ARCHETYPES: Record<VisualArchetype, VisualArchetypeDefinition> = {
@@ -141,6 +145,7 @@ export const VISUAL_ARCHETYPES: Record<VisualArchetype, VisualArchetypeDefinitio
     recommendedHeroLayouts: ["centered", "split"],
     recommendedCtaStyles: ["popup_calendar", "phone", "popup_form"],
     recommendedMedia: ["service_photo", "team_photo", "none"],
+    galleryLayout: "before_after",
   },
   saas_technology: {
     id: "saas_technology",
@@ -162,6 +167,7 @@ export const VISUAL_ARCHETYPES: Record<VisualArchetype, VisualArchetypeDefinitio
     recommendedHeroLayouts: ["browser_mockup", "split", "phone_mockup"],
     recommendedCtaStyles: ["popup_form", "dual", "sticky_desktop"],
     recommendedMedia: ["dashboard_screenshot", "browser_mockup", "product_screenshot"],
+    galleryLayout: "grid",
   },
   luxury_premium: {
     id: "luxury_premium",
@@ -182,6 +188,7 @@ export const VISUAL_ARCHETYPES: Record<VisualArchetype, VisualArchetypeDefinitio
     recommendedHeroLayouts: ["background_image", "centered", "founder_image"],
     recommendedCtaStyles: ["popup_calendar", "popup_form"],
     recommendedMedia: ["founder_photo", "abstract", "none"],
+    galleryLayout: "carousel",
   },
   nonprofit_mission: {
     id: "nonprofit_mission",
@@ -202,6 +209,7 @@ export const VISUAL_ARCHETYPES: Record<VisualArchetype, VisualArchetypeDefinitio
     recommendedHeroLayouts: ["centered", "split"],
     recommendedCtaStyles: ["popup_form", "inline"],
     recommendedMedia: ["community_photo", "illustration", "none"],
+    galleryLayout: "grid",
   },
   coach_consultant: {
     id: "coach_consultant",
@@ -222,6 +230,7 @@ export const VISUAL_ARCHETYPES: Record<VisualArchetype, VisualArchetypeDefinitio
     recommendedHeroLayouts: ["founder_image", "split", "centered"],
     recommendedCtaStyles: ["popup_calendar", "popup_form"],
     recommendedMedia: ["founder_photo", "video", "none"],
+    galleryLayout: "carousel",
   },
   wellness: {
     id: "wellness",
@@ -242,6 +251,7 @@ export const VISUAL_ARCHETYPES: Record<VisualArchetype, VisualArchetypeDefinitio
     recommendedHeroLayouts: ["centered", "founder_image"],
     recommendedCtaStyles: ["popup_form", "popup_calendar"],
     recommendedMedia: ["service_photo", "founder_photo", "illustration"],
+    galleryLayout: "masonry",
   },
   agency_creative: {
     id: "agency_creative",
@@ -262,6 +272,7 @@ export const VISUAL_ARCHETYPES: Record<VisualArchetype, VisualArchetypeDefinitio
     recommendedHeroLayouts: ["split", "background_image", "centered"],
     recommendedCtaStyles: ["popup_calendar", "dual"],
     recommendedMedia: ["product_screenshot", "abstract", "video"],
+    galleryLayout: "masonry",
   },
   professional_enterprise: {
     id: "professional_enterprise",
@@ -282,6 +293,7 @@ export const VISUAL_ARCHETYPES: Record<VisualArchetype, VisualArchetypeDefinitio
     recommendedHeroLayouts: ["centered", "split"],
     recommendedCtaStyles: ["popup_form", "popup_calendar"],
     recommendedMedia: ["team_photo", "abstract", "none"],
+    galleryLayout: "grid",
   },
 };
 
@@ -299,6 +311,7 @@ export interface DesignStrategy {
   animationLevel: AnimationLevel;
   mediaStrategy: MediaStrategyId;
   ctaStrategy: CtaStrategyId;
+  galleryLayout: GalleryLayoutId;
 }
 
 function pickPalette(archetype: VisualArchetypeDefinition, paletteId?: string): PaletteVariant {
@@ -325,6 +338,7 @@ export function resolveDesignStrategy(
     visualDensity?: VisualDensity;
     mediaStrategy?: MediaStrategyId;
     ctaStrategy?: CtaStrategyId;
+    galleryLayout?: GalleryLayoutId;
   },
 ): DesignStrategy {
   const archetype = VISUAL_ARCHETYPES[archetypeId ?? "professional_enterprise"];
@@ -362,6 +376,7 @@ export function resolveDesignStrategy(
     animationLevel,
     mediaStrategy,
     ctaStrategy,
+    galleryLayout: overrides?.galleryLayout ?? archetype.galleryLayout,
   };
 }
 

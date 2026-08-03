@@ -42,7 +42,8 @@ export type FunnelSectionType =
   | "stats"
   | "callout"
   | "team"
-  | "image_text";
+  | "image_text"
+  | "photo_gallery";
 
 /**
  * Shared CTA-experience config, embedded (optional) on any section that
@@ -64,6 +65,21 @@ export interface CtaExtras {
   /** "phone" style — tel: link, e.g. "+15551234567". Degrades to plain
    *  inline (no dead tel: link) when absent. */
   phoneNumber?: string;
+  /** Phase 3 — popup presentation layout, only meaningful for
+   *  "popup_form". "centered" (default/omitted) is today's plain
+   *  form-in-a-card. "split_image" needs popupImageUrl; "split_benefits"
+   *  needs popupBenefits — both degrade to "centered" when their
+   *  prerequisite is missing. */
+  popupLayout?: "centered" | "split_image" | "split_benefits";
+  /** Small headline shown above the form inside the popup (any layout).
+   *  Optional — omit for a plain form with no extra framing. */
+  popupHeadline?: string;
+  /** Real image URL for the "split_image" popup layout — never a
+   *  fabricated/stock image; the operator's own photo. */
+  popupImageUrl?: string;
+  /** 2-4 short benefit lines shown beside the form for the
+   *  "split_benefits" popup layout. */
+  popupBenefits?: string[];
 }
 
 export interface HeroConfig {
@@ -104,6 +120,12 @@ export interface HeroConfig {
    *  none was supplied. Ignored once mediaUrl is set. Never auto-filled
    *  with stock imagery — see CLAUDE.md's anti-fabrication rules. */
   mediaPlaceholderLabel?: string;
+  /** Phase 3 — operator-facing shooting brief for `mediaPlaceholderLabel`,
+   *  e.g. "Technician repairing an HVAC unit · Build trust before the CTA
+   *  · Recommended 1600×900". BUILDER-ONLY (never rendered on the public
+   *  page) — tells the operator specifically what to shoot/upload and why,
+   *  instead of a generic "add a photo." */
+  mediaPlaceholderBrief?: string;
 }
 
 export interface ProofStripConfig {
@@ -135,6 +157,8 @@ export interface StoryConfig {
    *  archetype expects a founder photo but none was supplied. Ignored once
    *  photoUrl is set. */
   photoPlaceholderLabel?: string;
+  /** Builder-only shooting brief — see HeroConfig.mediaPlaceholderBrief. */
+  photoPlaceholderBrief?: string;
 }
 
 export interface FaqConfig {
@@ -353,6 +377,27 @@ export interface ImageTextConfig {
   blocks: { headline: string; text: string; imageUrl?: string; imagePosition: "left" | "right" }[];
 }
 
+/** Phase 3 — multiple real photos, distinct from ImageTextConfig's
+ *  paired-with-copy blocks (this is a pure visual gallery, no text per
+ *  image beyond an optional caption) and from Hero's single media slot
+ *  (this is the "more than one photo" answer — a dedicated, independently
+ *  scalable section, so the hero can stay a single clean image/logo-only
+ *  while real work photos live here). Real URLs only; `placeholderLabel`
+ *  renders an honest "Add photos of your work" card when empty — never
+ *  fabricated/stock imagery. */
+export interface PhotoGalleryConfig {
+  headline?: string;
+  images: { url: string; caption?: string }[];
+  /** "grid" (default) = even columns. "masonry" = varied-height columns
+   *  for a less uniform feel. "carousel" = horizontal scroll-snap, best
+   *  for 5+ images. "before_after" = exactly two images side by side
+   *  labeled Before/After. */
+  layout?: "grid" | "masonry" | "carousel" | "before_after";
+  placeholderLabel?: string;
+  /** Builder-only shooting brief — see HeroConfig.mediaPlaceholderBrief. */
+  placeholderBrief?: string;
+}
+
 export type FunnelSectionConfig =
   | HeroConfig
   | ProofStripConfig
@@ -377,7 +422,8 @@ export type FunnelSectionConfig =
   | StatsConfig
   | CalloutConfig
   | TeamConfig
-  | ImageTextConfig;
+  | ImageTextConfig
+  | PhotoGalleryConfig;
 
 export interface FunnelSection {
   id: string;

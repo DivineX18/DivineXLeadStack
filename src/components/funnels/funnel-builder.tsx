@@ -34,6 +34,7 @@ import type {
   ImageTextConfig,
   IncludedConfig,
   OfferConfig,
+  PhotoGalleryConfig,
   ProblemSolutionConfig,
   ProofStripConfig,
   StatsConfig,
@@ -90,6 +91,7 @@ const SECTION_LABELS: Record<FunnelSectionType, string> = {
   callout: "Callout banner",
   team: "Team",
   image_text: "Image + text",
+  photo_gallery: "Photo gallery",
 };
 
 const SECTION_DEFAULTS: Record<FunnelSectionType, () => FunnelSection["config"]> = {
@@ -136,6 +138,7 @@ const SECTION_DEFAULTS: Record<FunnelSectionType, () => FunnelSection["config"]>
   callout: () => ({ text: "" }) satisfies CalloutConfig,
   team: () => ({ members: [] }) satisfies TeamConfig,
   image_text: () => ({ blocks: [] }) satisfies ImageTextConfig,
+  photo_gallery: () => ({ images: [], layout: "grid" }) satisfies PhotoGalleryConfig,
 };
 
 // Deliberately does NOT trim each line. These textareas are controlled —
@@ -671,6 +674,9 @@ function SectionFields({
                 placeholder="e.g. Add a dashboard screenshot"
                 className="h-9"
               />
+              {c.mediaPlaceholderBrief && (
+                <p className="mt-1.5 text-xs text-muted-foreground">{c.mediaPlaceholderBrief}</p>
+              )}
             </Field>
           )}
           <Field label="Bullets (one per line, optional)">
@@ -750,6 +756,47 @@ function SectionFields({
                 />
               </Field>
             </div>
+          )}
+          {c.cta?.style === "popup_form" && (
+            <>
+              <Field label="Popup layout">
+                <select
+                  value={c.cta?.popupLayout ?? "centered"}
+                  onChange={(e) => onChange({ ...c, cta: { ...c.cta, popupLayout: e.target.value as NonNullable<HeroConfig["cta"]>["popupLayout"] } })}
+                  className={fieldClass}
+                >
+                  <option value="centered">Centered — form only</option>
+                  <option value="split_image">Split — real photo beside the form</option>
+                  <option value="split_benefits">Split — benefit list beside the form</option>
+                </select>
+              </Field>
+              <Field label="Popup headline (optional)">
+                <Input
+                  value={c.cta?.popupHeadline ?? ""}
+                  onChange={(e) => onChange({ ...c, cta: { ...c.cta, popupHeadline: e.target.value } })}
+                  className="h-9"
+                />
+              </Field>
+              {c.cta?.popupLayout === "split_image" && (
+                <Field label="Popup photo URL">
+                  <Input
+                    value={c.cta?.popupImageUrl ?? ""}
+                    onChange={(e) => onChange({ ...c, cta: { ...c.cta, popupImageUrl: e.target.value } })}
+                    className="h-9"
+                  />
+                </Field>
+              )}
+              {c.cta?.popupLayout === "split_benefits" && (
+                <Field label="Popup benefits (one per line)">
+                  <Textarea
+                    value={(c.cta?.popupBenefits ?? []).join("\n")}
+                    onChange={(e) => onChange({ ...c, cta: { ...c.cta, popupBenefits: linesToArray(e.target.value) } })}
+                    rows={3}
+                    className="text-sm"
+                  />
+                </Field>
+              )}
+            </>
           )}
         </div>
       );
@@ -919,6 +966,7 @@ function SectionFields({
               <option value="dual">Dual — primary + secondary button</option>
               <option value="sticky_desktop">Sticky (desktop) — always-visible bar</option>
               <option value="floating_mobile">Floating (mobile) — persistent bottom button</option>
+              <option value="phone">Phone — tel: link</option>
             </select>
           </Field>
           {c.cta?.style === "popup_calendar" && (
@@ -926,6 +974,15 @@ function SectionFields({
               <Input
                 value={c.cta?.bookingPageSlug ?? ""}
                 onChange={(e) => onChange({ ...c, cta: { ...c.cta, bookingPageSlug: e.target.value } })}
+                className="h-9"
+              />
+            </Field>
+          )}
+          {c.cta?.style === "phone" && (
+            <Field label="Phone number (tel: link, e.g. +15551234567)">
+              <Input
+                value={c.cta?.phoneNumber ?? ""}
+                onChange={(e) => onChange({ ...c, cta: { ...c.cta, phoneNumber: e.target.value } })}
                 className="h-9"
               />
             </Field>
@@ -947,6 +1004,47 @@ function SectionFields({
                 />
               </Field>
             </div>
+          )}
+          {c.cta?.style === "popup_form" && (
+            <>
+              <Field label="Popup layout">
+                <select
+                  value={c.cta?.popupLayout ?? "centered"}
+                  onChange={(e) => onChange({ ...c, cta: { ...c.cta, popupLayout: e.target.value as NonNullable<OfferConfig["cta"]>["popupLayout"] } })}
+                  className={fieldClass}
+                >
+                  <option value="centered">Centered — form only</option>
+                  <option value="split_image">Split — real photo beside the form</option>
+                  <option value="split_benefits">Split — benefit list beside the form</option>
+                </select>
+              </Field>
+              <Field label="Popup headline (optional)">
+                <Input
+                  value={c.cta?.popupHeadline ?? ""}
+                  onChange={(e) => onChange({ ...c, cta: { ...c.cta, popupHeadline: e.target.value } })}
+                  className="h-9"
+                />
+              </Field>
+              {c.cta?.popupLayout === "split_image" && (
+                <Field label="Popup photo URL">
+                  <Input
+                    value={c.cta?.popupImageUrl ?? ""}
+                    onChange={(e) => onChange({ ...c, cta: { ...c.cta, popupImageUrl: e.target.value } })}
+                    className="h-9"
+                  />
+                </Field>
+              )}
+              {c.cta?.popupLayout === "split_benefits" && (
+                <Field label="Popup benefits (one per line)">
+                  <Textarea
+                    value={(c.cta?.popupBenefits ?? []).join("\n")}
+                    onChange={(e) => onChange({ ...c, cta: { ...c.cta, popupBenefits: linesToArray(e.target.value) } })}
+                    rows={3}
+                    className="text-sm"
+                  />
+                </Field>
+              )}
+            </>
           )}
         </div>
       );
@@ -977,6 +1075,19 @@ function SectionFields({
               className="h-9"
             />
           </Field>
+          {!c.photoUrl && (
+            <Field label="Photo placeholder label (optional)">
+              <Input
+                value={c.photoPlaceholderLabel ?? ""}
+                onChange={(e) => onChange({ ...c, photoPlaceholderLabel: e.target.value })}
+                placeholder="e.g. Add your photo"
+                className="h-9"
+              />
+              {c.photoPlaceholderBrief && (
+                <p className="mt-1.5 text-xs text-muted-foreground">{c.photoPlaceholderBrief}</p>
+              )}
+            </Field>
+          )}
         </div>
       );
     }
@@ -1966,6 +2077,67 @@ function SectionFields({
           )}
           addLabel="Add block"
         />
+      );
+    }
+    case "photo_gallery": {
+      const c = section.config as PhotoGalleryConfig;
+      return (
+        <div className="space-y-3">
+          <Field label="Headline (optional)">
+            <Input
+              value={c.headline ?? ""}
+              onChange={(e) => onChange({ ...c, headline: e.target.value })}
+              className="h-9"
+            />
+          </Field>
+          <Field label="Layout">
+            <select
+              value={c.layout ?? "grid"}
+              onChange={(e) => onChange({ ...c, layout: e.target.value as PhotoGalleryConfig["layout"] })}
+              className={fieldClass}
+            >
+              <option value="grid">Grid — even columns</option>
+              <option value="masonry">Masonry — varied-height columns</option>
+              <option value="carousel">Carousel — horizontal scroll (best for 5+)</option>
+              <option value="before_after">Before / After — exactly 2 photos</option>
+            </select>
+          </Field>
+          {c.images.length === 0 && (
+            <Field label="Placeholder label (shown until real photos are added)">
+              <Input
+                value={c.placeholderLabel ?? ""}
+                onChange={(e) => onChange({ ...c, placeholderLabel: e.target.value })}
+                placeholder="e.g. Add photos of your work"
+                className="h-9"
+              />
+              {c.placeholderBrief && (
+                <p className="mt-1.5 text-xs text-muted-foreground">{c.placeholderBrief}</p>
+              )}
+            </Field>
+          )}
+          <ListEditor
+            items={c.images}
+            onChange={(images) => onChange({ ...c, images })}
+            empty={{ url: "", caption: "" } as PhotoGalleryConfig["images"][number]}
+            renderRow={(img, update) => (
+              <div className="space-y-2">
+                <Input
+                  placeholder="Photo URL"
+                  value={img.url}
+                  onChange={(e) => update({ ...img, url: e.target.value })}
+                  className="h-9"
+                />
+                <Input
+                  placeholder="Caption (optional)"
+                  value={img.caption ?? ""}
+                  onChange={(e) => update({ ...img, caption: e.target.value })}
+                  className="h-9"
+                />
+              </div>
+            )}
+            addLabel="Add photo"
+          />
+        </div>
       );
     }
     default:
