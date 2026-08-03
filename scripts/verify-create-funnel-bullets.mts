@@ -285,5 +285,77 @@ function check(label: string, ok: boolean, detail?: string) {
   await auth.deleteUser(user.uid).catch(() => {});
 }
 
+// 10. "Ask instead of draft" edge case (found live 2026-08-03): for a
+// consultative/professional-services business with no named lead magnet,
+// the model sometimes asked "should this be a free assessment, a
+// checklist, or a generic consultation request?" instead of just picking
+// one and drafting — even though the tool's own instructions already said
+// to write the copy, not ask for it. Root cause: "the ONLY thing you
+// should ask for is what the business/offer/audience IS" was ambiguous
+// enough that the model read "the specific lead-magnet mechanism" as part
+// of "what the offer is." Fixed by explicitly naming that exact question
+// as one Zeno must NOT ask, and instructing a labeled default assumption
+// instead. Live-verified after the fix: 5/5 real OpenRouter calls against
+// the reported prompt called create_funnel directly (0/5 asked), vs. 1/3
+// asking before the fix — that live check is ad hoc (ran once, not
+// persisted, per this repo's live-model-test convention) since it needs a
+// real model call; what's locked in here is deterministic: the exact
+// instruction text stays present (so a future edit can't silently weaken
+// it) and the "drafted generic mechanism" shape it produces still
+// round-trips through validate()/execute() end to end.
+{
+  check(
+    "10a. Description explicitly bans asking about the lead-magnet/offer MECHANISM",
+    cap.description.includes("Never ask the user to define marketing copy, visual choices, funnel structure, or offer wording") &&
+      cap.description.toLowerCase().includes("lead-magnet/consultation mechanism"),
+  );
+  check(
+    "10b. Description instructs a labeled default assumption instead of blocking",
+    cap.description.includes("default to a free consultation/scoping-call/assessment offer") &&
+      cap.description.includes("A draft in review beats a blocking question every time"),
+  );
+  check(
+    "10c. The narrow legitimate ask-instead-of-draft exception is still documented (real price/calendar/phone/payment)",
+    cap.description.includes("a real price for a paid offer, a real booking-page slug for a calendar CTA, a real phone number for a phone CTA, or real payment configuration"),
+  );
+}
+{
+  const db = getAdminDb();
+  const auth = getAdminAuth();
+  const RUN_ID = `askvsdraft${Date.now()}`;
+  const AGENCY_ID = `test-agency-${RUN_ID}`;
+  const SUB_ID = `test-sa-${RUN_ID}`;
+  await db.doc(`agencies/${AGENCY_ID}`).set({ name: "Verify Agency", createdAt: new Date() });
+  await db.doc(`subAccounts/${SUB_ID}`).set({
+    name: "Verify Sub-Account",
+    agencyId: AGENCY_ID,
+    funnelsEnabledByAgency: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+  const user = await auth.createUser({ email: `askvsdraft-${RUN_ID}@example.com`, password: "verify-test-pass-123!" });
+
+  // Mirrors what a correctly-behaving model now sends for the reported
+  // prompt (professional-services, no named lead magnet) — a drafted
+  // generic-consultation mechanism instead of a blocking question.
+  const validated = cap.validate!({
+    genre: "lead_gen",
+    funnel_name: "Enterprise SOC2 Audit — Lead Gen",
+    headline: "Pass Your SOC 2 Audit Without Derailing the Finance Team",
+    bullets: "Fixed-scope audit plan, Evidence collection that runs alongside your close, One senior engagement lead",
+    cta_label: "Request a scoping call",
+  });
+  check("10d. Drafted generic-consultation proposal validates (no special field needed for this path)", validated.ok);
+  if (validated.ok) {
+    const result = await cap.execute!(fakeCtx(SUB_ID, AGENCY_ID, user.uid), validated.args);
+    check("10e. execute() creates a complete funnel from the drafted mechanism", !!result.ref?.id, result.resultText);
+    if (result.ref?.id) await db.doc(`funnels/${result.ref.id}`).delete().catch(() => {});
+  }
+
+  await db.doc(`subAccounts/${SUB_ID}`).delete().catch(() => {});
+  await db.doc(`agencies/${AGENCY_ID}`).delete().catch(() => {});
+  await auth.deleteUser(user.uid).catch(() => {});
+}
+
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);
 if (failures > 0) process.exit(1);
