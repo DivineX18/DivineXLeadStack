@@ -77,6 +77,7 @@ A small set of optional booleans on `SubAccountDoc` that **only the agency owner
 | `metaInboxEnabledByAgency` | **Beta master switch** for the Facebook Messenger + Instagram DM unified-inbox channels (both ride one Meta connection, so they flip together) | `false` | No tear-down — while off the inbox surface is **inert and invisible** everywhere. Ships off so an agency lights it up only for a sub-account that has a connected Meta account and volunteers to beta-test. Re-enabling resumes instantly. |
 | `socialPlannerEnabledByAgency` | **Beta master switch** for the Social Planner (schedule + auto-publish posts to the connected Facebook Page / Instagram Business) — the sidebar entry, the connect/create/publish routes, and posting scopes at connect time | `false` | No tear-down — scheduled posts + the Meta connection are preserved. While off: the Social Planner sidebar entry renders a "Locked by your agency" state and the connect/create/publish routes 403. **Shares the same `metaConfig` connection as the inbox** — it does NOT add a second connection (see "Social Planner v1"). Re-enabling resumes instantly. |
 | `getLeadsEnabledByAgency` | **Experimental master switch** for Get Leads — NOTE: the feature is currently **PARKED** (`GET_LEADS_PARKED` flag), so this gate's Manage-dialog toggle and assistant capability are hidden; the gate itself still works if flipped via the PATCH route. Gate description: switch (local-business prospecting: Outscraper-powered Google Maps search + email/social enrichment, Mapbox results map, select-and-import into Contacts) — the sidebar entry + the search/poll/import routes | `false` | No tear-down — search results are ephemeral (never persisted) and imported contacts are ordinary contacts. While off: the Get Leads sidebar entry renders a "Locked by your agency" state and the routes 403. Gated because every search spends the agency's shared Outscraper credits (~$0.10–0.20/search). Supports the `getLeadsHiddenWhenDisabled` hide-override like the other sidebar-gated features. See "Get Leads v1". |
+| `funnelCheckoutEnabledByAgency` | **Funnel Checkout** — real, native Stripe checkout on funnel pages: connecting a sub-account's own Stripe account, minting products/prices, creating Checkout Sessions (one-time or subscription) with an order bump, one-click post-purchase upsell/downsell charges, and refunds. Distinct from the base Funnel Builder gate (funnels/pages themselves) and from `apiAccessEnabledByAgency`/`broadcastsEnabledByAgency` — real money changes hands here, on the *sub-account's own* Stripe account, not the agency's. | `false` | No tear-down — a connected `stripeConfig` (encrypted key + webhook) and all `funnelOrders` history are preserved. While off: the Stripe-checkout settings card locks, `/stripe-checkout/connect` and the refund route 403, and `checkout`-mode sections on published funnels return a friendly "not set up for checkout yet" instead of erroring. Re-enable resumes instantly — no reconnect needed. See "Funnel Checkout v1 (BYO-Stripe)". |
 
 **Wiring pattern (same shape for every gate):**
 1. **Schema** — optional boolean on `SubAccountDoc` (`*EnabledByAgency`). Read `=== true` so legacy docs missing the field default to off.
@@ -184,6 +185,12 @@ src/
         twilio/                   Save dedicated Twilio creds (auto-wires inbound webhook)
         website/                  POST create-site (cap-enforced); [siteId]/build|poll|
         website/[siteId]/...      poll-now|DELETE (reset via ?reset=1, else remove)
+        stripe-checkout/connect/  POST connect/rotate + DELETE disconnect BYO-Stripe (Funnel Checkout)
+        funnels/orders/           GET list; [orderId]/refund/ POST refund
+        import/ghl/               connect/ preview/ start/ — GHL migration wizard backend
+      lp/[funnelId]/checkout/session/    POST create a Stripe Checkout Session (public)
+      lp/[funnelId]/upsell/[sectionId]/charge/  POST off-session upsell/downsell charge (public)
+      import/ghl/step/            QStash callback — GHL import drain (public, signature-verified)
       contacts/[id]/              DELETE contact + subcollections + referencing deals/tasks
       forms/[id]/submit/          Public form submission (unauthenticated; admin SDK)
       comms/email/send/           Send email (Resend, shared-sender)
@@ -194,6 +201,7 @@ src/
       u/[token]/                  POST unsubscribe (flips contact.emailOptedOut)
       cron/gitpage-heartbeat/     Daily QStash-scheduled telemetry + status cache
       webhooks/stripe/            Stripe subscription webhook
+      webhooks/stripe/tenant/[subAccountId]/  Per-tenant Funnel Checkout webhook (own signing secret, never the shared STRIPE_WEBHOOK_SECRET)
       webhooks/twilio/inbound/    Inbound SMS (STOP/START opt-out + chat-thread writes + AI auto-reply)
       sub-accounts/[id]/
         ai-agent/profile/         GET/PATCH shared agent profile (persona, hours, KB)
@@ -230,14 +238,19 @@ src/
     ai-agents/           Channel nav tabs + AgentProfileSection (persona+KB) + SMS/WebChat channel sections + WebChatSessionsList + WebChatSessionThread
     web-chat/            ChatWindow component rendered inside the embed iframe (self-contained, immune to host CSS)
     social/              Social Planner: social-content-calendar (month grid of posts), social-post-composer (caption + image URL + FB/IG targets + schedule dialog), social-connections (read-only status + deep link to Settings)
+    funnels/             Funnel Builder + public renderer; sections/ includes checkout-section.tsx + upsell-offer-section.tsx (Funnel Checkout) alongside the general section-type registry
+    import/               ghl-import-wizard.tsx (3-step: connect → map → run), ghl-import-help-dialog.tsx — GHL migration UI
     analytics-scripts.tsx  Crisp/GTM/Pixel loader — skips on /embed/* so the chat iframe doesn't render a nested support widget
     search/              Cmd+K command palette
-    settings/            Sub-account members + per-SA Twilio config sections
+    settings/            Sub-account members + per-SA Twilio config sections; sub-account-stripe-checkout-section.tsx (BYO-Stripe for Funnel Checkout — distinct from the pre-existing sub-account-stripe-section.tsx, which is the agency's shared invoice-payment Stripe)
   config/
     landing.ts           CUSTOM_BRAND fields (white-label config)
   lib/
     firebase/            Client + admin SDK (admin uses "server-only" guard) + auth helpers
-    stripe/              Checkout + portal + webhooks + client/server helpers
+    crypto/               secrets.ts — AES-256-GCM encrypt/decrypt for per-tenant credentials (TENANT_SECRETS_KEY), shared by Funnel Checkout + GHL Import
+    stripe/              Checkout + portal + webhooks + client/server helpers; tenant-server.ts (per-tenant BYO-Stripe client for Funnel Checkout, deliberately uncached)
+    funnels/             load-funnel-for-render.ts (shared by /lp + custom-domain), materialize-price.ts (lazy Stripe Product/Price minting), checkout-webhook.ts, checkout-rate-limit.ts, contact-reconcile.ts — Funnel Checkout server logic
+    import/               bulk-write.ts + job-progress.ts (generic, source-agnostic import engine); ghl/ (client.ts, transform.ts, fixtures.ts — the GHL migration connector)
     comms/               Resend + Twilio wrappers, route-auth, usage counter, SMS segments, per-SA config; meta.ts (server-only Graph API: OAuth, scopes, granted-scope read, send + Social Planner publish helpers), meta-capabilities.ts (client-safe metaCanInbox/metaCanPublish/deriveMetaCapabilities)
     comms/ai/            AI Agents: agent.ts (profile + per-channel resolver + lazy migration), respond.ts (SMS orchestrator), prompt.ts (channel-aware system prompt + KB injection), context.ts (contact context block), escalation.ts (keyword match + email notify), openrouter.ts (LLM client)
     comms/web-chat/      Web Chat: session.ts (get-or-create + history + capture-state), respond.ts (orchestrator returning reply over HTTP), capture.ts (parse [[form]] + [[capture]] markers, Contact reconciliation), follow-up.ts (post-capture Task + escalation email), origin.ts (Origin allowlist), rate-limit.ts (in-memory IP + session caps)
@@ -315,6 +328,9 @@ firebase.json            Deploys firestore.rules only
 | `subAccounts/{id}/counters/quoteNumbers` | server-only | Per-sub-account sequence counter for the year-prefixed `Q-YYYY-NNNN` quote number generator. `{ year: number, seq: number, updatedAt }`. Atomic increment via Firestore transaction in `lib/quotes/number.ts::issueQuoteNumber()`. Never touched by clients — the resulting number returns in the create-quote API response. |
 | `quotes/{id}` | sub-account read/create/update/delete | Operator-built quote. Carries tenancy (`agencyId`, `subAccountId`, `createdByUid`), `contactId`, `quoteNumber` (e.g. `Q-2026-0001`), `status` (draft → sent → viewed → accepted/declined/expired → paid), `currency`, `lineItems[]`, `globalDiscount`, `globalTaxPercent`, `termsAndNotes`, `billedToOrganization`, `validUntil`, `autoCreateDealOnAccept`, lifecycle stamps (`sentAt`, `viewedAt`, `acceptedAt`, `declinedAt`, `declineReason`, `declineNote`, `paidAt`), and `publicTokenHash` (SHA-256 of the most recent HMAC-signed public token — raw token never persisted). Edits allowed on sent quotes per v1 spec. |
 | `socialPosts/{id}` | sub-account read; server-only write | Social Planner post (top-level, like `quotes`). Carries tenancy (`agencyId`, `subAccountId`, `createdByUid`), `caption`, `imageUrl`, `targets` (`("facebook"\|"instagram")[]`), `status` (draft → scheduled → publishing → published/failed), `scheduledAt`, `publishedAt`, per-target `results[]` (`{platform, status, externalId, error}`), and `qstashMessageId`. Reads stream to the content calendar via `subscribeToSocialPosts`; all writes go through Admin-SDK routes (rules are read-only for members, mirrors `products`). |
+| `funnelOrders/{id}` | server-only (Admin-SDK read via `GET /api/sub-accounts/[id]/funnels/orders`) | One doc per completed Funnel Checkout order (BYO-Stripe). Carries tenancy, `funnelId`/`sectionId`, `stripeCheckoutSessionId`/`stripePaymentIntentId`/`stripeCustomerId`/`stripePaymentMethodId` (the saved card, for off-session upsell charges), `currency`, `mainOrderAmountCents`, `bumpIncluded`/`bumpAmountCents`, `contactId`/`customerEmail`, `upsells[]` (`{funnelId, status: "accepted"\|"declined"\|"failed_requires_action", amountCents}` — an array, not a fixed pair, so an uncapped upsell/downsell chain appends one entry per hop), `status` (`paid → refunded/partially_refunded/disputed`), `refundedAmountCents`. Created directly at `status: "paid"` by the tenant webhook's `checkout.session.completed` handler — Checkout Sessions only fire that event after payment clears, so there's no separate pending state. See "Funnel Checkout v1 (BYO-Stripe)". |
+| `importJobs/{id}` | server-only | Generic bulk-import job (GHL connector today; CSV/API sources share the same shape per `ImportSource`). Carries tenancy, `source`, `status` (`queued → running → completed/failed`), per-entity `totals` (`{received, created, updated, skipped, failed}`), a capped (500) `errors[]` sample, `finishedAt`. The GHL variant additionally carries `ghlMapping` (the operator-confirmed stage/custom-field map) and `ghlEntities` (which of contacts/opportunities/notes to pull). Progress is read live by the import wizard via `onSnapshot`. See "GoHighLevel Import v1". |
+| `subAccounts/{id}/importMappings/{key}` | server-only | Source-id ↔ LeadStack-id index, `key = "{system}:{entity}:{externalId}"` (e.g. `ghl:contacts:abc123`). Powers idempotent upsert (a re-run of the same import updates instead of duplicating) and child-record parent resolution (a note/deal's `contact_external_id` resolves to the real `contactId` via this index). Shared by every import source, not GHL-specific. |
 
 ## Key Architecture
 - **Page width convention** — every dashboard page wraps ALL of its top-level returns (main view AND loading/locked/empty/not-found states, so width doesn't jump) in a centered container. **Agency section (`/agency/*`): uniformly `mx-auto w-full max-w-5xl`** — every agency page matches Agency home, with TWO exceptions: the Affiliates list + Buyers pages use `max-w-6xl` (their payout/commission tables need the extra columns; Affiliates payouts + affiliate detail are 5xl), and the Landing editor (`/agency/landing`) stays at its original `max-w-4xl`. **Sub-account section (`/sa/[id]/*`): two tiers** — `mx-auto w-full max-w-5xl` for data/list surfaces (tables, calendars, maps, reports, campaign detail) or `mx-auto w-full max-w-3xl` for forms/editors/settings/chat/feeds (long text inputs read badly wider than ~3xl). The ONLY full-bleed page is **Pipeline** (the Kanban board needs the width). When adding a page, pick from these — don't invent a new width.
@@ -866,6 +882,142 @@ The Workspace Assistant (and the Agency Assistant via the `_in_sub_account` wrap
 
 Execution goes through [src/lib/server/websites-service.ts](src/lib/server/websites-service.ts) — `createWebsiteForSubAccount()` + `submitWebsiteBuildForSubAccount()`, extracted from the create/build routes (which now delegate). Every guard is shared: the `websiteEnabledByAgency` gate, the 5-site cap, `GITPAGE_API_KEY` presence, config normalization + validation, gitpage error mapping (incl. the 401 key-invalid heartbeat flip), and QStash poll scheduling. **No new env vars** — reuses `FIRECRAWL_API_KEY` (optional), `GITPAGE_API_KEY`, `QSTASH_*`.
 
+## Funnel Checkout v1 (BYO-Stripe)
+
+Real, native Stripe checkout on funnel pages — an order bump and one-click post-purchase upsell/downsell, the same mechanics ClickFunnels/GHL sell as their core value prop, layered onto the existing Funnel Builder (`funnels/{id}`, public render at `/lp/[funnelId]`). Critically, **each sub-account connects its OWN Stripe account** — the sub-account is the merchant of record; the agency/platform never touches or holds the money, never sees a raw secret key, and takes no cut. Gated by `funnelCheckoutEnabledByAgency` (see the feature-gates table above). Distinct from the pre-existing `sub-account-stripe-section.tsx` ("Payments — Stripe" on invoices), which runs on the **agency's own shared** `STRIPE_SECRET_KEY` — never confuse the two; they're separate settings cards, separate Stripe accounts, separate purposes.
+
+### BYO-Stripe connect (and rotate)
+
+`POST /api/sub-accounts/[id]/stripe-checkout/connect` (admin-only, gated on `funnelCheckoutEnabledByAgency` before anything else) — pastes a real `sk_live_*`/`sk_test_*` key, validated with a live `stripe.balance.retrieve()` call before anything is persisted. Mode (`live`/`test`) is inferred from the key prefix — no separate toggle to drift out of sync. On success it auto-creates a webhook endpoint **on the tenant's own Stripe account** (`tenantStripe.webhookEndpoints.create()`, `enabled_events`: `checkout.session.completed`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`) pointed at `{NEXT_PUBLIC_APP_URL}/api/webhooks/stripe/tenant/[subAccountId]` — the operator never hand-copies a webhook signing secret. **Pasting a key again while one is already connected IS the rotate/reconnect path** — no separate "rotate" UI: the old webhook endpoint is best-effort torn down and a fresh one created. `DELETE` disconnects (best-effort webhook teardown; `funnelOrders` history is preserved). Settings UI: `sub-account-stripe-checkout-section.tsx`.
+
+### Encryption
+
+`lib/crypto/secrets.ts` — the first (and, after this audit, second — see GHL below) app-level encryption utility in this codebase for a *stored* credential, as opposed to every other third-party credential here (`twilioConfig.authToken`, etc.) which relies on server-only Admin SDK access + Firestore rules alone. Real justification for the extra layer: Firestore has no field-level security, and `firestore.rules` lets **any active sub-account member** (not just admins) read the whole `subAccounts/{id}` document client-side (`allow read: if isAgencyOwner(...) || isSubMemberActive(subAccountId)`) — a plaintext secret key on that doc would be one `getDoc()` call away from every team member's browser devtools, not just an Admin-SDK-level breach.
+
+AES-256-GCM, versioned ciphertext `v1:<iv>:<tag>:<ct>` (all base64) so a future re-key scheme can coexist with old values during migration. Keyed by `TENANT_SECRETS_KEY` (see Environment Variables below). `encryptSecret()` / `decryptSecret()` / `tenantSecretsConfigured()` are generic — not Stripe-specific — and are reused as-is by GHL Import. `getStripeForTenant()` (`lib/stripe/tenant-server.ts`) decrypts fresh from Firestore on every call — deliberately **not** cached module-level the way the agency-wide `lib/stripe/server.ts::getStripeServer()` singleton is, since a per-tenant client can't safely be shared that way.
+
+**Key rotation is two different things.** A tenant rotating their own Stripe key is just "connect again" (above). Rotating the platform's own `TENANT_SECRETS_KEY` is a separate, rare, ops-only operation — it protects already-stored ciphertext, so rotating it without first re-encrypting every `subAccounts/*.stripeConfig` (and `*.ghlImportConfig`) row makes every connected tenant's stored credential undecryptable until they reconnect. `scripts/rotate-tenant-secrets-key.mjs` is the supported procedure (reads `OLD_TENANT_SECRETS_KEY`/`NEW_TENANT_SECRETS_KEY`, re-encrypts every affected doc in place) — there is deliberately no self-service UI for this.
+
+### Checkout — one-time and subscription, with an order bump
+
+The `checkout` section type (`CheckoutConfig`) extends the existing `offer`/`ticket_tiers` pattern with a third `checkoutMode`: `"external_link"` | `"form_capture"` (unchanged, existing behavior) | `"stripe_checkout"` (new). In `stripe_checkout` mode: `currency` (ISO 4217, defaults `"usd"`), `billingMode: "one_time" | "subscription"` (+ `recurringInterval: "month" | "year"`), and materialized `stripePriceId`/`stripeProductId`.
+
+**Price materialization is lazy, on funnel save** — `lib/funnels/materialize-price.ts::materializeCheckoutPrice()` mints a real `stripe.products.create()` + `stripe.prices.create()` on the tenant's own Stripe client whenever the section's price/currency/billing shape changes (mirrors Client Billing's plan-price-materialization flow). Prices are immutable on Stripe: a shape change mints a **new** Price and best-effort deactivates the old one; reusing the same shape reuses the existing ids. The product **name** (`config.headline`) syncs to Stripe unconditionally, independent of whether the price itself changed — a headline-only edit still needs to reach the tenant's Stripe Dashboard.
+
+**Order bump** = Stripe's native `optional_items` (`CheckoutConfig.orderBump: {headline, description?, priceCents, stripePriceId}`), a top-level array on `checkout.sessions.create()` parallel to `line_items`. Stripe renders its own checkbox on its hosted Checkout page — no custom pre-checkout UI needed on our side. Confirmed against Stripe's own API docs during the 2026-08-04 audit: `optional_items` **is** compatible with `mode: "subscription"` (max 20 combined line+optional items with recurring prices — this codebase only ever sends 1 + 1, nowhere near the limit). The original build plan had flagged this combination as unverified; it isn't a real constraint.
+
+**Checkout session creation** — `POST /api/lp/[funnelId]/checkout/session` (public, unauthenticated — the funnelId + sectionId are the only "credentials," same trust model as `/api/forms/[id]/submit`), rate-limited per-IP (`lib/funnels/checkout-rate-limit.ts`, 20/hour, in-memory). Non-subscription sessions set `payment_intent_data.setup_future_usage: "off_session"` so the card is saved for a later upsell charge (subscriptions already save the card automatically for future invoices, so this is skipped there). **Known gap, found during the 2026-08-04 audit, not yet fixed:** `success_url` always redirects back to the same funnel page (`?paid=1&session_id={CHECKOUT_SESSION_ID}`) — nothing anywhere reads that query string or `CheckoutConfig.upsellFunnelId` to route the customer onward into the first upsell page. The upsell/downsell chain mechanics below work correctly once a visitor is *on* an upsell page, but there's currently no way to actually get there after a real purchase completes. Fix this before relying on upsells in production.
+
+### Upsell/downsell chains (uncapped)
+
+An upsell/downsell step is an ordinary funnel — a separate `funnels/{id}` doc with `chainRole: "upsell" | "downsell"` and `parentFunnelId` set (undefined/`"standalone"` = every other funnel, unaffected) — rendered by the exact same `/lp/[funnelId]` route and section registry as any other funnel. No second rendering path. The `upsell_offer` section (`UpsellOfferConfig`): `priceCents` (charged via a **direct off-session PaymentIntent**, not a Checkout Session line item, so no pre-created Stripe Price is needed for this one), `acceptLabel`/`declineLabel`, `acceptNextFunnelId` (where "Yes" goes — another upsell, or null = stop) and `declineFunnelId` (where "No thanks" goes — a downsell step, or null = stop). Because each step carries its own accept/decline pointers rather than a single fixed pair on the root offer, a chain can run upsell → upsell → downsell → thank-you or any operator-built sequence for free — the only guard is against a step pointing back to an ancestor (cycle risk).
+
+`POST /api/lp/[funnelId]/upsell/[sectionId]/charge` (public) executes the accept: looks up the `funnelOrders` doc by `checkoutSessionId`, charges the saved `stripeCustomerId`/`stripePaymentMethodId` off-session (`payment_method_types: ["card"]` — deliberately card-only; a saved-card off-session charge can never use a redirect-based method anyway, and allowing one blocks confirmation without a `return_url`). **Idempotency-keyed** (`funnel-upsell:{checkoutSessionId}:{sectionId}`, deterministic per section — fixed during the 2026-08-04 audit, previously absent and a real double-charge risk on retry/double-click) so a network retry reuses the same PaymentIntent instead of charging twice. A `requires_action`/`requires_confirmation` response (3DS/SCA challenge — impossible to satisfy with the customer not present) or a hard decline degrades gracefully: records `upsells: [...{status: "failed_requires_action"}]`, routes to `declineFunnelId`, and **never touches the original order's paid status**.
+
+### Orders dashboard, refunds, disputes
+
+`funnelOrders/{id}` (see the Firestore Collections table) is created directly at `status: "paid"` by the tenant webhook's `checkout.session.completed` handler (`lib/funnels/checkout-webhook.ts::handleFunnelCheckoutCompleted()`) — idempotency-checked against `stripeCheckoutSessionId` so a Stripe retry never double-writes. Reconciles a Contact (`lib/funnels/contact-reconcile.ts::reconcileFunnelCheckoutContact()`, email-first match, `source: "funnel-checkout"`) and fires the outbound webhook event `funnel.order.completed`.
+
+- **Orders dashboard**: `GET /api/sub-accounts/[id]/funnels/orders` (list, member-read via an authed route — `funnelOrders` itself stays Admin-SDK-only at the rules layer, same pattern as `voiceCampaigns`/`broadcasts`) + `/sa/[subAccountId]/funnels/orders` page.
+- **Refunds**: `POST /api/sub-accounts/[id]/funnels/orders/[orderId]/refund` (admin-only, `{amountCents?}` — omit for full). Validates against the order's own remaining-refundable amount, calls `stripe.refunds.create()` on the tenant's client, writes an **optimistic** status update; the tenant webhook's `charge.refunded` handler (`handleFunnelChargeRefunded`) reconciles the authoritative total afterward (e.g. a refund issued directly in the Stripe Dashboard rather than through this route).
+- **Disputes**: visibility only, no in-app evidence submission (stays in the tenant's own Stripe Dashboard, which they have direct access to — rebuilding an evidence-upload flow has no real payoff). `charge.dispute.created`/`.closed` flip the order's `status` to `disputed` (or back, on a won dispute) and create a best-effort Task so the operator notices without watching the dashboard.
+
+### Routes, services, collections — quick reference
+
+| Concern | Path |
+|---|---|
+| Connect / rotate / disconnect | `POST`/`DELETE /api/sub-accounts/[id]/stripe-checkout/connect` |
+| Per-tenant Stripe client | `lib/stripe/tenant-server.ts::getStripeForTenant()` |
+| Encryption | `lib/crypto/secrets.ts` |
+| Price materialization | `lib/funnels/materialize-price.ts` |
+| Checkout session (public) | `POST /api/lp/[funnelId]/checkout/session` |
+| Upsell/downsell charge (public) | `POST /api/lp/[funnelId]/upsell/[sectionId]/charge` |
+| Tenant webhook (public, signature-verified) | `POST /api/webhooks/stripe/tenant/[subAccountId]` |
+| Webhook handlers | `lib/funnels/checkout-webhook.ts` |
+| Rate limiting | `lib/funnels/checkout-rate-limit.ts` |
+| Contact reconciliation | `lib/funnels/contact-reconcile.ts` |
+| Orders list | `GET /api/sub-accounts/[id]/funnels/orders` |
+| Refund | `POST /api/sub-accounts/[id]/funnels/orders/[orderId]/refund` |
+| Section components | `components/funnels/sections/checkout-section.tsx`, `upsell-offer-section.tsx` |
+| Settings UI | `components/settings/sub-account-stripe-checkout-section.tsx` |
+| Data | `funnelOrders/{id}`; `SubAccountStripeConfig` + `funnelCheckoutEnabledByAgency` on `SubAccountDoc`; `chainRole`/`parentFunnelId` on `FunnelDoc` |
+| Rotation ops script | `scripts/rotate-tenant-secrets-key.mjs` |
+| Regression coverage | `scripts/verify-checkout-ghl-audit.mts` (18 checks) |
+
+### What's intentionally NOT in v1
+
+- **True Stripe Connect OAuth** — BYO-raw-key-paste is the v1 model; Connect is a bigger, structurally different future upgrade.
+- **In-app dispute evidence submission** — visibility + the tenant's own Stripe Dashboard, not a rebuilt evidence-upload flow.
+- **Self-service `TENANT_SECRETS_KEY` rotation UI** — a documented ops script, not a feature.
+- **Non-Stripe checkout processors** for this feature (PayPal.me remains the separate, simpler option for Quotes/Invoices — its API doesn't support this bump/one-click-upsell pattern).
+
+### Setup contract
+
+**Required env var**: `TENANT_SECRETS_KEY` (see Environment Variables below — shared with GHL Import). Otherwise reuses `NEXT_PUBLIC_APP_URL` (webhook + success/cancel URL construction), Firebase (storage). No agency-level Stripe credential is involved anywhere in this feature — every key is the tenant's own. Graceful degradation: without `TENANT_SECRETS_KEY`, the connect route returns 503 with a friendly "isn't set up on this deployment yet" message; the rest of the sub-account is unaffected.
+
+## GoHighLevel Import v1
+
+A one-way migration importer — moves a client's contacts, opportunities (as Deals), and notes out of GoHighLevel and into this platform, so an agency can onboard a client off GHL without hand-entering their CRM data. Server-only Private Integration Token (PIT) auth against GHL's v2 API. Built on the same generic, source-agnostic bulk-import engine (`lib/import/bulk-write.ts`) that a future CSV or public-API importer would also share — GHL is one `ImportSource` ("ghl"), not a parallel system.
+
+### Connection and encrypted token storage
+
+`POST/DELETE /api/sub-accounts/[id]/import/ghl/connect` (admin-only) — pastes a GHL Private Integration Token + location id, validated with a live `GET /contacts/` call (limit 1) before anything is stored. **Fixed during the 2026-08-04 audit**: the token is now AES-256-GCM encrypted at rest (`ghlImportConfig.tokenEncrypted`, via the same `lib/crypto/secrets.ts` helper Funnel Checkout uses) — it was previously stored as plaintext in `ghlImportConfig.token`, which was a real, exploitable information-disclosure bug, not a theoretical one: `firestore.rules` lets any active sub-account member (not just admins) read the whole `subAccounts/{id}` document client-side, so a plaintext PIT — full read access to a client's entire CRM — was one `getDoc()` call away from every team member's browser. The connect route now also gates on `tenantSecretsConfigured()`, matching Funnel Checkout.
+
+### Preview
+
+`GET /api/sub-accounts/[id]/import/ghl/preview` (admin-only) — reads the stored connection, fetches contact/opportunity totals, the account's pipelines (with their stages), and custom-field definitions, all in parallel. This is the data the wizard's mapping step runs `suggestStageMap()`/`suggestCustomFields()` against, client-side. In the actual wizard UI this isn't a separate visible step — connecting auto-triggers the preview fetch, landing directly on the mapping screen (3 real steps: `"connect" → "map" → "run"`, see `components/import/ghl-import-wizard.tsx`).
+
+### Mapping
+
+Operator-confirmed before any data moves:
+- **Stage map** — every GHL pipeline stage → one of LeadStack's 6 canonical pipeline stages. `suggestStageId()` (`lib/import/ghl/transform.ts`) pre-fills a best-effort guess by keyword (`"won"`/`"closed won"` → `won`, `"proposal"`/`"quote"` → `proposal`, etc.); the operator reviews/overrides before starting. GHL's terminal `opportunity.status` (`won`/`lost`/`abandoned`) always overrides the stage map for that record, regardless of what stage it's sitting in.
+- **Custom fields** — `ghlId → {leadstackKey | null}`. **Real limitation, not yet solved**: the importer does not auto-create new LeadStack custom-field definitions from GHL's field list — `suggestCustomFields()` only proposes a *type* mapping (GHL `dataType` → LeadStack `CustomFieldType`); the target `leadstackKey` must already exist as a real custom-field definition in this sub-account, created by the operator beforehand. An unmapped field (`leadstackKey: null`) is silently skipped, not imported.
+- **Default currency** — GHL opportunities rarely carry one; falls back to a single operator-chosen default (`defaultCurrency`, default `"USD"`) applied to every imported deal.
+
+### Import execution — the drain process
+
+`POST /api/sub-accounts/[id]/import/ghl/start` (admin-only, gated on `qstashIsConfigured()` AND `tenantSecretsConfigured()`) creates the `importJobs/{id}` doc (carrying the confirmed mapping + which entities to pull) and enqueues the first QStash callback. `POST /api/import/ghl/step` (public path, Upstash-signature-verified — same security model as every other QStash callback in this app) is the actual drain: pulls **one page** of the current entity from GHL, transforms it (`lib/import/ghl/transform.ts`, pure functions — no network, no Firestore, fully fixture-testable), writes it via the shared bulk-write engine, then schedules the next page (or the next entity, or finishes). Fixed dependency order: **contacts → opportunities → notes** (opportunities/notes resolve their parent contact through the mappings the contacts phase just created). The token is decrypted fresh on every step from the stored connection — **never** carried in the QStash message payload itself. A decrypt failure (e.g. a misconfigured `TENANT_SECRETS_KEY` between steps) fails the job cleanly rather than throwing.
+
+Returning 500 makes QStash retry the *same* step — safe, because every write is an idempotent upsert (see below), so a retried page can never double-import. A 401/403 from GHL (bad/revoked token) fails the job immediately rather than retrying, since that kind of failure won't fix itself.
+
+### Idempotent upsert behavior
+
+Shared by every import source via `lib/import/bulk-write.ts::writeImportChunk()` — not GHL-specific. Every record carries `external_id` (the source system's id); a `subAccounts/{id}/importMappings/{key}` doc (`key = "{system}:{entity}:{externalId}"`) indexes source-id ↔ LeadStack-id. A re-run of the same import (or a QStash retry of the same page) **updates** the existing LeadStack record instead of creating a duplicate. Child records (deals/notes) resolve their parent contact via `contact_external_id` looked up against the same mapping index — this is also how notes attach to the *correct* contact even though notes are pulled in a separate phase, after contacts.
+
+Records are validated through the exact same v1 parsers (`parseContactCreate`/`parseDealCreate`/etc.) the public API uses, so an imported Contact/Deal is indistinguishable in shape from one created through `/api/v1/*`. Writes suppress webhooks + activity-log entries (no per-record `*.created` storm on a 5,000-contact import) and go through Firestore batches (≤400 ops/batch, ≤500 records/chunk).
+
+### Supported and unsupported object types
+
+**Actually pulled from GHL today**: contacts, opportunities (written as Deals), and per-contact notes. That's the full extent of it — `getPipelines()`/`getCustomFields()` are fetched for the mapping step's UI (stage/field suggestions) but pipelines and custom-field *definitions* themselves are not imported as new LeadStack objects; only the *values* on contacts/opportunities move, mapped onto **pre-existing** LeadStack custom fields (see "Mapping" above).
+
+**Not supported by the current importer** (the generic bulk-write engine's `ImportEntity` type also includes `tasks` and `events`, but the GHL connector never populates them — those code paths exist for a CSV/future importer, not GHL): GHL Funnels, Forms, Calendars/Appointments, Workflows/Automations, Email/SMS templates, Custom Field *definitions* (values only, per above), Media Assets, Tags-as-a-first-class-object (contact tags DO come across as a plain string array on the contact, but GHL's tag *management* — colors, categories — doesn't). None of these are wired to any GHL endpoint call anywhere in `lib/import/ghl/client.ts`.
+
+### Draft / import review behavior
+
+**Real behavior, not the aspirational "imports as Draft with a review queue" description that appears in some planning notes**: there is currently **no draft or post-import review state at all**. Every imported Contact/Deal/Note is written directly as **live** data (`mode: "live"`, `createdByUid: "import:ghl"`, indistinguishable from anything created through the public API) the moment its chunk is processed — visible in Contacts/Pipeline immediately, not staged anywhere for operator approval before going live. The only "review" that exists is **pre-import**: the mapping step (stage map + custom-field map, confirmed before `start` is ever called) and the live per-entity progress totals (`received/created/updated/skipped/failed`) + a capped (500) error sample shown while the job runs. There is no "Imported successfully / Needs review / Unsupported / Skipped" per-record UI triage — failed records surface only in that capped error list, with no one-click retry or edit-then-reimport flow.
+
+### Routes, services, collections — quick reference
+
+| Concern | Path |
+|---|---|
+| Connect / disconnect | `POST`/`DELETE /api/sub-accounts/[id]/import/ghl/connect` |
+| Preview | `GET /api/sub-accounts/[id]/import/ghl/preview` |
+| Start | `POST /api/sub-accounts/[id]/import/ghl/start` |
+| Drain step (public, QStash-signed) | `POST /api/import/ghl/step` |
+| GHL API client | `lib/import/ghl/client.ts` |
+| Transformers (pure, fixture-tested) | `lib/import/ghl/transform.ts` |
+| Fixtures | `lib/import/ghl/fixtures.ts` |
+| Generic bulk-write engine | `lib/import/bulk-write.ts` |
+| Job-progress folding | `lib/import/job-progress.ts` |
+| Wizard UI | `components/import/ghl-import-wizard.tsx`, `ghl-import-help-dialog.tsx` |
+| Page | `/sa/[subAccountId]/import` |
+| Data | `importJobs/{id}`, `subAccounts/{id}/importMappings/{key}`; `GhlImportConfig` on `SubAccountDoc` |
+| Regression coverage | `scripts/verify-checkout-ghl-audit.mts` (encryption + field-reference checks) |
+
+### Setup contract
+
+**Required env vars**: `TENANT_SECRETS_KEY` (token encryption, shared with Funnel Checkout — see below), plus the existing `QSTASH_*` vars (the drain is QStash-callback-driven) and `NEXT_PUBLIC_APP_URL`. No GHL-side app registration or OAuth needed — Private Integration Tokens are a GHL account-level credential the client generates themselves and pastes in. Graceful degradation: without `TENANT_SECRETS_KEY` or QStash, connect/start return 503 with a friendly message; nothing else in the sub-account is affected.
+
 ## Commands
 - `pnpm dev` — dev server (Turbopack)
 - `pnpm build` — production build
@@ -938,6 +1090,15 @@ Without these, `/api/automations/step` and the website-builder poll route return
 | `GITPAGE_API_URL` | Optional. Defaults to `https://www.gitpage.site`. Override only when mocking locally. |
 
 Without `GITPAGE_API_KEY`, `/api/sub-accounts/[id]/website/[siteId]/build` returns 503 and the **Build site** button surfaces a friendly error. The rest of the Website page (adding sites, form editing) still loads.
+
+### Required for Funnel Checkout + GHL Import (disables cleanly if missing)
+| Var | Source |
+|---|---|
+| `TENANT_SECRETS_KEY` | `openssl rand -base64 32`. AES-256-GCM key protecting every **per-tenant** credential this app stores encrypted at rest — today that's each sub-account's own BYO Funnel Checkout Stripe secret key + webhook signing secret, and each sub-account's GoHighLevel Private Integration Token. Unlike most third-party credentials in this codebase (`twilioConfig.authToken`, etc.), which rely on server-only Admin SDK access + Firestore rules alone, these two are financially/data sensitive enough (a live Stripe key; a token with full read access to a client's entire CRM) that they get encrypted, because Firestore's `subAccounts/{id}` doc — including these fields — is readable by any active sub-account member client-side, not just admins. |
+
+**⚠️ Rotating this key is NOT like rotating any other secret in this app.** Every other HMAC/token secret here (`AUTOMATIONS_TOKEN_SECRET`, `VAPI_WEBHOOK_SECRET`) only invalidates outstanding *links or tokens*, which get re-minted the next time something is sent — rotating them is cheap and self-healing. `TENANT_SECRETS_KEY` is different: it protects already-*stored ciphertext*. Rotating it without first re-encrypting every `subAccounts/*.stripeConfig` and `*.ghlImportConfig` row makes every connected tenant's stored credential **permanently undecryptable** — their Funnel Checkout stops working and their GHL import connection breaks — until they notice and manually reconnect/re-paste. There is deliberately no self-service UI for this rotation; use `scripts/rotate-tenant-secrets-key.mjs` (reads `OLD_TENANT_SECRETS_KEY`/`NEW_TENANT_SECRETS_KEY` from the environment, re-encrypts every affected doc in place) run manually by whoever holds deploy access.
+
+Without `TENANT_SECRETS_KEY` set: the Funnel Checkout "Connect Stripe" button and the GHL import "Connect" step both return 503 with a friendly "isn't set up on this deployment yet" message. Neither feature partially works without it — there's no unencrypted fallback path.
 
 ### Required for AI Agents (disables cleanly if missing)
 | Var | Source |
