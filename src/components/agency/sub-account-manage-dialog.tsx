@@ -849,11 +849,11 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
             }}
           >
             When enabled, this sub-account can build first-party
-            ClickFunnels/GHL-style single-page funnels (lead magnet, VSL,
-            challenge/webinar), hosted directly on this platform — no
-            gitpage.site involved. Disabling locks the Funnels sidebar entry
-            and the builder API; published funnels stay live at their
-            existing URL, so re-enabling resumes instantly.
+            single-page funnels (lead magnet, VSL, challenge/webinar),
+            hosted directly on this platform — no gitpage.site involved.
+            Disabling locks the Funnels sidebar entry and the builder API;
+            published funnels stay live at their existing URL, so
+            re-enabling resumes instantly.
           </GateToggle>
 
           <GateToggle

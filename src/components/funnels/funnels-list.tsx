@@ -159,8 +159,8 @@ export function FunnelsList({ saId }: { saId: string }) {
         <div>
           <h1 className="text-xl font-semibold">Funnels</h1>
           <p className="text-sm text-muted-foreground">
-            ClickFunnels/GHL-style single-page funnels, hosted directly on
-            this platform.
+            High-converting single-page funnels, hosted directly on this
+            platform.
           </p>
         </div>
         <div className="flex items-center gap-2">

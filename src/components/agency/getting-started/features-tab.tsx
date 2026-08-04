@@ -107,7 +107,7 @@ const FEATURES: Feature[] = [
     tone: "sky",
     href: "/quotes",
     description:
-      "GHL-style estimates: build a line-itemed quote, send a branded email, and the recipient accepts or declines on a public page. Accept auto-creates a Won-stage deal. Year-prefixed numbering, multi-currency, and full lifecycle tracking (sent → viewed → accepted → paid).",
+      "Build a line-itemed quote, send a branded email, and the recipient accepts or declines on a public page. Accept auto-creates a Won-stage deal. Year-prefixed numbering, multi-currency, and full lifecycle tracking (sent → viewed → accepted → paid).",
   },
   {
     icon: Zap,
