@@ -303,6 +303,14 @@ export function FunnelBuilder({
           {GENRE_LABELS[funnel.genre] ?? funnel.genre}
         </span>
         <div className="flex gap-2">
+          <a
+            href={`/funnel-preview/${saId}/${funnelId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center text-sm text-primary underline-offset-2 hover:underline"
+          >
+            Preview
+          </a>
           {status === "published" && (
             <a
               href={`/lp/${funnelId}`}
