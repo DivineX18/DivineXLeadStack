@@ -702,12 +702,26 @@ function SectionFields({
               className="h-9"
             />
           </Field>
-          <Field label="CTA link">
+          <Field label="CTA link (used when no form is selected below)">
             <Input
               value={c.ctaHref ?? ""}
               onChange={(e) => onChange({ ...c, ctaHref: e.target.value })}
               className="h-9"
             />
+          </Field>
+          <Field label="Lead-capture form (optional — hero can capture directly)">
+            <select
+              value={c.formId ?? ""}
+              onChange={(e) => onChange({ ...c, formId: e.target.value || null })}
+              className={fieldClass}
+            >
+              <option value="">No form — CTA link/button only</option>
+              {forms.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
           </Field>
           <Field label="CTA experience">
             <select
@@ -729,23 +743,45 @@ function SectionFields({
               <option value="phone">Phone — tel: link</option>
             </select>
           </Field>
+          {c.cta?.style === "popup_form" && !c.formId && (
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+              This CTA is set to open a popup, but no form is selected above — pick one, or the
+              button won&apos;t open anything for visitors.
+            </p>
+          )}
           {c.cta?.style === "popup_calendar" && (
-            <Field label="Booking page slug (from /b/[subAccountId]/[slug])">
-              <Input
-                value={c.cta?.bookingPageSlug ?? ""}
-                onChange={(e) => onChange({ ...c, cta: { ...c.cta, bookingPageSlug: e.target.value } })}
-                className="h-9"
-              />
-            </Field>
+            <>
+              <Field label="Booking page slug (from /b/[subAccountId]/[slug])">
+                <Input
+                  value={c.cta?.bookingPageSlug ?? ""}
+                  onChange={(e) => onChange({ ...c, cta: { ...c.cta, bookingPageSlug: e.target.value } })}
+                  className="h-9"
+                />
+              </Field>
+              {!c.cta?.bookingPageSlug && (
+                <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+                  No booking page slug set — this CTA won&apos;t open anything for visitors until
+                  you add one.
+                </p>
+              )}
+            </>
           )}
           {c.cta?.style === "phone" && (
-            <Field label="Phone number (tel: link, e.g. +15551234567)">
-              <Input
-                value={c.cta?.phoneNumber ?? ""}
-                onChange={(e) => onChange({ ...c, cta: { ...c.cta, phoneNumber: e.target.value } })}
-                className="h-9"
-              />
-            </Field>
+            <>
+              <Field label="Phone number (tel: link, e.g. +15551234567)">
+                <Input
+                  value={c.cta?.phoneNumber ?? ""}
+                  onChange={(e) => onChange({ ...c, cta: { ...c.cta, phoneNumber: e.target.value } })}
+                  className="h-9"
+                />
+              </Field>
+              {!c.cta?.phoneNumber && (
+                <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+                  No phone number set — this CTA falls back to a plain link/button until you add
+                  one.
+                </p>
+              )}
+            </>
           )}
           {c.cta?.style === "dual" && (
             <div className="grid grid-cols-2 gap-3">
@@ -977,23 +1013,45 @@ function SectionFields({
               <option value="phone">Phone — tel: link</option>
             </select>
           </Field>
+          {c.cta?.style === "popup_form" && !c.formId && (
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+              This CTA is set to open a popup, but no form is selected above — pick one, or the
+              button won&apos;t open anything for visitors.
+            </p>
+          )}
           {c.cta?.style === "popup_calendar" && (
-            <Field label="Booking page slug (from /b/[subAccountId]/[slug])">
-              <Input
-                value={c.cta?.bookingPageSlug ?? ""}
-                onChange={(e) => onChange({ ...c, cta: { ...c.cta, bookingPageSlug: e.target.value } })}
-                className="h-9"
-              />
-            </Field>
+            <>
+              <Field label="Booking page slug (from /b/[subAccountId]/[slug])">
+                <Input
+                  value={c.cta?.bookingPageSlug ?? ""}
+                  onChange={(e) => onChange({ ...c, cta: { ...c.cta, bookingPageSlug: e.target.value } })}
+                  className="h-9"
+                />
+              </Field>
+              {!c.cta?.bookingPageSlug && (
+                <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+                  No booking page slug set — this CTA won&apos;t open anything for visitors until
+                  you add one.
+                </p>
+              )}
+            </>
           )}
           {c.cta?.style === "phone" && (
-            <Field label="Phone number (tel: link, e.g. +15551234567)">
-              <Input
-                value={c.cta?.phoneNumber ?? ""}
-                onChange={(e) => onChange({ ...c, cta: { ...c.cta, phoneNumber: e.target.value } })}
-                className="h-9"
-              />
-            </Field>
+            <>
+              <Field label="Phone number (tel: link, e.g. +15551234567)">
+                <Input
+                  value={c.cta?.phoneNumber ?? ""}
+                  onChange={(e) => onChange({ ...c, cta: { ...c.cta, phoneNumber: e.target.value } })}
+                  className="h-9"
+                />
+              </Field>
+              {!c.cta?.phoneNumber && (
+                <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+                  No phone number set — this CTA falls back to a plain link/button until you add
+                  one.
+                </p>
+              )}
+            </>
           )}
           {c.cta?.style === "dual" && (
             <div className="grid grid-cols-2 gap-3">
@@ -1674,6 +1732,16 @@ function SectionFields({
               className="h-9"
             />
           </Field>
+          {!c.embedUrl && (
+            <Field label="Placeholder label (shown until you add a real video)">
+              <Input
+                value={c.placeholderLabel ?? ""}
+                onChange={(e) => onChange({ ...c, placeholderLabel: e.target.value })}
+                placeholder="e.g. Add your sales video"
+                className="h-9"
+              />
+            </Field>
+          )}
           <Field label="Headline (optional)">
             <Input
               value={c.headline ?? ""}

@@ -1,13 +1,13 @@
 import "server-only";
 
 import { getAdminDb } from "@/lib/firebase/admin";
-import type { CheckoutConfig, FunnelDoc, OfferConfig, TicketTiersConfig } from "@/types/funnels";
+import type { CheckoutConfig, FunnelDoc, HeroConfig, OfferConfig, TicketTiersConfig } from "@/types/funnels";
 import type { LeadForm } from "@/types/forms";
 
 export interface RenderableFunnel {
   funnel: FunnelDoc;
-  /** formId -> serialized LeadForm, for any offer/ticket_tiers sections
-   *  referencing an embedded lead-capture form. */
+  /** formId -> serialized LeadForm, for any hero/offer/ticket_tiers/checkout
+   *  sections referencing an embedded lead-capture form. */
   forms: Record<string, LeadForm>;
 }
 
@@ -29,6 +29,10 @@ export async function loadFunnelForRender(
 
   const formIds = new Set<string>();
   for (const section of funnel.sections) {
+    if (section.type === "hero") {
+      const c = section.config as HeroConfig;
+      if (c.formId) formIds.add(c.formId);
+    }
     if (section.type === "offer") {
       const c = section.config as OfferConfig;
       if (c.formId) formIds.add(c.formId);

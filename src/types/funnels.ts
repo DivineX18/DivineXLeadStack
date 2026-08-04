@@ -280,6 +280,9 @@ export interface VideoConfig {
   embedUrl: string;
   headline?: string;
   subtext?: string;
+  /** Honest placeholder shown when embedUrl is empty — the section stays
+   *  visible instead of silently rendering nothing (see VideoSection). */
+  placeholderLabel?: string;
 }
 
 /** Icon+title+description cards — the generic "here's what you get /

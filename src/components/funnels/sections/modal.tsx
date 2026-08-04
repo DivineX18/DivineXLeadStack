@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 /**
@@ -110,13 +111,21 @@ export function Modal({
     };
   }, [rendered, onClose]);
 
-  if (!rendered) return null;
+  if (!rendered || typeof document === "undefined") return null;
 
   const dark = theme === "dark";
   const surfaceBg = dark ? "#171717" : "#ffffff";
   const surfaceFg = dark ? "#f5f5f5" : "#0a0a0a";
 
-  return (
+  // Portalled straight to <body> — the overlay MUST escape whatever section
+  // wrapper it's rendered under. AnimatedSection applies an inline
+  // `transform` to every revealed section (even "translateY(0)" once
+  // visible), and per the CSS spec any non-"none" transform on an ancestor
+  // establishes a new containing block for `position: fixed` descendants.
+  // Without the portal, this modal's "fixed inset-0" resolved against that
+  // section's box instead of the viewport — cramped, off-center, and not
+  // reliably scrollable, exactly the popup-experience bug this fixes.
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200"
       style={{
@@ -152,6 +161,7 @@ export function Modal({
         </button>
         <div style={{ "--flow-accent": accentColor } as React.CSSProperties}>{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -88,12 +88,24 @@ export function CtaButton({
     }
     // "inline" (default), or a style missing its prerequisite (a "phone"
     // CTA with no phone number, a "popup_calendar" with no booking slug,
-    // etc.) — degrade to plain inline rather than a dead/misleading button.
+    // a "popup_form" with no form wired up, etc.) — degrade to plain inline
+    // rather than a dead/misleading button. Deliberately NOT `href="#"`: an
+    // anchor with an empty-fragment href visibly jumps the page to the top
+    // on click, which is exactly the "sends people back to the top of the
+    // page" bug — a real link renders as a link, anything else renders as
+    // an inert button that does nothing rather than something misleading.
     if (form) return <PublicForm form={form} />;
+    if (href) {
+      return (
+        <a href={href} className={btnClass} style={buttonStyle}>
+          {label}
+        </a>
+      );
+    }
     return (
-      <a href={href || "#"} className={btnClass} style={buttonStyle}>
+      <button type="button" className={btnClass} style={buttonStyle}>
         {label}
-      </a>
+      </button>
     );
   };
 
@@ -195,10 +207,14 @@ export function CtaButton({
             <button type="button" onClick={openModal} className={btnClass} style={buttonStyle}>
               {label}
             </button>
-          ) : (
-            <a href={href || "#"} className={btnClass} style={buttonStyle}>
+          ) : href ? (
+            <a href={href} className={btnClass} style={buttonStyle}>
               {label}
             </a>
+          ) : (
+            <button type="button" className={btnClass} style={buttonStyle}>
+              {label}
+            </button>
           )}
         </div>
       )}
