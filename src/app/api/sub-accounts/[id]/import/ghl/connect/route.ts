@@ -5,6 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { requireSubAccountAdmin } from "@/lib/auth/require-tenancy";
 import { GhlApiError, validateGhlAccess } from "@/lib/import/ghl/client";
+import { encryptSecret, tenantSecretsConfigured } from "@/lib/crypto/secrets";
 
 /**
  * Connect / disconnect a GoHighLevel source for migration (Phase 4).
@@ -23,6 +24,13 @@ export async function POST(
   const { id: subAccountId } = await ctx.params;
   const access = await requireSubAccountAdmin(request, subAccountId);
   if (access instanceof NextResponse) return access;
+
+  if (!tenantSecretsConfigured()) {
+    return NextResponse.json(
+      { error: "GHL import isn't set up on this deployment yet." },
+      { status: 503 },
+    );
+  }
 
   let body: unknown;
   try {
@@ -65,7 +73,7 @@ export async function POST(
   }
   await ref.update({
     ghlImportConfig: {
-      token,
+      tokenEncrypted: encryptSecret(token),
       locationId,
       connectedByUid: access.uid,
       connectedAt: FieldValue.serverTimestamp(),

@@ -42,6 +42,20 @@ export async function materializeCheckoutPrice(
   next: PriceShape,
   previous: (PriceShape & { stripeProductId: string | null; stripePriceId: string | null }) | null,
 ): Promise<MaterializedPrice> {
+  const productId =
+    previous?.stripeProductId ??
+    (await stripe.products.create({ name: next.productName })).id;
+
+  // Sync the product name unconditionally, BEFORE the price-reuse check
+  // below — a headline-only edit (price/currency/billing unchanged) must
+  // still propagate to the tenant's own Stripe Dashboard. This used to live
+  // after the early return and only ran on the "shape changed" path, so an
+  // operator editing just the offer's headline never saw it reflected on
+  // Stripe's side.
+  if (previous?.stripeProductId && previous.productName !== next.productName) {
+    await stripe.products.update(productId, { name: next.productName }).catch(() => {});
+  }
+
   if (
     previous?.stripeProductId &&
     previous.stripePriceId &&
@@ -51,14 +65,6 @@ export async function materializeCheckoutPrice(
       stripeProductId: previous.stripeProductId,
       stripePriceId: previous.stripePriceId,
     };
-  }
-
-  const productId =
-    previous?.stripeProductId ??
-    (await stripe.products.create({ name: next.productName })).id;
-
-  if (previous?.stripeProductId && previous.productName !== next.productName) {
-    await stripe.products.update(productId, { name: next.productName }).catch(() => {});
   }
 
   const price = await stripe.prices.create({

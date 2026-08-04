@@ -464,8 +464,14 @@ export interface SubAccountDoc {
   pipelineStages?: import("./deals").PipelineStageOverride[];
   /**
    * GHL migration connection (Phase 4). Holds the Private Integration Token +
-   * location id used to pull the account's data. The token is a secret stored
-   * like `twilioConfig.authToken` — server-only, never returned to the client.
+   * location id used to pull the account's data. Unlike most stored
+   * third-party credentials in this app (e.g. `twilioConfig.authToken`,
+   * which relies on server-only Admin SDK access + Firestore rules alone),
+   * the token is AES-256-GCM encrypted at rest via lib/crypto/secrets.ts —
+   * a GHL Private Integration Token grants full read access to a client's
+   * entire CRM (every contact's PII, every deal value, every note), a
+   * larger blast radius than most API credentials this app stores, so it
+   * gets the same treatment as the funnel-checkout Stripe secret key.
    * Null until connected; cleared on disconnect.
    */
   ghlImportConfig?: GhlImportConfig | null;
@@ -481,8 +487,10 @@ export interface SubAccountDoc {
 }
 
 export interface GhlImportConfig {
-  /** GHL Private Integration Token (pit-...). Server-only — never sent to the browser. */
-  token: string;
+  /** GHL Private Integration Token (pit-...), AES-256-GCM encrypted via
+   *  lib/crypto/secrets.ts::encryptSecret(). Server-only — never sent to
+   *  the browser, never decrypted outside a server route. */
+  tokenEncrypted: string;
   /** The GHL sub-account (location) id this token is scoped to. */
   locationId: string;
   connectedByUid: string | null;

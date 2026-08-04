@@ -5,6 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { requireSubAccountAdmin } from "@/lib/auth/require-tenancy";
 import { publishCallback, qstashIsConfigured } from "@/lib/automations/qstash";
+import { tenantSecretsConfigured } from "@/lib/crypto/secrets";
 import { PIPELINE_STAGES, type PipelineStageId } from "@/types/deals";
 import { type ImportJob } from "@/types/import";
 import type { GhlPhase } from "@/lib/import/ghl/transform";
@@ -38,6 +39,12 @@ export async function POST(
       { status: 503 },
     );
   }
+  if (!tenantSecretsConfigured()) {
+    return NextResponse.json(
+      { error: "GHL import isn't set up on this deployment yet." },
+      { status: 503 },
+    );
+  }
 
   const db = getAdminDb();
   const subSnap = await db.doc(`subAccounts/${subAccountId}`).get();
@@ -47,7 +54,7 @@ export async function POST(
   const sub = subSnap.data() ?? {};
   const agencyId = (sub.agencyId as string | undefined) ?? null;
   const cfg = sub.ghlImportConfig as GhlImportConfig | null | undefined;
-  if (!cfg?.token || !cfg.locationId) {
+  if (!cfg?.tokenEncrypted || !cfg.locationId) {
     return NextResponse.json(
       { error: "Connect a GoHighLevel token before starting an import." },
       { status: 400 },

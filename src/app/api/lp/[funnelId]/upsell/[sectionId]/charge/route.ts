@@ -94,21 +94,31 @@ export async function POST(
       : `/lp/${funnelId}?done=1`;
 
   try {
-    const paymentIntent = await tenant.stripe.paymentIntents.create({
-      amount: config.priceCents,
-      currency: (config.currency ?? order.currency ?? "usd").toLowerCase(),
-      customer: order.stripeCustomerId,
-      payment_method: order.stripePaymentMethodId,
-      // Off-session charges must be card-only — without this, Stripe falls
-      // back to whatever payment methods are enabled in the tenant's own
-      // Dashboard, and refuses to confirm without a return_url the moment
-      // any redirect-based method (Cash App, Link, etc.) is enabled there.
-      // A saved-card off-session charge can never use a redirect flow
-      // anyway, so restricting to card is correct, not just a workaround.
-      payment_method_types: ["card"],
-      off_session: true,
-      confirm: true,
-    });
+    // Idempotency key tied to (checkout session, upsell section) — a retry
+    // of THIS exact accept (network retry, double-click, a client resend)
+    // reuses the same key so Stripe dedupes it into a single charge instead
+    // of creating a second PaymentIntent against the same saved card. A
+    // genuinely separate purchase always has a different checkoutSessionId,
+    // so this never blocks a real second sale.
+    const idempotencyKey = `funnel-upsell:${body.checkoutSessionId}:${sectionId}`;
+    const paymentIntent = await tenant.stripe.paymentIntents.create(
+      {
+        amount: config.priceCents,
+        currency: (config.currency ?? order.currency ?? "usd").toLowerCase(),
+        customer: order.stripeCustomerId,
+        payment_method: order.stripePaymentMethodId,
+        // Off-session charges must be card-only — without this, Stripe falls
+        // back to whatever payment methods are enabled in the tenant's own
+        // Dashboard, and refuses to confirm without a return_url the moment
+        // any redirect-based method (Cash App, Link, etc.) is enabled there.
+        // A saved-card off-session charge can never use a redirect flow
+        // anyway, so restricting to card is correct, not just a workaround.
+        payment_method_types: ["card"],
+        off_session: true,
+        confirm: true,
+      },
+      { idempotencyKey },
+    );
 
     if (paymentIntent.status === "requires_action" || paymentIntent.status === "requires_confirmation") {
       await orderDoc.ref.update({
