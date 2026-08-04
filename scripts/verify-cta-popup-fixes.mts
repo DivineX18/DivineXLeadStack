@@ -125,5 +125,13 @@ function check(label: string, pass: boolean) {
   }
 }
 
+// 7. checkout-section.tsx has its own inline CTA fallback (doesn't route
+//    through the shared CtaButton), so it needed the same href="#" fix
+//    applied separately.
+{
+  const src = read("src/components/funnels/sections/checkout-section.tsx");
+  check('7. checkout-section.tsx no longer has href={config.ctaHref || "#"}', !src.includes('href={config.ctaHref || "#"}'));
+}
+
 console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);
