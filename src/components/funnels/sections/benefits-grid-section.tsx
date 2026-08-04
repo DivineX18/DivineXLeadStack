@@ -9,6 +9,7 @@ import {
   Star,
 } from "lucide-react";
 import type { BenefitIconType, BenefitsGridConfig } from "@/types/funnels";
+import { MediaPlaceholder } from "./media-placeholder";
 
 const ICONS: Record<BenefitIconType, typeof Check> = {
   check: Check,
@@ -38,7 +39,27 @@ export function BenefitsGridSection({
    *  bg, colored icon only (luxury/professional, minimal icon usage). */
   iconStyle?: "outline" | "duotone" | "filled";
 }) {
-  if (config.items.length === 0) return null;
+  if (config.items.length === 0) {
+    return (
+      <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
+        <div className="mx-auto max-w-5xl">
+          {config.headline && (
+            <h2
+              className="mb-10 text-balance text-center font-extrabold tracking-tight"
+              style={{ fontSize: "clamp(1.5rem, 4vw, 2.25rem)", lineHeight: 1.15 }}
+            >
+              {config.headline}
+            </h2>
+          )}
+          <MediaPlaceholder
+            label="This section has no content yet — add it in the builder"
+            accentColor={accentColor}
+            className="min-h-32"
+          />
+        </div>
+      </section>
+    );
+  }
   const cols =
     config.items.length === 1
       ? "sm:grid-cols-1"

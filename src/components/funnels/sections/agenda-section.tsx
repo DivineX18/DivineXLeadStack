@@ -1,4 +1,5 @@
 import type { AgendaConfig } from "@/types/funnels";
+import { MediaPlaceholder } from "./media-placeholder";
 
 export function AgendaSection({
   config,
@@ -16,7 +17,6 @@ export function AgendaSection({
    *  solid one — luxury/professional archetypes' "minimal icon usage." */
   iconStyle?: "outline" | "duotone" | "filled";
 }) {
-  if (config.days.length === 0) return null;
   return (
     <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
       <div className="mx-auto max-w-4xl">
@@ -26,6 +26,13 @@ export function AgendaSection({
         >
           Everything you&apos;ll learn
         </h2>
+        {config.days.length === 0 && (
+          <MediaPlaceholder
+            label="This section has no steps yet — add them in the builder"
+            accentColor={accentColor}
+            className="min-h-32"
+          />
+        )}
         <div className="grid gap-5 sm:grid-cols-2">
           {config.days.map((day, i) => {
             const stepColor = iconPalette && iconPalette.length > 0 ? iconPalette[i % iconPalette.length] : accentColor;

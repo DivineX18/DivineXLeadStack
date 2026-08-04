@@ -1,5 +1,6 @@
 import { X, Check } from "lucide-react";
 import type { ProblemSolutionConfig } from "@/types/funnels";
+import { MediaPlaceholder } from "./media-placeholder";
 
 export function ProblemSolutionSection({
   config,
@@ -8,7 +9,19 @@ export function ProblemSolutionSection({
   config: ProblemSolutionConfig;
   accentColor: string;
 }) {
-  if (!config.problemText && !config.solutionText) return null;
+  if (!config.problemText && !config.solutionText) {
+    return (
+      <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
+        <div className="mx-auto max-w-5xl">
+          <MediaPlaceholder
+            label="This section has no content yet — add it in the builder"
+            accentColor={accentColor}
+            className="min-h-32"
+          />
+        </div>
+      </section>
+    );
+  }
   return (
     <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
       <div className="mx-auto grid max-w-5xl gap-5 sm:grid-cols-2">

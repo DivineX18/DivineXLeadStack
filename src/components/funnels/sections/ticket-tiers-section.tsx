@@ -2,6 +2,7 @@ import { CheckCircle2 } from "lucide-react";
 import { PublicForm } from "@/components/forms/public-form";
 import type { TicketTiersConfig } from "@/types/funnels";
 import type { LeadForm } from "@/types/forms";
+import { MediaPlaceholder } from "./media-placeholder";
 
 function formatPrice(cents: number | null | undefined): string {
   if (cents === null || cents === undefined) return "";
@@ -24,7 +25,6 @@ export function TicketTiersSection({
   theme: "light" | "dark";
   forms: Record<string, LeadForm>;
 }) {
-  if (config.tiers.length === 0) return null;
   return (
     <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
       <div className="mx-auto max-w-4xl">
@@ -34,6 +34,13 @@ export function TicketTiersSection({
         >
           Select your ticket
         </h2>
+        {config.tiers.length === 0 && (
+          <MediaPlaceholder
+            label="No tickets set up yet — add at least one in the builder"
+            accentColor={accentColor}
+            className="min-h-32"
+          />
+        )}
         <div className="grid gap-6 sm:grid-cols-2">
           {config.tiers.map((tier, i) => {
             const form = tier.formId ? forms[tier.formId] : null;

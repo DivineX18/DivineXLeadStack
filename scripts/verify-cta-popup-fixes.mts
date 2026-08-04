@@ -101,5 +101,29 @@ function check(label: string, pass: boolean) {
   check("5c. popup_calendar without a slug warns in both Hero and Offer editors (2 occurrences)", calendarWarnings === 2);
 }
 
+// 6. Phase 3 component audit — the same "whole required framework stage
+//    silently vanishes when the AI's stage_content generation misses it"
+//    bug class as VideoSection, found across 6 more section components that
+//    genre frameworks treat as required (agenda/process, benefits_grid,
+//    problem_solution, story/host, ticket_tiers/register, callout,
+//    before_after/results). Each must now show a visible placeholder
+//    instead of `return null`.
+{
+  const files = [
+    "src/components/funnels/sections/agenda-section.tsx",
+    "src/components/funnels/sections/benefits-grid-section.tsx",
+    "src/components/funnels/sections/problem-solution-section.tsx",
+    "src/components/funnels/sections/story-section.tsx",
+    "src/components/funnels/sections/ticket-tiers-section.tsx",
+    "src/components/funnels/sections/callout-section.tsx",
+    "src/components/funnels/sections/before-after-section.tsx",
+  ];
+  for (const f of files) {
+    const src = read(f);
+    const name = f.split("/").pop();
+    check(`6. ${name} imports MediaPlaceholder and never bare-returns null for an empty required stage`, src.includes("MediaPlaceholder") && !/^\s*return null;\s*$/m.test(src));
+  }
+}
+
 console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);

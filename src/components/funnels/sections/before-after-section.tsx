@@ -1,5 +1,6 @@
 import { Minus, ArrowRight } from "lucide-react";
 import type { BeforeAfterConfig } from "@/types/funnels";
+import { MediaPlaceholder } from "./media-placeholder";
 
 export function BeforeAfterSection({
   config,
@@ -8,7 +9,19 @@ export function BeforeAfterSection({
   config: BeforeAfterConfig;
   accentColor: string;
 }) {
-  if (config.beforeItems.length === 0 && config.afterItems.length === 0) return null;
+  if (config.beforeItems.length === 0 && config.afterItems.length === 0) {
+    return (
+      <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
+        <div className="mx-auto max-w-4xl">
+          <MediaPlaceholder
+            label="This section has no content yet — add it in the builder"
+            accentColor={accentColor}
+            className="min-h-32"
+          />
+        </div>
+      </section>
+    );
+  }
   return (
     <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
       <div className="mx-auto grid max-w-4xl items-stretch gap-4 sm:grid-cols-[1fr_auto_1fr]">
