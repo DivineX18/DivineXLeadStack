@@ -1018,6 +1018,56 @@ Records are validated through the exact same v1 parsers (`parseContactCreate`/`p
 
 **Required env vars**: `TENANT_SECRETS_KEY` (token encryption, shared with Funnel Checkout — see below), plus the existing `QSTASH_*` vars (the drain is QStash-callback-driven) and `NEXT_PUBLIC_APP_URL`. No GHL-side app registration or OAuth needed — Private Integration Tokens are a GHL account-level credential the client generates themselves and pastes in. Graceful degradation: without `TENANT_SECRETS_KEY` or QStash, connect/start return 503 with a friendly message; nothing else in the sub-account is affected.
 
+## Ascend SSO Bridge (Ascend → Flow, v1)
+
+A one-directional login handoff: a Clerk-authenticated user on **Ascend Intelligence** (`app.divinex.io`, a separate repo — Express/PostgreSQL/Drizzle backend, React/Vite frontend) can jump straight into a specific Flow sub-account here with no second login. **Discovered undocumented** during the 2026-08-05 Ascend OS unification audit — the routes, libs, and four env vars below existed in this repo with zero mention in this file until now. Real, working V1 implementation (no TODO/FIXME markers in any SSO file, reads as deliberately scoped rather than abandoned) — **not a stub**.
+
+**Strictly one-directional (Ascend → Flow only).** There is no reverse bridge — Flow's own UI links out to `app.divinex.io` as a plain external anchor, and the user re-authenticates with Clerk fresh. No Flow code initiates a handoff into Ascend/Clerk.
+
+### Five-phase flow
+
+| Phase | Where | What happens |
+|---|---|---|
+| **1. Start** | Ascend (`GET /api/sso/operations/start`, Clerk-authenticated) | Verifies the Clerk user's email is verified, checks the `growth_operations` Stripe entitlement, confirms an `active` row exists in Ascend's `divinex_workspace_mappings` table for this `clerkUserId`. Mints a random 32-byte one-time code (only its SHA-256 hash persisted, 90s TTL in `sso_authorization_codes`), redirects the browser to Flow's callback with `?code=`. |
+| **2. Callback** | Flow — `GET /api/auth/sso/callback` ([src/app/api/auth/sso/callback/route.ts](src/app/api/auth/sso/callback/route.ts)), **public route** (the one-time code is the credential) | Server-to-server POSTs the code to Ascend's exchange endpoint with `Authorization: Bearer ${ASCEND_SSO_SHARED_SECRET}`. |
+| **3. Exchange** | Ascend (`POST /api/sso/operations/exchange`, shared-secret Bearer auth, `timingSafeEqual`) | Atomically consumes the code (`UPDATE ... WHERE usedAt IS NULL AND expiresAt > now()`), re-checks email verification + the `growth_operations` entitlement are *still* active (closes the 90s revocation window), looks up the workspace mapping again, returns an identity JSON payload (not itself signed — integrity relies on TLS + the shared-secret gate). |
+| **4. Workspace authorization + bridge creation** | Flow, same callback route (Phase B–D in the code's own comments) | Validates the target `subAccounts/{id}` exists and the role is `admin` or `collaborator`. Resolves an existing mapped `leadstackFirebaseUid` (verified via [src/lib/auth/sso-workspace-access.ts](src/lib/auth/sso-workspace-access.ts)::`verifySsoWorkspaceAccess()` — active membership required, **role mismatch fails closed, is never auto-corrected**) **or**, if unmapped and Ascend says `provisioningAllowed: true`, JIT-provisions a brand-new passwordless Firebase user + `users`/`subAccountMembers`/`userMemberships` docs (rolled back via `deleteUser` if the Firestore batch fails). Mints a short-lived single-use bridge token ([src/lib/auth/sso-bridge-token.ts](src/lib/auth/sso-bridge-token.ts) — `${bridgeId}.${nonce}.${HMAC-SHA256}`, keyed by its own `SSO_BRIDGE_TOKEN_SECRET`, deliberately never `AUTOMATIONS_TOKEN_SECRET`), stores its hash on a new `ssoBridge/{bridgeId}` doc (`expiresAt = now+30s`, `usedAt: null`), sets it as an `HttpOnly`/`Secure`/`SameSite=lax`, root-scoped, 30s-maxAge cookie, redirects to `/auth/sso/finish`. |
+| **5. Finish** | Flow — `POST /api/auth/sso/exchange-bridge-token` ([src/app/api/auth/sso/exchange-bridge-token/route.ts](src/app/api/auth/sso/exchange-bridge-token/route.ts)) called from the client page `/auth/sso/finish` | Reads the HttpOnly cookie server-side, atomically consumes the `ssoBridge` doc in a Firestore transaction (hash match, not used, not expired), **re-runs `verifySsoWorkspaceAccess()` a second time** (closes the TOCTOU gap between Phase 4 and now), mints a Firebase `createCustomToken(uid)`, returns it in the JSON body only (never a URL param). The client signs in with `signInWithCustomToken` then calls the exact same `createSessionCookie()` path the native login form uses — no parallel session-creation logic. |
+
+### Token formats
+
+Neither token is a JWT. The authorization code (leg 1→3) is an opaque random hex string, hash-only persisted. The bridge token (leg 4→5) is a custom `bridgeId.nonce.HMAC-SHA256` string that carries no embedded claims — it's a bearer reference into the `ssoBridge/{bridgeId}` Firestore doc, which is where `uid`/`subAccountId`/`approvedRole`/`expiresAt` actually live. The final credential is a standard Firebase Admin SDK custom token with no extra claims added.
+
+### Security properties
+
+- **Replay protection**: both the authorization code (90s TTL) and the bridge token/doc (30s TTL) are single-use, consumed atomically (SQL `UPDATE ... WHERE` on Ascend's side, a Firestore transaction on Flow's).
+- **Defense in depth**: workspace access is independently re-verified at *both* the callback (Phase 4) and the bridge-token exchange (Phase 5) via the same shared `verifySsoWorkspaceAccess()` helper, so the two checks can never drift apart.
+- **Fail closed on role mismatch**: if the mapped Firebase account's actual sub-account role no longer matches the role Ascend approved, the bridge refuses rather than silently using whichever role is current.
+- **No email-based account linking**: a returning user is resolved strictly by the explicitly mapped `leadstackFirebaseUid`, never by looking up an account by email.
+- **No dedicated revocation action**: disabling the mapped Firebase user, flipping `divinex_workspace_mappings.connectionStatus`, or revoking the `growth_operations` entitlement are the only ways to cut off a mapped user's bridge access today — there's no one-click "revoke this SSO session" admin control.
+- **Audit trails exist but aren't unified**: Ascend writes to Postgres `sso_audit_events` (never logs raw codes/tokens/secrets); Flow writes to Firestore `ssoLoginAttempts` (`callback_failure` / `bridge_created`). The two logs are not cross-referenced.
+
+### Known V1 limitations
+
+- **No self-service workspace-mapping UI on either side.** Ascend's `divinex_workspace_mappings` table has no admin UI, API route, or seed script that writes to it — its own schema comment says it's "populated by hand via a one-off script." This means the bridge only works for manually-provisioned users today, not the general customer population.
+- **One-directional only** — see above.
+- **Identity payload isn't independently signed** — Phase 3's JSON response relies on TLS + the shared-secret-gated POST, not a JWS/JWT.
+
+### Env vars (add to the Environment Variables section's tables when reorganizing)
+
+| Var | Side | Purpose |
+|---|---|---|
+| `ASCEND_SSO_EXCHANGE_URL` | Flow | Points at Ascend's `POST /api/sso/operations/exchange` (`https://app.divinex.io/api/sso/operations/exchange`) |
+| `ASCEND_SSO_SHARED_SECRET` | Both (same value) | Server-to-server Bearer auth between the two callback/exchange routes |
+| `SSO_BRIDGE_TOKEN_SECRET` | Flow only | HMAC key for the bridge token — deliberately separate from `AUTOMATIONS_TOKEN_SECRET` so rotating one never rotates the other |
+| `NEXT_PUBLIC_ASCEND_APP_URL` | Flow | Client-facing "back to Ascend" links |
+
+Without these four set, the callback route returns a `not_configured` error redirect; nothing else in Flow is affected.
+
+### A third, separate Ascend↔Flow integration (not part of the SSO bridge)
+
+Ascend's `api-server/src/lib/crmIntegration.ts` calls Flow's own **Public API v1** (`lsk_live_*` bearer key, `POST /api/v1/contacts` + `POST /api/v1/tasks` — see the Public API v1 section above) to sync qualified prospecting/audit leads into one specific, hardcoded Flow sub-account. Manual/on-demand only (triggered by an internal script, `sendLeadToCrm.ts`, not automatic on every scan), one-directional (Ascend → Flow), and uses zero SSO-bridge machinery — it's just an ordinary Public API v1 caller with its own key. Relevant precedent: it's a working, production example of an Ascend server calling Flow's API directly, which is the same shape a future Zeno execution bridge would need.
+
 ## Commands
 - `pnpm dev` — dev server (Turbopack)
 - `pnpm build` — production build
