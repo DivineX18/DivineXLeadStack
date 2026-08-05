@@ -153,6 +153,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // featureFlags/{flagId} — Ascend OS Phase 2 progressive-rollout flags.
+    // Fully Admin-SDK-only: evaluation happens server-side
+    // (lib/flags/evaluate-flag.ts), never client-read, so a flagged-off
+    // feature can't be discovered by inspecting Firestore from devtools.
+    match /featureFlags/{flagId} {
+      allow read, write: if false;
+    }
+
     // ---------- agencies ----------
     match /agencies/{agencyId} {
       // Anyone in the agency can read the doc (owner uses it for billing,
