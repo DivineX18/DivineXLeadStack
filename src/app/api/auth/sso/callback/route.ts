@@ -2,9 +2,9 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
-import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
+import { getAdminDb } from "@/lib/firebase/admin";
 import { issueSsoBridgeToken } from "@/lib/auth/sso-bridge-token";
-import { verifySsoWorkspaceAccess } from "@/lib/auth/sso-workspace-access";
+import { resolveOrProvisionFirebaseUser } from "@/lib/auth/sso-jit-provisioning";
 import type { SubAccountDoc, SubAccountRole } from "@/types/tenancy";
 
 export const dynamic = "force-dynamic";
@@ -121,7 +121,6 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   const db = getAdminDb();
-  const auth = getAdminAuth();
   const { leadstackSubAccountId, leadstackFirebaseUid, leadstackRole } = identity;
 
   // ── Phase B — workspace authorization ──────────────────────────────────
@@ -140,122 +139,25 @@ export async function GET(request: Request): Promise<NextResponse> {
     return errorRedirect(request, "role_not_recognized");
   }
 
-  let uid: string;
-
-  if (leadstackFirebaseUid) {
-    // Returning user — resolve by the explicitly mapped UID, never by email
-    // alone. Verify the account exists, isn't disabled, and its email
-    // matches Ascend's verified email as a consistency check (not the
-    // lookup key).
-    let userRecord;
-    try {
-      userRecord = await auth.getUser(leadstackFirebaseUid);
-    } catch {
-      await auditFailure("mapped_uid_not_found", { clerkUserId: identity.clerkUserId, uid: leadstackFirebaseUid });
-      return errorRedirect(request, "account_unavailable");
-    }
-    if (userRecord.disabled) {
-      await auditFailure("account_disabled", { clerkUserId: identity.clerkUserId, uid: leadstackFirebaseUid });
-      return errorRedirect(request, "account_unavailable");
-    }
-    if (userRecord.email?.toLowerCase() !== identity.email.toLowerCase()) {
-      await auditFailure("email_mismatch", { clerkUserId: identity.clerkUserId, uid: leadstackFirebaseUid });
-      return errorRedirect(request, "account_unavailable");
-    }
-
-    // 3/4. Active membership in this EXACT sub-account (or the agency-owner
-    // shortcut), role matches the mapping exactly (Final rule 1 — never
-    // auto-correct a mismatch, fail closed instead). Shared with Phase E's
-    // re-validation so both checks can never drift apart.
-    const access = await verifySsoWorkspaceAccess({
-      uid: leadstackFirebaseUid,
-      subAccountId: leadstackSubAccountId,
-      approvedRole: leadstackRole,
-    });
-    if (!access.ok) {
-      await auditFailure(access.reason, { clerkUserId: identity.clerkUserId, uid: leadstackFirebaseUid, subAccountId: leadstackSubAccountId });
-      return errorRedirect(request, "no_workspace_access");
-    }
-
-    uid = leadstackFirebaseUid;
-  } else {
-    // ── Phase C — optional provisioning ──────────────────────────────────
-    if (!identity.provisioningAllowed) {
-      await auditFailure("provisioning_not_allowed", { clerkUserId: identity.clerkUserId });
-      return errorRedirect(request, "setup_needed");
-    }
-
-    let userRecord;
-    try {
-      userRecord = await auth.createUser({
-        email: identity.email,
-        displayName: identity.name ?? identity.email.split("@")[0],
-        // No password is ever set — this account only ever authenticates
-        // via the SSO bridge.
-      });
-    } catch (err) {
-      console.error("[sso/callback] provisioning createUser failed", err);
-      await auditFailure("provisioning_create_user_failed", { clerkUserId: identity.clerkUserId });
-      return errorRedirect(request, "provisioning_failed");
-    }
-    uid = userRecord.uid;
-
-    try {
-      await auth.setCustomUserClaims(uid, {
-        role: (leadstackRole === "admin" ? "admin" : "collaborator") as SubAccountRole,
-        status: "active",
-        agencyId: sub.agencyId,
-        agencyRole: null,
-      });
-
-      const batch = db.batch();
-      batch.set(db.doc(`users/${uid}`), {
-        uid,
-        email: identity.email,
-        displayName: identity.name ?? identity.email.split("@")[0],
-        photoURL: null,
-        stripeCustomerId: null,
-        subscriptionStatus: "inactive",
-        subscriptionPriceId: null,
-        role: (leadstackRole === "admin" ? "admin" : "collaborator") as SubAccountRole,
-        status: "active",
-        primaryAgencyId: sub.agencyId,
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-      batch.set(
-        db.doc(`subAccounts/${leadstackSubAccountId}/subAccountMembers/${uid}`),
-        {
-          uid,
-          subAccountId: leadstackSubAccountId,
-          agencyId: sub.agencyId,
-          role: leadstackRole,
-          status: "active",
-          email: identity.email,
-          displayName: identity.name ?? identity.email.split("@")[0],
-          addedAt: FieldValue.serverTimestamp(),
-          addedByUid: uid,
-          assignedTerritoryIds: [],
-        },
-      );
-      batch.set(
-        db.doc(`userMemberships/${uid}/subAccounts/${leadstackSubAccountId}`),
-        {
-          subAccountId: leadstackSubAccountId,
-          agencyId: sub.agencyId,
-          role: leadstackRole,
-          name: sub.name,
-          addedAt: FieldValue.serverTimestamp(),
-        },
-      );
-      await batch.commit();
-    } catch (err) {
-      console.error("[sso/callback] provisioning finalize failed, rolling back orphan user", err);
-      await auth.deleteUser(uid).catch(() => undefined);
-      await auditFailure("provisioning_finalize_failed", { clerkUserId: identity.clerkUserId });
-      return errorRedirect(request, "provisioning_failed");
-    }
+  // Resolve the existing mapped Firebase user, or JIT-provision a new one —
+  // extracted to lib/auth/sso-jit-provisioning.ts (Ascend OS Phase 2, Slice
+  // 3). Byte-for-byte identical logic to what was inline here; see
+  // PHASE_2_IMPLEMENTATION_LEDGER.md for the extraction record.
+  const resolved = await resolveOrProvisionFirebaseUser({
+    clerkUserId: identity.clerkUserId,
+    email: identity.email,
+    name: identity.name,
+    leadstackFirebaseUid,
+    leadstackSubAccountId,
+    leadstackRole,
+    provisioningAllowed: identity.provisioningAllowed,
+    subAgencyId: sub.agencyId,
+    subName: sub.name,
+  });
+  if (!resolved.ok) {
+    return errorRedirect(request, resolved.errorPage);
   }
+  const uid = resolved.uid;
 
   // ── Phase D — bridge creation ──────────────────────────────────────────
   const bridgeRef = db.collection("ssoBridge").doc();

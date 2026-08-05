@@ -81,7 +81,8 @@ None — Phase 0/1 architecture holds. The two findings above are gaps in *infra
 
 ## Deployment state
 
-Nothing deployed. No code written beyond this ledger and the repo-state investigation above.
+- Committed to `dev` (2 commits: docs, then the flag primitive) and pushed to `origin/dev`. **Not merged to `main`, not deployed anywhere.**
+- **Outstanding manual step**: `firebase deploy --only firestore:rules,firestore:indexes` has not been run — the new `featureFlags` rules block only takes effect in production once that's deployed. Deliberately not run automatically in this session (a live production Firestore rules deploy), left as an explicit action for the product owner or a later, dedicated deploy slice.
 
 ## Browser verification state
 
@@ -89,9 +90,58 @@ Not started. Phase 0 §0.2's live SSO checklist remains outstanding and is a har
 
 ## Rollback instructions
 
-N/A — no code changes made this slice.
+- **Code**: `git revert 4c92849` (flag primitive) on `dev` — fully additive, nothing else references these files yet, safe to revert cleanly.
+- **Firestore rules**: not yet deployed, so there's nothing live to roll back. Once deployed, rolling back means redeploying the previous `firestore.rules` revision (the `featureFlags` block is additive — removing it doesn't affect any other collection's rules).
 
 ---
+
+## Wave A — Slice 3: JIT extraction + identityLinks model
+
+**Status:** ✅ Complete. Committed to `dev` only. Not merged to `main`. Firestore rules for the two new collections are **not deployed** (deliberately deferred to the controlled staging/live certification step, per explicit instruction, alongside `featureFlags`' rules from Slice 2).
+
+### 1. JIT provisioning extraction
+
+Moved the SSO callback's inline Phase B(3/4)+C block (resolve-existing-user or JIT-provision-new-user) into `src/lib/auth/sso-jit-provisioning.ts::resolveOrProvisionFirebaseUser()`. The callback route (`src/app/api/auth/sso/callback/route.ts`) shrank from 294 to 196 lines and now just calls the extracted function and branches on `.ok`.
+
+**Design choice**: the extracted function returns `{ok:true, uid} | {ok:false, errorPage}` rather than deciding the redirect itself — building the actual `NextResponse` stays a route-handler concern, matching how `verifySsoWorkspaceAccess()` already separates "business logic result" from "HTTP response shaping." `auditFailure()` is intentionally duplicated (5 lines) between the route and the new file rather than shared, to keep this specific diff minimal and behavior-preservation-focused — noted as a reasonable future cleanup, not bundled in here.
+
+**Proof behavior was preserved** (not just asserted): `scripts/verify-sso-jit-extraction.mts` diffs the extracted function against the **actual last-committed pre-extraction route file** (via `git show HEAD:...`), not just the new code in isolation. 47 checks — every audit-reason string, every redirect target, the exact rollback call, the fail-closed return-count (7 failure paths, 2 success paths), and confirmation that the downstream session-cookie-creation file (`exchange-bridge-token/route.ts`) was never touched. First run caught 4 real discrepancies, all confirmed as harmless refactor artifacts (parameter renaming, `getAdminAuth()` called inline vs. a cached local var — verified functionally identical by reading `lib/firebase/admin.ts`, which returns a cached singleton either way) rather than real regressions — the test was fixed to tolerate those specific, verified-safe differences while still catching anything else. All 47 checks pass.
+
+### 2. `identityLinks` model
+
+`src/types/identity-links.ts` + `src/lib/auth/identity-links-service.ts`. Storage: `identityLinks/{clerkUserId}` (doc ID = clerkUserId → free uniqueness), `identityLinksByFirebaseUid/{firebaseUid}` (reverse index, same trick for firebaseUid uniqueness), `identityLinkAttempts/{auto}` (append-only audit log, mirrors the existing `ssoAuditEvents`/`ssoLoginAttempts` pattern).
+
+- **Idempotent create**: `createIdentityLinkIdempotent()` runs inside one Firestore transaction — identical re-run of the same pairing is a no-op; a conflicting pairing on either ID is returned to the caller, never silently overwritten.
+- **Never links by email**: `emailAtLinkTime` is stored for audit display only — no function reads it back as a comparison/lookup condition (verified by `verify-identity-links.mts` 2a–2c).
+- **Status**: `active | revoked | superseded`. **Migration state**: `not_started | in_progress | complete | failed`, tracked separately from status.
+- **Failure recording**: `recordIdentityLinkFailure()` — attempt-log only (no link doc exists yet at the point this fires), never accepts/logs a secret or token.
+
+Regression coverage: `scripts/verify-identity-links.mts`, 25 checks, all passing.
+
+### 3. Dry-run + single-user backfill tooling
+
+`scripts/backfill-identity-link.mts`. **Deliberately narrow scope**: links exactly one explicitly-named user per invocation. There is no loop/batch code path in the file at all — not disabled by a flag, genuinely absent. Dry-run is the default; `--execute` is required to write anything; an already-linked user is a no-op (idempotent).
+
+**Real gap, named rather than hidden**: a full batch backfill needs a bulk "list eligible Clerk users with an active entitlement" source. That data lives in Ascend Intelligence's `entitlements` table and has no callable endpoint today — building one would mean writing new Ascend-side code, which this slice's instructions explicitly deferred until the `dev`/`main` divergence (Slice 1 finding) is resolved. **Bulk backfill is blocked on that, not on anything in this slice.**
+
+### Verification run this slice
+
+| Check | Result |
+|---|---|
+| `npx tsx scripts/verify-sso-jit-extraction.mts` | ✅ 47/47 |
+| `npx tsx scripts/verify-identity-links.mts` | ✅ 25/25 |
+| Existing `scripts/verify-*.mts` regression scripts | 7 of 10 fail with an identical, **pre-existing** `server-only` module-guard error when dynamically importing `firebase-admin`-dependent modules via `tsx` — confirmed pre-existing (not caused by this slice) by reproducing the identical failure via `git stash` against the clean committed state. `verify-cta-popup-fixes.mts` (doesn't touch Firebase-dependent modules) passes. Worth a dedicated fix later — these scripts' invocation method appears to have broken independent of Ascend OS work — but out of scope for this slice per "no new warnings/errors introduced." |
+| `npx tsc --noEmit` | ✅ Clean |
+| `pnpm lint` | ✅ Zero new issues (same 32 pre-existing problems as Slice 2's baseline, none in any Slice 3 file) |
+| `pnpm build` | ✅ Clean |
+
+### Firestore rules deployment — still deferred
+
+`identityLinks/{clerkUserId}`, `identityLinksByFirebaseUid/{firebaseUid}`, and `identityLinkAttempts/{attemptId}` are added to `firestore.rules` (Admin-SDK-only, same pattern as `featureFlags`) but **not deployed**, per this slice's explicit instruction — bundled with `featureFlags`' rules deploy into the controlled staging/live certification step once Workspace Mapping v2 makes the whole identity foundation actually usable end-to-end.
+
+### Dependency on the Ascend branch divergence
+
+Unchanged from Slice 2 — Ascend-side work stays paused. This slice's only Ascend-adjacent gap (bulk-eligible-user enumeration for the backfill tool) is explicitly blocked on that resolution, not worked around.
 
 ## Checkpoint before Slice 2 — resolved
 

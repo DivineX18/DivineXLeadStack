@@ -161,6 +161,20 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // identityLinks/{clerkUserId}, identityLinksByFirebaseUid/{firebaseUid},
+    // identityLinkAttempts/{auto} — Ascend OS Phase 2 Clerk<->Firebase
+    // identity-link records (lib/auth/identity-links-service.ts). Fully
+    // Admin-SDK-only, same reasoning as featureFlags above.
+    match /identityLinks/{clerkUserId} {
+      allow read, write: if false;
+    }
+    match /identityLinksByFirebaseUid/{firebaseUid} {
+      allow read, write: if false;
+    }
+    match /identityLinkAttempts/{attemptId} {
+      allow read, write: if false;
+    }
+
     // ---------- agencies ----------
     match /agencies/{agencyId} {
       // Anyone in the agency can read the doc (owner uses it for billing,
