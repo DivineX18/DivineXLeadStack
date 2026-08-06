@@ -414,6 +414,79 @@ Reuses Slice 5's philosophy exactly: per-module denials are console-only; only t
 
 Per instructions: no billing migration, no Stripe changes, no Ascend changes, no real usage limit values, no add-on catalog, no checkout integration, no unified shell, no Firebase cutover, no Zeno execution.
 
+## Wave A — Slice 8: Unified Ascend Next.js Shell
+
+**Status:** ✅ Complete. Committed to `dev` only. Not merged to `main`. Not deployed. No new Firestore collection (none needed — the shell composes existing collections + Slices 2/5/6/7's existing evaluators). `unified_shell`/`unified_navigation` (Slice 2's already-registered flag IDs) both default OFF (no `featureFlags/{id}` doc exists yet), so **the entire `/app/*` route group is unreachable — every request bounces to the existing CRM experience — until an operator explicitly creates and enables the flag doc.** Every existing dashboard/agency/sub-account file confirmed byte-for-byte untouched.
+
+### Audit findings (repository truth — see the numbered items below for the exact files/logic this slice builds on top of, never duplicates)
+
+| Item | Confirmed |
+|---|---|
+| Root layout / theming | `src/app/layout.tsx` wraps `Providers` (ThemeProvider `attribute="class" defaultTheme="system"`, sonner `Toaster`), fonts (Geist Sans/Mono + Instrument Serif). `src/app/globals.css` already has a scoped-theme-class precedent (`.theme-green`, `.theme-leadstack`, `.marketing-accent`) this slice's `.theme-ascend` block follows exactly. |
+| Error/loading/not-found | Only `src/app/error.tsx` + `src/app/not-found.tsx` exist, both root-level. **No `loading.tsx` anywhere in the app**, no dashboard-specific overrides. Not extended by this slice (out of scope). |
+| Middleware | `src/middleware.ts`'s `authMiddleware` protects everything not in `PUBLIC_PATHS`/`PUBLIC_PATH_PATTERNS` by default — confirmed the ONE existing host-based logic is `customDomainRewrite()` (Funnels custom domains), with a documented fail-closed-on-ambiguity incident pattern this slice's `decideShellMode()` deliberately mirrors. `/app/*` was **not** added to either public list, so it inherits the exact same session-cookie gate as every other dashboard route — no middleware changes were needed or made. |
+| Dashboard shell | `(dashboard)/layout.tsx` (client component) renders `Sidebar` + `Header` + `BottomTabBar` + `CommandPalette` + `ZenoLauncher`; `SubAccountProvider`/`BillingGuard` mount one level deeper, in `sa/[subAccountId]/layout.tsx` only — agency-level pages never have sub-account context. |
+| Sidebar gating pattern | `sidebar.tsx` already has the EXACT dual-gate shape this slice's navigation model reuses: role-based hide (agency section only for owner/multi-membership) vs. entitlement-based "Locked" row (`broadcastsEnabledByAgency` etc., default hidden unless the agency owner explicitly un-hides it). This slice's `buildShellNavigation()` reproduces this same visible-vs-locked shape, but driven by Slice 5's real permission registry + Slice 6's real entitlement engine instead of the hand-rolled per-feature gate fields — confirmed by audit to be **the first UI-adjacent code to consume either engine** (zero `.tsx` files imported `lib/entitlements/` or used `roleHasPermission` before this slice). |
+| Ascend↔Flow links | Exactly ONE exists today: a plain external `<a href={NEXT_PUBLIC_ASCEND_APP_URL}>DivineX Home</a>` in the sidebar footer. This slice reuses the same `NEXT_PUBLIC_ASCEND_APP_URL` env var (already documented, already wired) as the authoritative "Ascend domain" hostname for `decideShellMode()` — not a new env var. |
+| Zeno | **Fully built, live today** — sidebar nav item, agency nav item, `/ai-suite` pages, a persistent floating "Ask Zeno" launcher (`components/ai-suite/zeno-launcher.tsx`) pathname-coupled to `/sa/*`/`/agency/*`. This slice deliberately does NOT reuse `ZenoLauncher` inside `/app/*` (its pathname matching doesn't recognize the new route group and would misbehave) — instead the new shell exposes a `capabilities.canUseZeno` boolean (driven by Slice 5's real `zeno.advise` permission) plus a plain link into the workspace's existing `/sa/{id}/ai-suite` page. `ZenoLauncher` itself is unmodified. |
+| Tier/mode-driven UI | Confirmed **did not exist anywhere** before this slice — `WorkspaceTier` (Slice 6) had zero rendered-UI influence. This slice is the first consumer. |
+| Legacy flat-route redirect | `LegacyRedirect` (`src/components/legacy-redirect.tsx`) is the existing precedent this slice's `decideShellFallbackRoute()` follows for the same "bounce to first membership's sub-account, or `/agency` if none" shape — reused as a pattern, not imported directly (that component is client-side/`useAuth()`-driven; this slice's fallback route decider is a pure function driven by the already-resolved `IdentityContext`, used from a Server Component). |
+| Billing paywall | `BillingGuard` mounts one level below the shared dashboard shell (wraps only `sa/[subAccountId]` children) — sidebar/header/tab-bar are never blocked by a lapsed subscription. Unmodified, unconsulted by this slice (the shell's `full_ascend` gate is orthogonal to billing-lapsed state; a future slice can decide whether `/app/*` should also mount `BillingGuard`). |
+| Onboarding/first-run | `/agency/get-started` exists (a tabbed orientation page) but **no automatic redirect to it exists anywhere** — confirmed absent from middleware and every layout. Not built by this slice (out of scope; the spec did not ask for first-run detection). |
+| Design tokens (Architecture spec) | `--jade: 158 64% 45%`, `--indigo: 239 84% 67%`, `--cobalt: 217 91% 60%` are the Architecture spec's LOCKED values (Locked Decision 4, Section 8) — used verbatim in `resolveShellBranding()`, not reinvented. |
+
+**No contradiction with the architecture spec found.** One clarification worth recording: the spec's Locked Decision 1/2 ("Full Ascend customers use `app.divinex.io`... CRM-only customers may continue on `crm.divinex.io`") is realized in this slice as ONE Next.js deployment (this repo) serving both hostnames — `decideShellMode()` branches on the incoming request's `Host` header, the same mechanism `customDomainRewrite()` already uses for Funnels custom domains — rather than two separate deployments. No DNS/hosting change was made or is needed for this slice (feature-flagged off by default; hostname branching only matters once `app.divinex.io` is actually pointed at this deployment).
+
+### Shell modes
+
+`ShellMode = "full_ascend" | "crm_only"` (`src/types/ascend-shell.ts`). No third "internal/operator" mode — the spec's internal Ascend operator console lives in the untouched Ascend Intelligence repo, explicitly out of scope.
+
+### Shell-mode resolver — fail-closed by design
+
+`src/lib/shell/decide-shell-mode.ts`::`decideShellMode(signals)` — pure, unit-tested (10 genuine tests). `"full_ascend"` requires ALL THREE: (1) the request's hostname equals the configured Ascend hostname (`NEXT_PUBLIC_ASCEND_APP_URL`, reused — not a new env var), (2) the caller's workspace entitlement tier (Slice 6, real, never guessed) is genuinely `"full_ascend"`, (3) the `"unified_shell"` progressive-rollout flag (Slice 2, reused) is on for this caller/workspace. Any missing/ambiguous signal falls through to `"crm_only"`. A `devOverride` signal is honored ONLY when `isProduction === false` — asserted first, so a leftover override can never fire in production even if accidentally left set. The function itself never reads `process.env`/`next/headers`/Firestore — the orchestrator (`resolve-shell-context.ts`) gathers every signal first, keeping the decision genuinely pure and testable.
+
+### Canonical shell context
+
+`src/types/ascend-shell.ts`::`AscendShellContext` — composes Slice 7's `IdentityContext` unchanged with `navigation`, `branding`, `rollout`, `capabilities`. `src/lib/shell/resolve-shell-context.ts`::`resolveShellContext(uid, options?)` is the single composer (structurally verified: `server-only`, reuses `resolveIdentityForShell` — never a duplicated identity/session/workspace lookup — reuses `isFeatureFlagEnabled` for both `unified_shell` and `unified_navigation`, reuses the existing `resolveCustomBrand()` for `crm_only` branding, delegates every decision to a pure function). `src/lib/shell/shell-context-wrappers.ts` mirrors Slice 7's wrapper discipline exactly: `resolveShellContextForLayout()` (reads `x-user-uid` via `next/headers`, the same header every API-route auth helper already reads from a `Request` object), `resolveShellContextForServerAction(uid)`, and a service-to-service `resolveShellContextForService({representedUid})` stub for Slice 9+/Zeno (representedUid required, never optional — same discipline as Slices 5-7).
+
+### Lifecycle navigation — the first real UI consumer of Slices 5 & 6
+
+`src/lib/shell/build-shell-navigation.ts`::`buildShellNavigation(workspace)` — pure, unit-tested. The eight sections (Home/Identify/Create/Launch/Grow/Optimize/Scale/Settings) each map to a `{permission, module}` requirement (`LIFECYCLE_REQUIREMENTS`, explicitly documented in the file as a **new Slice 8 product decision, not a discovered fact** — the audit confirmed no such mapping existed anywhere to preserve). Gating reproduces the existing sidebar's exact dual-gate shape: missing the PERMISSION hides the section entirely (role-based); having the permission but the workspace lacking the MODULE renders it visible-but-locked with a reason (entitlement-based) — now driven by real `roleHasPermission()` (Slice 5) + `WorkspaceEntitlementSummary.allowedModules` (Slice 6) instead of hand-rolled gate fields. Zeno is deliberately excluded from this list (global capability, not a primary nav item, per spec).
+
+### Branding — additive, not a restyle
+
+`src/lib/shell/resolve-shell-branding.ts` — pure. `crm_only` mode passes through Flow's EXISTING `resolveCustomBrand()` result unchanged (zero visual change for CRM-only customers). `full_ascend` mode carries the Architecture spec's locked jade/indigo/cobalt tokens. `globals.css` gained one new, purely additive `.theme-ascend` block (verified via `git diff` containing zero deletion lines) — scoped to the new `/app/*` shell frame only; no existing screen carries this class, so nothing existing changes visually.
+
+### Route structure
+
+`src/app/app/layout.tsx` — the shell frame. Resolves context via the wrapper (never the raw composer), redirects (never renders Ascend UI) whenever `mode !== "full_ascend"` or no context resolves at all, using the pure `decideShellFallbackRoute()` (→ `/login`, the caller's existing `/sa/{id}/dashboard`, or `/agency` — mirroring `LegacyRedirect`'s existing fallback shape). `/app/*` was not added to `PUBLIC_PATHS`, so it's protected by the existing session-cookie gate with zero middleware changes. Eight placeholder pages (`/app/{home,identify,create,launch,grow,optimize,scale,settings}`) each link into the closest existing, unmodified Flow surface (stable routing into existing functionality, per the spec) — explicitly not the final Home dashboard, not Ascend Intelligence, not the Zeno execution bridge, not a builder rewrite.
+
+### Tests
+
+| Suite | Kind | Result |
+|---|---|---|
+| `scripts/verify-shell-decisions.mts` | **Genuine unit tests** (real calls, real assertions, zero Firebase/next import) | ✅ 25/25 — `decideShellMode` (10, incl. the production-ignores-override case), `buildShellNavigation` (7, incl. the hide-vs-lock distinction), `resolveShellBranding` (4), `decideShellFallbackRoute` (4) |
+| `scripts/verify-shell-composition.mts` | Structural | ✅ 41/41 — pure files stay pure, one composer, wrapper reuse, layout gates before rendering, `/app/*` not exposed as public, **9 existing dashboard/shell files diffed byte-for-byte against the pre-Slice-8 commit and confirmed unchanged**, globals.css change proven purely additive |
+| All Slice 3-7 regressions (11 suites) | Regression | ✅ Unaffected |
+| `pnpm build` | — | ✅ Clean; confirmed all 9 new `/app/*` routes compiled |
+| `npx tsc --noEmit` | — | ✅ Clean |
+| `pnpm lint` | — | ✅ Zero new issues (same 32 pre-existing problems, unrelated `.cjs` script) |
+
+### Bugs found and fixed (in this slice's own test-writing, not the shipped code)
+
+1. Shell-quoting crash in the byte-diff structural test: `execSync("git show ...")` broke on the parenthesized path `src/app/(dashboard)/layout.tsx` (shell interprets `(` as a syntax token). Fixed by switching to `execFileSync("git", [...])`, which passes arguments without shell interpretation.
+2. Another comment-string false positive (same recurring class as Slices 5-7): the "pure functions stay pure" check flagged `decide-shell-mode.ts` because its OWN doc comment explains the "no next/headers, no process.env" invariant using those exact words. Fixed by stripping comments before the substring check.
+
+### Risks
+
+- The `LIFECYCLE_REQUIREMENTS` permission/module mapping is a first-pass Slice 8 design choice, explicitly documented as revisable once Slice 9 defines what each section actually renders — revising it doesn't require touching the gating mechanism itself.
+- Each of the 8 placeholder pages independently calls `resolveShellContextForLayout()` (in addition to the layout's own call), meaning identity/entitlement/flag resolution runs twice per request today. Acceptable for a placeholder-page foundation slice; flagged here as a Slice 9 optimization opportunity (pass shell context down via a request-scoped mechanism instead of re-resolving per page).
+- `BillingGuard` is not mounted under `/app/*` — a billing-lapsed full_ascend workspace is not currently paywalled inside the new shell. Not a regression (this route group is unreachable without the flag anyway) but worth deciding explicitly before any real rollout.
+
+### Deferred / explicitly not done this slice
+
+Per instructions: no Ascend Intelligence integration, no final Home dashboard, no Zeno execution bridge, no builder rewrite, no global restyle of existing Flow screens, no Firestore rules deploy, no production auth/billing changes, no Ascend Intelligence repository changes.
+
 ## Wave A — Slice 7: Unified Identity & Session
 
 **Status:** ✅ Complete. Committed to `dev` only. Not merged to `main`. One new collection (`identityAuditEvents`) added to `firestore.rules`, **not deployed**. **Every existing login/logout/SSO/JIT file confirmed byte-for-byte untouched** — not just claimed, proven by a structural test that diffs each one against the pre-Slice-7 commit.

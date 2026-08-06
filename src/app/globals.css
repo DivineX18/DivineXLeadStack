@@ -54,6 +54,23 @@ body {
   --sidebar-ring: oklch(0.511 0.262 276.97);
 }
 
+/* Ascend OS Phase 2, Slice 8 — the Full Ascend shell's design tokens.
+   Values are the Architecture spec's LOCKED tokens verbatim
+   (ASCEND_OS_V1_ARCHITECTURE_SPECIFICATION.md, Locked Decision 4 + Section
+   8), not reinvented. Scoped entirely to `.theme-ascend` (applied only by
+   src/app/app/layout.tsx, the new Full Ascend shell frame) — additive
+   only, zero effect on any existing Flow screen, which never carries this
+   class. This is NOT a global restyle; it's the one new theme scope this
+   slice's new shell frame opts into. */
+.theme-ascend {
+  --jade: 158 64% 45%;
+  --indigo: 239 84% 67%;
+  --cobalt: 217 91% 60%;
+  --glass-1: rgba(255, 255, 255, 0.03);
+  --glass-2: rgba(255, 255, 255, 0.06);
+  --glass-3: rgba(255, 255, 255, 0.1);
+}
+
 /* Marketing site accent (public pages only — never applied inside the
    authenticated app, which has its own per-user accent-theme system above).
    Reuses the exact emerald values from .theme-green so this isn't a new
