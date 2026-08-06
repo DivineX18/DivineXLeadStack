@@ -191,6 +191,15 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // workspacePermissionAudit/{auto} — Ascend OS Phase 2 Slice 5, the one
+    // genuinely new collection this slice introduces
+    // (lib/permissions/workspace-permission-audit.ts). Admin-SDK-only, no
+    // client read requirement exists — a future admin diagnostics screen
+    // would read this through a server route, not directly.
+    match /workspacePermissionAudit/{auditId} {
+      allow read, write: if false;
+    }
+
     // ---------- agencies ----------
     match /agencies/{agencyId} {
       // Anyone in the agency can read the doc (owner uses it for billing,

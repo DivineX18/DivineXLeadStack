@@ -232,6 +232,94 @@ Unchanged — Ascend-side work stays paused. This slice's Ascend-adjacent gap (t
 
 The dry-run migration tool's live Flow-side checks work today; a *real* production dry run still needs someone to actually export the `divinex_workspace_mappings` rows + candidate business profiles from Ascend into the expected input JSON shape — that export step itself depends on the Ascend branch divergence being resolved, same as Slice 3's bulk-enumeration gap.
 
+## Wave A — Slice 5: Unified Workspace Permission Evaluator
+
+**Status:** ✅ Complete. Committed to `dev` only. Not merged to `main`. One new collection (`workspacePermissionAudit`) added to `firestore.rules`, **not deployed**.
+
+**Minor correction to the Slice 3 ledger entry**: re-running all pre-existing `verify-*.mts` scripts this slice found **9 of the original 10 fail** with the known `server-only` module-guard error (`verify-cta-popup-fixes.mts` is the only one that passes) — Slice 3's entry said "7 of 10." Same root cause, same pre-existing/unrelated status, just a wrong count recorded at the time. Corrected here rather than silently left wrong.
+
+### Audit findings (no contradictions with the architecture docs — everything held up)
+
+| Item | Confirmed |
+|---|---|
+| `requireSubAccountMember` / `requireSubAccountAdmin` / `requireAgencyOwnerAny` | Exact shapes reused as-is (already read in full during Slice 1/3) |
+| Firestore rules helpers | `isAgencyOwner()` (0 reads, claim-only), `canAccessSub()` (any active member — read tier), `canAdminSub()` (admin or owner — structural tier) — confirms exactly the two-tier + owner-shortcut model this evaluator's compatibility mapping is built on |
+| `lib/auth/territory-filter.ts` | Real, existing resource-level conditional-restriction mechanism (`loadEffectiveTerritoryScope`, `territoryGate`) — reused for `resourceContext.territoryId`, not reimplemented |
+| Real agency feature-gate fields | **15 exist**, not the ~9-10 prose-summarized in `CLAUDE.md`'s table — grep-confirmed against `src/types/tenancy.ts`: `aiSuiteEnabledByAgency, apiAccessEnabledByAgency, broadcastsEnabledByAgency, communityEnabledByAgency, customDomainsEnabledByAgency, emailDomainEnabledByAgency, funnelCheckoutEnabledByAgency, funnelsEnabledByAgency, getLeadsEnabledByAgency, metaInboxEnabledByAgency, missedCallTextBackEnabledByAgency, outboundVoiceEnabledByAgency, socialPlannerEnabledByAgency, websiteEnabledByAgency, whatsappEnabledByAgency`. No shared "check this gate" read helper exists — every route reads the field directly (`sub.xEnabledByAgency === true`); this evaluator follows the same convention rather than inventing a wrapper the codebase doesn't otherwise use. |
+| `lib/billing/status.ts::effectiveBillingState()` | Real, pure, reusable — confirms Client Billing v1's real lapsed/grace/pending/comped states and, critically, that **the agency owner is never walled** (direct quote from `CLAUDE.md`'s Client Billing section) — this evaluator's billing check reuses this function and preserves that exact exemption |
+| `lib/auth/require-admin.ts` | A **separate, legacy/global** `Role`/`MemberStatus` system, distinct from `SubAccountRole` — not the same axis as Workspace permissions. Noted as out of scope, not folded into this evaluator. |
+
+### Permission registry
+
+`src/types/workspace-permissions.ts` — **53 permissions**, exactly the list from this slice's instructions, type-safe (`WorkspacePermission` union + `isWorkspacePermission()` type guard). No route or script may reference a permission as a bare string literal outside this file.
+
+### Compatibility role mapping
+
+`src/lib/permissions/workspace-permission-compat.ts` — pure, generated from two named exception lists rather than 53×3 hand-written entries:
+
+| Tier | Rule | Permissions |
+|---|---|---|
+| `agencyOwner` | Everything | All 53 (matches today's real unrestricted agency-wide authority) |
+| `admin` | Everything except agency-scoped | All 53 except `agency.manage` (matches `canAdminSub`'s real ceiling) |
+| `collaborator` | Read + core CRM operations | Everything NOT in the `ADMIN_OR_ABOVE` list (26 permissions — billing, member management, deletions, publishing, sending, Stripe, domains, API, agency, `zeno.execute`, `assessments.run`, memory writes/approvals, `recommendations.approve`, `reports.export`) |
+
+**Honesty note recorded per this slice's own instruction**: this is not a permission-by-permission audit of every route's exact current guard (that would mean reading dozens of files this slice didn't touch) — it's the verified two-tier Firestore-rules pattern applied consistently with domain judgment, erring toward the more restrictive option (deny for collaborator) wherever precise verification wasn't done. **Proven monotonic by a real unit test**: collaborator's allowed set is always a strict subset of admin's, admin's always a subset of agency owner's — mechanically guarantees no tier accidentally gains what a higher tier lacks.
+
+### Evaluation algorithm
+
+`src/lib/permissions/evaluate-workspace-permission.ts`, exact required order (source-verified in this order, not just documented):
+1. Validate the permission key (`isWorkspacePermission`) — unknown strings denied, not evaluated.
+2. Resolve caller identity (`resolveAuthedCaller(uid)`, new — see extraction below) — never trusts a caller-supplied role.
+3. Confirm sub-account exists + caller has active access (`resolveSubAccountAccess`, new — the **extracted**, not reimplemented, core of the existing `requireSubAccountMember`).
+4. If a Workspace Mapping v2 record exists (Slice 4), confirm it isn't archived — its absence is normal, never a denial on its own.
+5. Entitlement/feature-gate requirements: Client Billing lapsed state (agency owner exempt, matches real behavior) + the permission's real feature-gate requirement, if any.
+6. Role-to-permission compatibility mapping.
+7. Deny by default — exactly one allow return-point in the whole function, structurally confirmed.
+
+### A real, in-scope extraction: `require-tenancy.ts`
+
+The core evaluator must not import `NextResponse` (explicit requirement), but `requireSubAccountMember` — the existing tenancy check this evaluator must reuse, not reinterpret — returns `NextResponse` on failure. Extracted the NextResponse-free core (`resolveSubAccountAccess`, `resolveAuthedCaller`) directly into `lib/auth/require-tenancy.ts`, with `requireSubAccountMember` becoming a thin wrapper that maps the new typed reasons back to the exact original status codes/messages. Same discipline as Slice 3's SSO/JIT extraction: characterization test (`scripts/verify-require-tenancy-extraction.mts`, diffs against the specific pre-extraction commit `6032270`) proves every original status code, error message, and the agency-owner-shortcut-before-membership-read ordering survived unchanged. 21/21 checks pass.
+
+### Entitlement / feature-gate behavior
+
+`src/lib/permissions/workspace-permission-requirements.ts` — only maps permissions to gates that **actually exist and actually gate that behavior today**: `api.manage→apiAccessEnabledByAgency`, `broadcasts.send→broadcastsEnabledByAgency`, `stripe.connect→funnelCheckoutEnabledByAgency`, `funnels.create/publish→funnelsEnabledByAgency`, `websites.create/publish→websiteEnabledByAgency`, `domains.manage→customDomainsEnabledByAgency`, `zeno.advise/execute→aiSuiteEnabledByAgency`. **Deliberately unmapped, not invented**: `assessments.*`, `memory.*`, `recommendations.*` — Ascend Intelligence has no Flow-side gate at all today. The `RequiredAscendTier`/`ascendTier` type exists as a named future extension point (the natural signal: an active Workspace Mapping v2 record) but is never set on any requirement this slice — confirmed by a unit test.
+
+### Authorization wrappers
+
+`src/lib/permissions/workspace-permission-wrappers.ts` — exactly three entry points, all delegating to the one core evaluator:
+1. `requireWorkspacePermission(request, input)` — human session, extracts uid from the existing `x-user-uid` header convention, returns a generic (never internally-detailed) error to HTTP callers on denial.
+2. `evaluateServiceToServicePermission({representedUid, ...})` — `representedUid` is a required field, not optional; a shared secret alone can never imply blanket authorization, matching this slice's explicit requirement. Defensively rejects an empty string before ever calling the evaluator.
+3. `evaluateZenoCapabilityPermission({representedUid, ...})` — a named, typed stub for the future Zeno execution bridge (not built, not wired up anywhere yet) so that future slice has an entry point to call rather than inventing one under time pressure.
+
+### Audit behavior
+
+`src/lib/permissions/workspace-permission-audit.ts` — every denial gets a structured `console.warn` (cheap, always observable). A named `HIGH_RISK_PERMISSIONS` list (`billing.manage, stripe.connect, api.manage, agency.manage, orders.refund, members.manage, zeno.execute, domains.manage, integrations.manage`) additionally gets a persistent, append-only Firestore row on **every** evaluation (allow or deny) — for these specific actions, knowing who was allowed matters as much as who was denied. Routine reads (`contacts.read`, `workspace.read`, etc.) never produce a persistent row, confirmed by a unit test that they're absent from the high-risk list.
+
+### Tests
+
+| Suite | Kind | Result |
+|---|---|---|
+| `scripts/verify-workspace-permission-registry.mts` | **Genuine unit tests** (real calls, real assertions, zero Firebase import) | ✅ 60+/60+ — registry completeness, agencyOwner-unrestricted, admin-minus-agency.manage, collaborator allow/deny lists, **monotonic hierarchy proof**, malformed-role deny-by-default, real-vs-invented entitlement mapping |
+| `scripts/verify-workspace-permission-evaluator.mts` | Structural (Firestore-dependent evaluator/wrappers/audit) | ✅ 27/27 — no NextResponse import, evaluation order, never-trust-caller-role, never-cross-workspace, deny-by-default single-allow-path, reuse (not reimplementation) of billing/territory/mapping logic, sensitive-data non-leakage, service-to-service representedUid enforcement, audit tiering |
+| `scripts/verify-require-tenancy-extraction.mts` | Regression/characterization | ✅ 21/21 |
+| Slice 3 SSO/JIT, identity-links | Regression | ✅ 47/47, 25/25, unaffected |
+| Slice 4 invariants, service | Regression | ✅ 27/27, 34/34, unaffected |
+| Other pre-existing `verify-*.mts` | — | 9 of 10 fail with the identical pre-existing `server-only` error (count corrected above); confirmed unchanged by this slice |
+| `npx tsc --noEmit` | — | ✅ Clean |
+| `pnpm lint` | — | ✅ Zero new issues |
+| `pnpm build` | — | ✅ Clean |
+
+Two genuine test-assertion mistakes were found and fixed while writing this slice's own tests (not false alarms about the *code* — both were errors in the test I'd just written): a miscounted permission total (53, not the 52 I first typed) and a comment-string false-positive on the "no NextResponse import" check (my own explanatory comment contained the word "NextResponse"). Both fixed to check the real thing rather than relaxed to pass.
+
+### Risks
+
+- The collaborator compatibility mapping (documented above) is a reasoned application of a verified pattern, not a route-by-route audit — flagged as the one place this slice's confidence is "high, not certain." Any future slice that touches a specific domain's real routes should verify and correct if it finds a mismatch, per the "record contradictions" instruction.
+- `workspacePermissionAudit`'s Firestore rule is added but not deployed — no live enforcement change yet, consistent with every prior slice.
+
+### Deferred / explicitly not done this slice
+
+Per instructions: no unified shell, no persisted-membership migration to the future seven-role matrix, no Zeno execution wiring (stub only), no authentication changes, no Ascend-side work (still paused on the branch divergence).
+
 ## Checkpoint before Slice 2 — resolved
 
 1. **Feature-flag primitive**: confirmed — build it first, on Flow's `dev` branch, reusing the existing agency feature-gate pattern. In progress below.
