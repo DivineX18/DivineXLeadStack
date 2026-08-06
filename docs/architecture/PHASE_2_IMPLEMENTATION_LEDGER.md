@@ -320,6 +320,100 @@ Two genuine test-assertion mistakes were found and fixed while writing this slic
 
 Per instructions: no unified shell, no persisted-membership migration to the future seven-role matrix, no Zeno execution wiring (stub only), no authentication changes, no Ascend-side work (still paused on the branch divergence).
 
+## Wave A — Slice 6: Unified Entitlements & Workspace Access Composition
+
+**Status:** ✅ Complete. Committed to `dev` only. Not merged to `main`. One new collection (`workspaceEntitlementAudit`) added to `firestore.rules`, **not deployed**.
+
+### Audit findings (no contradictions with the architecture docs)
+
+| Item | Confirmed |
+|---|---|
+| Two REAL, existing usage-tracking systems | `lib/ai-suite/usage.ts` (per-day `{messages, actions}` counters, `subAccounts/{id}/aiSuiteUsage/{day}` or agency-scoped) and `lib/comms/usage.ts` (per-user monthly `{email, sms}` counters, `usage/{uid}`). **Both tracking-only, zero enforcement** — confirms `CLAUDE.md`'s own "No enforcement in MVP" claim rather than contradicting it. Neither is wired into this slice's usage engine (no real limit exists to compare against) — named as the natural future data sources. |
+| `PLAN_GATE_KEYS` | 14 entries — exactly Slice 5's 15 real gate fields minus `getLeadsEnabledByAgency` (correctly excluded, that feature is parked). Confirms Slice 5's gate-field audit was accurate. |
+| Two SEPARATE subscription axes | `AgencyDoc.subscriptionStatus` (the agency owner's own platform subscription — Free/Pro/Scale) vs. `SubAccountBilling.status` (Client Billing v1 — the agency charging ITS clients). Slice 5 already correctly used the per-workspace one (`effectiveBillingState`); this slice's evaluator reuses the same one, deliberately not touching the agency-level axis (out of scope, a higher-level concern than workspace entitlements). |
+| `BillingPlanDoc.gates: PlanGates` | Confirms plans already bundle feature gates today (Client Billing v1) — this slice's registry doesn't re-derive from the Plan doc directly, since the SubAccountDoc's own gate fields are already the resolved/applied source of truth (same convention Slice 5 uses). |
+| No "CRM-only vs Full Ascend" field anywhere | Re-confirmed (already found in Slice 5). The only real signal is an active Workspace Mapping v2 record (Slice 4) — that's what `effectiveTier` actually uses, nothing invented. |
+
+### Canonical entitlement model
+
+`src/types/workspace-entitlements.ts` — `WorkspaceTier` (`crm_only`/`full_ascend`), `WorkspaceModule` (25 modules, exactly the list from this slice's instructions), `WorkspaceAddon` (4, all future/inactive), `UsageLimitType` (8), `WorkspaceUsageStatus`, `WorkspaceCapability`, `WorkspaceEntitlementRegistryEntry`. Reuses Slice 5's `RequiredFeatureGate` type rather than a second gate-name system — see the one real, needed extension below.
+
+### Registry
+
+`src/lib/entitlements/workspace-entitlement-registry.ts` — all 25 modules, each declaring `requiredTier`, `requiredFeatureGate` (Slice 5's real, verified fields only), `usageLimitType`, `addonSupport`, `metered`, `optional`. Flow-owned CRM modules (10) have no tier/gate requirement at all — they work CRM-only, confirmed real. Ascend-owned modules (7: `ascend_intelligence`, `business_memory`, `growth_scan`, `cro_audit`, `blueprints`, `business_timeline`, `recommendations`) require `full_ascend`, no invented Flow gate. `communities`/`courses` share one real gate (`communityEnabledByAgency`, confirmed same underlying service file per the Phase 1 blueprint's own finding).
+
+### A real, additive extension to Slice 5's shared type
+
+`communityEnabledByAgency` is a real, verified gate field (was already part of Slice 5's own 15-field audit list) that Slice 5's `RequiredFeatureGate` union just didn't happen to include, since none of its 53 permissions needed it. `tsc` caught this immediately (a genuine compile error, not a test failure) when the registry tried to use it. Extended `src/types/workspace-permissions.ts`'s `RequiredFeatureGate` union to add it — purely additive, re-ran all of Slice 5's tests afterward to confirm zero impact (all still pass).
+
+### Evaluation algorithm
+
+`src/lib/entitlements/evaluate-workspace-entitlements.ts`, no `uid` parameter — **entitlements are a property of the Workspace, not the caller** (the key conceptual distinction from Slice 5's per-user permissions). Order:
+1. Missing/archived sub-account → deny every module (`workspace_inactive`/`workspace_archived`).
+2. Archived Workspace Mapping v2 (Slice 4, reused) → also deny every module.
+3. Effective tier: an ACTIVE mapping → `full_ascend`; anything else → `crm_only`.
+4. Billing state (`effectiveBillingState`, reused) — a `lapsed` state denies every module **except for the agency owner**, mirroring the real, documented BillingGuard exemption (matches Slice 5's identical exemption).
+5. Per module (all 25): tier requirement → feature-gate requirement → usage limit (mechanism only, never fires today — no real limit exists) → allow.
+6. Deny by default for anything unrecognized (`unknown_module`).
+
+### A real design improvement made mid-slice (mirrors Slice 4's pattern)
+
+The per-module decision logic (`evaluateModule`) never actually touched Firestore itself — it only read plain data already fetched by the caller. Extracted into `src/lib/entitlements/workspace-entitlement-decision.ts` (no Firebase import at all) so it's genuinely unit-testable, same discipline as Slice 4's `computeAttachPrimary`/etc. extraction.
+
+### A real bug found and fixed mid-slice (not a false positive)
+
+The first draft of `denyAll()` looped over all 25 modules calling the per-decision audit logger — for the three blanket-deny reasons (which are in the persistent-audit list), that would have written **25 Firestore rows for one archived-workspace check**, exactly the "excessive write traffic" this slice's own instructions warn against. Caught during design review before ever being tested, not by a failing test. Fixed by splitting the audit module into `logEntitlementDecision` (per-module, console-only, never persists) and a separate `logWorkspaceLevelDenial` (one persistent row per blanket-deny evaluation, called once by `denyAll()`, never from inside the per-module loop) — structurally confirmed by a dedicated test.
+
+### Billing composition
+
+Reuses `lib/billing/status.ts::effectiveBillingState()` verbatim — no reimplementation. `lapsed` → deny-all except agency owner. `comped`/`active`/`grace`/`pending` all pass through to per-module evaluation (this slice doesn't further distinguish them at the entitlement layer — that's Client Billing's own existing UI concern, not duplicated here).
+
+### Feature-flag composition
+
+Note: this slice composes **feature GATES** (`*EnabledByAgency`, agency-controlled product toggles), not Slice 2's progressive-rollout **feature FLAGS** (`featureFlags` collection, internal staged-rollout mechanism) — the two are different axes, confirmed not to overlap in this slice's scope. No entitlement in this slice depends on a Slice 2 flag; that flag system gates internal Ascend OS shell rollout, not customer product access.
+
+### Usage abstraction
+
+`src/lib/entitlements/workspace-usage.ts` — `computeUsageStatus(type, used, limit)`, `isUsageWithinLimit()`. `limit: null` = unlimited, the only state that exists in the repository today for every usage type (confirmed by audit — no real plan limit is enforced anywhere). Engine only, per explicit instruction — no real limit value invented.
+
+### Upgrade recommendation model
+
+`src/lib/entitlements/workspace-upgrade-recommendations.ts` — `buildUpgradeRecommendation()`, pure. Returns `null` for an allowed decision. For a blocked one, pulls `requiredTier`/`addonSupport` straight from the registry (never invents beyond what's declared) and a human-readable `upgradePath` string keyed by denial reason. No checkout integration, no pricing, no Stripe call anywhere in this file.
+
+### Wrappers
+
+`src/lib/entitlements/workspace-entitlement-wrappers.ts` — four entry points, all delegating to the one core evaluator: human-session (`requireWorkspaceEntitlements`), server action (`getWorkspaceEntitlementsForServerAction`), service-to-service (`evaluateWorkspaceEntitlementsForService` — `representedUid` required, same non-bypassable discipline as Slice 5), and future Zeno/Ascend-bridge stubs (not wired up anywhere). **Every human-facing wrapper composes with Slice 5's `evaluateWorkspacePermission()` first** (`workspace.read`) — the required "compatibility with Slice 5" wiring, done once at the wrapper layer so no call site has to remember it.
+
+### Audit behavior
+
+Reuses Slice 5's philosophy exactly: per-module denials are console-only; only the three blanket, whole-workspace reasons get a persistent row, and only one per evaluation (see the bug-fix above).
+
+### Tests
+
+| Suite | Kind | Result |
+|---|---|---|
+| `scripts/verify-workspace-entitlements.mts` | **Genuine unit tests** (real calls, real assertions, zero Firebase import) | ✅ 47/47 — registry shape, tier/gate correctness per module, usage engine (unlimited/under/at/over), per-module decision logic (all branches), upgrade recommendations (allowed→null, tier-blocked, gate-blocked, non-tier/gate reason) |
+| `scripts/verify-workspace-entitlement-evaluator.mts` | Structural (Firestore-dependent evaluator/wrappers/audit) | ✅ 27/27 — single registry/evaluator, no NextResponse import, no duplicated gate/billing logic, deny-by-default, the audit bug-fix, Slice 5 composition, service-to-service `representedUid` enforcement |
+| All Slice 3, 4, 5 regressions | Regression | ✅ Unaffected (re-verified after the shared `RequiredFeatureGate` type extension specifically) |
+| Other pre-existing `verify-*.mts` | — | Unaffected, not touched this slice |
+| `npx tsc --noEmit` | — | ✅ Clean (after fixing the real `communityEnabledByAgency` type error — see below) |
+| `pnpm lint` | — | ✅ Zero new issues (after fixing a real `no-assign-module-variable` error — see below) |
+| `pnpm build` | — | ✅ Clean |
+
+### Bugs found and fixed (both real, not false positives)
+
+1. **`tsc`**: `communityEnabledByAgency` used in the registry before it existed in Slice 5's `RequiredFeatureGate` union — genuine compile error, fixed by the additive type extension described above.
+2. **`pnpm lint`**: Next.js's `no-assign-module-variable` rule forbids binding a variable/parameter literally named `module` (shadows a reserved bundler identifier) — used as a loop variable, map callback parameter, and function parameter in three files. Renamed to `mod` throughout; object-literal keys (`{ module: mod, ... }`) and the `WorkspaceModule` type name are unaffected, only variable/parameter bindings changed.
+
+### Risks
+
+- No new risks beyond what Slices 4/5 already carry (this slice composes their outputs, introduces no new write path to customer data).
+- The registry's tier/gate assignments for a handful of modules (`reports`, `automation`, `email` metering) are reasoned defaults consistent with the verified data-ownership split, not independently verified against every real route — same "high confidence, not certainty" caveat Slice 5 recorded for its own compatibility mapping.
+
+### Deferred / explicitly not done this slice
+
+Per instructions: no billing migration, no Stripe changes, no Ascend changes, no real usage limit values, no add-on catalog, no checkout integration, no unified shell, no Firebase cutover, no Zeno execution.
+
 ## Checkpoint before Slice 2 — resolved
 
 1. **Feature-flag primitive**: confirmed — build it first, on Flow's `dev` branch, reusing the existing agency feature-gate pattern. In progress below.

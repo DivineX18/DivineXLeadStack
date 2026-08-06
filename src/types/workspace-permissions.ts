@@ -92,9 +92,16 @@ export type FutureWorkspaceRole = "owner" | "admin" | "manager" | "marketing" | 
 
 // ── Entitlement / feature-gate requirement hooks ────────────────────────
 
-/** A permission may require an agency feature gate to be on. Field names
- *  are the REAL, verified gate fields on SubAccountDoc (grep-confirmed
- *  against src/types/tenancy.ts, Slice 5 ledger entry) — never invented. */
+/** A permission (or, since Slice 6, a workspace entitlement/module) may
+ *  require an agency feature gate to be on. Field names are the REAL,
+ *  verified gate fields on SubAccountDoc (grep-confirmed against
+ *  src/types/tenancy.ts, Slice 5 ledger entry) — never invented.
+ *  `communityEnabledByAgency` was added in Slice 6 for the
+ *  communities/courses entitlement modules — it was already part of the
+ *  same verified 15-field list Slice 5's audit found, Slice 5 just didn't
+ *  need it for any of its 53 permissions. Shared here (not duplicated in
+ *  a second gate-name type) so both slices' evaluators agree on exactly
+ *  the same set of real gate fields. */
 export type RequiredFeatureGate =
   | "apiAccessEnabledByAgency"
   | "broadcastsEnabledByAgency"
@@ -102,7 +109,8 @@ export type RequiredFeatureGate =
   | "funnelsEnabledByAgency"
   | "websiteEnabledByAgency"
   | "customDomainsEnabledByAgency"
-  | "aiSuiteEnabledByAgency";
+  | "aiSuiteEnabledByAgency"
+  | "communityEnabledByAgency";
 
 /** Placeholder for a future CRM-only vs. Full Ascend distinction. No
  *  permission in this slice's registry sets this — there is no real

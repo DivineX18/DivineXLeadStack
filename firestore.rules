@@ -200,6 +200,15 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // workspaceEntitlementAudit/{auto} — Ascend OS Phase 2 Slice 6, the one
+    // genuinely new collection this slice introduces
+    // (lib/entitlements/workspace-entitlement-audit.ts). Admin-SDK-only,
+    // same reasoning as workspacePermissionAudit above — only ever written
+    // for rare, whole-workspace-level denials, not per-module noise.
+    match /workspaceEntitlementAudit/{auditId} {
+      allow read, write: if false;
+    }
+
     // ---------- agencies ----------
     match /agencies/{agencyId} {
       // Anyone in the agency can read the doc (owner uses it for billing,
