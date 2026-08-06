@@ -71,6 +71,16 @@ body {
   --glass-3: rgba(255, 255, 255, 0.1);
 }
 
+/* Slice 8.5 — honor prefers-reduced-motion inside the Ascend shell scope.
+   Additive/scoped only; does not touch any existing Flow screen's motion
+   (none of which carry .theme-ascend). */
+@media (prefers-reduced-motion: reduce) {
+  .theme-ascend * {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
+}
+
 /* Marketing site accent (public pages only — never applied inside the
    authenticated app, which has its own per-user accent-theme system above).
    Reuses the exact emerald values from .theme-green so this isn't a new

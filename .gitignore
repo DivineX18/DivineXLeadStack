@@ -13,6 +13,12 @@
 # testing
 /coverage
 
+# Playwright (Slice 8.5) — local run artifacts, never committed
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 # next.js
 /.next/
 /out/

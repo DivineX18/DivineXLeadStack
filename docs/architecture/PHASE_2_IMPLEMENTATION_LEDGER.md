@@ -414,6 +414,71 @@ Reuses Slice 5's philosophy exactly: per-module denials are console-only; only t
 
 Per instructions: no billing migration, no Stripe changes, no Ascend changes, no real usage limit values, no add-on catalog, no checkout integration, no unified shell, no Firebase cutover, no Zeno execution.
 
+## Wave A — Slice 8.5: Unified Shell Stabilization & Browser Certification
+
+**Status:** ✅ Complete, with one explicitly disclosed limitation. Committed to `dev` only. Not merged to `main`. Not deployed. No Firestore rules changed. No production data touched. Full detail in `docs/architecture/SLICE_8_5_SHELL_CERTIFICATION.md` — this entry summarizes; that document is the durable certification record.
+
+### The one limitation, stated plainly
+
+This slice's instructions called for live browser certification against real authenticated sessions, including creating one scoped test workspace + feature-flag doc. Mid-slice, this session confirmed — via the user cross-checking a screenshot of their Render dashboard's env vars against this repo's local `.env.local` — that both point at the SAME Firebase project (`ascend-crm-jvm`), and that project is the one and only real backend behind the live deployment (one Render service exists, `ascend-crm-db9e7`). Per repository discipline ("do not modify production data"), no signup, login, or Firestore write was performed against it. Everything else in this slice's 20-section scope was completed: static/source audit, real defect fixes (with regression tests), a full Playwright test infrastructure with every checklist scenario written out (skip-guarded, not faked as passing), and the 30 tests that don't require a real session were run live for real. See the certification doc's "Final recommendation" for the exact follow-up a human with write access should run.
+
+### Shell truth re-confirmed (not assumed from Slice 8's own report)
+
+Re-read every file in `src/lib/shell/`, `src/types/ascend-shell.ts`, and `src/app/app/layout.tsx` from scratch against this slice's certification checklist. The mode-resolution/composition logic itself (decideShellMode, buildShellNavigation, resolveShellContext) had zero defects — only the UI layer built on top of it did. One additional structural finding worth recording: `resolveShellContextForLayout()` is always called with no options from `layout.tsx`, so there is **no client-controllable workspace-id input anywhere in the `/app/*` surface** — the "manual URL manipulation with an unauthorized Workspace ID" attack this slice's checklist asks to certify has no surface to test against the shell itself (Flow's existing `/sa/[subAccountId]/*` routes remain the real, already-tested authorization boundary, Slice 5, unmodified).
+
+### Real defects found and fixed (reproduced by rigorous source audit, not a live browser, given the credential constraint above — each is an objective code property, not a judgment call, and each now has both a regression test and a corresponding live Playwright assertion ready to run)
+
+1. **Mobile navigation was completely absent.** The Slice 8 `<aside>` was `hidden ... md:flex` with zero alternative below 768px — a real mobile customer had no way to reach any lifecycle section. Fixed: new `AscendMobileNav` (Sheet-based drawer, mirrors the existing Flow sidebar's own desktop-aside + mobile-Sheet split exactly) + a new shared `AscendShellSidebarContent` so desktop and mobile can never render different navigation (single source of markup, not two hand-maintained copies).
+2. **No user menu / no logout path existed anywhere in the shell.** Fixed: new `AscendUserMenu`, reusing the EXISTING `signOutUser()` (`lib/firebase/auth.ts`) — not a second sign-out implementation.
+3. **No `aria-current` on the active nav link.** Fixed.
+4. **Locked nav items weren't keyboard-discoverable** — a non-focusable `<div>` with a `title`-only tooltip (invisible to screen readers, unreachable by keyboard). Fixed: `role="button" tabIndex={0} aria-disabled="true"` with the reason exposed via `aria-label`.
+5. **No skip-to-content link.** Fixed.
+6. **`prefers-reduced-motion` not honored.** Fixed via a scoped, additive `@media` block under `.theme-ascend`.
+
+None of these fixes touch any file outside `src/components/shell/`, `src/app/app/layout.tsx`, or the purely-additive `.theme-ascend` CSS block — every file Slice 8 proved untouched remains untouched (re-verified this slice, see Verification below).
+
+### Test infrastructure built (repository's first)
+
+No test framework existed anywhere in this repo before this slice (confirmed by audit). Added, scoped to shell certification only: `@playwright/test` + `@axe-core/playwright`, `playwright.config.ts` (chromium-desktop + chromium-mobile projects, auto-starts `pnpm dev`), `e2e/fixtures/test-accounts.ts` (env-var-driven, zero hardcoded credentials, covers all 11 named roles/states), `e2e/fixtures/auth.ts` (logs in through the REAL Firebase login form, no shortcuts), `e2e/README.md` (exact operator setup: provisioning accounts, creating a Workspace Mapping v2 record via Slice 4's CLI, scoping the `unified_shell` flag to one test workspace via Slice 2's existing admin route at `single_workspace` stage — never `ga` — and the rollback drill), and 9 spec files under `e2e/shell/` covering every certification checklist section.
+
+### What ran live vs. what's skip-guarded
+
+30 tests ran for real against a live `pnpm dev` server (both desktop and mobile Playwright projects): every unauthenticated `/app/*` route redirect, redirect-loop absence, redirect-path preservation, the real Firebase login form's rendering + keyboard navigation, and an axe accessibility scan of `/login` (zero critical/serious violations). 104 tests across the remaining 7 spec files cleanly `test.skip()` with a clear reason (missing `TEST_*` env vars) — never faked as passing. One genuine bug in the tests themselves was found and fixed during this process (a wrong assumption about the login form's tab order — the real order is email → "Forgot password?" button → password, which is reasonable DOM order, not a defect; the test's expectation was wrong, not the app).
+
+### Tests
+
+| Suite | Result |
+|---|---|
+| `scripts/verify-shell-8-5-fixes.mts` (new) | ✅ 16/16 — one regression check per fixed defect |
+| `e2e/shell/unauthenticated-entry.spec.ts` + `accessibility.spec.ts` | ✅ 30/30, run live |
+| Remaining 7 `e2e/shell/*` files | 104 tests, cleanly skipped (credentials not available in this environment) |
+| All Slice 3-8 regression suites (14 scripts) | ✅ Unaffected |
+| `npx tsc --noEmit` | ✅ Clean (typechecks the new `e2e/` and `playwright.config.ts` too — confirmed via `tsconfig.json`'s `**/*.ts` include) |
+| `pnpm lint` | ✅ Same 32 pre-existing problems, zero new (two new warnings were introduced and fixed during this slice's own test-writing, then reconfirmed at baseline) |
+| `pnpm build` | ✅ Clean |
+| 9 pre-existing broken `verify-*.mts` scripts (unrelated `server-only` guard issue) | Reconfirmed identical, unaffected |
+
+### Risks closed
+
+- Mobile users of a future Full Ascend rollout would have had zero navigation — closed.
+- No logout path inside the shell — closed.
+- Baseline keyboard/screen-reader accessibility gaps in the new shell's own chrome — closed.
+
+### Risks remaining (see the certification doc's "Remaining known seams" for full detail)
+
+- No Ascend-branded full-screen editor/module chrome — every module and builder handoff still drops into unmodified Flow CRM styling with a visible seam (the single largest remaining cohesion gap).
+- No "Back to Ascend" affordance inside Flow's existing dashboard layout.
+- Duplicate identity/entitlement resolution per `/app/*` page request (performance-only, previously disclosed in Slice 8's own ledger).
+- **Live authenticated-flow certification itself remains outstanding**, pending a human with write access to the real Firebase project running the exact steps in `e2e/README.md`.
+
+### Files changed
+
+New: `playwright.config.ts`, `e2e/fixtures/test-accounts.ts`, `e2e/fixtures/auth.ts`, `e2e/README.md`, `e2e/shell/*.spec.ts` (9 files), `src/components/shell/ascend-mobile-nav.tsx`, `src/components/shell/ascend-user-menu.tsx`, `src/components/shell/ascend-shell-sidebar-content.tsx`, `scripts/verify-shell-8-5-fixes.mts`, `docs/architecture/SLICE_8_5_SHELL_CERTIFICATION.md`. Modified: `src/components/shell/ascend-shell-nav.tsx` (a11y fixes), `src/app/app/layout.tsx` (mobile nav + user menu + skip link wiring), `src/app/globals.css` (reduced-motion, additive), `package.json` (`@playwright/test`/`@axe-core/playwright` dev deps + `test:e2e`/`test:e2e:safe` scripts), `pnpm-lock.yaml`.
+
+### Go/no-go for Slice 9
+
+**Conditional go.** Shell code correctness, fail-closed security properties, and baseline accessibility/mobile/logout completeness are verified. Slice 9 can safely build on `AscendShellContext`/`resolveShellContext()` as-is. The one open item — live authenticated-flow certification — should run in parallel with or just before Slice 9, using the exact `e2e/README.md` steps; it does not block Slice 9's own code from being written, but should complete before any real customer rollout.
+
 ## Wave A — Slice 8: Unified Ascend Next.js Shell
 
 **Status:** ✅ Complete. Committed to `dev` only. Not merged to `main`. Not deployed. No new Firestore collection (none needed — the shell composes existing collections + Slices 2/5/6/7's existing evaluators). `unified_shell`/`unified_navigation` (Slice 2's already-registered flag IDs) both default OFF (no `featureFlags/{id}` doc exists yet), so **the entire `/app/*` route group is unreachable — every request bounces to the existing CRM experience — until an operator explicitly creates and enables the flag doc.** Every existing dashboard/agency/sub-account file confirmed byte-for-byte untouched.
