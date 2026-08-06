@@ -414,6 +414,83 @@ Reuses Slice 5's philosophy exactly: per-module denials are console-only; only t
 
 Per instructions: no billing migration, no Stripe changes, no Ascend changes, no real usage limit values, no add-on catalog, no checkout integration, no unified shell, no Firebase cutover, no Zeno execution.
 
+## Wave A — Slice 7: Unified Identity & Session
+
+**Status:** ✅ Complete. Committed to `dev` only. Not merged to `main`. One new collection (`identityAuditEvents`) added to `firestore.rules`, **not deployed**. **Every existing login/logout/SSO/JIT file confirmed byte-for-byte untouched** — not just claimed, proven by a structural test that diffs each one against the pre-Slice-7 commit.
+
+### Audit findings (no contradictions with the architecture docs)
+
+| Item | Confirmed |
+|---|---|
+| Clerk in Flow | **None exists.** Clerk lives entirely on Ascend's side of the SSO bridge — Flow only ever sees a `clerkUserId` string in the exchange payload (Phase 0). "Identity provider" in this repo is always Firebase; what varies is *provenance* (native vs. SSO-originated), not the authenticating system. |
+| Session creation | `lib/firebase/auth.ts::createSessionCookie(user)` is the **one real chokepoint** — used identically by `signInWithEmail`, `signUpWithEmail`, and the SSO finish page (`/auth/sso/finish`, confirmed by direct read: "identical to what the normal login form does"). Exchanges a Firebase ID token for the `__session` cookie via `GET /api/login`. |
+| `/api/login`, `/api/logout` | **No route files exist for either** — both are handled entirely inside `next-firebase-auth-edge`'s `authMiddleware` (`loginPath`/`logoutPath` config in `middleware.ts`), which intercepts before reaching app code. Nothing to extract here; there's no app-level login route to characterize. |
+| Session cookie config | Exact, confirmed: name `__session`, `httpOnly: true`, `secure` in production only, `sameSite: "lax"`, `maxAge: 12 days`, signed with `COOKIE_SECRET_CURRENT`/`_PREVIOUS` (rotation pair). |
+| Session validation | `authMiddleware`'s `handleValidToken` sets `x-user-uid`/`x-user-email` request headers from the decoded token — the exact header convention every auth helper since `require-tenancy.ts` (and now Slices 5-7) already reads. |
+| Refresh behavior | `/api/auth/refresh-claims` — explicit, client-triggered re-mint of custom claims after a membership change (not a silent background refresh loop); the ID token's own ~60-minute ceiling is standard Firebase behavior, not custom-configured. |
+| Impersonation / support login | **Confirmed absent** — the only "impersonat" string matches in the whole `src/` tree are unrelated prose in two comments (webhook-spoofing risk descriptions), not real logic. |
+| "Remember me" | **Confirmed absent** — no such UI or persistence exists. |
+| Multi-workspace membership | `userMemberships/{uid}/subAccounts/{saId}` — the EXISTING denormalized index CLAUDE.md documents as powering the sub-account switcher — is real and reused directly for workspace-candidate resolution, not reinvented. |
+| No "last active workspace" signal | Confirmed absent from every relevant type (`UserDoc`, `UserSubAccountMembership`) — same "never invent a selection signal" finding as Slices 4 and 6, now a third time in a row. |
+
+### Canonical identity model
+
+`src/types/identity.ts` — `IdentityContext` (= `IdentityResolutionResult`, one type not two independently-evolving ones), `AuthenticatedUser`, `SessionIdentity`/`SessionState`/`SessionMetadata`, `IdentityProvider` (always `"firebase"` today — kept as a union for Slice 8+'s future work, not expanded here), `IdentitySource` (`native_signup`/`sso_jit_provisioned`/`migration_backfilled`/`unknown` — derived from Slice 3's `identityLinks.linkSource`, fails closed to `unknown` for any unrecognized value), `WorkspaceSelection`/`WorkspaceIdentity`/`WorkspaceIdentityStatus`, `IdentityMigrationState` (representation only, three states, no function moves an identity between them).
+
+### Canonical session model
+
+A session, in this model, is `SessionIdentity` — `state` (`active`/`no_session`/`account_inactive`) + the resolved `AuthenticatedUser` + `SessionMetadata` (provider/source/identity-link presence). It is composed, once, inside `resolveIdentity()` from the already-verified `uid` the middleware hands every request — this slice adds no new session-creation path, only a read-side composition over the existing one.
+
+### Workspace resolution algorithm
+
+`src/lib/workspace-selection.ts` (pure): explicit `workspaceId` always wins; exactly one `userMemberships` candidate auto-selects; zero candidates → `none_available`; **2+ candidates with no explicit request never auto-picks one** — no "most recently active" fallback exists anywhere to base one on, confirmed by this slice's own audit. The full candidate list is always returned regardless, so a future switcher UI (Slice 8) never has to re-query it.
+
+### Identity composition algorithm
+
+`src/lib/identity/resolve-identity.ts`, source-verified order:
+1. `resolveAuthedCaller(uid)` (Slice 5, reused) — inactive/missing account → `session.state = "account_inactive"`, no workspace, done.
+2. `getIdentityLinkByFirebaseUid(uid)` (Slice 3, reused) → identity source + migration state.
+3. Workspace candidates from `userMemberships/{uid}/subAccounts` (existing collection, read directly).
+4. `decideWorkspaceSelection()` (pure, this slice).
+5. If a workspace was selected: `resolveSubAccountAccess()` (Slice 5, reused) for role/membership status.
+6. `evaluateWorkspaceEntitlements()` (Slice 6, reused) — **also** independently re-validates archived-SubAccount/archived-mapping state, since `resolveSubAccountAccess` alone does not check `SubAccountDoc.status` (confirmed, existing, unmodified behavior — Slice 6 already layers this check on top, and this slice reuses that result rather than adding a third independent read of the same field).
+7. `allowedPermissions` computed via the **pure** `roleHasPermission()` (Slice 5) over all 53 registered permissions — zero extra Firestore reads beyond what resolving `effectiveRole` already required.
+
+A billing-lapsed workspace stays `status: "active"` (the caller genuinely is an active member) with `entitlements.blockedModules` reflecting the paywall — kept as a distinct concern from workspace archival/inactivity, which are structural/membership states, not commercial ones.
+
+### Migration foundation
+
+`src/lib/identity/identity-migration-state.ts` (pure) — `deriveIdentitySource()` and `deriveMigrationState()`, both representation-only. `unlinked_ascend_pending` exists as a named future state with **no data source populating it yet** — flagged explicitly rather than wired to a guess.
+
+### Audit behavior
+
+Reuses the exact philosophy from Slices 5/6: only five meaningful event types ever logged (`login`, `logout`, `workspace_resolution_failure`, `identity_conflict`, `session_anomaly`) — **no "resolution succeeded" event exists**, confirmed structurally, since `resolveIdentity()` will eventually run on most authenticated requests once wired into routes (Slice 8+) and logging every success would be exactly the noisy session logging this slice's instructions warned against. `recordLoginEvent`/`recordLogoutEvent` are audit-only hooks a caller invokes *after* an existing flow completes — confirmed structurally that neither function body creates a session itself.
+
+### Tests
+
+| Suite | Kind | Result |
+|---|---|---|
+| `scripts/verify-identity-resolution.mts` | **Genuine unit tests** (real calls, real assertions, zero Firebase import) | ✅ 12/12 — workspace selection (all 5 scenarios), identity-source derivation (all 4 branches incl. fail-closed unknown), migration-state derivation |
+| `scripts/verify-identity-resolver.mts` | Structural (Firestore-dependent resolver/wrappers/audit) | ✅ 30/30 — one resolver, no NextResponse import, no credential-verification call, composition-not-duplication across Slices 3/4/5/6, **8 existing files diffed byte-for-byte against the pre-Slice-7 commit and confirmed unchanged**, wrapper reuse, audit event-type discipline |
+| All Slice 3-6 regressions | Regression | ✅ Unaffected |
+| Other pre-existing `verify-*.mts` | — | Unaffected, still 9 of 9 on the known pre-existing `server-only` issue |
+| `npx tsc --noEmit` | — | ✅ Clean (after fixing a real import-path error — see below) |
+| `pnpm lint` | — | ✅ Zero new issues |
+| `pnpm build` | — | ✅ Clean |
+
+### Bugs found and fixed (real, not false positives)
+
+1. **`tsc`**: `MemberStatus` imported from `@/types/tenancy`, but it actually lives in `@/types/firebase` (there's also an unrelated same-named type in `@/types/community` — confirmed the barrel `@/types/index.ts` only re-exports the `firebase.ts` one, so no real ambiguity once imported correctly). Fixed by importing from the `@/types` barrel, matching `require-tenancy.ts`'s own existing convention.
+2. Two more comment-string false positives in this slice's own test-writing (same recurring class as Slices 5/6 — an explanatory comment naming the exact thing being checked for absence). Both fixed to check actual code (specific function bodies / import statements) rather than whole-file substrings.
+
+### Risks
+
+- None new. This slice adds no write path to session/auth state — every mutation-capable primitive it touches (identityLinks, Workspace Mapping, permission/entitlement evaluation) was already built and audited in Slices 3-6; this slice only composes reads.
+
+### Deferred / explicitly not done this slice
+
+Per instructions: no shell, no customer migration, no Clerk removal, no production auth cutover, no billing changes, no Ascend changes. `IdentityMigrationState`'s `unlinked_ascend_pending` and `IdentityProvider`'s room for a future non-Firebase value are named but unpopulated placeholders for Slice 8+.
+
 ## Checkpoint before Slice 2 — resolved
 
 1. **Feature-flag primitive**: confirmed — build it first, on Flow's `dev` branch, reusing the existing agency feature-gate pattern. In progress below.

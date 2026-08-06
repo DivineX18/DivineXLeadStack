@@ -209,6 +209,16 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // identityAuditEvents/{auto} — Ascend OS Phase 2 Slice 7, the one
+    // genuinely new collection this slice introduces
+    // (lib/identity/identity-audit.ts). Admin-SDK-only — only login,
+    // logout, workspace-resolution-failure, identity-conflict, and
+    // session-anomaly events are ever written here, never routine
+    // successful resolutions.
+    match /identityAuditEvents/{eventId} {
+      allow read, write: if false;
+    }
+
     // ---------- agencies ----------
     match /agencies/{agencyId} {
       // Anyone in the agency can read the doc (owner uses it for billing,
