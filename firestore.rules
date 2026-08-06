@@ -175,6 +175,22 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // workspaceMappings/{workspaceId}, workspaceMappingsBySubAccount/{flowSubAccountId},
+    // workspaceMappingAttempts/{auto} — Ascend OS Phase 2 Workspace Mapping
+    // v2 (lib/workspace/workspace-mappings-service.ts). Fully Admin-SDK-only
+    // — no current, verified client-side read requirement exists yet (the
+    // customer-facing Workspace UI that would need one is out of scope for
+    // this slice).
+    match /workspaceMappings/{workspaceId} {
+      allow read, write: if false;
+    }
+    match /workspaceMappingsBySubAccount/{flowSubAccountId} {
+      allow read, write: if false;
+    }
+    match /workspaceMappingAttempts/{attemptId} {
+      allow read, write: if false;
+    }
+
     // ---------- agencies ----------
     match /agencies/{agencyId} {
       // Anyone in the agency can read the doc (owner uses it for billing,

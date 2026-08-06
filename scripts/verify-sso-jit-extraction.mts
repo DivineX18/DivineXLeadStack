@@ -21,8 +21,15 @@ import path from "node:path";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const read = (rel: string) => readFileSync(path.join(root, rel), "utf8");
+// Pinned to the specific commit immediately BEFORE the extraction landed
+// (Slice 2's commit), not a floating HEAD -- HEAD now points at the
+// extraction commit itself (Slice 3), so diffing against HEAD would
+// compare the extracted code against itself and produce false failures.
+// Pinning keeps this test meaningful indefinitely, not just at the moment
+// the extraction commit was made.
+const PRE_EXTRACTION_COMMIT = "4c92849";
 const readAtHead = (rel: string) =>
-  execSync(`git show HEAD:${rel}`, { cwd: root, encoding: "utf8" });
+  execSync(`git show ${PRE_EXTRACTION_COMMIT}:${rel}`, { cwd: root, encoding: "utf8" });
 
 let failures = 0;
 function check(label: string, pass: boolean) {

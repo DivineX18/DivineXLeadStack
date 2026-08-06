@@ -143,6 +143,95 @@ Regression coverage: `scripts/verify-identity-links.mts`, 25 checks, all passing
 
 Unchanged from Slice 2 — Ascend-side work stays paused. This slice's only Ascend-adjacent gap (bulk-eligible-user enumeration for the backfill tool) is explicitly blocked on that resolution, not worked around.
 
+## Wave A — Slice 4: Workspace Mapping v2
+
+**Status:** ✅ Complete. Committed to `dev` only. Not merged to `main`. Firestore rules for the three new collections are **not deployed** — grouped with `featureFlags` and `identityLinks*`'s rules for the same later controlled deployment step.
+
+### Repository-truth confirmation pass (before writing code)
+
+Re-confirmed against live source rather than assumed from the architecture docs:
+
+| Item | Confirmed value |
+|---|---|
+| `SubAccountRole` | `"admin" \| "collaborator"` only — `"agencyOwner"` is a claims-based shortcut synthesized by `requireSubAccountMember()`, never a stored `SubAccountMemberDoc.role` value |
+| `SubAccountStatus` | `"active" \| "archived"` only — **no `"suspended"` at the SubAccount level.** Confirms the Workspace Mapping's own `status: "suspended"` is a mapping-layer-only construct with no corresponding SubAccountDoc field flip — consistent with the architecture docs' data-ownership design (suspension ≠ touching the underlying SubAccount), not a contradiction requiring correction |
+| `AgencyDoc.ownerUid` | Confirmed field name |
+| Ascend `businessProfiles` schema | **Confirmed no `isPrimary`/`isCanonical`/`primaryProfile` field exists anywhere** — directly verified by grepping the schema file. This makes the "never auto-select a primary profile" instruction not just a policy choice but the only technically honest option: there is no data-driven signal to select from even if auto-selection were wanted |
+| `divinex_workspace_mappings` fields | Unchanged from Phase 0/Slice 1 findings — `clerkUserId, leadstackSubAccountId, leadstackRole, leadstackFirebaseUid, provisioningAllowed, connectionStatus` |
+
+**No contradiction between the architecture docs and live code was found this slice** — the docs' design held up under direct verification. The one naming deviation (`ownerFirebaseUid` instead of the earlier draft's `ownerUserId`) was already specified in this slice's own instructions, not discovered as a correction.
+
+### Model and collections
+
+`src/types/workspace-mappings.ts` + `src/lib/workspace/workspace-mappings-service.ts`. Storage:
+- `workspaceMappings/{workspaceId}` — main doc, `workspaceId` is a generated UUID (not derived from `flowSubAccountId`)
+- `workspaceMappingsBySubAccount/{flowSubAccountId}` → `{workspaceId}` — reverse index; doc-ID-as-uniqueness-constraint gives `flowSubAccountId` uniqueness for free (same trick as Slice 3's `identityLinksByFirebaseUid`)
+- `workspaceMappingAttempts/{auto}` — append-only audit log
+
+Fields exactly as specified in this slice's instructions: `workspaceId, flowSubAccountId, agencyId, ownerFirebaseUid, primaryAscendBusinessProfileId, linkedSecondaryAscendBusinessProfileIds, status, provisioningStatus, mappingVersion, lastReconciliationResult, createdAt, updatedAt`.
+
+### Invariants — how each of the 10 required ones is actually enforced
+
+| # | Invariant | Enforcement |
+|---|---|---|
+| 1 | One `flowSubAccountId` → one mapping | Doc-ID uniqueness on `workspaceMappingsBySubAccount/{flowSubAccountId}` |
+| 2 | One Workspace → exactly one canonical SubAccount | `flowSubAccountId` is a single required field on `WorkspaceMappingDoc`, not an array — structurally can't hold more than one |
+| 3 | No primary/secondary overlap | `validateNoPrimarySecondaryOverlap()` (pure), called by every mutation that touches profile links |
+| 4 | Secondary IDs deduplicated | `dedupeSecondaryProfileIds()` (pure, `Set`-based), called on every write path that touches the array |
+| 5 | Archived mappings stay queryable | `archiveMapping()` only flips `status`, never deletes; confirmed by structural test 3c (no `.delete()` call exists anywhere in the service file) |
+| 6 | Idempotent creation | `createMappingIdempotent()` — same-owner re-create is a no-op (`created: false`); different-owner is a rejected conflict, never merged |
+| 7 | Idempotent, retry-safe reconciliation | `reconcileMapping()` re-reads live state every call, writes only `lastReconciliationResult` (+ optionally `agencyId`) — safe to run any number of times |
+| 8 | Conflicts never silently overwrite | Every conflict path (`create`, `attach primary over an overlap`, etc.) returns `{ok: false, reason}` and the transaction never reaches a write |
+| 9 | Version increments on every material change | Centralized in the shared `withMapping()` helper's transaction — every one of the 6 mutating functions routes through it, confirmed structurally (test 2b, all 6) |
+| 10 | Append-only audit event on every create/conflict/relink/status-change/archive/restore/reconciliation | `logAttempt()` called from every one of those paths — confirmed structurally (test 6, 5 distinct outcomes checked) |
+
+### A real design upgrade made mid-slice: pure mutation logic, not just validation
+
+Initially the profile-attach/promote/add/remove logic was written inline inside each service function's Firestore-transaction callback. Refactored during this slice into pure, Firestore-free functions in `workspace-mapping-invariants.ts` (`computeAttachPrimary`, `computeAddSecondary`, `computeRemoveSecondary`, `computePromoteSecondaryToPrimary`) that the service layer now just calls and applies. This is what makes the **genuine unit tests** below possible — real function calls with real assertions on the actual mutation logic (e.g., "promoting a secondary moves the old primary into the secondary list, nothing is lost"), not just checking that certain source-text patterns exist.
+
+### Authorization — human-session vs. service-to-service, explicitly separated
+
+`src/lib/workspace/workspace-mappings-authz.ts` wraps read/reconcile operations with Flow's **existing** `requireSubAccountMember()` (unchanged, not reimplemented) before delegating into the core service. `workspace-mappings-service.ts` itself has zero import of `require-tenancy` or `NextResponse` — confirmed structurally (test 9e) — so it's impossible for a future caller to accidentally treat the unauthenticated service layer as if it were already access-checked. Migration/reconciliation scripts call the core service directly with `actingAsUid: "system:migration-tool"` / `"system:reconciliation-tool"` audit markers.
+
+### Migration tooling
+
+1. **Dry-run** (`scripts/dry-run-workspace-mapping-migration.mts`) — reads source rows from an **input JSON file**, not live Ascend Postgres (same constraint and same reasoning as Slice 3's backfill tool — no safe way to query Ascend live while its branch divergence is unresolved). The Flow-side checks (sub-account existence, identity-link existence) ARE real, live Firestore reads against this repo's own data. Reports every category the instructions required: eligible, missing sub-account, missing identity link, multiple primary candidates, duplicate `flowSubAccountId`, invalid role/status, requires manual review. **Writes nothing** — confirmed structurally (test 10a).
+2. **Single-mapping migration** (`scripts/migrate-single-workspace-mapping.mts`) — one explicit source mapping per run, no loop/batch code path exists, dry-run by default, requires an **explicit** `--primary-profile-id` or `--no-primary-profile` flag (refuses to proceed on an unstated primary), idempotent (checks for an existing mapping first).
+3. **Reconciliation** (`scripts/reconcile-workspace-mapping.mts`) — thin CLI wrapper around `reconcileMapping()`. Confirms the Flow sub-account exists, agency relationship, owner membership; reports drift; `--repair-safe-drift` auto-corrects **only** the `agencyId` mismatch case (Flow SubAccount is unambiguously authoritative there) — ownership/membership drift is reported only, never guessed, regardless of the flag (confirmed structurally, test 5d).
+
+**No production batch migration was executed or built this slice**, per explicit instruction.
+
+### Primary-profile selection — the explicit correction, implemented literally
+
+`classifyMigrationRow()` (pure, unit-tested) has **no code path that selects a primary profile automatically under any circumstance** — 2+ candidates always classify as `multiple_primary_candidates` with all candidates surfaced for manual review, confirmed by a unit test that deliberately includes a more-recently-updated second candidate and asserts it is NOT auto-selected. This is stronger than "the default behavior avoids auto-selecting" — the capability to auto-select doesn't exist in the function at all.
+
+### Tests
+
+| Suite | Kind | Result |
+|---|---|---|
+| `scripts/verify-workspace-mapping-invariants.mts` | **Genuine unit tests** — real function calls, real assertions, zero Firebase imports | ✅ 27/27 |
+| `scripts/verify-workspace-mappings-service.mts` | Structural/source-level (Firestore-dependent code, same necessary constraint as Slice 3) | ✅ 34/34 |
+| `scripts/verify-sso-jit-extraction.mts` (Slice 3) | Regression | ✅ 47/47 — **fixed during this slice**: was diffing against a floating `git show HEAD:...`, which broke once Slice 3's own commit became HEAD (compared the extraction against itself). Re-pinned to the specific pre-extraction commit hash (`4c92849`) so it stays meaningful indefinitely, not just at the moment it was written. Not a real regression — a test-infrastructure bug, found and fixed. |
+| `scripts/verify-identity-links.mts` (Slice 3) | Regression | ✅ 25/25, unaffected |
+| Other pre-existing `verify-*.mts` | — | Same 7-of-10 pre-existing `server-only` module-guard failures as Slice 3, confirmed unrelated to this slice (unchanged root cause) |
+| `npx tsc --noEmit` | — | ✅ Clean (one real, self-inflicted generic-inference bug in `withMapping<T>()` found and fixed mid-slice — see below) |
+| `pnpm lint` | — | ✅ Zero new issues |
+| `pnpm build` | — | ✅ Clean |
+
+**A real type bug found and fixed by tsc, not by the test scripts**: `withMapping<T>()`'s original signature let the mutate callback return either the outer `WorkspaceMappingResult<T>` or a bare `{doc, value}` shape, which confused TypeScript's generic inference into widening `T` to `null | undefined` at several call sites (4 real `tsc` errors). Fixed by introducing a dedicated, narrower `MutateOutcome<T>` type for the callback contract, distinct from the outer result type. Genuine tsc-caught defect, not a false positive — worth naming since the other "failures" caught during this and the prior slice were mostly test-assertion issues, and this one wasn't.
+
+### Firestore rules — still deferred
+
+`workspaceMappings/{workspaceId}`, `workspaceMappingsBySubAccount/{flowSubAccountId}`, `workspaceMappingAttempts/{attemptId}` added to `firestore.rules`, Admin-SDK-only. **Not deployed.**
+
+### Dependency on the Ascend branch divergence
+
+Unchanged — Ascend-side work stays paused. This slice's Ascend-adjacent gap (the dry-run tool needing source rows as file input rather than a live Postgres query) is the same category of gap as Slice 3's, blocked on the same resolution.
+
+### Remaining gap before the next slice
+
+The dry-run migration tool's live Flow-side checks work today; a *real* production dry run still needs someone to actually export the `divinex_workspace_mappings` rows + candidate business profiles from Ascend into the expected input JSON shape — that export step itself depends on the Ascend branch divergence being resolved, same as Slice 3's bulk-enumeration gap.
+
 ## Checkpoint before Slice 2 — resolved
 
 1. **Feature-flag primitive**: confirmed — build it first, on Flow's `dev` branch, reusing the existing agency feature-gate pattern. In progress below.
