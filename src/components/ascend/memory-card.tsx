@@ -1,21 +1,44 @@
 import { AscendCardShell } from "@/components/ascend/card-shell";
 import { IntelligenceStatusBadge } from "@/components/ascend/intelligence-status-badge";
-import type { WithMeta, BusinessMemorySummary } from "@/types/intelligence";
+import type { WithMeta, MemoryActionItem } from "@/types/intelligence";
 
-export function BusinessMemoryCard({ memory }: { memory: WithMeta<BusinessMemorySummary> }) {
-  const data = memory.data;
+/**
+ * Corrected Slice 10.5: the real `/internal/intelligence/memory` endpoint
+ * returns a raw array of `zenoMemory` rows — a recommendation/status
+ * action-items list (`{recommendation, status}`), not the richer governed
+ * `platform_memory` aggregate Slice 9 assumed (see the correction note in
+ * `types/intelligence.ts`'s header). Replaces the invented
+ * `BusinessMemorySummary{totalCount,approvedCount,recentItems}` shape.
+ */
+const STATUS_LABEL: Record<MemoryActionItem["status"], string> = {
+  pending: "Pending",
+  in_progress: "In progress",
+  completed: "Completed",
+  skipped: "Skipped",
+};
+
+const STATUS_TONE: Record<MemoryActionItem["status"], string> = {
+  pending: "text-white/50",
+  in_progress: "text-amber-400",
+  completed: "text-emerald-400",
+  skipped: "text-white/30",
+};
+
+export function BusinessMemoryCard({ memory }: { memory: WithMeta<MemoryActionItem[]> }) {
+  const items = memory.data ?? [];
   return (
     <AscendCardShell title="Business Memory" action={<IntelligenceStatusBadge meta={memory.meta} />}>
-      {data && data.totalCount > 0 ? (
+      {items.length > 0 ? (
         <>
           <p className="text-sm text-white/60">
-            <span className="font-semibold text-white/85">{data.approvedCount}</span> approved of {data.totalCount} total
+            <span className="font-semibold text-white/85">{items.filter((i) => i.status === "completed").length}</span> completed of {items.length} action
+            items
           </p>
           <ul className="mt-3 space-y-2">
-            {data.recentItems.slice(0, 5).map((item) => (
+            {items.slice(0, 5).map((item) => (
               <li key={item.id} className="rounded-lg border border-white/10 px-3 py-2">
-                <p className="text-xs uppercase tracking-wide text-white/40">{item.memoryType.replace(/_/g, " ")}</p>
-                <p className="mt-0.5 text-sm text-white/80">{item.summary}</p>
+                <p className={`text-xs uppercase tracking-wide ${STATUS_TONE[item.status]}`}>{STATUS_LABEL[item.status]}</p>
+                <p className="mt-0.5 text-sm text-white/80">{item.recommendation}</p>
               </li>
             ))}
           </ul>

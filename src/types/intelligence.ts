@@ -1,49 +1,31 @@
 /**
  * Ascend OS Phase 2, Slice 9 — canonical Intelligence types.
+ * Corrected in Slice 10.5 against REAL Ascend response shapes, read
+ * directly from the live route/query source
+ * (`DivineX-Business-Intelligence/artifacts/api-server/src/lib/intelligenceQueries.ts`,
+ * extracted this same slice from the pre-existing `/zeno/*` handlers) — not
+ * guessed. The Slice 9 shapes below were wrong (invented nesting that
+ * doesn't exist, an aggregate memory object where the real endpoint
+ * returns a raw array, a timeline entry list where the real endpoint
+ * returns a single comparison object). This file replaces them wholesale.
  *
- * Repository-truth audit (this slice, cross-checked against direct source
- * reads of `DivineX-Business-Intelligence/artifacts/api-server/src` done
- * earlier in this effort — not re-derived from the product's marketing
- * description):
+ * Real bridge endpoints this client targets (Slice 10.5,
+ * `routes/internalIntelligence.ts`, mounted at `/internal/intelligence/*`,
+ * `requireServiceAuth`-gated — NOT the Clerk-gated `/zeno/*` paths Slice 9
+ * originally pointed at):
+ *   - `GET /internal/intelligence/business-profiles/:id/dashboard-summary` → DashboardSummary
+ *   - `GET /internal/intelligence/cro-audits` → CroAudit[]
+ *   - `GET /internal/intelligence/memory` → MemoryActionItem[]
+ *   - `GET /internal/intelligence/growth-timeline/:businessProfileId` → GrowthTimeline | 404
+ *   - `GET /internal/intelligence/reports` → IntelligenceReportSummary[]
  *
- *   - Real, confirmed, `requireAuth`-gated (Clerk) route groups this slice's
- *     client targets: `GET /zeno/business-profiles/:id/dashboard-summary`,
- *     `GET /zeno/assessments`, `GET /zeno/growth-scans`, `GET /zeno/cro-audits`,
- *     `GET /zeno/memory`, `GET /zeno/growth-timeline/:businessProfileId`,
- *     `GET /zeno/reports`. Every path above was seen mounted in
- *     `routes/index.ts`/`routes/zeno.ts`/`routes/growthScan.ts` directly.
- *   - **Contradiction recorded, not silently resolved**: this slice's own
- *     instructions list "Recommendations" as a first-class Ascend read
- *     surface alongside Growth Scan/Assessments/Business Memory. No
- *     standalone `/recommendations` (or similar) endpoint exists anywhere in
- *     Ascend's route mounts. Recommendations are real, but they live NESTED
- *     inside a CRO audit response's `recommendations` field (rendered by
- *     Ascend's own `CroAuditor.tsx` as `RecommendationCard`s) — there is no
- *     endpoint to page/list/filter them independently. `Recommendation`
- *     below models the nested shape; there is deliberately no
- *     `listRecommendations()` client method, because that would be an
- *     invented endpoint.
- *   - **Contradiction recorded**: "Zeno read APIs" is listed as a distinct
- *     surface. Zeno's OWN endpoint (`POST /zeno/chat`) is action/chat, not a
- *     read API. The closest genuine read-only Zeno-adjacent surfaces are
- *     `/zeno/memory` (Business Memory — real, structured, see
- *     BusinessMemorySummary) and `/zeno/timeline` / `/zeno/growth-timeline/:id`
- *     (Growth Timeline). This slice's client exposes those, not a fictional
- *     "Zeno read" endpoint.
- *   - **Auth gap recorded, not worked around**: every route above requires a
- *     live Clerk session token. `docs/architecture/ASCEND_OS_V1_ARCHITECTURE_SPECIFICATION.md`
- *     Section 6 ("API Contract Strategy") explicitly states the
- *     service-to-service contract for Flow calling these routes on a
- *     workspace's behalf is "Not implemented by this document — this is the
- *     Phase 1 checklist, pending product-owner approval." No service-account/
- *     API-key mechanism exists on Ascend's side today (confirmed: Ascend's
- *     own dev-only Clerk-bypass header is explicitly disabled in
- *     production). This means `AscendIntelligenceApiConfigured()` (the
- *     client, Slice 9) will return false in every environment until that
- *     contract is actually specified and the resulting env vars are set —
- *     this is the CURRENT, HONEST state of the system, not a placeholder.
- *     Every card built this slice has a real, first-class "unavailable"
- *     state for exactly this reason.
+ * **Correction recorded**: Slice 9's header comment described `/zeno/memory`
+ * as backed by a rich, governed `platform_memory` table. Direct source
+ * read of the real route/query (this slice) shows it queries `zenoMemory`
+ * instead — a simpler recommendation/status action-items list
+ * (`{recommendation, status: pending|in_progress|completed|skipped}`), not
+ * the richer governed store. `MemoryActionItem` below models what the
+ * endpoint actually returns.
  *
  * All types below are pure data — no fetch/Firestore/Postgres/Express
  * import anywhere in this file.
@@ -69,91 +51,182 @@ export interface WithMeta<T> {
   data: T | null;
 }
 
-// ── Canonical models (Ascend-sourced) ───────────────────────────────────
+// ── Canonical models (Ascend-sourced, real shapes) ──────────────────────
 
-/** From `growthScans` (via `/zeno/business-profiles/:id/dashboard-summary`
- *  and `/zeno/growth-scans`) — `growthScanEngine.ts`'s real output shape:
- *  overall 0-100 score + weighted category breakdown + a primary
- *  constraint. Field names below are the STABLE subset this slice commits
- *  to; the full engine output has more fields not needed for Home/Identify. */
-export interface GrowthScore {
-  overallScore: number; // 0-100
+/** From `businessTimelineEvents` — a raw event row, as returned inline
+ *  inside dashboard-summary's `lastFiveTimeline`. */
+export interface DashboardTimelineEvent {
+  id: number;
+  createdAt: string; // ISO
+  businessProfileId: number;
+  eventType: string; // 'onboarding' | 'growth_scan' | 'blueprint' | 'asset' | 'cro_audit' | 'calibration' | 'recommendation'
+  title: string;
+  summary: string | null;
+  sourceType: string | null;
+  sourceId: string | null;
+  metadata: unknown;
+}
+
+/** From `generatedAssets` — a projected subset, as returned inline inside
+ *  dashboard-summary's `lastFiveAssets`. */
+export interface DashboardAsset {
+  id: number;
+  createdAt: string; // ISO
+  assetType: string;
+  title: string;
+  version: number;
+}
+
+/** `GET /internal/intelligence/business-profiles/:id/dashboard-summary` —
+ *  the real, flat shape computed by `getDashboardSummary()`. Replaces
+ *  Slice 9's invented nested `GrowthAssessment.growthScore` object. */
+export interface DashboardSummary {
+  latestGrowthScore: number | null;
+  scoreLabel: "Optimized" | "Ready to Scale" | "Growing" | "Needs Work" | null;
   primaryConstraint: string | null;
-  categoryScores: { category: string; score: number }[];
-  scannedAt: string; // ISO
-}
-
-export interface GrowthAssessment {
-  id: string;
-  businessProfileId: string;
-  status: "pending" | "in_progress" | "complete" | "failed";
-  growthScore: GrowthScore | null;
   recommendedFunnel: string | null;
-  createdAt: string;
+  recommendedAction: string | null;
+  latestBlueprintHeadline: string | null;
+  assessmentId: number | null;
+  blueprintId: number | null;
+  latestBlueprintAssessmentId: number | null;
+  hasScan: boolean;
+  lastFiveAssets: DashboardAsset[];
+  lastFiveTimeline: DashboardTimelineEvent[];
 }
 
-/** Nested inside a CRO audit response — see the contradiction note above.
- *  Modeled here because Home/Identify need to render it; there is no
- *  standalone endpoint that returns a list of these on its own. */
-export interface Recommendation {
-  id: string;
-  title: string;
-  impact: "high" | "medium" | "low";
-  difficulty: "high" | "medium" | "low";
-  category: string;
-  sourceAuditId: string;
+/** From `croAuditEngine.ts`'s real `CroAuditCategoryScore` — used for both
+ *  `categoryScores` and the `strengths`/`weaknesses` subsets on a CRO audit row. */
+export interface CroAuditCategoryScore {
+  key: string;
+  label: string;
+  score: number;
+  color: "green" | "yellow" | "red";
+  finding: string;
 }
 
-export interface CroAuditSummary {
-  id: string;
-  businessProfileId: string;
-  overallScore: number | null;
-  quickWinCount: number;
-  recommendations: Recommendation[];
-  createdAt: string;
+/** From `croAuditEngine.ts`'s real `CroAuditRecommendation` — used for both
+ *  `quickWins` and `recommendations` on a CRO audit row. Replaces Slice 9's
+ *  invented `Recommendation{id,title,impact:lowercase,...}` shape: impact/
+ *  difficulty are Title-cased in the real engine, there is no `id` field
+ *  (a recommendation is identified by its position within an audit, not a
+ *  standalone id), and the fix text lives in `fix`/`fixWithZeno`, not `title`. */
+export interface CroAuditRecommendation {
+  categoryKey: string;
+  categoryLabel: string;
+  impact: "High" | "Medium" | "Low";
+  difficulty: "High" | "Medium" | "Low";
+  fix: string;
+  fixWithZeno: string | null;
+  fixContext: string;
 }
 
-/** From `/zeno/growth-timeline/:businessProfileId` or `/zeno/timeline`. One
- *  entry per notable event Ascend recorded for a business — scans, audits,
- *  blueprint generations, memory writes. Kept intentionally generic
- *  (`kind` is a string, not a closed union) since this slice did not
- *  enumerate every real event kind the backend emits — narrowing that is a
- *  follow-up once live connectivity exists to observe real payloads. */
-export interface GrowthTimelineEntry {
-  id: string;
-  kind: string;
-  title: string;
-  occurredAt: string;
-  businessProfileId: string;
+/** `GET /internal/intelligence/cro-audits` — a raw `croAudits` DB row (via
+ *  `getCroAuditsForProfile()`), timestamps serialized to ISO. Replaces
+ *  Slice 9's invented `CroAuditSummary{quickWinCount,...}` aggregate — the
+ *  real endpoint returns full rows, not a summary. */
+export interface CroAudit {
+  id: number;
+  createdAt: string; // ISO
+  businessProfileId: number | null;
+  url: string;
+  notes: string | null;
+  overallScore: number;
+  categoryScores: CroAuditCategoryScore[];
+  strengths: CroAuditCategoryScore[];
+  weaknesses: CroAuditCategoryScore[];
+  quickWins: CroAuditRecommendation[];
+  recommendations: CroAuditRecommendation[];
+  aiMode: "live" | "mock";
+  requiresHumanReview: boolean;
+  reviewReason: string | null;
 }
 
-/** From `/zeno/memory` — backed by Ascend's real `platform_memory` table
- *  (governed, scoped, system-written — the LLM reads it, never writes it
- *  directly, per the schema's own doc comment). This summary is a thin,
- *  UI-shaped projection, not the full memory record (which also carries
- *  provenance/review fields Home/Identify don't render). */
-export interface BusinessMemoryItem {
-  id: string;
-  memoryType: string;
+/** `GET /internal/intelligence/memory` — a raw `zenoMemory` DB row (via
+ *  `getMemoryForProfile()`), timestamps serialized to ISO. This is a
+ *  recommendation/status action-items list, not the richer governed
+ *  `platform_memory` concept Slice 9 assumed — see the correction note in
+ *  the file header. Replaces Slice 9's invented `BusinessMemorySummary`
+ *  aggregate; the real endpoint returns a raw array of these. */
+export interface MemoryActionItem {
+  id: number;
+  createdAt: string; // ISO
+  updatedAt: string; // ISO
+  businessProfileId: number;
+  recommendation: string;
+  status: "pending" | "in_progress" | "completed" | "skipped";
+  sourceType: string | null; // 'assessment' | 'strategy' | 'audit'
+  sourceId: number | null;
+}
+
+export interface GrowthTimelineCategoryDelta {
+  key: string;
+  label: string;
+  previousScore: number;
+  currentScore: number;
+  difference: number;
+  direction: "improved" | "declined" | "no_change" | "new_finding" | "resolved";
+  reason: string;
+}
+
+export interface GrowthTimelineRecommendationProgress {
+  recommendation: string;
+  status: "completed" | "improved" | "no_change" | "regressed" | "outstanding" | "new_opportunity";
+  previousScore?: number;
+  currentScore?: number;
+  relatedCategory?: string;
+}
+
+export interface GrowthTimelineBusinessEvolution {
+  previousOverallScore: number;
+  currentOverallScore: number;
+  difference: number;
+  direction: "improved" | "declined" | "no_change";
   summary: string;
-  confidenceScore: number | null;
-  status: "pending" | "approved" | "rejected" | "needs_revision";
-  createdAt: string;
+  topImprovements: string[];
+  outstandingIssues: string[];
+  highestPriorityOpportunity: string;
 }
 
-export interface BusinessMemorySummary {
-  totalCount: number;
-  approvedCount: number;
-  recentItems: BusinessMemoryItem[];
+/** `GET /internal/intelligence/growth-timeline/:businessProfileId` — a
+ *  SINGLE `growthTimelines` row: one scan-to-scan comparison, not a list of
+ *  timeline events (that's `DashboardTimelineEvent[]`, a different, unrelated
+ *  concept nested inside dashboard-summary). Replaces Slice 9's invented
+ *  `GrowthTimelineEntry[]` shape. 404s (returned as `null` by this client)
+ *  when fewer than 2 scans exist for the profile. */
+export interface GrowthTimeline {
+  id: number;
+  createdAt: string; // ISO
+  updatedAt: string; // ISO
+  businessProfileId: number;
+  currentScanId: number | null;
+  previousScanId: number | null;
+  scanCount: number;
+  businessEvolution: GrowthTimelineBusinessEvolution;
+  categoryDeltas: GrowthTimelineCategoryDelta[];
+  recommendationProgress: GrowthTimelineRecommendationProgress[];
 }
 
+/** `GET /internal/intelligence/reports` — real field names from
+ *  `getReportsForProfile()`: `reportType` (not `kind`), no `shareUrl` (only
+ *  a raw `shareToken`, null for business_architect reports), plus the
+ *  underlying growth-scan/blueprint linkage ids. Replaces Slice 9's
+ *  invented `{kind, shareUrl}` shape. */
 export interface IntelligenceReportSummary {
-  id: string;
-  kind: "growth_scan" | "cro_audit" | "blueprint";
+  id: string; // "gs_<id>" | "bp_<id>"
+  reportType: "growth_scan" | "business_architect";
   title: string;
+  businessType: string | null;
+  websiteUrl: string | null;
   score: number | null;
-  createdAt: string;
-  shareUrl: string | null;
+  scoreLabel: string | null;
+  status: string | null;
+  createdAt: string; // ISO
+  shareToken: string | null;
+  scanId: number | null;
+  blueprintId: number | null;
+  assessmentId: number | null;
+  businessProfileId: number | null;
 }
 
 /** One composed snapshot of everything Ascend knows about a business
@@ -163,12 +236,13 @@ export interface IntelligenceReportSummary {
  *  snapshot. */
 export interface IntelligenceSnapshot {
   businessProfileId: string | null;
-  growthScore: WithMeta<GrowthScore>;
-  latestAssessment: WithMeta<GrowthAssessment>;
-  latestCroAudit: WithMeta<CroAuditSummary>;
-  recommendations: WithMeta<Recommendation[]>;
-  timeline: WithMeta<GrowthTimelineEntry[]>;
-  memory: WithMeta<BusinessMemorySummary>;
+  dashboardSummary: WithMeta<DashboardSummary>;
+  croAudits: WithMeta<CroAudit[]>;
+  /** Convenience projection of the newest CRO audit's `recommendations`
+   *  array — derived client-side, not a separate fetch. */
+  recommendations: WithMeta<CroAuditRecommendation[]>;
+  growthTimeline: WithMeta<GrowthTimeline>;
+  memory: WithMeta<MemoryActionItem[]>;
   reports: WithMeta<IntelligenceReportSummary[]>;
 }
 
@@ -199,9 +273,9 @@ export interface HomeDashboardData {
   businessHealth: WithMeta<BusinessHealthSummary>;
   intelligence: IntelligenceSnapshot;
   /** A single, pre-ranked "what to do next" — derived, not a separate
-   *  endpoint (there isn't one — see the Recommendations contradiction
-   *  above). Null when nothing qualifies (no data, or everything nominal). */
-  recommendedNextAction: Recommendation | null;
+   *  endpoint. Sourced from the latest CRO audit's `recommendations`
+   *  array. Null when nothing qualifies (no data, or everything nominal). */
+  recommendedNextAction: CroAuditRecommendation | null;
 }
 
 export interface IdentifyDashboardData {

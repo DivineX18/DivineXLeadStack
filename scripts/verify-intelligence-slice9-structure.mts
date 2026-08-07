@@ -96,7 +96,13 @@ function check(label: string, pass: boolean) {
 //      outside the one client file ──────────────────────────────────────
 {
   const clientSrc = read("src/lib/intelligence/ascend-intelligence-client.ts");
-  const endpointPaths = ["/zeno/business-profiles/", "/zeno/cro-audits", "/zeno/memory", "/zeno/growth-timeline/", "/zeno/reports"];
+  const endpointPaths = [
+    "/internal/intelligence/business-profiles/",
+    "/internal/intelligence/cro-audits",
+    "/internal/intelligence/memory",
+    "/internal/intelligence/growth-timeline/",
+    "/internal/intelligence/reports",
+  ];
   for (const p of endpointPaths) {
     check(`7. Endpoint path "${p}" is only constructed in the client file`, clientSrc.includes(p));
   }

@@ -55,7 +55,7 @@ export default async function AscendHomePage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <BusinessHealthCard businessHealth={businessHealth} />
-        <GrowthScoreCard growthScore={intelligence.growthScore} />
+        <GrowthScoreCard dashboardSummary={intelligence.dashboardSummary} />
         <RecommendedNextActionCard action={recommendedNextAction} meta={intelligence.recommendations.meta} />
 
         <MetricCard
@@ -86,9 +86,9 @@ export default async function AscendHomePage() {
           value={health ? String(health.upcomingAppointmentCount) : "—"}
           meta={businessHealth.meta}
         />
-        <LatestAssessmentCard assessment={intelligence.latestAssessment} />
+        <LatestAssessmentCard dashboardSummary={intelligence.dashboardSummary} />
 
-        <GrowthTimelineCard timeline={intelligence.timeline} limit={5} />
+        <GrowthTimelineCard timeline={intelligence.growthTimeline} limit={5} />
         <BusinessMemoryCard memory={intelligence.memory} />
         <ReportsCard reports={intelligence.reports} />
       </div>

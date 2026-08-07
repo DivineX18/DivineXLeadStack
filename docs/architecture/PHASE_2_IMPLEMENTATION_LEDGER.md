@@ -797,6 +797,79 @@ Per the user's explicit decision: no Ascend-side service authentication middlewa
 
 **No-go on live data, go on continuing Flow-side work that doesn't depend on Ascend connectivity.** The bridge contract is complete and ready. The actual blocker — Ascend's branch divergence — is a repository-hygiene/product decision entirely outside this slice's or Slice 11's control. Recommend either: (a) a slice dedicated to resolving the Ascend branch divergence itself (comparing the two branches' real diffs, deciding which reflects production, reconciling), separate from any further Ascend OS feature work, or (b) continuing Create/Launch/Grow/Optimize/Scale section scaffolding (same placeholder→real pattern as Slice 8, zero Ascend dependency) while that decision is made elsewhere. Per this slice's explicit instruction, stopping here — not beginning Slice 11.
 
+## Wave A — Slice 10.5: Ascend Repository Reconciliation & Secure Bridge Completion
+
+**Status: Complete, both repositories.** Resolved the branch-divergence blocker that stopped Slice 10 from certifying live, built the real Ascend-side receiver, wired the live bridge end to end, and — discovered mid-slice, not planned for — corrected a significant, real defect in Slice 9/10's Flow-side types and parsers, which had been built against guessed response shapes that turned out not to match reality once the real Ascend query/route code was read directly.
+
+### Step 1-2: Repository audit + reconciliation (both repos)
+
+`git cherry main dev` (patch-content comparison, not commit hashes) on `DivineX-Business-Intelligence` showed **zero** commits on `dev` not already patch-equivalent to a commit on `main` — confirmed by a manual byte-for-byte spot-check (`diff` of one matched commit pair, excluding hash-only lines, empty) rather than trusting the tool alone. **Correction to Slice 1's own finding, recorded not silently fixed**: the "~60 commits at risk" framing was a raw commit-count comparison; at the patch-content level, `main` is a strict content superset of `dev` — there is no real work on `dev` that doesn't already exist on `main`. `render.yaml` (`branch: main` for both the `ascend-bi-api` web service and the `ascend-onboarding-cron` job) then gave definitive, non-inferential proof of which branch is actually deployed, and the user independently confirmed "main is live." Reconciliation strategy: adopt `main` as sole authoritative branch; no merge was needed (nothing to merge — `main` already contains everything real on `dev`); `dev` left untouched, no destructive action taken on it this slice. Full audit table (9 commits genuinely unique to `main`, all additive or a clean revert, zero conflicts) is in the plan file (`rosy-finding-summit.md`) and was not duplicated into this ledger to avoid drift between two copies of the same audit.
+
+### Step 5-8: Ascend-side implementation (real, committed to `main`)
+
+Built on `DivineX-Business-Intelligence` `main`, following the extraction discipline this whole effort established (Flow's own SSO JIT / require-tenancy extractions): pulled the 5 bridge queries' logic out of the pre-existing Clerk-gated `/zeno/*` handlers into `artifacts/api-server/src/lib/intelligenceQueries.ts` so BOTH the existing Clerk-gated routes and the new service-auth-gated routes run the identical code — never two copies. `routes/zeno.ts`'s handlers now call the extracted functions; behavior-preservation proven via characterization tests diffing against the pre-edit commit (`c7422b0`), not assumed.
+
+- **`middlewares/serviceAuth.ts`** — `requireServiceAuth`: constant-time Bearer-secret compare (length check before `timingSafeEqual`, mirroring `routes/sso.ts`'s proven live pattern — read first, per the plan's own instruction, before writing this), requires `X-Intelligence-Business-Profile-Id` non-empty and numeric, confirms the profile exists via `businessProfileExists()`, attaches `req.serviceContext`. `sendEnvelope`/`sendEnvelopeError` implement the exact `{ok,data,error}` contract from `INTELLIGENCE_SERVICE_BRIDGE_CONTRACT.md`. Every auth decision writes one row to the existing `ssoAuditEvents` table (`bridge_auth_success`/`bridge_auth_failure`) — reused, not duplicated into a second audit table for the same kind of event.
+- **`routes/internalIntelligence.ts`** — mounted at `/internal/intelligence/*`, `requireServiceAuth` applied router-wide, never mixed with Clerk auth on the same route (structurally verified — see Tests below). `businessProfileId` comes exclusively from `req.serviceContext`, never re-parsed from a query/route param — the `:id`/`:businessProfileId` path segments exist only to satisfy Express route matching and are never read by any handler, so a caller cannot use them to request a profile other than the one the auth header authorized.
+
+### Step 9: Live bridge — not yet exercised (needs deployment env vars, outside this slice's reach)
+
+`ASCEND_INTELLIGENCE_API_URL`/`ASCEND_INTELLIGENCE_API_SECRET` still need setting on both deployments (Render for Ascend, Vercel for Flow) — this is deployment configuration the user controls via hosting dashboards this session has no access to. Both sides are code-complete and independently tested against injected fakes; nothing architectural blocks Step 9 from succeeding once the env vars are set. Recorded here as the honest current state, not deferred silently — see "Remaining risks" below.
+
+### A real bug found and fixed — Slice 9/10's Flow-side types and parsers were built on guessed, wrong shapes
+
+While extracting the Ascend-side queries, their real return shapes were read directly from the live route handlers for the first time (Slices 9-10 had never had Ascend-side source to read, and reasoned from the architecture spec's prose instead — an honest gap, not negligence, but a gap all the same). The real shapes differed from Slice 9's guesses in five ways, all now corrected in `src/types/intelligence.ts` and `src/lib/intelligence/ascend-intelligence-client.ts`:
+
+1. **Wrong request paths entirely.** The Slice 9 client targeted `/zeno/*` (Clerk-session-gated — a Flow backend service call could never authenticate against it) instead of the real bridge's `/internal/intelligence/*` (service-auth-gated). This alone would have made the whole bridge non-functional regardless of any other correctness.
+2. **`dashboard-summary` is flat, not nested.** Slice 9 invented a nested `growthScore: {overallScore, primaryConstraint, categoryScores, scannedAt}` object; the real endpoint returns flat fields (`latestGrowthScore`, `scoreLabel`, `primaryConstraint`, `hasScan`, …) with no per-category breakdown at this level.
+3. **`/internal/intelligence/memory` returns a different, simpler concept than assumed.** Slice 9's header comment described it as backed by a rich, governed `platform_memory` table (`BusinessMemorySummary{totalCount,approvedCount,recentItems}`). Direct read of the real query (`getMemoryForProfile`) shows it queries `zenoMemory` instead — a recommendation/status action-items list (`{recommendation, status: pending|in_progress|completed|skipped}`), a genuinely different, simpler table. Recorded as a correction in the types file, not silently swapped.
+4. **Growth timeline is one comparison object, not a list of events.** Slice 9 invented `GrowthTimelineEntry[]` (a chronological event list); the real endpoint returns a SINGLE `growthTimelines` row — one scan-to-scan comparison (`businessEvolution`, `categoryDeltas[]`, `recommendationProgress[]`) — and 404s (`not_found`) when fewer than 2 scans exist, which the corrected client now surfaces as a real `"empty"` state rather than `"unavailable"`.
+5. **CRO audit recommendations use Title-cased fields and no standalone id.** The real `CroAuditRecommendation` (from `croAuditEngine.ts`) carries `impact: "High"|"Medium"|"Low"` (not lowercase), `fix`/`fixWithZeno`/`fixContext` (not `title`), and no `id` field — a recommendation is identified by position within an audit. `reports` also uses `reportType` (not `kind`) and `shareToken` (not `shareUrl`).
+
+Fixed by rewriting `types/intelligence.ts` (all 5 models) and `ascend-intelligence-client.ts` (paths + all 5 parsers), then cascading through every consumer: `resolve-intelligence-snapshot.ts` (now derives `recommendations` from the newest CRO audit's `recommendations` array, sorted server-side by the bridge query), `derive-next-action.ts` (ranks `CroAuditRecommendation[]` by Title-cased impact/difficulty), all 8 `src/components/ascend/*.tsx` card components (prop shapes + rendered fields), and both `/app/home` and `/app/identify` pages. `GrowthTimelineCard` was redesigned from a chronological-event list to a scan-comparison view to match what the real endpoint actually returns. `INTELLIGENCE_SERVICE_BRIDGE_CONTRACT.md`'s endpoint table was rewritten to the real paths/shapes; its Slice 10 "why the Ascend side isn't built yet" section replaced with the Step 1-2 reconciliation summary above.
+
+### Step 10: Security audit (structural, both repos)
+
+Ascend side: 16 tests in `artifacts/api-server/src/tests/intelligenceBridge.test.ts` (see Tests below) cover every `requireServiceAuth` failure mode via real supertest HTTP calls (not isolated function calls), envelope-shape purity, and structural Clerk-avoidance. Flow side: re-ran Slice 10's own `verify-intelligence-slice10-bridge.mts` security checks (9a-9g) unchanged in substance — one test (9b, "client never references Clerk") false-positived against this slice's own explanatory doc comment ("NOT the Clerk-gated `/zeno/*` paths") — the same recurring self-inflicted test-bug class this whole effort has hit in Slices 5-8 (Flow) and now this slice (Ascend, `intelligenceBridge.test.ts`'s own equivalent check hit the identical bug independently). Fixed the same way both times: strip comments before the substring check, not the source.
+
+### Step 11: Performance (both repos)
+
+No new query patterns introduced. Ascend's extracted functions are byte-identical to what `zeno.ts` already ran (proven via characterization tests, not assumed) — same query count, same indices, no new N+1s. Flow's client still fires the same 5 parallel `Promise.all` requests as Slice 9 — this slice corrected paths and shapes, not the request pattern.
+
+### Tests
+
+| Suite | Kind | Result |
+|---|---|---|
+| `artifacts/api-server/src/tests/intelligenceBridge.test.ts` (Ascend repo) | **Genuine tests** — real HTTP-level middleware-chain tests via supertest, `@workspace/db` mocked per the existing `planLimits.test.ts` convention | ✅ 16/16 — 6 `requireServiceAuth` failure/success modes, 2 pure envelope-helper tests, 3 structural (never mixes Clerk auth, `router.use(requireServiceAuth)` applied, `businessProfileId` always from `serviceContext`), 4 characterization (extraction preserved behavior, exact score-label thresholds survived, the untouched multi-profile branch of `/zeno/cro-audits` left alone) |
+| Ascend repo full suite (`pnpm --filter @workspace/api-server run test`) | Regression | ✅ 88 total pass (72 pre-existing + 16 new) |
+| Ascend repo typecheck/build (`build.mjs`, esbuild entry-point bundling, no monorepo-wide typecheck in the real deploy path) | — | ✅ Clean; 8 pre-existing, unrelated typecheck errors in standalone scripts confirmed unchanged (not in the deploy build's compile graph) |
+| `scripts/verify-intelligence-slice9-unit.mts` (Flow repo, rewritten) | **Genuine tests**, corrected for real shapes | ✅ 31/31 — cache, retry/backoff, next-action ranking against real `CroAuditRecommendation`, client method names/paths/envelope handling against the real bridge contract incl. the `growth-timeline` not_found→`"empty"` case |
+| `scripts/verify-intelligence-slice9-structure.mts` (Flow repo) | Structural, one section corrected | ✅ 61/61 — endpoint-path list updated to `/internal/intelligence/*` (correction: this slice's own re-run found the true count is 61, not the 62 recorded in Slice 9's original entry — that earlier figure was already imprecise, not something this slice's edits changed) |
+| `scripts/verify-intelligence-slice10-bridge.mts` (Flow repo, rewritten) | **Genuine tests**, corrected for real shapes + contract doc | ✅ 31/31 — envelope handling against the real `dashboard-summary` shape, growth-timeline empty-state handling, contract-doc structural checks against the Slice 10.5 revision, security checks (9b fixed for the comment false-positive) |
+| All other pre-existing Flow `verify-*.mts` (24) | Regression | ✅ 24/24, unaffected |
+| `npx tsc --noEmit` (Flow repo) | — | ✅ Clean |
+| `pnpm lint` (Flow repo, targeted + full) | — | ✅ Zero errors, zero new warnings |
+| `pnpm build` (Flow repo) | — | ✅ Clean, `/app/home` + `/app/identify` compile |
+
+### Bugs discovered / fixed
+
+1. **The Slice 9/10 type/parser mismatch documented in full above** — the most significant finding this slice, would have silently defeated the entire Home/Identify intelligence surface (every field parsing to `unparseable_response`/`unavailable`) the moment the bridge went live, without this correction.
+2. The recurring "own doc comment triggers a naive substring test check" bug, hit independently on both repos this slice (Flow's `verify-intelligence-slice10-bridge.mts` check 9b; Ascend's `intelligenceBridge.test.ts`'s "structural" describe block) — fixed the same way in both places (strip comments before checking), consistent with every prior occurrence of this bug class across the whole multi-slice effort.
+
+### Remaining risks
+
+1. **Live bridge (Step 9) and certification (Step 12) still require deployment-side env var configuration** (`ASCEND_INTELLIGENCE_API_URL`/`ASCEND_INTELLIGENCE_API_SECRET` on both Render and Vercel) — outside this session's reach. Both sides are code-complete and ready the moment those are set.
+2. The corrected parsers are defensive (return `null`/empty on any shape mismatch) but have only been exercised against hand-constructed fake payloads matching the shapes read from source — not a real live response. A first live certification pass may still surface a field-level surprise (e.g. a jsonb column whose actual runtime content differs subtly from its TypeScript interface), though the request PATH and TOP-LEVEL shape are now confirmed correct by direct source read, which is the part that would have failed completely before this slice.
+3. `dev` on the Ascend repo is now confirmed redundant (100% patch-content subset of `main`) but was left untouched this slice, per the plan's explicit "no destructive action regardless" constraint — cleanup is the user's call, not made unilaterally here.
+
+### Deferred / explicitly not done this slice
+
+Step 9 (setting real env vars on live deployments) and Step 12 (live certification against real Growth Score/Revenue/Timeline/Memory/Recommendations/Reports data) — both require actions on hosting dashboards outside this session's access, consistent with every prior slice's "cannot deploy or configure production infra directly" boundary.
+
+### Go/no-go for the next slice
+
+**Go, fully — with one outstanding external action.** Both repositories are code-complete, tested, and reconciled. The single remaining step to real live data is the user setting `ASCEND_INTELLIGENCE_API_URL`/`ASCEND_INTELLIGENCE_API_SECRET` on both deployments — a five-minute task once they're ready, not an engineering blocker. Per the master prompt's explicit instruction, stopping here — not beginning another slice.
+
 ## Checkpoint before Slice 2 — resolved
 
 1. **Feature-flag primitive**: confirmed — build it first, on Flow's `dev` branch, reusing the existing agency feature-gate pattern. In progress below.

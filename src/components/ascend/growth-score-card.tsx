@@ -1,34 +1,33 @@
 import { AscendCardShell } from "@/components/ascend/card-shell";
 import { IntelligenceStatusBadge } from "@/components/ascend/intelligence-status-badge";
-import type { WithMeta, GrowthScore } from "@/types/intelligence";
+import type { WithMeta, DashboardSummary } from "@/types/intelligence";
 
-export function GrowthScoreCard({ growthScore }: { growthScore: WithMeta<GrowthScore> }) {
-  const data = growthScore.data;
+/**
+ * Corrected Slice 10.5: sourced from the real `dashboard-summary` bridge
+ * response (flat `latestGrowthScore`/`scoreLabel`/`primaryConstraint`),
+ * not Slice 9's invented nested `GrowthScore` object. The real endpoint
+ * carries no per-category score breakdown at this level — that detail
+ * lives on individual CRO audit rows (`CroAudit.categoryScores`), a
+ * different resource.
+ */
+export function GrowthScoreCard({ dashboardSummary }: { dashboardSummary: WithMeta<DashboardSummary> }) {
+  const data = dashboardSummary.data;
   return (
-    <AscendCardShell title="Growth Score" action={<IntelligenceStatusBadge meta={growthScore.meta} />}>
-      {data ? (
+    <AscendCardShell title="Growth Score" action={<IntelligenceStatusBadge meta={dashboardSummary.meta} />}>
+      {data?.hasScan ? (
         <>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-semibold tracking-tight" style={{ color: "hsl(var(--jade))" }}>
-              {Math.round(data.overallScore)}
+              {data.latestGrowthScore !== null ? Math.round(data.latestGrowthScore) : "—"}
             </span>
             <span className="text-sm text-white/40">/ 100</span>
+            {data.scoreLabel && <span className="ml-1 text-xs text-white/50">{data.scoreLabel}</span>}
           </div>
           {data.primaryConstraint && <p className="mt-2 text-xs text-white/60">Primary constraint: {data.primaryConstraint}</p>}
-          {data.categoryScores.length > 0 && (
-            <ul className="mt-3 space-y-1.5">
-              {data.categoryScores.slice(0, 5).map((c) => (
-                <li key={c.category} className="flex items-center justify-between text-xs text-white/50">
-                  <span>{c.category}</span>
-                  <span>{Math.round(c.score)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
         </>
       ) : (
         <p className="text-sm text-white/40">
-          {growthScore.meta.reasonCode === "no_linked_business_profile"
+          {dashboardSummary.meta.reasonCode === "no_linked_business_profile"
             ? "Link a business profile to see your Growth Score here."
             : "No score available yet."}
         </p>

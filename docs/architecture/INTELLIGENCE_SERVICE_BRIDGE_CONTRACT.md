@@ -1,14 +1,21 @@
 # Intelligence Service Bridge Contract
 
-**Status: SPECIFIED, PARTIALLY IMPLEMENTED. Flow-side (caller) implementation is real and committed. Ascend-side (receiver) implementation is BLOCKED — see "Why the Ascend side isn't built yet" below — and does not exist anywhere, on any branch, as of this document.**
+**Status: SPECIFIED AND IMPLEMENTED, BOTH SIDES. Flow-side (caller, `src/lib/intelligence/ascend-intelligence-client.ts`) and Ascend-side (receiver, `artifacts/api-server/src/routes/internalIntelligence.ts` + `middlewares/serviceAuth.ts`, on `main`) are both real and committed as of Slice 10.5. Not yet exercised against a live deployment — `ASCEND_INTELLIGENCE_API_URL`/`ASCEND_INTELLIGENCE_API_SECRET` still need setting on both deployments (Step 9/12, tracked separately) — but the code on both ends is complete and unit/structurally tested.**
 
-This is the Phase 2 / Slice 10 deliverable for the Flow ↔ Ascend Intelligence service-to-service bridge referenced (but never specified) by `ASCEND_OS_V1_ARCHITECTURE_SPECIFICATION.md` Section 6 ("API Contract Strategy" — "Not implemented by this document... pending product-owner approval") and consumed by `src/lib/intelligence/ascend-intelligence-client.ts` (Slice 9).
+This is the Phase 2 / Slice 10 (specification) + Slice 10.5 (Ascend-side implementation) deliverable for the Flow ↔ Ascend Intelligence service-to-service bridge referenced (but never specified) by `ASCEND_OS_V1_ARCHITECTURE_SPECIFICATION.md` Section 6 ("API Contract Strategy" — "Not implemented by this document... pending product-owner approval") and consumed by `src/lib/intelligence/ascend-intelligence-client.ts` (Slice 9, corrected Slice 10.5).
 
-## Why the Ascend side isn't built yet
+## Repository reconciliation (Slice 10.5) — why the branch question is now resolved
 
-`DivineX-Business-Intelligence`'s `main` (tip `c7422b0`) and `dev` (tip `3c4d3e8`) branches diverged approximately 60 commits ago with no common recent ancestor — first discovered in Slice 1 (2026-08-04ish, this ledger's Wave A Slice 1 entry), re-confirmed unchanged at the start of this slice. `main` carries newer marketing/onboarding/checkout commits; `dev` carries ~60 commits of real fixes (vision-based site audits, calibration/em-dash enforcement, an OOM crash fix, headless-render fallback fixes, testimonial/CTA-extraction fixes) that never landed on `main`. Neither branch is confirmed to be what's actually deployed to `app.divinex.io`.
+`DivineX-Business-Intelligence`'s `main` (tip `c7422b0` at reconciliation time) and `dev` (tip `3c4d3e8`) branches were suspected divergent (first flagged in Slice 1, ~60 "at risk" commits). Slice 10.5 resolved this two ways: `git cherry main dev` (patch-content comparison, not commit hashes) showed **zero** commits on `dev` not already patch-equivalent to a commit on `main` — `main` is a strict content superset. `render.yaml` (the deployment config, `branch: main` for both the `ascend-bi-api` web service and the `ascend-onboarding-cron` job) then gave definitive, non-inferential proof of which branch is live, and the user independently confirmed "main is live." The earlier "~60 commits at risk" framing was a raw commit-count comparison, not a patch-level one — recorded here as a correction, not silently dropped. All Slice 10.5 Ascend-side work committed to `main` directly (no `dev`-first discipline exists on that repo).
 
-Writing service-auth middleware to the wrong branch risks either (a) losing ~60 commits of real fixes if that branch is later force-reset to match the other, or (b) building something that never reaches the app customers actually use. Per this slice's own "prove it, document it, stop — instead of inventing" discipline, and per the user's explicit direction when asked, **no code was written to the Ascend Intelligence repository this slice.** This document is the ready-to-implement specification for whoever resolves the branch question.
+## Slice 10.5 implementation — the real Ascend-side receiver
+
+Built on `main` (`DivineX-Business-Intelligence`), extracted from the pre-existing Clerk-gated `/zeno/*` route handlers so both auth paths run the exact same query logic — never two copies:
+
+- **`artifacts/api-server/src/lib/intelligenceQueries.ts`** — the 5 extracted query functions (`getDashboardSummary`, `getCroAuditsForProfile`, `getMemoryForProfile`, `getGrowthTimelineForProfile`, `getReportsForProfile`) plus `businessProfileExists()`. `routes/zeno.ts`'s existing Clerk-gated handlers now call these too (behavior-preserving, proven via characterization tests against the pre-edit commit).
+- **`artifacts/api-server/src/middlewares/serviceAuth.ts`** — `requireServiceAuth`: constant-time Bearer-secret compare (length check before `timingSafeEqual`, mirroring `sso.ts`'s proven pattern), requires `X-Intelligence-Business-Profile-Id`, confirms the profile exists, attaches `req.serviceContext = {businessProfileId}`. Exports `sendEnvelope`/`sendEnvelopeError` implementing the exact envelope shape specified below. Every auth decision writes one row to the existing `ssoAuditEvents` table (`bridge_auth_success`/`bridge_auth_failure`) — reused rather than duplicated, per this effort's "one audit table per kind of event, not one per feature" discipline.
+- **`artifacts/api-server/src/routes/internalIntelligence.ts`** — mounted at `/internal/intelligence/*` in `routes/index.ts`, `requireServiceAuth` applied to the whole router, never mixed with Clerk auth on the same route. `businessProfileId` is read exclusively from `req.serviceContext` (set by the auth middleware after verifying the header) — never re-parsed from a query/route param, so a caller cannot request data for a profile other than the one the header authorized.
+- **`artifacts/api-server/src/tests/intelligenceBridge.test.ts`** — 16 vitest/supertest tests: real HTTP-level middleware-chain tests (not isolated function calls) for every `requireServiceAuth` failure mode, envelope-shape purity, structural Clerk-avoidance, and characterization against the pre-edit `zeno.ts`.
 
 ## Repository-truth audit this slice was built on
 
@@ -66,17 +73,19 @@ Flow's client (`ascend-intelligence-client.ts`) already implements the CALLER ha
 
 ## Required endpoints
 
-Per Slice 9's audit (unchanged, re-confirmed this slice — no new endpoints found or needed):
+Live on `main` as of Slice 10.5 (`routes/internalIntelligence.ts`). `businessProfileId` for every route comes from `req.serviceContext` (set by `requireServiceAuth` from the `X-Intelligence-Business-Profile-Id` header) — the `:id`/`:businessProfileId` path segments on two of the routes exist only to match Express's route-matching, they are never read by the handler, so a caller cannot use them to request a different profile than the header authorized. The 3 endpoints without a path segment take no query params either — the header is the only input:
 
-| Endpoint | Real today? | Bridge equivalent |
+| Endpoint | Real today? | Response shape (`data` field) |
 |---|---|---|
-| `GET /zeno/business-profiles/:id/dashboard-summary` | ✅ real, Clerk-gated | `GET /internal/intelligence/business-profiles/:id/dashboard-summary` (new, service-auth-gated, wraps the same underlying query) |
-| `GET /zeno/cro-audits` | ✅ real | `GET /internal/intelligence/cro-audits?businessProfileId=` |
-| `GET /zeno/memory` | ✅ real | `GET /internal/intelligence/memory?businessProfileId=` |
-| `GET /zeno/growth-timeline/:id` | ✅ real | `GET /internal/intelligence/growth-timeline/:businessProfileId` |
-| `GET /zeno/reports` | ✅ real | `GET /internal/intelligence/reports?businessProfileId=` |
+| `GET /internal/intelligence/business-profiles/:id/dashboard-summary` | ✅ real, service-auth-gated | `DashboardSummary` — flat: `latestGrowthScore`, `scoreLabel`, `primaryConstraint`, `recommendedFunnel`, `recommendedAction`, `latestBlueprintHeadline`, `assessmentId`, `blueprintId`, `hasScan`, `lastFiveAssets[]`, `lastFiveTimeline[]` |
+| `GET /internal/intelligence/cro-audits` | ✅ real | `CroAudit[]` — raw `croAudits` rows, newest first, limit 20 |
+| `GET /internal/intelligence/memory` | ✅ real | `MemoryActionItem[]` — raw `zenoMemory` rows (`{recommendation, status}` action items — NOT the richer governed `platform_memory` concept; see the correction note in Flow's `types/intelligence.ts`), newest first, limit 50 |
+| `GET /internal/intelligence/growth-timeline/:businessProfileId` | ✅ real | A SINGLE `GrowthTimeline` object (one scan-to-scan comparison: `businessEvolution`, `categoryDeltas[]`, `recommendationProgress[]`) — `not_found` (envelope error) when fewer than 2 scans exist, which Flow's client surfaces as a real `"empty"` state, not a failure |
+| `GET /internal/intelligence/reports` | ✅ real | `IntelligenceReportSummary[]` — `reportType: "growth_scan" \| "business_architect"`, newest first |
 
-**Never invented**: a standalone `/recommendations` endpoint (still nested in CRO audit responses, per Slice 9's Contradiction #1) and a standalone "Zeno read" endpoint (Zeno has no tool-calling mechanism, per Slice 9's Contradiction #2) — both re-confirmed unchanged this slice. The bridge does not add new business logic; it's a thin, service-auth-gated re-exposure of the SAME queries the existing Clerk-gated routes already run, under a new path prefix (`/internal/intelligence/*`) so the auth model is unambiguous from the route path alone — never the same route handling both a Clerk session and a service secret.
+**Corrected from the Slice 10 speculative version of this table**: the original draft guessed `?businessProfileId=` query params on 3 of these routes — the real implementation never reads query params at all, since `requireServiceAuth` already scopes every request to exactly one profile via the header. Response shapes above were also guessed in Slice 9/10 (a nested `growthScore` object, an aggregate `BusinessMemorySummary`, a `GrowthTimelineEntry[]` list) and are corrected here to match `intelligenceQueries.ts` exactly, read directly from source rather than assumed.
+
+**Never invented**: a standalone `/recommendations` endpoint (still nested in each CRO audit row's `recommendations` field) and a standalone "Zeno read" endpoint (Zeno has no tool-calling mechanism). The bridge does not add new business logic; it's a thin, service-auth-gated re-exposure of the SAME queries the existing Clerk-gated `/zeno/*` routes already run, under a new path prefix (`/internal/intelligence/*`) so the auth model is unambiguous from the route path alone — never the same route handling both a Clerk session and a service secret.
 
 ## Observability (required audit events, Ascend side)
 
@@ -84,6 +93,6 @@ One row per bridge request, never per sub-check (Slice 6's bug-fix precedent): `
 
 **Flow-side equivalents, actually implemented this slice** (`src/lib/intelligence/intelligence-audit.ts`, extended): `bridge_request_sent`, `bridge_envelope_ok`, `bridge_envelope_error` (carries the `error.code`), plus Slice 9's existing `cache_hit`/`cache_miss`/`fetch_timeout`/`fetch_failure`/`not_configured`. Same no-user-data discipline as Slice 9.
 
-## What changes in Flow once Ascend implements this
+## What's left before this is live (Step 9/12, tracked separately)
 
-Nothing structural. `ascend-intelligence-client.ts` already targets `/zeno/*` paths pointed at `ASCEND_INTELLIGENCE_API_URL`; the moment Ascend stands up `/internal/intelligence/*` (or reuses `/zeno/*` behind the new middleware — either is compatible with this contract, that's an Ascend-side implementation choice, not a Flow-side dependency), Flow's client paths need a one-line base-path update and `ASCEND_INTELLIGENCE_API_URL`/`ASCEND_INTELLIGENCE_API_SECRET` need setting on both deployments. No Flow-side architecture changes.
+Both sides are complete and independently tested against injected fakes (never a real network call in either repo's test suite). What remains is purely operational, not architectural: set `ASCEND_INTELLIGENCE_API_URL` (Ascend's deployed base URL) and `ASCEND_INTELLIGENCE_API_SECRET` (the same shared value) on both Flow's and Ascend's real deployments, then exercise Flow's client against the real bridge for the first time (live certification). Neither side needs further code changes for that step to succeed — this is deployment configuration the user controls, not something achievable from within either repo.

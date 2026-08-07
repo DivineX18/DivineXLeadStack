@@ -5,32 +5,40 @@ import { readIntelligenceCache, writeIntelligenceCache } from "@/lib/intelligenc
 import { recordIntelligenceAuditEvent } from "@/lib/intelligence/intelligence-audit";
 import { MAX_RETRIES, TIMEOUT_MS, backoffMs, normalizeFailure, shouldRetry } from "@/lib/intelligence/ascend-intelligence-retry";
 import type {
-  BusinessMemorySummary,
-  CroAuditSummary,
-  GrowthAssessment,
-  GrowthTimelineEntry,
+  CroAudit,
+  CroAuditCategoryScore,
+  CroAuditRecommendation,
+  DashboardAsset,
+  DashboardSummary,
+  DashboardTimelineEvent,
+  GrowthTimeline,
+  GrowthTimelineBusinessEvolution,
+  GrowthTimelineCategoryDelta,
+  GrowthTimelineRecommendationProgress,
   IntelligenceReportSummary,
+  MemoryActionItem,
   WithMeta,
 } from "@/types/intelligence";
 
 /**
- * Ascend OS Phase 2, Slice 9 (hardened in Slice 10) — THE single
- * server-side client responsible for every Ascend Intelligence read. No
- * other file in this codebase should call `fetch()` against an Ascend
- * host directly — structurally enforced by
+ * Ascend OS Phase 2, Slice 9 (hardened Slice 10, corrected Slice 10.5) —
+ * THE single server-side client responsible for every Ascend Intelligence
+ * read. No other file in this codebase should call `fetch()` against an
+ * Ascend host directly — structurally enforced by
  * `scripts/verify-intelligence-slice9-structure.mts`.
  *
  * Slice 10 formalized the request/response contract in
- * `docs/architecture/INTELLIGENCE_SERVICE_BRIDGE_CONTRACT.md` — this
- * client implements the CALLER half of it (the `X-Intelligence-Business-
- * Profile-Id` header, envelope-aware parsing). The Ascend RECEIVER side
- * does not exist yet (blocked on an unresolved main/dev branch divergence
- * in the Ascend Intelligence repo — see the contract doc), so this client
- * cannot be verified against a real envelope response today. It therefore
- * handles TWO response shapes deliberately: the formal
- * `{ok, data, error}` envelope (once Ascend implements it) and a bare/
- * legacy shape (today's genuinely-unknown-until-verified state, unchanged
- * from Slice 9) — never assuming which one a real deployment will send.
+ * `docs/architecture/INTELLIGENCE_SERVICE_BRIDGE_CONTRACT.md`. Slice 10.5
+ * built the real Ascend-side receiver
+ * (`routes/internalIntelligence.ts`, `/internal/intelligence/*`,
+ * `requireServiceAuth`-gated) and this client is corrected to match it
+ * exactly: real paths (NOT the Clerk-gated `/zeno/*` paths Slice 9
+ * originally, wrongly, pointed at) and real response shapes (read directly
+ * from `intelligenceQueries.ts` — see `types/intelligence.ts`'s header for
+ * the full list of corrections). The bridge always wraps responses in the
+ * formal `{ok, data, error}` envelope now that the receiver is real; the
+ * bare/legacy parse path is kept only as a defensive fallback, never
+ * assumed as primary.
  *
  * Every public method returns `WithMeta<T>` — never throws for an expected
  * failure (not-configured, timeout, upstream error, unparseable body,
@@ -65,13 +73,11 @@ async function rawFetch(fetchImpl: FetchImpl, url: string, secret: string, busin
       method: "GET",
       headers: {
         Authorization: `Bearer ${secret}`,
-        // Required per the service bridge contract (Slice 10) — the
-        // secret proves this request came from Flow's backend; this
-        // header states WHICH business profile's data is being asked
-        // for. A valid secret is necessary, never sufficient, mirroring
-        // the "representedUid required, never optional" discipline
-        // already established for every other service-to-service caller
-        // in this codebase (Slices 5-9).
+        // Required per the service bridge contract (Slice 10, verified
+        // live against the real `requireServiceAuth` middleware in Slice
+        // 10.5) — the secret proves this request came from Flow's
+        // backend; this header states WHICH business profile's data is
+        // being asked for. A valid secret is necessary, never sufficient.
         "X-Intelligence-Business-Profile-Id": businessProfileId,
         Accept: "application/json",
       },
@@ -79,7 +85,16 @@ async function rawFetch(fetchImpl: FetchImpl, url: string, secret: string, busin
     });
     clearTimeout(timer);
     if (!res.ok) {
-      return { ok: false, status: res.status, timedOut: false, body: null };
+      // The bridge itself returns 401/404/500 WITH a JSON envelope body
+      // (never a bare non-2xx with no body) — still parse it so the
+      // envelope branch below can extract the real error code instead of
+      // falling back to a generic "http_error".
+      try {
+        const body = await res.json();
+        return { ok: false, status: res.status, timedOut: false, body };
+      } catch {
+        return { ok: false, status: res.status, timedOut: false, body: null };
+      }
     }
     try {
       const body = await res.json();
@@ -107,10 +122,8 @@ async function fetchWithRetry(fetchImpl: FetchImpl, url: string, secret: string,
   }
 }
 
-// ── Response envelope (Slice 10 contract) ───────────────────────────────
+// ── Response envelope (Slice 10 contract, live since Slice 10.5) ────────
 
-/** The formal shape from INTELLIGENCE_SERVICE_BRIDGE_CONTRACT.md. Not yet
- *  observed live — see the file header. */
 interface BridgeEnvelope {
   ok: boolean;
   data: unknown;
@@ -129,6 +142,11 @@ function isBridgeEnvelope(body: unknown): body is BridgeEnvelope {
  * Core generic read: cache → not-configured gate → fetch-with-retry →
  * parse → cache write. `resource` is a stable audit/cache-key label (e.g.
  * "growth-timeline"), never a value containing business/user data.
+ *
+ * `treatNotFoundAsEmpty`: the growth-timeline endpoint legitimately 404s
+ * ("not_found") when fewer than 2 scans exist for a profile — that's a
+ * real, expected "empty" state, not a failure, so it's surfaced as
+ * `status: "empty"` rather than `"unavailable"` when this flag is set.
  */
 async function readAscendResource<T>(params: {
   resource: string;
@@ -137,8 +155,9 @@ async function readAscendResource<T>(params: {
   businessProfileId: string;
   fetchImpl: FetchImpl;
   parse: (body: unknown) => T | null;
+  treatNotFoundAsEmpty?: boolean;
 }): Promise<WithMeta<T>> {
-  const { resource, cacheKey, path, businessProfileId, fetchImpl, parse } = params;
+  const { resource, cacheKey, path, businessProfileId, fetchImpl, parse, treatNotFoundAsEmpty } = params;
 
   const cached = readIntelligenceCache<T>(cacheKey);
   if (cached.hit === "fresh") {
@@ -170,35 +189,37 @@ async function readAscendResource<T>(params: {
   const result = await fetchWithRetry(fetchImpl, `${baseUrl}${path}`, secret, businessProfileId);
   const durationMs = Date.now() - start;
 
-  if (result.ok) {
-    // Envelope-aware first (Slice 10 contract) — if the body matches the
-    // formal {ok, data, error} shape, its `ok` field is authoritative,
-    // even though the HTTP status was already 2xx (the contract doc's own
-    // reasoning: a misconfigured proxy could rewrite a status code but not
-    // the body). Falls back to the Slice 9 bare/legacy parse for anything
-    // that doesn't match — the real shape has never been observed live.
-    if (isBridgeEnvelope(result.body)) {
-      if (!result.body.ok) {
-        const code = result.body.error?.code && ENVELOPE_ERROR_CODES.has(result.body.error.code) ? result.body.error.code : "internal_error";
-        recordIntelligenceAuditEvent({ kind: "bridge_envelope_error", resource, errorCode: code, durationMs });
-        if (cached.hit === "stale") {
-          return { meta: { status: "stale", fetchedAt: cached.fetchedAt, reasonCode: code }, data: cached.value };
-        }
-        return { meta: { status: "unavailable", fetchedAt: null, reasonCode: code }, data: null };
+  if (isBridgeEnvelope(result.body)) {
+    if (!result.body.ok) {
+      const code = result.body.error?.code && ENVELOPE_ERROR_CODES.has(result.body.error.code) ? result.body.error.code : "internal_error";
+      if (treatNotFoundAsEmpty && code === "not_found") {
+        recordIntelligenceAuditEvent({ kind: "bridge_envelope_ok", resource, durationMs });
+        return { meta: { status: "empty", fetchedAt: Date.now(), reasonCode: null }, data: null };
       }
-      const parsedEnvelope = parse(result.body.data);
-      if (parsedEnvelope === null) {
-        recordIntelligenceAuditEvent({ kind: "fetch_failure", resource, reasonCode: "unparseable_response", durationMs });
-        if (cached.hit === "stale") {
-          return { meta: { status: "stale", fetchedAt: cached.fetchedAt, reasonCode: "unparseable_response" }, data: cached.value };
-        }
-        return { meta: { status: "unavailable", fetchedAt: null, reasonCode: "unparseable_response" }, data: null };
+      recordIntelligenceAuditEvent({ kind: "bridge_envelope_error", resource, errorCode: code, durationMs });
+      if (cached.hit === "stale") {
+        return { meta: { status: "stale", fetchedAt: cached.fetchedAt, reasonCode: code }, data: cached.value };
       }
-      writeIntelligenceCache(cacheKey, parsedEnvelope);
-      recordIntelligenceAuditEvent({ kind: "bridge_envelope_ok", resource, durationMs });
-      return { meta: { status: "ok", fetchedAt: Date.now(), reasonCode: null }, data: parsedEnvelope };
+      return { meta: { status: "unavailable", fetchedAt: null, reasonCode: code }, data: null };
     }
+    const parsedEnvelope = parse(result.body.data);
+    if (parsedEnvelope === null) {
+      recordIntelligenceAuditEvent({ kind: "fetch_failure", resource, reasonCode: "unparseable_response", durationMs });
+      if (cached.hit === "stale") {
+        return { meta: { status: "stale", fetchedAt: cached.fetchedAt, reasonCode: "unparseable_response" }, data: cached.value };
+      }
+      return { meta: { status: "unavailable", fetchedAt: null, reasonCode: "unparseable_response" }, data: null };
+    }
+    writeIntelligenceCache(cacheKey, parsedEnvelope);
+    recordIntelligenceAuditEvent({ kind: "bridge_envelope_ok", resource, durationMs });
+    return { meta: { status: "ok", fetchedAt: Date.now(), reasonCode: null }, data: parsedEnvelope };
+  }
 
+  if (result.ok) {
+    // Defensive fallback for a bare/legacy body that isn't the formal
+    // envelope — kept only in case something between Flow and the real
+    // bridge (a proxy, a CDN) ever strips the envelope. Never the expected
+    // path against the real, live `/internal/intelligence/*` receiver.
     const parsed = parse(result.body);
     if (parsed === null) {
       recordIntelligenceAuditEvent({ kind: "fetch_failure", resource, reasonCode: "unparseable_response", durationMs });
@@ -229,136 +250,256 @@ async function readAscendResource<T>(params: {
 }
 
 // ── Parsers — defensive, never throw, return null on any shape mismatch ──
-// Field names match the real schema/route findings documented in
-// src/types/intelligence.ts's header comment. Response envelope shape
-// (bare object vs. {data: ...}) has not been observed live (no working
-// connection exists yet — see the auth-gap note) — parsers accept either,
-// since that's the one thing that's genuinely unknown rather than unverified.
+// Field names match the REAL schema/route shapes confirmed by direct
+// source read of `intelligenceQueries.ts` this slice (Slice 10.5) — see
+// src/types/intelligence.ts's header for the full correction record.
 
-function unwrap(body: unknown): Record<string, unknown> | null {
+function str(v: unknown): string | null {
+  return typeof v === "string" ? v : null;
+}
+function num(v: unknown): number | null {
+  return typeof v === "number" ? v : null;
+}
+function bool(v: unknown, fallback: boolean): boolean {
+  return typeof v === "boolean" ? v : fallback;
+}
+
+function parseCategoryScore(raw: unknown): CroAuditCategoryScore | null {
+  if (!raw || typeof raw !== "object") return null;
+  const c = raw as Record<string, unknown>;
+  if (typeof c.key !== "string" || typeof c.label !== "string") return null;
+  return {
+    key: c.key,
+    label: c.label,
+    score: num(c.score) ?? 0,
+    color: (["green", "yellow", "red"] as const).includes(c.color as never) ? (c.color as "green" | "yellow" | "red") : "yellow",
+    finding: str(c.finding) ?? "",
+  };
+}
+
+function parseCategoryScoreArray(raw: unknown): CroAuditCategoryScore[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map(parseCategoryScore).filter((c): c is CroAuditCategoryScore => c !== null);
+}
+
+function parseRecommendation(raw: unknown): CroAuditRecommendation | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.fix !== "string") return null;
+  return {
+    categoryKey: str(r.categoryKey) ?? "",
+    categoryLabel: str(r.categoryLabel) ?? "",
+    impact: (["High", "Medium", "Low"] as const).includes(r.impact as never) ? (r.impact as "High" | "Medium" | "Low") : "Medium",
+    difficulty: (["High", "Medium", "Low"] as const).includes(r.difficulty as never) ? (r.difficulty as "High" | "Medium" | "Low") : "Medium",
+    fix: r.fix,
+    fixWithZeno: str(r.fixWithZeno),
+    fixContext: str(r.fixContext) ?? "",
+  };
+}
+
+function parseRecommendationArray(raw: unknown): CroAuditRecommendation[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map(parseRecommendation).filter((r): r is CroAuditRecommendation => r !== null);
+}
+
+function parseDashboardAsset(raw: unknown): DashboardAsset | null {
+  if (!raw || typeof raw !== "object") return null;
+  const a = raw as Record<string, unknown>;
+  if (typeof a.id !== "number") return null;
+  return {
+    id: a.id,
+    createdAt: str(a.createdAt) ?? new Date().toISOString(),
+    assetType: str(a.assetType) ?? "",
+    title: str(a.title) ?? "",
+    version: num(a.version) ?? 1,
+  };
+}
+
+function parseDashboardTimelineEvent(raw: unknown): DashboardTimelineEvent | null {
+  if (!raw || typeof raw !== "object") return null;
+  const t = raw as Record<string, unknown>;
+  if (typeof t.id !== "number") return null;
+  return {
+    id: t.id,
+    createdAt: str(t.createdAt) ?? new Date().toISOString(),
+    businessProfileId: num(t.businessProfileId) ?? 0,
+    eventType: str(t.eventType) ?? "unknown",
+    title: str(t.title) ?? "",
+    summary: str(t.summary),
+    sourceType: str(t.sourceType),
+    sourceId: str(t.sourceId),
+    metadata: t.metadata ?? null,
+  };
+}
+
+function parseDashboardSummary(body: unknown): DashboardSummary | null {
   if (!body || typeof body !== "object") return null;
   const obj = body as Record<string, unknown>;
-  if (obj.data && typeof obj.data === "object") return obj.data as Record<string, unknown>;
-  return obj;
-}
-
-function parseCategoryScores(raw: unknown): { category: string; score: number }[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .filter((c): c is Record<string, unknown> => !!c && typeof c === "object")
-    .map((c) => ({
-      category: typeof c.category === "string" ? c.category : "",
-      score: typeof c.score === "number" ? c.score : 0,
-    }))
-    .filter((c) => c.category);
-}
-
-function parseGrowthAssessment(body: unknown): GrowthAssessment | null {
-  const obj = unwrap(body);
-  if (!obj || typeof obj.id !== "string") return null;
-  const scoreObj = obj.growthScore as Record<string, unknown> | undefined;
+  const scoreLabel = (["Optimized", "Ready to Scale", "Growing", "Needs Work"] as const).includes(obj.scoreLabel as never)
+    ? (obj.scoreLabel as DashboardSummary["scoreLabel"])
+    : null;
   return {
-    id: obj.id,
-    businessProfileId: typeof obj.businessProfileId === "string" ? obj.businessProfileId : "",
-    status: (["pending", "in_progress", "complete", "failed"] as const).includes(obj.status as never)
-      ? (obj.status as GrowthAssessment["status"])
+    latestGrowthScore: num(obj.latestGrowthScore),
+    scoreLabel,
+    primaryConstraint: str(obj.primaryConstraint),
+    recommendedFunnel: str(obj.recommendedFunnel),
+    recommendedAction: str(obj.recommendedAction),
+    latestBlueprintHeadline: str(obj.latestBlueprintHeadline),
+    assessmentId: num(obj.assessmentId),
+    blueprintId: num(obj.blueprintId),
+    latestBlueprintAssessmentId: num(obj.latestBlueprintAssessmentId),
+    hasScan: bool(obj.hasScan, false),
+    lastFiveAssets: Array.isArray(obj.lastFiveAssets) ? obj.lastFiveAssets.map(parseDashboardAsset).filter((a): a is DashboardAsset => a !== null) : [],
+    lastFiveTimeline: Array.isArray(obj.lastFiveTimeline)
+      ? obj.lastFiveTimeline.map(parseDashboardTimelineEvent).filter((t): t is DashboardTimelineEvent => t !== null)
+      : [],
+  };
+}
+
+function parseCroAuditRow(raw: unknown): CroAudit | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  if (typeof o.id !== "number" || typeof o.url !== "string") return null;
+  return {
+    id: o.id,
+    createdAt: str(o.createdAt) ?? new Date().toISOString(),
+    businessProfileId: num(o.businessProfileId),
+    url: o.url,
+    notes: str(o.notes),
+    overallScore: num(o.overallScore) ?? 0,
+    categoryScores: parseCategoryScoreArray(o.categoryScores),
+    strengths: parseCategoryScoreArray(o.strengths),
+    weaknesses: parseCategoryScoreArray(o.weaknesses),
+    quickWins: parseRecommendationArray(o.quickWins),
+    recommendations: parseRecommendationArray(o.recommendations),
+    aiMode: o.aiMode === "live" ? "live" : "mock",
+    requiresHumanReview: bool(o.requiresHumanReview, false),
+    reviewReason: str(o.reviewReason),
+  };
+}
+
+function parseCroAudits(body: unknown): CroAudit[] | null {
+  if (!Array.isArray(body)) return null;
+  return body.map(parseCroAuditRow).filter((a): a is CroAudit => a !== null);
+}
+
+function parseMemoryItem(raw: unknown): MemoryActionItem | null {
+  if (!raw || typeof raw !== "object") return null;
+  const i = raw as Record<string, unknown>;
+  if (typeof i.id !== "number" || typeof i.recommendation !== "string") return null;
+  return {
+    id: i.id,
+    createdAt: str(i.createdAt) ?? new Date().toISOString(),
+    updatedAt: str(i.updatedAt) ?? new Date().toISOString(),
+    businessProfileId: num(i.businessProfileId) ?? 0,
+    recommendation: i.recommendation,
+    status: (["pending", "in_progress", "completed", "skipped"] as const).includes(i.status as never)
+      ? (i.status as MemoryActionItem["status"])
       : "pending",
-    growthScore:
-      scoreObj && typeof scoreObj.overallScore === "number"
-        ? {
-            overallScore: scoreObj.overallScore,
-            primaryConstraint: typeof scoreObj.primaryConstraint === "string" ? scoreObj.primaryConstraint : null,
-            categoryScores: parseCategoryScores(scoreObj.categoryScores),
-            scannedAt: typeof scoreObj.scannedAt === "string" ? scoreObj.scannedAt : new Date().toISOString(),
-          }
-        : null,
-    recommendedFunnel: typeof obj.recommendedFunnel === "string" ? obj.recommendedFunnel : null,
-    createdAt: typeof obj.createdAt === "string" ? obj.createdAt : new Date().toISOString(),
+    sourceType: str(i.sourceType),
+    sourceId: num(i.sourceId),
   };
 }
 
-function parseCroAudit(body: unknown): CroAuditSummary | null {
-  const obj = unwrap(body);
-  if (!obj || typeof obj.id !== "string") return null;
-  const recs = Array.isArray(obj.recommendations) ? obj.recommendations : [];
+function parseMemory(body: unknown): MemoryActionItem[] | null {
+  if (!Array.isArray(body)) return null;
+  return body.map(parseMemoryItem).filter((i): i is MemoryActionItem => i !== null);
+}
+
+function parseCategoryDelta(raw: unknown): GrowthTimelineCategoryDelta | null {
+  if (!raw || typeof raw !== "object") return null;
+  const c = raw as Record<string, unknown>;
+  if (typeof c.key !== "string") return null;
   return {
-    id: obj.id,
-    businessProfileId: typeof obj.businessProfileId === "string" ? obj.businessProfileId : "",
-    overallScore: typeof obj.overallScore === "number" ? obj.overallScore : null,
-    quickWinCount: typeof obj.quickWinCount === "number" ? obj.quickWinCount : 0,
-    recommendations: recs
-      .filter((r): r is Record<string, unknown> => !!r && typeof r === "object")
-      .map((r) => ({
-        id: typeof r.id === "string" ? r.id : "",
-        title: typeof r.title === "string" ? r.title : "",
-        impact: (["high", "medium", "low"] as const).includes(r.impact as never) ? (r.impact as "high" | "medium" | "low") : "medium",
-        difficulty: (["high", "medium", "low"] as const).includes(r.difficulty as never) ? (r.difficulty as "high" | "medium" | "low") : "medium",
-        category: typeof r.category === "string" ? r.category : "general",
-        sourceAuditId: obj.id as string,
-      }))
-      .filter((r) => r.id),
-    createdAt: typeof obj.createdAt === "string" ? obj.createdAt : new Date().toISOString(),
+    key: c.key,
+    label: str(c.label) ?? "",
+    previousScore: num(c.previousScore) ?? 0,
+    currentScore: num(c.currentScore) ?? 0,
+    difference: num(c.difference) ?? 0,
+    direction: (["improved", "declined", "no_change", "new_finding", "resolved"] as const).includes(c.direction as never)
+      ? (c.direction as GrowthTimelineCategoryDelta["direction"])
+      : "no_change",
+    reason: str(c.reason) ?? "",
   };
 }
 
-function parseMemorySummary(body: unknown): BusinessMemorySummary | null {
-  const obj = unwrap(body);
-  if (!obj) return null;
-  const items = Array.isArray(obj.items) ? obj.items : Array.isArray(obj.recentItems) ? obj.recentItems : [];
+function parseRecommendationProgress(raw: unknown): GrowthTimelineRecommendationProgress | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.recommendation !== "string") return null;
+  const status = (["completed", "improved", "no_change", "regressed", "outstanding", "new_opportunity"] as const).includes(r.status as never)
+    ? (r.status as GrowthTimelineRecommendationProgress["status"])
+    : "outstanding";
   return {
-    totalCount: typeof obj.totalCount === "number" ? obj.totalCount : items.length,
-    approvedCount: typeof obj.approvedCount === "number" ? obj.approvedCount : 0,
-    recentItems: items
-      .filter((i: unknown): i is Record<string, unknown> => !!i && typeof i === "object")
-      .map((i: Record<string, unknown>) => ({
-        id: typeof i.id === "string" ? i.id : "",
-        memoryType: typeof i.memoryType === "string" ? i.memoryType : "unknown",
-        summary: typeof i.summary === "string" ? i.summary : "",
-        confidenceScore: typeof i.confidenceScore === "number" ? i.confidenceScore : null,
-        status: (["pending", "approved", "rejected", "needs_revision"] as const).includes(i.status as never)
-          ? (i.status as "pending" | "approved" | "rejected" | "needs_revision")
-          : "pending",
-        createdAt: typeof i.createdAt === "string" ? i.createdAt : new Date().toISOString(),
-      }))
-      .filter((i) => i.id),
+    recommendation: r.recommendation,
+    status,
+    ...(typeof r.previousScore === "number" ? { previousScore: r.previousScore } : {}),
+    ...(typeof r.currentScore === "number" ? { currentScore: r.currentScore } : {}),
+    ...(typeof r.relatedCategory === "string" ? { relatedCategory: r.relatedCategory } : {}),
   };
 }
 
-function parseTimeline(body: unknown): GrowthTimelineEntry[] | null {
-  const obj = unwrap(body);
-  if (!obj) return null;
-  const items = Array.isArray(obj.items) ? obj.items : Array.isArray(obj) ? obj : null;
-  if (!items) return null;
-  return items
-    .filter((i: unknown): i is Record<string, unknown> => !!i && typeof i === "object")
-    .map((i: Record<string, unknown>) => ({
-      id: typeof i.id === "string" ? i.id : "",
-      kind: typeof i.kind === "string" ? i.kind : "unknown",
-      title: typeof i.title === "string" ? i.title : "",
-      occurredAt: typeof i.occurredAt === "string" ? i.occurredAt : new Date().toISOString(),
-      businessProfileId: typeof i.businessProfileId === "string" ? i.businessProfileId : "",
-    }))
-    .filter((i) => i.id);
+function parseBusinessEvolution(raw: unknown): GrowthTimelineBusinessEvolution {
+  const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  return {
+    previousOverallScore: num(o.previousOverallScore) ?? 0,
+    currentOverallScore: num(o.currentOverallScore) ?? 0,
+    difference: num(o.difference) ?? 0,
+    direction: (["improved", "declined", "no_change"] as const).includes(o.direction as never)
+      ? (o.direction as GrowthTimelineBusinessEvolution["direction"])
+      : "no_change",
+    summary: str(o.summary) ?? "",
+    topImprovements: Array.isArray(o.topImprovements) ? o.topImprovements.filter((s): s is string => typeof s === "string") : [],
+    outstandingIssues: Array.isArray(o.outstandingIssues) ? o.outstandingIssues.filter((s): s is string => typeof s === "string") : [],
+    highestPriorityOpportunity: str(o.highestPriorityOpportunity) ?? "",
+  };
+}
+
+function parseGrowthTimeline(body: unknown): GrowthTimeline | null {
+  if (!body || typeof body !== "object") return null;
+  const o = body as Record<string, unknown>;
+  if (typeof o.id !== "number") return null;
+  return {
+    id: o.id,
+    createdAt: str(o.createdAt) ?? new Date().toISOString(),
+    updatedAt: str(o.updatedAt) ?? new Date().toISOString(),
+    businessProfileId: num(o.businessProfileId) ?? 0,
+    currentScanId: num(o.currentScanId),
+    previousScanId: num(o.previousScanId),
+    scanCount: num(o.scanCount) ?? 0,
+    businessEvolution: parseBusinessEvolution(o.businessEvolution),
+    categoryDeltas: Array.isArray(o.categoryDeltas) ? o.categoryDeltas.map(parseCategoryDelta).filter((c): c is GrowthTimelineCategoryDelta => c !== null) : [],
+    recommendationProgress: Array.isArray(o.recommendationProgress)
+      ? o.recommendationProgress.map(parseRecommendationProgress).filter((r): r is GrowthTimelineRecommendationProgress => r !== null)
+      : [],
+  };
+}
+
+function parseReportItem(raw: unknown): IntelligenceReportSummary | null {
+  if (!raw || typeof raw !== "object") return null;
+  const i = raw as Record<string, unknown>;
+  if (typeof i.id !== "string") return null;
+  return {
+    id: i.id,
+    reportType: i.reportType === "business_architect" ? "business_architect" : "growth_scan",
+    title: str(i.title) ?? "",
+    businessType: str(i.businessType),
+    websiteUrl: str(i.websiteUrl),
+    score: num(i.score),
+    scoreLabel: str(i.scoreLabel),
+    status: str(i.status),
+    createdAt: str(i.createdAt) ?? new Date().toISOString(),
+    shareToken: str(i.shareToken),
+    scanId: num(i.scanId),
+    blueprintId: num(i.blueprintId),
+    assessmentId: num(i.assessmentId),
+    businessProfileId: num(i.businessProfileId),
+  };
 }
 
 function parseReports(body: unknown): IntelligenceReportSummary[] | null {
-  const obj = unwrap(body);
-  if (!obj) return null;
-  const items = Array.isArray(obj.items) ? obj.items : Array.isArray(obj) ? obj : null;
-  if (!items) return null;
-  return items
-    .filter((i: unknown): i is Record<string, unknown> => !!i && typeof i === "object")
-    .map((i: Record<string, unknown>) => ({
-      id: typeof i.id === "string" ? i.id : "",
-      kind: (["growth_scan", "cro_audit", "blueprint"] as const).includes(i.kind as never)
-        ? (i.kind as "growth_scan" | "cro_audit" | "blueprint")
-        : "growth_scan",
-      title: typeof i.title === "string" ? i.title : "",
-      score: typeof i.score === "number" ? i.score : null,
-      createdAt: typeof i.createdAt === "string" ? i.createdAt : new Date().toISOString(),
-      shareUrl: typeof i.shareUrl === "string" ? i.shareUrl : null,
-    }))
-    .filter((i) => i.id);
+  if (!Array.isArray(body)) return null;
+  return body.map(parseReportItem).filter((i): i is IntelligenceReportSummary => i !== null);
 }
 
 // ── Public client ─────────────────────────────────────────────────────────
@@ -371,47 +512,48 @@ export function createAscendIntelligenceClient(options: AscendIntelligenceClient
   const fetchImpl = options.fetchImpl ?? fetch;
 
   return {
-    async getLatestGrowthAssessment(businessProfileId: string): Promise<WithMeta<GrowthAssessment>> {
+    async getDashboardSummary(businessProfileId: string): Promise<WithMeta<DashboardSummary>> {
       return readAscendResource({
-        resource: "growth-assessment",
-        cacheKey: `growth-assessment:${businessProfileId}`,
-        path: `/zeno/business-profiles/${encodeURIComponent(businessProfileId)}/dashboard-summary`,
+        resource: "dashboard-summary",
+        cacheKey: `dashboard-summary:${businessProfileId}`,
+        path: `/internal/intelligence/business-profiles/${encodeURIComponent(businessProfileId)}/dashboard-summary`,
         businessProfileId,
         fetchImpl,
-        parse: parseGrowthAssessment,
+        parse: parseDashboardSummary,
       });
     },
 
-    async getLatestCroAudit(businessProfileId: string): Promise<WithMeta<CroAuditSummary>> {
+    async getCroAudits(businessProfileId: string): Promise<WithMeta<CroAudit[]>> {
       return readAscendResource({
-        resource: "cro-audit",
-        cacheKey: `cro-audit:${businessProfileId}`,
-        path: `/zeno/cro-audits?businessProfileId=${encodeURIComponent(businessProfileId)}&limit=1`,
+        resource: "cro-audits",
+        cacheKey: `cro-audits:${businessProfileId}`,
+        path: `/internal/intelligence/cro-audits`,
         businessProfileId,
         fetchImpl,
-        parse: parseCroAudit,
+        parse: parseCroAudits,
       });
     },
 
-    async getBusinessMemorySummary(businessProfileId: string): Promise<WithMeta<BusinessMemorySummary>> {
+    async getMemory(businessProfileId: string): Promise<WithMeta<MemoryActionItem[]>> {
       return readAscendResource({
-        resource: "business-memory",
-        cacheKey: `business-memory:${businessProfileId}`,
-        path: `/zeno/memory?businessProfileId=${encodeURIComponent(businessProfileId)}`,
+        resource: "memory",
+        cacheKey: `memory:${businessProfileId}`,
+        path: `/internal/intelligence/memory`,
         businessProfileId,
         fetchImpl,
-        parse: parseMemorySummary,
+        parse: parseMemory,
       });
     },
 
-    async getGrowthTimeline(businessProfileId: string): Promise<WithMeta<GrowthTimelineEntry[]>> {
+    async getGrowthTimeline(businessProfileId: string): Promise<WithMeta<GrowthTimeline>> {
       return readAscendResource({
         resource: "growth-timeline",
         cacheKey: `growth-timeline:${businessProfileId}`,
-        path: `/zeno/growth-timeline/${encodeURIComponent(businessProfileId)}`,
+        path: `/internal/intelligence/growth-timeline/${encodeURIComponent(businessProfileId)}`,
         businessProfileId,
         fetchImpl,
-        parse: parseTimeline,
+        parse: parseGrowthTimeline,
+        treatNotFoundAsEmpty: true,
       });
     },
 
@@ -419,7 +561,7 @@ export function createAscendIntelligenceClient(options: AscendIntelligenceClient
       return readAscendResource({
         resource: "reports",
         cacheKey: `reports:${businessProfileId}`,
-        path: `/zeno/reports?businessProfileId=${encodeURIComponent(businessProfileId)}`,
+        path: `/internal/intelligence/reports`,
         businessProfileId,
         fetchImpl,
         parse: parseReports,

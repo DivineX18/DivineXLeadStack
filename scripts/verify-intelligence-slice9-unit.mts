@@ -2,6 +2,12 @@
  * Ascend OS Phase 2, Slice 9 — genuine unit tests. Real function calls,
  * real assertions, dependency-injected fetch (never a real network call).
  * Same discipline as Slices 4-8's own unit-test scripts.
+ *
+ * Corrected in Slice 10.5: method names, request paths, and body shapes
+ * below now match the REAL Ascend bridge (`/internal/intelligence/*`,
+ * envelope-wrapped `{ok,data,error}` responses) confirmed by direct
+ * source read of `intelligenceQueries.ts` — replacing the guessed Slice 9
+ * shapes this suite originally asserted against.
  */
 let failures = 0;
 function check(label: string, pass: boolean) {
@@ -48,6 +54,8 @@ function check(label: string, pass: boolean) {
 }
 
 // ── 3. derive-next-action (pure composition) ────────────────────────────
+// Real CroAuditRecommendation shape (Title-cased impact/difficulty, no
+// standalone id — see types/intelligence.ts's header for the correction).
 {
   const { deriveRecommendedNextAction } = await import("../src/lib/intelligence/derive-next-action.ts");
   const okMeta = { status: "ok" as const, fetchedAt: Date.now(), reasonCode: null };
@@ -66,18 +74,18 @@ function check(label: string, pass: boolean) {
     } as never) === null,
   );
 
-  const high = { id: "r1", title: "High impact, easy", impact: "high" as const, difficulty: "low" as const, category: "cta", sourceAuditId: "a1" };
-  const low = { id: "r2", title: "Low impact, hard", impact: "low" as const, difficulty: "high" as const, category: "copy", sourceAuditId: "a1" };
-  const medium = { id: "r3", title: "Medium", impact: "medium" as const, difficulty: "medium" as const, category: "design", sourceAuditId: "a1" };
+  const high = { categoryKey: "cta", categoryLabel: "CTA Effectiveness", fix: "High impact, easy", fixWithZeno: null, fixContext: "", impact: "High" as const, difficulty: "Low" as const };
+  const low = { categoryKey: "copy", categoryLabel: "Messaging", fix: "Low impact, hard", fixWithZeno: null, fixContext: "", impact: "Low" as const, difficulty: "High" as const };
+  const medium = { categoryKey: "design", categoryLabel: "Visual Design", fix: "Medium", fixWithZeno: null, fixContext: "", impact: "Medium" as const, difficulty: "Medium" as const };
   const picked = deriveRecommendedNextAction({
     recommendations: { meta: okMeta, data: [low, medium, high] },
   } as never);
-  check("3c. Ranks high-impact/low-difficulty first regardless of input order", picked?.id === "r1");
+  check("3c. Ranks high-impact/low-difficulty first regardless of input order", picked?.fix === "High impact, easy");
 }
 
 // ── 4. Intelligence client — real calls with a fake fetch (no network) ──
 {
-  const { readIntelligenceCache, clearIntelligenceCache } = await import("../src/lib/intelligence/intelligence-cache.ts");
+  const { clearIntelligenceCache } = await import("../src/lib/intelligence/intelligence-cache.ts");
   clearIntelligenceCache();
 
   // 4a. Not configured -> every method fails closed to "unavailable", no fetch attempted.
@@ -91,37 +99,56 @@ function check(label: string, pass: boolean) {
 
   const { createAscendIntelligenceClient } = await import("../src/lib/intelligence/ascend-intelligence-client.ts");
   const clientA = createAscendIntelligenceClient({ fetchImpl: neverCalledFetch });
-  const resA = await clientA.getLatestGrowthAssessment("bp_1");
+  const resA = await clientA.getDashboardSummary("bp_1");
   check("4a. Not configured -> status unavailable, reasonCode not_configured", resA.meta.status === "unavailable" && resA.meta.reasonCode === "not_configured");
   check("4a2. Not configured -> fetch is never actually called", fetchCalls === 0);
 
-  // 4b. Configured + successful fetch -> ok, cached for next call.
+  // 4b. Configured + successful fetch (real envelope shape) -> ok, cached for next call.
   process.env.ASCEND_INTELLIGENCE_API_URL = "https://fake-ascend.test";
   process.env.ASCEND_INTELLIGENCE_API_SECRET = "test-secret";
   clearIntelligenceCache();
 
   let callCount = 0;
-  const okBody = { id: "gs_1", businessProfileId: "bp_1", status: "complete", growthScore: { overallScore: 72, primaryConstraint: "traffic", categoryScores: [], scannedAt: new Date().toISOString() }, recommendedFunnel: "tripwire", createdAt: new Date().toISOString() };
+  const dashboardSummaryData = {
+    latestGrowthScore: 72,
+    scoreLabel: "Ready to Scale",
+    primaryConstraint: "traffic",
+    recommendedFunnel: "tripwire",
+    recommendedAction: "Run a CRO audit",
+    latestBlueprintHeadline: null,
+    assessmentId: 5,
+    blueprintId: null,
+    latestBlueprintAssessmentId: 5,
+    hasScan: true,
+    lastFiveAssets: [],
+    lastFiveTimeline: [],
+  };
+  const envelopeBody = { ok: true, data: dashboardSummaryData, error: null };
   const successFetch = (async (url: unknown, init?: RequestInit) => {
     callCount++;
     const authHeader = (init?.headers as Record<string, string> | undefined)?.Authorization;
     if (authHeader !== "Bearer test-secret") throw new Error("missing/wrong auth header");
-    return new Response(JSON.stringify(okBody), { status: 200, headers: { "content-type": "application/json" } });
+    const profileHeader = (init?.headers as Record<string, string> | undefined)?.["X-Intelligence-Business-Profile-Id"];
+    if (profileHeader !== "bp_1") throw new Error("missing/wrong business-profile-id header");
+    if (typeof url === "string" && !url.includes("/internal/intelligence/business-profiles/bp_1/dashboard-summary")) {
+      throw new Error(`unexpected path: ${url}`);
+    }
+    return new Response(JSON.stringify(envelopeBody), { status: 200, headers: { "content-type": "application/json" } });
   }) as unknown as typeof fetch;
 
   const clientB = createAscendIntelligenceClient({ fetchImpl: successFetch });
-  const resB1 = await clientB.getLatestGrowthAssessment("bp_1");
+  const resB1 = await clientB.getDashboardSummary("bp_1");
   check("4b. Configured + success -> status ok", resB1.meta.status === "ok");
-  check("4b2. Parses real fields correctly", resB1.data?.status === "complete" && resB1.data?.growthScore?.overallScore === 72);
-  check("4b3. Sends the Bearer auth header", callCount === 1);
+  check("4b2. Parses real fields correctly", resB1.data?.hasScan === true && resB1.data?.latestGrowthScore === 72 && resB1.data?.scoreLabel === "Ready to Scale");
+  check("4b3. Sends the Bearer auth header + hits the real bridge path", callCount === 1);
 
-  const resB2 = await clientB.getLatestGrowthAssessment("bp_1");
+  const resB2 = await clientB.getDashboardSummary("bp_1");
   check("4b4. Second call within TTL is served from cache (no second fetch)", callCount === 1 && resB2.meta.status === "ok");
 
   // 4c. Failure with a prior cached value -> falls back to stale, not blank.
   clearIntelligenceCache();
   const clientC1 = createAscendIntelligenceClient({ fetchImpl: successFetch });
-  await clientC1.getLatestGrowthAssessment("bp_stale_test");
+  await clientC1.getDashboardSummary("bp_1");
   const failFetch = (async () => new Response("", { status: 503 })) as unknown as typeof fetch;
   const clientC2 = createAscendIntelligenceClient({ fetchImpl: failFetch });
   // Force the cached entry to be treated as stale-not-fresh by directly
@@ -130,7 +157,7 @@ function check(label: string, pass: boolean) {
   // exercises the same fail-closed branch without needing to fast-forward
   // wall-clock time, which this synchronous test suite doesn't do).
   clearIntelligenceCache();
-  const resC = await clientC2.getLatestGrowthAssessment("bp_new");
+  const resC = await clientC2.getDashboardSummary("bp_new");
   check("4c. Fetch failure with no cache -> unavailable, not thrown", resC.meta.status === "unavailable" && resC.data === null);
 
   // 4d. 500 retries MAX_RETRIES+1 times total, then fails closed.
@@ -141,7 +168,7 @@ function check(label: string, pass: boolean) {
     return new Response("", { status: 500 });
   }) as unknown as typeof fetch;
   const clientD = createAscendIntelligenceClient({ fetchImpl: alwaysFailFetch });
-  const resD = await clientD.getLatestCroAudit("bp_retry_test");
+  const resD = await clientD.getCroAudits("bp_retry_test");
   check("4d. 500 is retried (more than one attempt made)", attempts500 > 1);
   check("4d2. Ultimately fails closed to unavailable, never throws", resD.meta.status === "unavailable");
 
@@ -149,15 +176,23 @@ function check(label: string, pass: boolean) {
   clearIntelligenceCache();
   const badJsonFetch = (async () => new Response("not json{{{", { status: 200, headers: { "content-type": "application/json" } })) as unknown as typeof fetch;
   const clientE = createAscendIntelligenceClient({ fetchImpl: badJsonFetch });
-  const resE = await clientE.getBusinessMemorySummary("bp_bad_json");
+  const resE = await clientE.getMemory("bp_bad_json");
   check("4e. Unparseable response body -> unavailable, no throw", resE.meta.status === "unavailable" && resE.meta.reasonCode !== null);
 
-  // 4f. Empty memory list -> real "empty" data shape, not unavailable.
+  // 4f. Genuinely empty upstream array -> real "ok" with an empty (not null) list.
   clearIntelligenceCache();
-  const emptyMemoryFetch = (async () => new Response(JSON.stringify({ totalCount: 0, approvedCount: 0, items: [] }), { status: 200 })) as unknown as typeof fetch;
+  const emptyMemoryFetch = (async () => new Response(JSON.stringify({ ok: true, data: [], error: null }), { status: 200 })) as unknown as typeof fetch;
   const clientF = createAscendIntelligenceClient({ fetchImpl: emptyMemoryFetch });
-  const resF = await clientF.getBusinessMemorySummary("bp_empty");
-  check("4f. Genuinely empty upstream data -> status ok with an empty (not null) summary", resF.meta.status === "ok" && resF.data?.totalCount === 0);
+  const resF = await clientF.getMemory("bp_empty");
+  check("4f. Genuinely empty upstream data -> status ok with an empty (not null) array", resF.meta.status === "ok" && Array.isArray(resF.data) && resF.data.length === 0);
+
+  // 4g. growth-timeline 404 (not_found envelope error) -> surfaced as "empty", not "unavailable".
+  clearIntelligenceCache();
+  const notFoundFetch = (async () =>
+    new Response(JSON.stringify({ ok: false, data: null, error: { code: "not_found", message: "At least 2 scans are required." } }), { status: 404 })) as unknown as typeof fetch;
+  const clientG = createAscendIntelligenceClient({ fetchImpl: notFoundFetch });
+  const resG = await clientG.getGrowthTimeline("bp_one_scan");
+  check("4g. growth-timeline not_found -> status empty (a real, expected state, not a failure)", resG.meta.status === "empty" && resG.data === null);
 
   // cleanup
   delete process.env.ASCEND_INTELLIGENCE_API_URL;

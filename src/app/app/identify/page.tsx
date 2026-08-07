@@ -43,12 +43,12 @@ export default async function AscendIdentifyPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <GrowthScoreCard growthScore={intelligence.growthScore} />
-        <AssessmentHistoryCard assessment={intelligence.latestAssessment} />
+        <GrowthScoreCard dashboardSummary={intelligence.dashboardSummary} />
+        <AssessmentHistoryCard dashboardSummary={intelligence.dashboardSummary} />
         <RecommendationsListCard recommendations={intelligence.recommendations} />
         <BusinessMemoryCard memory={intelligence.memory} />
-        <GrowthTimelineCard timeline={intelligence.timeline} />
-        <BlueprintSummaryCard assessment={intelligence.latestAssessment} />
+        <GrowthTimelineCard timeline={intelligence.growthTimeline} />
+        <BlueprintSummaryCard dashboardSummary={intelligence.dashboardSummary} />
       </div>
     </div>
   );
