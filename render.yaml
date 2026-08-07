@@ -72,3 +72,13 @@ services:
         sync: false
       - key: OPENROUTER_API_KEY
         sync: false
+      # Ascend OS Phase 2, Slice 9/10.5 — Intelligence Bridge client
+      # (src/lib/intelligence/ascend-intelligence-client.ts). URL must
+      # include the /api prefix since the client appends
+      # /internal/intelligence/... directly. Secret must match
+      # ASCEND_INTELLIGENCE_API_SECRET on the Ascend
+      # (DivineX-Business-Intelligence) side exactly.
+      - key: ASCEND_INTELLIGENCE_API_URL
+        value: https://app.divinex.io/api
+      - key: ASCEND_INTELLIGENCE_API_SECRET
+        sync: false
