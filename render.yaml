@@ -8,6 +8,13 @@ services:
     startCommand: pnpm start
     domains:
       - crm.divinex.io
+      # Ascend OS unification (docs/architecture/ASCEND_OS_V1_ARCHITECTURE_SPECIFICATION.md,
+      # "Customer-Facing Product"): app.divinex.io and crm.divinex.io are
+      # the SAME Next.js app, not two deployments — decide-shell-mode.ts
+      # picks "full_ascend" vs "crm_only" per-request based on which
+      # hostname the caller used, plus entitlements/flags. Do not move this
+      # domain to a different service.
+      - app.divinex.io
     envVars:
       - key: NODE_VERSION
         value: "22"
@@ -77,8 +84,11 @@ services:
       # include the /api prefix since the client appends
       # /internal/intelligence/... directly. Secret must match
       # ASCEND_INTELLIGENCE_API_SECRET on the Ascend
-      # (DivineX-Business-Intelligence) side exactly.
+      # (DivineX-Business-Intelligence) side exactly. Points at
+      # intelligence.divinex.io, NOT app.divinex.io — that domain now
+      # belongs to this app (the unified shell), see the domains: comment
+      # above.
       - key: ASCEND_INTELLIGENCE_API_URL
-        value: https://app.divinex.io/api
+        value: https://intelligence.divinex.io/api
       - key: ASCEND_INTELLIGENCE_API_SECRET
         sync: false
