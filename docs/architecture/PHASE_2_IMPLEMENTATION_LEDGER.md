@@ -629,6 +629,91 @@ Reuses the exact philosophy from Slices 5/6: only five meaningful event types ev
 
 Per instructions: no shell, no customer migration, no Clerk removal, no production auth cutover, no billing changes, no Ascend changes. `IdentityMigrationState`'s `unlinked_ascend_pending` and `IdentityProvider`'s room for a future non-Firebase value are named but unpopulated placeholders for Slice 8+.
 
+## Wave A — Slice 9: Unified Intelligence Integration (Home + Identify)
+
+**Status:** ✅ Complete. Committed to `dev` only. Not merged to `main`. Not deployed. No Firestore rules changed, no new collection. Ascend Intelligence repository untouched (per instruction — confirmed, no file outside this repo was written).
+
+**This slice began from a discontinuity worth recording**: the session that received this slice's instructions had no memory of Slices 2-8.5 being built — they were completed in a separate, parallel effort. Before writing any code, this session re-derived the full picture from `git log`, this ledger, `ASCEND_OS_V1_ARCHITECTURE_SPECIFICATION.md`, and direct reads of the Slice 7/8 output (`types/identity.ts`, `types/ascend-shell.ts`, `lib/shell/shell-context-wrappers.ts`, `app/app/layout.tsx`) before treating anything as "already built." No contradiction was found between this re-derivation and the ledger's own account — Slices 2-8.5 are exactly as documented above.
+
+### Audit findings — Ascend Intelligence integration surface (Task 1)
+
+Grounded in TWO independent Explore passes into `DivineX-Business-Intelligence/artifacts/api-server/src` and `artifacts/divinex/src` completed earlier in this same session (before this slice's instructions arrived, while producing an unrelated architecture blueprint draft) — not re-derived from this slice's own prompt language, which turned out to diverge from reality in two places:
+
+| Real, confirmed (route mounted, `requireAuth`/Clerk-gated) | This slice's client targets |
+|---|---|
+| `GET /zeno/business-profiles/:id/dashboard-summary` | Growth Score + latest Assessment |
+| `GET /zeno/cro-audits` | CRO Audit summary + nested Recommendations |
+| `GET /zeno/memory` | Business Memory summary |
+| `GET /zeno/growth-timeline/:businessProfileId` | Growth Timeline |
+| `GET /zeno/reports` | Recent Intelligence / Reports |
+
+**Contradiction #1 (recorded, not silently resolved)**: this slice's own task list names "Recommendations" as a first-class, independent Ascend read surface. No standalone `/recommendations` endpoint exists anywhere in Ascend's route mounts (confirmed by direct read of `routes/index.ts`/`routes/zeno.ts`/`routes/growthScan.ts`). Recommendations are real, but live nested inside a CRO audit response's `recommendations` field. `Recommendation` is modeled for that nested shape; there is no `listRecommendations()` client method, because that would be an invented endpoint.
+
+**Contradiction #2 (recorded)**: "Zeno read APIs" is listed as a distinct surface. Zeno's own endpoint (`POST /zeno/chat`) is chat/action, not a read API — and per this session's own earlier audit, Zeno has NO tool-calling mechanism at all (no `tools` array is ever passed to the Anthropic/OpenAI call; it's a context-stuffed single-shot chatbot). The genuinely read-only Zeno-adjacent surfaces are `/zeno/memory` and `/zeno/timeline`/`/zeno/growth-timeline/:id` — both are in the client; there is no fictional "Zeno read" endpoint.
+
+**Auth gap (recorded, not worked around — this is the load-bearing finding of the whole slice)**: `ASCEND_OS_V1_ARCHITECTURE_SPECIFICATION.md` Section 6 ("API Contract Strategy") explicitly states the Flow→Ascend service-to-service contract is "Not implemented by this document — this is the Phase 1 checklist, pending product-owner approval." No service-account/API-key mechanism exists on Ascend's side today — confirmed by direct source read: its only non-Clerk auth path is a dev-only bypass header, explicitly disabled in production. **This means the two new env vars this slice introduces (`ASCEND_INTELLIGENCE_API_URL`, `ASCEND_INTELLIGENCE_API_SECRET`, named to mirror the proven `ASCEND_SSO_EXCHANGE_URL`/`ASCEND_SSO_SHARED_SECRET` shape) are not set anywhere, and every Ascend Intelligence read will report `status: "unavailable"` / `reasonCode: "not_configured"` until the real contract is specified and configured.** This is not a placeholder standing in for something real — it is the honest, currently-correct state of the system, and it's exactly why the master prompt's own card-state checklist requires a first-class "unavailable" state for every card.
+
+### Types built (Task 2)
+
+`src/types/intelligence.ts` — zero runtime imports (pure data). `IntelligenceFieldStatus` (`ok/cached/stale/unavailable/timeout/empty`) + `WithMeta<T>` wrap every intelligence-derived field independently, so a partial outage never blanks the whole dashboard. `GrowthScore`, `GrowthAssessment`, `Recommendation`, `CroAuditSummary`, `GrowthTimelineEntry`, `BusinessMemorySummary`, `IntelligenceReportSummary`, `IntelligenceSnapshot`, `BusinessHealthSummary` (Flow-sourced), `HomeDashboardData`, `IdentifyDashboardData`.
+
+### Intelligence client (Task 3)
+
+`src/lib/intelligence/ascend-intelligence-client.ts` is the ONE file in the codebase that calls `fetch()` against an Ascend host — structurally enforced (`verify-intelligence-slice9-structure.mts` check 1a). Composed from three smaller files, each independently reusable/testable:
+- `ascend-intelligence-config.ts` — the not-configured gate (see auth-gap finding above).
+- `ascend-intelligence-retry.ts` — pure retry/backoff/error-normalization logic, mirrors the bounded-retry shape already proven in `lib/import/ghl/client.ts`'s `ghlFetch()` rather than inventing a new convention. Retries on 429/5xx/network-level failure, never on 4xx, capped at 2 retries with exponential-ish backoff.
+- `intelligence-cache.ts` — in-memory, per-process, two-tier TTL (2min fresh / 30min stale-but-usable), same accepted tradeoff as `lib/funnels/checkout-rate-limit.ts`.
+
+Every public client method returns `WithMeta<T>`, never throws for a known failure mode (not-configured, timeout, upstream error, unparseable body) — falls back to a stale cache entry when one exists, otherwise fails closed to `unavailable`/`timeout`. Response parsers are defensive (accept either a bare object or `{data: ...}` envelope — the real response shape has never been observed live, given the auth gap; this is the one thing genuinely unknown rather than unverified, stated plainly in the client's own header comment).
+
+### Composition layer (Tasks 4, 6, 9)
+
+- `compose-business-health.ts` — Flow-side operational data (revenue/pipeline/leads/tasks/appointments), computed server-side against `contacts`/`deals`/`tasks`/`events` directly. **New, necessary code** — the existing `sa/[subAccountId]/dashboard` page computes its KPIs client-side via Firestore `onSnapshot`, which a Server Component composer can't reuse; no reusable server-side equivalent existed before this slice. Never throws — a Firestore failure here degrades to `unavailable`, never blocks the rest of the page.
+- `resolve-intelligence-snapshot.ts`::`composeIntelligenceSnapshot()` — resolves workspaceId → `primaryAscendBusinessProfileId` via Slice 4's `getMappingBySubAccountId()` (reused, not reimplemented), then fetches all 5 client resources in parallel (`Promise.all`). A workspace with no Workspace Mapping v2 record (the normal case for most sub-accounts today) returns every field `unavailable`/`no_linked_business_profile` — a real, expected state, not an error.
+- `compose-home-dashboard.ts` — Flow operational data + Ascend intelligence fetched IN PARALLEL (`Promise.all` across the two composers, not sequential) — structurally guarantees an Ascend outage never delays the CRM half, satisfying "never block the page because Ascend is unavailable" as an architectural property, not just a documented intent.
+- `derive-next-action.ts` — pure, ranks available recommendations (impact × inverse difficulty); returns `null` when nothing qualifies rather than fabricating one. There is no dedicated "next action" endpoint on Ascend's side (see Contradiction #1) — this is a genuine, disclosed client-side derivation.
+- `compose-identify-dashboard.ts` — intelligence-only (no Flow operational data), its own composer so Identify can resolve independently of Home.
+- `intelligence-wrappers.ts` — the three sanctioned public entry points (`resolveHomeDashboard`, `resolveIdentifyDashboard`, `resolveIntelligenceSnapshot`), each re-checking `workspace.read` via Slice 5's real evaluator BEFORE calling its compose* function — same defense-in-depth discipline as every prior slice's wrapper layer, deliberately redundant with the `/app/*` shell's own gate. Plus a `resolveIntelligenceSnapshotForService({representedUid, workspaceId})` stub for the future Zeno bridge, same `representedUid`-required discipline as Slices 5-8.
+
+### Home + Identify UI (Tasks 5, 6, 7)
+
+Replaces Slice 8's placeholder pages. `src/components/ascend/*` — 8 new card components (`MetricCard`, `GrowthScoreCard`, `RecommendedNextActionCard`/`RecommendationsListCard`, `GrowthTimelineCard`, `BusinessMemoryCard`, `BusinessHealthCard`, `LatestAssessmentCard`/`AssessmentHistoryCard`/`ReportsCard`/`BlueprintSummaryCard`), all sharing one `AscendCardShell` (reuses the `--glass-1/2/3` tokens already defined in `.theme-ascend`, Slice 8) and one `IntelligenceStatusBadge` (renders `cached`/`stale`/`unavailable`/`timeout`/`empty` — `ok` renders nothing, the data speaks for itself). `BusinessHealthCard` deliberately does NOT invent a numeric "health score" — no such derived metric exists in either system's real data; it uses a plain qualitative label instead, consistent with this effort's repeated anti-fabrication findings elsewhere in the codebase. `BlueprintSummaryCard` is deliberately minimal (shows only `recommendedFunnel`, the one blueprint-adjacent field the dashboard-summary response actually carries) rather than inventing full blueprint content this slice's client was never built to fetch.
+
+"Loading" (the master prompt's 6th required card state) is handled at the route level — `/app/home/loading.tsx` and `/app/identify/loading.tsx`, the first `loading.tsx` files anywhere in this app (Slice 8's own audit confirmed none existed) — since the whole payload is composed server-side before the page body renders; there's no per-card independent client fetch to show a spinner for.
+
+### Audit support (Task 10)
+
+`intelligence-audit.ts` — `console.warn` for every cache hit/miss, fetch success/timeout/failure, and not-configured event. Never logs business/user content — only shape-level facts (resource label, status, duration, cache state), same discipline as Slices 5-7's audit modules.
+
+### Tests (Tasks 11, 12)
+
+| Suite | Kind | Result |
+|---|---|---|
+| `scripts/verify-intelligence-slice9-unit.mts` | **Genuine unit tests** — real calls, real assertions, dependency-injected fetch (zero real network calls) | ✅ 22/22 — cache fresh/stale/miss, retry/backoff/error-normalization (all branches), next-action ranking (incl. empty→null), client not-configured gate, successful fetch+parse+cache, cache-hit-avoids-refetch, failure-with-no-cache→unavailable, 500 genuinely retried then fails closed, unparseable JSON→unavailable not a crash, genuinely-empty upstream data→`ok` with empty summary (not `unavailable`) |
+| `scripts/verify-intelligence-slice9-structure.mts` | Structural | ✅ 62/62 — single fetch chokepoint, no other file constructs a `/zeno/` path or reads the shared secret, no `"use client"` component references the secret or imports the client directly, wrapper→compose* call order for all 3 entry points, service wrapper `representedUid` enforcement, pure files stay import-free, cache module never imports Firebase, CRM composer never imports the intelligence cache, every card renders the status badge, pages call the wrapper layer never the raw composer |
+| All 24 pre-existing `verify-*.mts` scripts (Slices 2-8.5 + Flow's own funnel/design-strategy suites) | Regression | ✅ 24/24, all passing. **Correction to a risk this ledger previously recorded**: Slices 3-8.5 repeatedly noted "9 of 10 pre-existing scripts fail with a `server-only` module-guard error." Re-running the full set this slice with the established `NODE_OPTIONS="--conditions=react-server"` invocation, every script passes — that failure was specific to how those scripts were being invoked in whatever environment recorded it, not a real code defect. Recorded here as a correction, not silently left stale. |
+| `npx tsc --noEmit` | — | ✅ Clean on first run |
+| `pnpm lint` | — | Found and fixed one small real pre-existing warning while auditing (`verify-checkout-ghl-audit.mts`'s unused mock parameter, from an unrelated earlier session turn — not part of this slice's own new files). Back to the exact documented baseline (32 problems: 2 errors, 30 warnings), zero new from any Slice 9 file. |
+| `pnpm build` | — | ✅ Clean; confirmed `/app/home` and `/app/identify` both compiled as dynamic routes |
+
+### Bugs found and fixed (in this slice's own test-writing, not the shipped code)
+
+Same recurring class every prior slice has hit: a structural check (10d) initially flagged `identify/page.tsx` for "importing the raw composer directly" — it was matching this file's OWN doc comment, which mentions `compose-identify-dashboard.ts` by name to explain the architecture. Fixed by checking for an actual `import` statement pattern instead of a bare substring, same fix Slices 5-8 each independently arrived at for their own version of this false positive.
+
+### Risks
+
+- **The Ascend Intelligence connection is not live** — this is the slice's central, disclosed limitation, not a defect. Every card will show real `unavailable` states in any environment until `ASCEND_INTELLIGENCE_API_URL`/`ASCEND_INTELLIGENCE_API_SECRET` are actually specified (Architecture Spec Section 6, still pending product-owner approval) and configured on both sides. The client, composition, caching, and UI are all fully real and ready the moment that contract exists — nothing about this slice needs to be revisited to go live, only configured.
+- The Ascend response-envelope shape (bare object vs. `{data: ...}`) and exact field names beyond what this session's earlier source-code Explore passes confirmed are unverified against a live payload — the client's parsers accept either shape and degrade to `null`/defaults on any mismatch rather than crash, but should be re-verified against a real response the first time live connectivity exists.
+- `compose-business-health.ts`'s Firestore queries assume composite indexes exist for `contacts(subAccountId, createdAt)` and `events(subAccountId, startAt)` — both already required by other existing Flow features per `CLAUDE.md` (leads map, booking availability respectively), so this is reusing existing index coverage, not introducing a new dependency — but the contacts query is defensively wrapped to degrade to 0 rather than fail the whole summary if that assumption is ever wrong in a given deployment.
+
+### Deferred / explicitly not done this slice
+
+Per instructions and per honest scope: no live Ascend connectivity test (nothing to test against — the service contract doesn't exist yet), no full Blueprint Studio content (only the one field the real dashboard-summary response carries), no Growth Timeline pagination beyond the first page, no Zeno execution bridge (the service-to-service stub is named, not wired up), no Create/Launch/Grow/Optimize/Scale section work (out of this slice's scope).
+
+### Go/no-go for Slice 10
+
+**Conditional go**, same shape as Slice 8.5's handoff. Everything buildable without live Ascend connectivity is done and verified. Before Slice 10 (or before treating Home/Identify as customer-ready), someone with authority over the Architecture Spec's Section 6 needs to actually specify and provision the Flow→Ascend service auth contract — this is a product/security decision, not an engineering one, and no amount of further Flow-side work substitutes for it.
+
 ## Checkpoint before Slice 2 — resolved
 
 1. **Feature-flag primitive**: confirmed — build it first, on Flow's `dev` branch, reusing the existing agency feature-gate pattern. In progress below.

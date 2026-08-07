@@ -88,7 +88,7 @@ process.env.TENANT_SECRETS_KEY = randomBytes(32).toString("base64");
   const priceUpdateCalls: string[] = [];
   const fakeStripe = {
     products: {
-      create: async (p: { name: string }) => ({ id: "prod_new" }),
+      create: async () => ({ id: "prod_new" }),
       update: async (id: string, params: { name?: string }) => {
         updateCalls.push({ id, params });
         return {};
