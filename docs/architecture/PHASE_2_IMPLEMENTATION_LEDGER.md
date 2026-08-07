@@ -886,3 +886,55 @@ A local `dev` branch already existed on `DivineX-Business-Intelligence` (tracked
 **No action taken** — did not push, merge, delete, or check out either branch beyond the local `git branch`/`git log` inspection above. This needs the product owner to determine which branch actually reflects what's deployed to `app.divinex.io` before any new work lands on either one; picking a side unilaterally risks either losing ~60 commits of real fixes or building on top of a branch that isn't what's actually in production. **Ascend-side Phase 2 implementation is paused until this is resolved separately from Ascend OS.**
 
 Flow-side work (the feature-flag primitive, and everything else that doesn't touch the Ascend repo) is unaffected and continues below.
+
+## Production Cutover — Domain Architecture Lock-In (post-Slice 10.5)
+
+**Trigger:** Slices 2–10.5 were all built and merged on Flow's `dev` branch but never reached `main` — Render deploys `crm.divinex.io` from `main` only, so none of this work (SSO bridge, Intelligence Bridge, unified shell) had ever actually run in production. Discovered when a fresh login to `crm.divinex.io` showed no visible change after the Intelligence Bridge was verified working service-to-service.
+
+### Step 1: `dev` → `main` reconciliation (Flow repo)
+
+Confirmed `main` (tip `2f44208`) is a direct ancestor of `dev` — zero divergence, zero conflicts (`git merge-tree` dry run: 0 conflict markers). Fast-forwarded `main` to `dev`'s tip (13 commits, 127 files). Verified with a full `pnpm build` before pushing — clean, only one pre-existing unrelated lint warning. Pushed; Render auto-deployed successfully (confirmed via `/api/healthz`-equivalent route checks: homepage 200, new `/app/home` and `/api/platform/feature-flags` routes correctly 307-redirecting unauthenticated requests rather than erroring).
+
+Note: this reconciliation was specific to Flow's `dev`/`main` (clean fast-forward). The **separate, still-unresolved** Ascend (`DivineX-Business-Intelligence`) `dev`/`main` divergence documented in the "Checkpoint before Slice 2" section above is untouched — confirmed still real (50 commits ahead on `dev`, 65 ahead on `main`, no common recent ancestor) and still requires a product-owner decision before any action.
+
+### Step 2: Canonical domain architecture decision
+
+Initial assumption (mine) was that the Ascend Business Intelligence app needed its own public subdomain once `app.divinex.io` was correctly re-pointed at the unified Flow shell. **Corrected by the product owner**: the Intelligence service is internal infrastructure, not a third customer-facing product, and should not get a public subdomain by default. Locked-in model:
+
+- `app.divinex.io` — Full Ascend OS experience
+- `crm.divinex.io` — CRM-only experience
+- Both are the **same** Next.js app (this repo); `decide-shell-mode.ts` (Slice 8) picks the mode per-request from hostname + entitlement tier + the `unified_shell` flag — exactly as originally designed, now actually reachable in production for the first time.
+- The Ascend Business Intelligence service (separate repo/deployment) is the Intelligence *backend*, reached only via the bridge API (`ASCEND_INTELLIGENCE_API_URL`) at its own plain Render-assigned URL (`https://divinex-business-intelligence.onrender.com`) — no custom domain. `intelligence.divinex.io` was evaluated and explicitly rejected: no concrete infrastructure need for it beyond naming preference. Render's private internal networking was noted as a possible future hardening (backend traffic never touching the public internet) but not adopted this pass — the existing `requireServiceAuth` shared-secret gate is the real, already-proven security boundary regardless of URL shape.
+
+### Step 3: `app.divinex.io` cutover (zero-downtime order, both Render services + DNS)
+
+Executed in the order that avoids taking the live domain down mid-migration: added `app.divinex.io` as a second domain on the CRM's Render service (alongside `crm.divinex.io`, same app) before any DNS change; only then re-pointed the `app.divinex.io` CNAME from the Ascend Business Intelligence service to the CRM service.
+
+### Step 4: Ascend Business Intelligence — Clerk simplification (Ascend repo)
+
+The BI app's own frontend (`artifacts/divinex`) used `publishableKeyFromHost()` to derive a per-hostname Clerk Frontend API domain (`clerk.<hostname>`) — a pattern that requires a matching Clerk dedicated custom domain for whatever hostname serves the page. Since this frontend no longer lives at a customer-facing custom domain (it's internal/admin-only — calibration reviewers, auditor/trainers, super admins — accessed from exactly one fixed Render URL), removed the hostname-based derivation in favor of using `VITE_CLERK_PUBLISHABLE_KEY` directly. Clerk falls back to its default shared Frontend API domain; no dedicated domain to provision or keep in sync with hosting. Genuine simplification (removes now-purposeless multi-domain logic), not a workaround.
+
+### Verification
+
+| Check | Result |
+|---|---|
+| Intelligence Bridge shared-secret auth (`intelligenceBridge.test.ts`, Ascend repo) | ✅ 16/16, re-run after the URL/Clerk changes |
+| Ascend repo full typecheck | ✅ Clean (only the two known pre-existing dead-script errors, unchanged) |
+| Ascend repo — no other `publishableKeyFromHost`/hostname-derived Clerk references | ✅ Confirmed via grep, none found |
+| Flow repo full production build | ✅ Clean, one pre-existing unrelated lint warning |
+| Flow repo — no customer-facing route depends on the BI frontend | ✅ Confirmed via grep; only 2 references to `app.divinex.io` outside the intelligence client, both correctly self-referential (this app's own "back to Ascend" link and a doc comment) |
+| Flow repo `scripts/verify-*.mts` (27 total) | ✅ 21/27 pass; 6 fail on a pre-existing `server-only` guard tripping under bare `tsx` execution (not Next.js's runtime) — confirmed NOT a regression, since the same failure hits scripts entirely unrelated to this work (e.g. `verify-create-funnel-bullets.mts`) |
+| Flow repo e2e — `unauthenticated-entry.spec.ts` + `accessibility.spec.ts` (the two specs that need no test-account provisioning, per `e2e/README.md`) | ✅ 30/30 |
+| Live production: `divinex-business-intelligence.onrender.com/api/healthz` + `/api/internal/intelligence/cro-audits` (real secret + real business-profile-id header) | ✅ 200, real envelope response |
+| Live production: `crm.divinex.io` homepage, `/app/home`, `/api/platform/feature-flags` (post fast-forward deploy) | ✅ 200 / 307-to-login as expected, no errors |
+
+### Deferred / explicitly not done this pass
+
+- The full authenticated e2e shell suite (`full-ascend-entry`, `crm-only-fallback`, `workspace-resolution`, `lifecycle-navigation`, `operational-module-handoff`, `builder-handoff`, `permissions-entitlements-gates`, `rollback`) — all require real test accounts + a real Workspace Mapping v2 record + the `unified_shell` flag scoped to a test workspace, none of which exist yet. Per `e2e/README.md`'s own policy, never faked as passing.
+- The Ascend repo's separate, unrelated `dev`/`main` divergence (~50 vs ~65 commits) — confirmed still unresolved, explicitly out of scope for this pass, still needs a product-owner decision.
+- Render's private internal networking for the Intelligence Bridge (noted as a possible future hardening in Step 2, not adopted this pass).
+- Actually logging into `app.divinex.io` with an account that has an active Workspace Mapping v2 record + the `unified_shell` flag enabled, to visually confirm the Full Ascend shell renders — the domain/deploy/auth plumbing is now verified end-to-end at the HTTP level, but a human visual check with a real entitled account hasn't happened yet.
+
+### Go/no-go for the next slice
+
+**Stopping here per explicit instruction — not beginning another slice.** Domain architecture is locked in, documented, deployed, and verified at the infrastructure level. The next real step (out of scope for this pass) is provisioning a real Full-Ascend-eligible test account to visually certify the shell in production, per `e2e/README.md`'s operator setup section.
