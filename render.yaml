@@ -84,11 +84,12 @@ services:
       # include the /api prefix since the client appends
       # /internal/intelligence/... directly. Secret must match
       # ASCEND_INTELLIGENCE_API_SECRET on the Ascend
-      # (DivineX-Business-Intelligence) side exactly. Points at
-      # intelligence.divinex.io, NOT app.divinex.io — that domain now
-      # belongs to this app (the unified shell), see the domains: comment
-      # above.
+      # (DivineX-Business-Intelligence) side exactly. Points at that
+      # service's own Render-assigned URL — it's internal infrastructure,
+      # not a customer-facing product, so it deliberately has no custom
+      # domain. app.divinex.io and crm.divinex.io are the only two
+      # customer-facing domains, both served by this app.
       - key: ASCEND_INTELLIGENCE_API_URL
-        value: https://intelligence.divinex.io/api
+        value: https://divinex-business-intelligence.onrender.com/api
       - key: ASCEND_INTELLIGENCE_API_SECRET
         sync: false
