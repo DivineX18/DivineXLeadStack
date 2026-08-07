@@ -14,18 +14,32 @@ import type {
 } from "@/types/intelligence";
 
 /**
- * Ascend OS Phase 2, Slice 9 — THE single server-side client responsible
- * for every Ascend Intelligence read. No other file in this codebase
- * should call `fetch()` against an Ascend host directly — structurally
- * enforced by `scripts/verify-intelligence-structure.mts`.
+ * Ascend OS Phase 2, Slice 9 (hardened in Slice 10) — THE single
+ * server-side client responsible for every Ascend Intelligence read. No
+ * other file in this codebase should call `fetch()` against an Ascend
+ * host directly — structurally enforced by
+ * `scripts/verify-intelligence-slice9-structure.mts`.
+ *
+ * Slice 10 formalized the request/response contract in
+ * `docs/architecture/INTELLIGENCE_SERVICE_BRIDGE_CONTRACT.md` — this
+ * client implements the CALLER half of it (the `X-Intelligence-Business-
+ * Profile-Id` header, envelope-aware parsing). The Ascend RECEIVER side
+ * does not exist yet (blocked on an unresolved main/dev branch divergence
+ * in the Ascend Intelligence repo — see the contract doc), so this client
+ * cannot be verified against a real envelope response today. It therefore
+ * handles TWO response shapes deliberately: the formal
+ * `{ok, data, error}` envelope (once Ascend implements it) and a bare/
+ * legacy shape (today's genuinely-unknown-until-verified state, unchanged
+ * from Slice 9) — never assuming which one a real deployment will send.
  *
  * Every public method returns `WithMeta<T>` — never throws for an expected
- * failure (not-configured, timeout, upstream error, unparseable body).
- * Fails closed to `{status: "unavailable"|"timeout", data: null}` in every
- * one of those cases so a caller can always render a real UI state instead
- * of crashing. Genuine bugs (a programming error in this file) still throw
- * — this contract is about the KNOWN failure modes of a real external
- * dependency, not about swallowing everything unconditionally.
+ * failure (not-configured, timeout, upstream error, unparseable body,
+ * envelope error). Fails closed to `{status: "unavailable"|"timeout",
+ * data: null}` in every one of those cases so a caller can always render a
+ * real UI state instead of crashing. Genuine bugs (a programming error in
+ * this file) still throw — this contract is about the KNOWN failure modes
+ * of a real external dependency, not about swallowing everything
+ * unconditionally.
  */
 
 function sleep(ms: number): Promise<void> {
@@ -43,7 +57,7 @@ interface RawFetchResult {
  *  global fetch. */
 export type FetchImpl = typeof fetch;
 
-async function rawFetch(fetchImpl: FetchImpl, url: string, secret: string): Promise<RawFetchResult> {
+async function rawFetch(fetchImpl: FetchImpl, url: string, secret: string, businessProfileId: string): Promise<RawFetchResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
@@ -51,6 +65,14 @@ async function rawFetch(fetchImpl: FetchImpl, url: string, secret: string): Prom
       method: "GET",
       headers: {
         Authorization: `Bearer ${secret}`,
+        // Required per the service bridge contract (Slice 10) — the
+        // secret proves this request came from Flow's backend; this
+        // header states WHICH business profile's data is being asked
+        // for. A valid secret is necessary, never sufficient, mirroring
+        // the "representedUid required, never optional" discipline
+        // already established for every other service-to-service caller
+        // in this codebase (Slices 5-9).
+        "X-Intelligence-Business-Profile-Id": businessProfileId,
         Accept: "application/json",
       },
       signal: controller.signal,
@@ -72,17 +94,35 @@ async function rawFetch(fetchImpl: FetchImpl, url: string, secret: string): Prom
   }
 }
 
-async function fetchWithRetry(fetchImpl: FetchImpl, url: string, secret: string): Promise<RawFetchResult> {
+async function fetchWithRetry(fetchImpl: FetchImpl, url: string, secret: string, businessProfileId: string): Promise<RawFetchResult> {
   let attempt = 0;
   let last: RawFetchResult = { ok: false, status: null, timedOut: false, body: null };
   for (;;) {
-    last = await rawFetch(fetchImpl, url, secret);
+    last = await rawFetch(fetchImpl, url, secret, businessProfileId);
     if (last.ok) return last;
     if (!shouldRetry({ attempt, status: last.status })) return last;
     await sleep(backoffMs(attempt));
     attempt++;
     if (attempt > MAX_RETRIES) return last;
   }
+}
+
+// ── Response envelope (Slice 10 contract) ───────────────────────────────
+
+/** The formal shape from INTELLIGENCE_SERVICE_BRIDGE_CONTRACT.md. Not yet
+ *  observed live — see the file header. */
+interface BridgeEnvelope {
+  ok: boolean;
+  data: unknown;
+  error: { code: string; message: string } | null;
+}
+
+const ENVELOPE_ERROR_CODES = new Set(["unauthorized", "business_not_found", "workspace_mismatch", "not_found", "internal_error"]);
+
+function isBridgeEnvelope(body: unknown): body is BridgeEnvelope {
+  if (!body || typeof body !== "object") return false;
+  const obj = body as Record<string, unknown>;
+  return typeof obj.ok === "boolean" && "data" in obj && "error" in obj;
 }
 
 /**
@@ -94,10 +134,11 @@ async function readAscendResource<T>(params: {
   resource: string;
   cacheKey: string;
   path: string;
+  businessProfileId: string;
   fetchImpl: FetchImpl;
   parse: (body: unknown) => T | null;
 }): Promise<WithMeta<T>> {
-  const { resource, cacheKey, path, fetchImpl, parse } = params;
+  const { resource, cacheKey, path, businessProfileId, fetchImpl, parse } = params;
 
   const cached = readIntelligenceCache<T>(cacheKey);
   if (cached.hit === "fresh") {
@@ -124,12 +165,40 @@ async function readAscendResource<T>(params: {
     return { meta: { status: "unavailable", fetchedAt: null, reasonCode: "not_configured" }, data: null };
   }
 
-  recordIntelligenceAuditEvent({ kind: "cache_miss", resource });
+  recordIntelligenceAuditEvent({ kind: "bridge_request_sent", resource });
   const start = Date.now();
-  const result = await fetchWithRetry(fetchImpl, `${baseUrl}${path}`, secret);
+  const result = await fetchWithRetry(fetchImpl, `${baseUrl}${path}`, secret, businessProfileId);
   const durationMs = Date.now() - start;
 
   if (result.ok) {
+    // Envelope-aware first (Slice 10 contract) — if the body matches the
+    // formal {ok, data, error} shape, its `ok` field is authoritative,
+    // even though the HTTP status was already 2xx (the contract doc's own
+    // reasoning: a misconfigured proxy could rewrite a status code but not
+    // the body). Falls back to the Slice 9 bare/legacy parse for anything
+    // that doesn't match — the real shape has never been observed live.
+    if (isBridgeEnvelope(result.body)) {
+      if (!result.body.ok) {
+        const code = result.body.error?.code && ENVELOPE_ERROR_CODES.has(result.body.error.code) ? result.body.error.code : "internal_error";
+        recordIntelligenceAuditEvent({ kind: "bridge_envelope_error", resource, errorCode: code, durationMs });
+        if (cached.hit === "stale") {
+          return { meta: { status: "stale", fetchedAt: cached.fetchedAt, reasonCode: code }, data: cached.value };
+        }
+        return { meta: { status: "unavailable", fetchedAt: null, reasonCode: code }, data: null };
+      }
+      const parsedEnvelope = parse(result.body.data);
+      if (parsedEnvelope === null) {
+        recordIntelligenceAuditEvent({ kind: "fetch_failure", resource, reasonCode: "unparseable_response", durationMs });
+        if (cached.hit === "stale") {
+          return { meta: { status: "stale", fetchedAt: cached.fetchedAt, reasonCode: "unparseable_response" }, data: cached.value };
+        }
+        return { meta: { status: "unavailable", fetchedAt: null, reasonCode: "unparseable_response" }, data: null };
+      }
+      writeIntelligenceCache(cacheKey, parsedEnvelope);
+      recordIntelligenceAuditEvent({ kind: "bridge_envelope_ok", resource, durationMs });
+      return { meta: { status: "ok", fetchedAt: Date.now(), reasonCode: null }, data: parsedEnvelope };
+    }
+
     const parsed = parse(result.body);
     if (parsed === null) {
       recordIntelligenceAuditEvent({ kind: "fetch_failure", resource, reasonCode: "unparseable_response", durationMs });
@@ -307,6 +376,7 @@ export function createAscendIntelligenceClient(options: AscendIntelligenceClient
         resource: "growth-assessment",
         cacheKey: `growth-assessment:${businessProfileId}`,
         path: `/zeno/business-profiles/${encodeURIComponent(businessProfileId)}/dashboard-summary`,
+        businessProfileId,
         fetchImpl,
         parse: parseGrowthAssessment,
       });
@@ -317,6 +387,7 @@ export function createAscendIntelligenceClient(options: AscendIntelligenceClient
         resource: "cro-audit",
         cacheKey: `cro-audit:${businessProfileId}`,
         path: `/zeno/cro-audits?businessProfileId=${encodeURIComponent(businessProfileId)}&limit=1`,
+        businessProfileId,
         fetchImpl,
         parse: parseCroAudit,
       });
@@ -327,6 +398,7 @@ export function createAscendIntelligenceClient(options: AscendIntelligenceClient
         resource: "business-memory",
         cacheKey: `business-memory:${businessProfileId}`,
         path: `/zeno/memory?businessProfileId=${encodeURIComponent(businessProfileId)}`,
+        businessProfileId,
         fetchImpl,
         parse: parseMemorySummary,
       });
@@ -337,6 +409,7 @@ export function createAscendIntelligenceClient(options: AscendIntelligenceClient
         resource: "growth-timeline",
         cacheKey: `growth-timeline:${businessProfileId}`,
         path: `/zeno/growth-timeline/${encodeURIComponent(businessProfileId)}`,
+        businessProfileId,
         fetchImpl,
         parse: parseTimeline,
       });
@@ -347,6 +420,7 @@ export function createAscendIntelligenceClient(options: AscendIntelligenceClient
         resource: "reports",
         cacheKey: `reports:${businessProfileId}`,
         path: `/zeno/reports?businessProfileId=${encodeURIComponent(businessProfileId)}`,
+        businessProfileId,
         fetchImpl,
         parse: parseReports,
       });

@@ -714,6 +714,89 @@ Per instructions and per honest scope: no live Ascend connectivity test (nothing
 
 **Conditional go**, same shape as Slice 8.5's handoff. Everything buildable without live Ascend connectivity is done and verified. Before Slice 10 (or before treating Home/Identify as customer-ready), someone with authority over the Architecture Spec's Section 6 needs to actually specify and provision the Flow→Ascend service auth contract — this is a product/security decision, not an engineering one, and no amount of further Flow-side work substitutes for it.
 
+## Wave A — Slice 10: Secure Intelligence Service Bridge & Live Data Certification
+
+**Status: Partial — by explicit user decision, not silently scoped down.** Flow-side bridge hardening, the full authentication/authorization/envelope/observability contract, security audit, and tests are complete and committed to `dev`. **Live certification and the Ascend-side implementation did not happen this slice** — the Ascend Intelligence repository's `main`/`dev` branch divergence (first found in Slice 1, re-confirmed unchanged at the start of this slice: `main` at `c7422b0`, `dev` at `3c4d3e8`, still no reconciliation) makes it unsafe to write service-auth middleware to either branch without knowing which one is actually deployed to `app.divinex.io`. Asked the user directly rather than guessing; they chose "stop and let me check first" — so **zero lines of code were written to the Ascend Intelligence repository this slice**, per instruction and per this slice's own "prove it, document it, stop — instead of inventing" discipline.
+
+### Repository-truth audit (Task: "audit both repositories")
+
+Re-confirmed (not re-derived from assumption) via direct source read of Ascend's current `main` checkout:
+
+| Item | Finding |
+|---|---|
+| Global auth | `app.use(clerkMiddleware(...))` — applied to every request, not opt-in |
+| Per-route auth | `requireAuth`/`requireRole`/`requirePermission` (`middlewares/auth.ts`), all resolving `getAuth(req)?.userId ?? getDevUserId(req)` — the dev bypass is hard-disabled by `NODE_ENV === "production"` inside the function itself |
+| Service-account/API-key mechanism | **Confirmed, again, does not exist anywhere.** No precedent to extend — this is genuinely new surface area |
+| Existing failure-response shape | Ad hoc `res.status(401).json({error: "Unauthorized"})` — a loose `{error: string}` convention, not a formal envelope |
+| Only proven service-to-service pattern in the whole system | The live Ascend→Flow SSO bridge: static `Authorization: Bearer <shared secret>`, no signing, no JWT, no mTLS |
+
+**Full audit findings, the auth contract design, and the "repository decides" reasoning are written up in the new `docs/architecture/INTELLIGENCE_SERVICE_BRIDGE_CONTRACT.md`** — this ledger entry summarizes; that document is the durable contract record (mirrors how `SLICE_8_5_SHELL_CERTIFICATION.md` relates to its own ledger entry).
+
+### Authentication contract (Task 5)
+
+Static Bearer shared secret (`ASCEND_INTELLIGENCE_API_SECRET`, already reserved by Slice 9, still unset on both deployments) + a required `X-Intelligence-Business-Profile-Id` header — the secret proves the caller is Flow's backend; the header states which business profile's data is being requested. Chosen by repository truth, not preference: it's the *only* service-to-service pattern that has ever been built and proven in this system (the SSO bridge). No HMAC signing, JWT, or mTLS — those have zero precedent here and would be exactly the invented compatibility layer this slice's discipline forbids.
+
+### Authorization model (Task 6)
+
+Specified for the Ascend side (not built): verify secret (constant-time compare) → require the header non-empty → look up the business profile → **"workspace validation" scoped honestly** — Ascend has no workspace concept of its own (no `workspaces`/`agencies` table, re-confirmed), so the real check available to it is business-profile existence, not a Flow-workspace re-derivation (Flow already did that hard check via Slice 4/5 before ever calling Ascend). Documented explicitly so a future implementer doesn't assume Ascend re-derives Flow's authorization decision.
+
+### Service bridge implementation (Task 7) — Flow side, real and committed
+
+`ascend-intelligence-client.ts` (Slice 9, hardened this slice): now sends `X-Intelligence-Business-Profile-Id` on every request, and parses responses envelope-aware-first — if the body matches the formal `{ok, data, error}` shape, its `ok`/`error.code` fields are authoritative (even over a 2xx HTTP status, matching the contract doc's "a misconfigured proxy could rewrite a status code but not the body" reasoning); unrecognized error codes degrade to `internal_error` rather than leaking an arbitrary upstream string. Falls back to Slice 9's original bare/`{data}` parsing for anything that doesn't match the envelope shape — the real response shape has never been observed live, so both paths are genuinely needed, not speculative over-engineering.
+
+### Response envelope (Task 8)
+
+Specified in full in the contract doc: `{ok: boolean, data: T | null, error: {code, message} | null}`, 5 error codes (`unauthorized`, `business_not_found`, `workspace_mismatch`, `not_found`, `internal_error`). Flow's client validates incoming codes against this exact set — an out-of-contract code never reaches the UI as a raw string.
+
+### Payload validation changes (Task 9)
+
+None to the parsers themselves — Slice 9's defensive field-by-field parsing (accepts either envelope-nested or bare data, degrades to null/defaults on any mismatch) already satisfies "never force the backend to match fake assumptions." What changed is WHERE the envelope's `ok`/`error` gets read before those parsers ever run (see Service bridge implementation above).
+
+### Home / Identify certification (Tasks 10, 11)
+
+**Not live-certifiable this slice — stated plainly, not glossed over.** There is no reachable Ascend endpoint to certify against (`ASCEND_INTELLIGENCE_API_URL`/`_API_SECRET` remain unset; the Ascend-side receiver doesn't exist on any branch). Re-verified instead: Slice 9's fail-closed behavior is unchanged and still structurally guaranteed (`compose-home-dashboard.ts`'s `Promise.all` still runs Flow-ops and Ascend-intelligence in parallel, independent failure domains) — Flow operational data will render correctly regardless of Ascend's live status; every intelligence card will show a real `unavailable` state, not a mock value, not a crash. This satisfies the "fail-closed behavior" requirement honestly; it does not satisfy "verify live" against real Growth Score/Revenue/etc. data, because that data doesn't exist to verify against yet.
+
+### Security audit (Task 12)
+
+Structural, in `scripts/verify-intelligence-slice10-bridge.mts` (checks 9a-9g): client never reads/forwards a Firebase session cookie or uid to Ascend (confirmed by source-text absence, not just intent); client never references anything Clerk-related (consistent with Slice 7's finding that Flow has no Clerk code anywhere); the shared secret is not a `NEXT_PUBLIC_*` var (never build-time-inlined into the browser bundle); the config module carries `"server-only"`; neither Home nor Identify page source references the secret; no workspace crossover — `checkWorkspaceRead(uid, workspaceId)` and the composer it guards always receive the identical `workspaceId`, structurally confirmed by regex over the actual wrapper source, not just described.
+
+### Performance (Task 13)
+
+Unchanged from Slice 9 — timeouts (8s), bounded retry with backoff (max 2, capped at 4s), two-tier TTL cache (2min fresh / 30min stale), all already built. This slice added the header + envelope parsing without touching any of that logic — re-confirmed unaffected by re-running Slice 9's own retry/backoff/cache unit tests unchanged (see Tests below).
+
+### Observability (Task: required audit events)
+
+Ascend-side events (`bridge_auth_success/failure`, `permission_denied`, `business_missing`, `workspace_mismatch`) are specified in the contract doc but cannot be implemented here — they belong to code that doesn't exist yet. Flow-side equivalents, actually built: `bridge_request_sent`, `bridge_envelope_ok`, `bridge_envelope_error` (carries the error code), added to `intelligence-audit.ts` alongside Slice 9's existing `cache_hit`/`cache_miss`/`fetch_timeout`/`fetch_failure`/`not_configured`.
+
+### Tests (Task 14)
+
+| Suite | Kind | Result |
+|---|---|---|
+| `scripts/verify-intelligence-slice10-bridge.mts` | **Genuine tests** — real calls, dependency-injected fetch, zero network | ✅ 31/31 — envelope ok:true parses nested data correctly, all 5 documented error codes map through with the code preserved, an unrecognized code degrades to `internal_error` rather than leaking a string, bare/legacy shapes still parse (backward compatibility), the required header is actually sent with the correct value, contract doc structural checks (6 required sections + discloses the branch divergence + states no Ascend code was written), client/audit source-level checks, 7 security-property checks |
+| `scripts/verify-intelligence-slice9-unit.mts` (22) + `-structure.mts` (62) | Regression | ✅ 84/84 unaffected by this slice's client changes |
+| All other pre-existing `verify-*.mts` (24) | Regression | ✅ 24/24, unaffected |
+| `npx tsc --noEmit` | — | ✅ Clean |
+| `pnpm lint` | — | ✅ Exact documented baseline (32: 2 errors, 30 warnings), zero new |
+| `pnpm build` | — | ✅ Clean |
+
+### Bugs discovered / fixed
+
+None new this slice (Slice 9's own client logic was extended, not debugged — no defect found in the pre-existing code while doing so).
+
+### Remaining risks
+
+1. **The central, disclosed limitation, unchanged from Slice 9's own handoff, now compounded by a second blocker**: intelligence data is not live. Previously blocked only on the auth contract being unspecified (now resolved — see the contract doc); now additionally blocked on the Ascend repo's branch divergence, which must be resolved before ANY code (this contract's receiver, or anything else) can safely land on the Ascend side.
+2. The envelope shape this slice designed has never been validated against a real Ascend response — the client handles both the envelope and legacy shapes defensively, but the actual shape Ascend ships (if it doesn't follow this spec exactly) may need a follow-up parser adjustment.
+3. `docs/architecture/INTELLIGENCE_SERVICE_BRIDGE_CONTRACT.md` is a Flow-repository-only document — whoever implements the Ascend side needs to be handed this doc directly (it doesn't exist on the Ascend repo, by design, since nothing was written there).
+
+### Deferred / explicitly not done this slice
+
+Per the user's explicit decision: no Ascend-side service authentication middleware, no Ascend-side verification/authorization/business-profile-lookup/response-envelope/audit-logging code, no live certification of Home/Identify against real Growth Score/Revenue/Timeline/Memory/Recommendations/Reports/Assessment data (nothing to certify against). All of the above are fully specified and ready to implement the moment the branch question is resolved.
+
+### Go/no-go for Slice 11
+
+**No-go on live data, go on continuing Flow-side work that doesn't depend on Ascend connectivity.** The bridge contract is complete and ready. The actual blocker — Ascend's branch divergence — is a repository-hygiene/product decision entirely outside this slice's or Slice 11's control. Recommend either: (a) a slice dedicated to resolving the Ascend branch divergence itself (comparing the two branches' real diffs, deciding which reflects production, reconciling), separate from any further Ascend OS feature work, or (b) continuing Create/Launch/Grow/Optimize/Scale section scaffolding (same placeholder→real pattern as Slice 8, zero Ascend dependency) while that decision is made elsewhere. Per this slice's explicit instruction, stopping here — not beginning Slice 11.
+
 ## Checkpoint before Slice 2 — resolved
 
 1. **Feature-flag primitive**: confirmed — build it first, on Flow's `dev` branch, reusing the existing agency feature-gate pattern. In progress below.
