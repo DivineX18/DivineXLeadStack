@@ -85,7 +85,18 @@ interface Row {
   status: FunnelStatus;
 }
 
-export function FunnelsList({ saId }: { saId: string }) {
+export function FunnelsList({
+  saId,
+  baseHref = `/sa/${saId}/funnels`,
+}: {
+  saId: string;
+  /** Ascend OS launch pass — lets the /app/create native mount point at
+   *  /app/create/funnels instead of the legacy /sa/{id}/funnels, so
+   *  clicking into a specific funnel also stays inside Ascend chrome.
+   *  Defaults to the original legacy path — zero behavior change for the
+   *  existing CRM-only page, which never passes this prop. */
+  baseHref?: string;
+}) {
   const router = useRouter();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [creating, setCreating] = useState(false);
@@ -119,7 +130,7 @@ export function FunnelsList({ saId }: { saId: string }) {
       });
       const d = (await res.json()) as { id?: string };
       if (!res.ok || !d.id) throw new Error();
-      router.push(`/sa/${saId}/funnels/${d.id}`);
+      router.push(`${baseHref}/${d.id}`);
     } catch {
       toast.error("Couldn't create funnel");
       setCreating(false);
@@ -224,7 +235,7 @@ export function FunnelsList({ saId }: { saId: string }) {
             const genre = GENRES.find((g) => g.id === f.genre);
             return (
               <div key={f.id} className="flex items-center gap-3 p-4 hover:bg-muted/40">
-                <Link href={`/sa/${saId}/funnels/${f.id}`} className="min-w-0 flex-1">
+                <Link href={`${baseHref}/${f.id}`} className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="truncate font-medium">{f.name}</span>
                     <span
