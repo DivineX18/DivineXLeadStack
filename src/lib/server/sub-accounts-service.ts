@@ -225,6 +225,7 @@ export async function createSubAccountForAgency(
       funnelsEnabledByAgency: false,
       customDomainsEnabledByAgency: false,
       funnelCheckoutEnabledByAgency: false,
+      ascendIntelligenceEnabledByAgency: false,
       stripeConfig: null,
       metaConfig: null,
       bookingConfig: null,

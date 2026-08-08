@@ -35,6 +35,13 @@ export const PLAN_GATE_KEYS = [
   "funnelsEnabledByAgency",
   "customDomainsEnabledByAgency",
   "funnelCheckoutEnabledByAgency",
+  // Ascend OS — unlike every other key here (which each gate exactly one
+  // Flow module/surface), this one also feeds
+  // evaluate-workspace-entitlements.ts's `effectiveTier` computation: a
+  // sub-account only reaches "full_ascend" (the Full Ascend shell at
+  // /app/*) when BOTH this gate is on AND an active Ascend<->Flow
+  // workspace mapping exists. See that file for the full formula.
+  "ascendIntelligenceEnabledByAgency",
 ] as const;
 
 export type PlanGateKey = (typeof PLAN_GATE_KEYS)[number];
@@ -55,6 +62,7 @@ export const PLAN_GATE_LABELS: Record<PlanGateKey, string> = {
   funnelsEnabledByAgency: "Funnels",
   customDomainsEnabledByAgency: "Custom domains",
   funnelCheckoutEnabledByAgency: "Funnel checkout (Stripe)",
+  ascendIntelligenceEnabledByAgency: "Ascend Intelligence (Full Ascend shell)",
 };
 
 /** Full gate bundle a plan carries — every key present, true = enabled. */

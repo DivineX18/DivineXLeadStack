@@ -86,11 +86,37 @@ check("Shell layout never reads a client-supplied mode (no searchParams/query mo
 // ── /app/* is protected by default (not added to PUBLIC_PATHS) ──────────
 check("middleware.ts's PUBLIC_PATHS/PUBLIC_PATH_PATTERNS were NOT modified to expose /app", !/"\/app"/.test(middleware) && !/\/\^\\\/app\\\//.test(middleware));
 
-// ── middleware.ts and every dashboard shell file are untouched ──────────
+// ── middleware.ts's active-workspace cookie addition (post-Slice-8, the
+// app.divinex.io domain cutover) is structurally safe: defensive, doesn't
+// touch PUBLIC_PATHS, doesn't change the pre-existing custom-domain-rewrite
+// or auth-middleware control flow. middleware.ts is deliberately no longer
+// in the byte-identical set below -- it now legitimately needs to change to
+// give /app/* a workspace-selection signal (see /app/layout.tsx's own
+// "active_workspace_id" cookie read). This replaces byte-identity with
+// structural checks matching this file's existing check() style.
+{
+  check("middleware.ts sets the active_workspace_id cookie", middleware.includes('"active_workspace_id"'));
+  check(
+    "Cookie-setting logic is wrapped in try/catch (never blocks a real request)",
+    /function applyActiveWorkspaceCookie[\s\S]*?\{\s*try\s*\{[\s\S]*?\}\s*catch/.test(middleware),
+  );
+  check(
+    "Cookie-setting logic does not reference PUBLIC_PATHS/PUBLIC_PATH_PATTERNS",
+    (() => {
+      const match = middleware.match(/function applyActiveWorkspaceCookie[\s\S]*?\n\}/);
+      return !!match && !/PUBLIC_PATHS|PUBLIC_PATH_PATTERNS/.test(match[0]);
+    })(),
+  );
+  check(
+    "customDomainRewrite() is still checked first in middleware() (control-flow order unchanged)",
+    /export default async function middleware[\s\S]*?customDomainRewrite\(request\)/.test(middleware),
+  );
+}
+
+// ── every OTHER dashboard shell file is untouched ────────────────────────
 {
   const PRE_SLICE8_COMMIT = "72c1a47";
   const filesThatMustBeUnchanged = [
-    "src/middleware.ts",
     "src/app/(dashboard)/layout.tsx",
     "src/app/(dashboard)/sa/[subAccountId]/layout.tsx",
     "src/components/dashboard/sidebar.tsx",

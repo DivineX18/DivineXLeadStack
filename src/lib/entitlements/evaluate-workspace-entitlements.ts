@@ -32,10 +32,16 @@ import {
  * Composition order (explicit, source-verified by
  * scripts/verify-workspace-entitlement-evaluator.mts):
  *   1. Resolve the sub-account — missing/archived denies everything.
- *   2. Resolve Workspace Mapping v2 state (Slice 4, reused) -> effective
- *      tier (an ACTIVE mapping means full_ascend; its absence, or a
- *      non-active mapping, means crm_only — never invented, this is the
- *      only real signal that exists).
+ *   2. Resolve Workspace Mapping v2 state (Slice 4, reused) AND the
+ *      sub-account's `ascendIntelligenceEnabledByAgency` Client Billing
+ *      gate (see PLAN_GATE_KEYS in types/billing.ts) -> effective tier.
+ *      BOTH must hold for full_ascend: an active mapping is the technical
+ *      linkage to an Ascend workspace, the gate is the commercial decision
+ *      that this sub-account's plan actually includes it. Either one
+ *      missing/off means crm_only — never invented, these are the only two
+ *      real signals that exist. No agency-owner bypass on the gate (unlike
+ *      step 3's billing exemption) — it's a deliberate plan decision, not
+ *      a payment failure.
  *   3. Resolve billing state (lib/billing/status.ts::effectiveBillingState,
  *      reused, not reimplemented) -> a lapsed state blocks every module
  *      except for the agency owner (mirrors Slice 5's exemption, which
@@ -73,7 +79,11 @@ export async function evaluateWorkspaceEntitlements(
   if (!subSnap.exists) {
     return denyAll(workspaceId, "workspace_inactive", input.module);
   }
-  const sub = subSnap.data() as Record<string, unknown> & { status?: string; billing?: SubAccountBilling };
+  const sub = subSnap.data() as Record<string, unknown> & {
+    status?: string;
+    billing?: SubAccountBilling;
+    ascendIntelligenceEnabledByAgency?: boolean;
+  };
 
   if (sub.status === "archived") {
     return denyAll(workspaceId, "workspace_archived", input.module);
@@ -83,7 +93,17 @@ export async function evaluateWorkspaceEntitlements(
   if (mapping && mapping.status === "archived") {
     return denyAll(workspaceId, "workspace_archived", input.module);
   }
-  const effectiveTier: WorkspaceTier = mapping && mapping.status === "active" ? "full_ascend" : "crm_only";
+  // Ascend OS — full_ascend requires BOTH signals, not just the mapping:
+  // an active Ascend<->Flow workspace mapping (the *technical* linkage) AND
+  // the sub-account's Client Billing plan actually entitling it to Ascend
+  // (the *commercial* decision, via the ascendIntelligenceEnabledByAgency
+  // gate — see PLAN_GATE_KEYS in types/billing.ts). No agency-owner bypass
+  // here, deliberately — unlike the billing-lapsed exemption below, this
+  // gate is a real plan decision, not a payment failure, so the owner
+  // should see exactly what their client's plan actually grants.
+  const mappingActive = mapping?.status === "active";
+  const ascendGateOn = sub.ascendIntelligenceEnabledByAgency === true;
+  const effectiveTier: WorkspaceTier = mappingActive && ascendGateOn ? "full_ascend" : "crm_only";
 
   const billingState = sub.billing ? effectiveBillingState(sub.billing) : "comped";
   const billingLapsed = billingState === "lapsed" && !callerIsAgencyOwner;

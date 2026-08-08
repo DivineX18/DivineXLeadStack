@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertTriangle,
+  BrainCircuit,
   CreditCard,
   Globe,
   Funnel,
@@ -91,6 +92,8 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
   const initialCustomDomains = subAccount?.customDomainsEnabledByAgency === true;
   const initialFunnelCheckout =
     subAccount?.funnelCheckoutEnabledByAgency === true;
+  const initialAscendIntelligence =
+    subAccount?.ascendIntelligenceEnabledByAgency === true;
   // "Hide vs. show as Locked" flag for the sidebar-gated features. HIDDEN is the
   // default — a disabled feature is omitted from the tenant's sidebar unless the
   // owner explicitly opts it into the greyed "Locked" row (field set to `false`).
@@ -135,6 +138,9 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
   );
   const [funnelCheckoutEnabled, setFunnelCheckoutEnabled] = useState(
     initialFunnelCheckout,
+  );
+  const [ascendIntelligenceEnabled, setAscendIntelligenceEnabled] = useState(
+    initialAscendIntelligence,
   );
   const [broadcastsHidden, setBroadcastsHidden] = useState(
     initialBroadcastsHidden,
@@ -252,6 +258,8 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
   const customDomainsDirty = customDomainsEnabled !== initialCustomDomains;
   const funnelCheckoutDirty =
     funnelCheckoutEnabled !== initialFunnelCheckout;
+  const ascendIntelligenceDirty =
+    ascendIntelligenceEnabled !== initialAscendIntelligence;
   const broadcastsHiddenDirty = broadcastsHidden !== initialBroadcastsHidden;
   const websiteHiddenDirty = websiteHidden !== initialWebsiteHidden;
   const socialHiddenDirty = socialHidden !== initialSocialHidden;
@@ -276,6 +284,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
     funnelsDirty ||
     customDomainsDirty ||
     funnelCheckoutDirty ||
+    ascendIntelligenceDirty ||
     broadcastsHiddenDirty ||
     websiteHiddenDirty ||
     socialHiddenDirty ||
@@ -313,6 +322,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
         funnelsEnabled?: boolean;
         customDomainsEnabled?: boolean;
         funnelCheckoutEnabled?: boolean;
+        ascendIntelligenceEnabled?: boolean;
         broadcastsHiddenWhenDisabled?: boolean;
         websiteHiddenWhenDisabled?: boolean;
         socialPlannerHiddenWhenDisabled?: boolean;
@@ -346,6 +356,8 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
         payload.customDomainsEnabled = customDomainsEnabled;
       if (funnelCheckoutDirty)
         payload.funnelCheckoutEnabled = funnelCheckoutEnabled;
+      if (ascendIntelligenceDirty)
+        payload.ascendIntelligenceEnabled = ascendIntelligenceEnabled;
       if (broadcastsHiddenDirty)
         payload.broadcastsHiddenWhenDisabled = broadcastsHidden;
       if (websiteHiddenDirty)
@@ -485,6 +497,13 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
           funnelCheckoutEnabled
             ? "Funnel checkout (Stripe) enabled."
             : "Funnel checkout (Stripe) disabled. The connected Stripe key + past orders are preserved; new checkouts blocked until re-enabled.",
+        );
+      }
+      if (ascendIntelligenceDirty) {
+        parts.push(
+          ascendIntelligenceEnabled
+            ? "Ascend Intelligence enabled. Also requires an active Ascend workspace mapping before the Full Ascend shell actually activates."
+            : "Ascend Intelligence disabled. The Full Ascend shell will no longer render for this sub-account, regardless of any existing workspace mapping.",
         );
       }
       // "Hide instead of lock" changes. Only meaningful while the feature is
@@ -885,6 +904,23 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
             record; the agency never touches the money. Disabling blocks new
             checkouts and Stripe connect/reconnect; the connected key and past
             orders are preserved, so re-enabling resumes instantly.
+          </GateToggle>
+
+          <GateToggle
+            checked={ascendIntelligenceEnabled}
+            onChange={setAscendIntelligenceEnabled}
+            disabled={saving}
+            icon={<BrainCircuit className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />}
+            title="Ascend Intelligence"
+          >
+            Unlike every other gate on this dialog, this one controls whether
+            the whole Full Ascend shell (not a single module) renders for
+            this sub-account at all — it&apos;s one of two conditions
+            (alongside an active Ascend↔Flow workspace mapping) required
+            before this sub-account&apos;s tier can be full_ascend. Enabling this
+            alone is not enough without that mapping already existing.
+            Disabling it immediately drops the sub-account back to the
+            plain CRM experience, even if a mapping is still active.
           </GateToggle>
         </div>
 

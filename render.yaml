@@ -20,6 +20,16 @@ services:
         value: "22"
       - key: NEXT_PUBLIC_APP_URL
         value: https://crm.divinex.io
+      # Ascend OS domain cutover (2026-08-08): the Funnels custom-domain
+      # middleware (src/middleware.ts::customDomainRewrite()) treats any
+      # hostname other than NEXT_PUBLIC_APP_URL's as an unrecognized tenant
+      # custom domain and rewrites it into a 404 Firestore lookup — a
+      # fail-closed guard from a past incident. app.divinex.io is a second
+      # first-party hostname for this SAME app (see the domains: block
+      # above), not a tenant's funnel domain, so it must be allowlisted here
+      # or every request to it 404s despite reaching the right service.
+      - key: SAFE_APP_HOSTNAMES
+        value: app.divinex.io
       - key: BOOTSTRAP_ADMIN_EMAIL
         value: hello@divinex.io
       - key: EMAIL_FROM

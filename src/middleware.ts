@@ -303,7 +303,38 @@ function customDomainRewrite(request: NextRequest): NextResponse | null {
   );
 }
 
-export default function middleware(request: NextRequest) {
+// Ascend OS — the /app/* Full Ascend shell needs to know which sub-account
+// (workspace) is "active" for a caller who belongs to more than one, since
+// /app/* itself carries no [subAccountId] URL segment (unlike /sa/[id]/...).
+// No such signal existed anywhere before this (confirmed: no cookie, no
+// localStorage, no Firestore field) — every request into /sa/[id]/... IS
+// that signal, so this mirrors it into a cookie /app/*'s layout can read
+// server-side. Trust model: this cookie is NEVER treated as authorization —
+// resolveWorkspaceIdentity() -> resolveSubAccountAccess() independently
+// re-verifies real membership on every read regardless of where the
+// workspaceId came from, so a forged/stale value here can at worst cause a
+// harmless redirect, never real access. Wrapped defensively (never throws,
+// never touches PUBLIC_PATHS) matching this file's existing fail-closed
+// discipline (see the customDomainRewrite() incident note above).
+const ACTIVE_WORKSPACE_COOKIE = "active_workspace_id";
+
+function applyActiveWorkspaceCookie(request: NextRequest, response: NextResponse): void {
+  try {
+    const match = request.nextUrl.pathname.match(/^\/sa\/([^/]+)/);
+    if (!match) return;
+    response.cookies.set(ACTIVE_WORKSPACE_COOKIE, match[1], {
+      path: "/",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 12 * 60 * 60 * 24, // 12 days, matches the __session cookie's maxAge below
+    });
+  } catch {
+    // Never let this block a real request.
+  }
+}
+
+export default async function middleware(request: NextRequest) {
   const domainRewrite = customDomainRewrite(request);
   if (domainRewrite) return domainRewrite;
 
@@ -315,7 +346,7 @@ export default function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  return authMiddleware(request, {
+  const response = await authMiddleware(request, {
     loginPath: "/api/login",
     logoutPath: "/api/logout",
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -375,6 +406,9 @@ export default function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     },
   });
+
+  applyActiveWorkspaceCookie(request, response);
+  return response;
 }
 
 export const config = {

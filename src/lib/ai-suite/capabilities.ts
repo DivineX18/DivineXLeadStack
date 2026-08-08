@@ -416,6 +416,16 @@ const FEATURE_GATES: Record<
     field: "funnelCheckoutEnabledByAgency",
     label: "Funnel checkout (Stripe)",
   },
+  // Unlike every other gate here, this one also feeds
+  // evaluate-workspace-entitlements.ts's effectiveTier computation — it's
+  // one of two conditions (alongside an active Ascend<->Flow workspace
+  // mapping) required before a sub-account reaches full_ascend. Enabling
+  // it here alone won't activate the Full Ascend shell without that
+  // mapping already existing.
+  "ascend-intelligence": {
+    field: "ascendIntelligenceEnabledByAgency",
+    label: "Ascend Intelligence (Full Ascend shell)",
+  },
   // Get Leads is PARKED — while the flag is on the assistant can't flip (or
   // report) its gate, matching the hidden Manage-dialog toggle. When
   // un-parked, enabling doesn't require OUTSCRAPER_API_KEY to be set —

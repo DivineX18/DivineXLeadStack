@@ -243,6 +243,7 @@ export async function POST(request: Request) {
         funnelsEnabledByAgency: false,
         customDomainsEnabledByAgency: false,
         funnelCheckoutEnabledByAgency: false,
+        ascendIntelligenceEnabledByAgency: false,
         stripeConfig: null,
         metaConfig: null,
         bookingConfig: null,

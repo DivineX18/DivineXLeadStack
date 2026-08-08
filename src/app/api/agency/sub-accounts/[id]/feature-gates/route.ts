@@ -58,6 +58,13 @@ interface PatchBody {
   funnelsEnabled?: boolean;
   customDomainsEnabled?: boolean;
   funnelCheckoutEnabled?: boolean;
+  /**
+   * Whether this sub-account's plan entitles it to the Full Ascend shell
+   * (/app/*). Combined with an active Ascend<->Flow workspace mapping in
+   * `evaluate-workspace-entitlements.ts` — flipping this alone does not
+   * guarantee full_ascend if no mapping exists yet.
+   */
+  ascendIntelligenceEnabled?: boolean;
   // "Hide instead of lock" overrides for the sidebar-gated features.
   // Only take effect while the matching gate is off. See `*HiddenWhenDisabled`
   // on SubAccountDoc.
@@ -106,6 +113,8 @@ export async function PATCH(
   const wantsFunnels = typeof body.funnelsEnabled === "boolean";
   const wantsCustomDomains = typeof body.customDomainsEnabled === "boolean";
   const wantsFunnelCheckout = typeof body.funnelCheckoutEnabled === "boolean";
+  const wantsAscendIntelligence =
+    typeof body.ascendIntelligenceEnabled === "boolean";
   const wantsBroadcastsHidden =
     typeof body.broadcastsHiddenWhenDisabled === "boolean";
   const wantsWebsiteHidden =
@@ -155,6 +164,7 @@ export async function PATCH(
     !wantsFunnels &&
     !wantsCustomDomains &&
     !wantsFunnelCheckout &&
+    !wantsAscendIntelligence &&
     !wantsBroadcastsHidden &&
     !wantsWebsiteHidden &&
     !wantsSocialPlannerHidden &&
@@ -248,6 +258,9 @@ export async function PATCH(
   if (typeof body.funnelCheckoutEnabled === "boolean") {
     gates.funnelCheckoutEnabledByAgency = body.funnelCheckoutEnabled;
   }
+  if (typeof body.ascendIntelligenceEnabled === "boolean") {
+    gates.ascendIntelligenceEnabledByAgency = body.ascendIntelligenceEnabled;
+  }
 
   let clearedDomain = false;
   if (Object.keys(gates).length > 0) {
@@ -337,6 +350,9 @@ export async function PATCH(
       : {}),
     ...(wantsFunnelCheckout
       ? { funnelCheckoutEnabled: body.funnelCheckoutEnabled }
+      : {}),
+    ...(wantsAscendIntelligence
+      ? { ascendIntelligenceEnabled: body.ascendIntelligenceEnabled }
       : {}),
     ...(clearedDomain ? { clearedDomain: true } : {}),
   });

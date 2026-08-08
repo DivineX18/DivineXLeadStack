@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { resolveShellContextForLayout } from "@/lib/shell/shell-context-wrappers";
 import { decideShellFallbackRoute } from "@/lib/shell/resolve-shell-fallback-route";
@@ -33,7 +34,19 @@ import { AscendUserMenu } from "@/components/shell/ascend-user-menu";
  * not the Zeno execution bridge, not a builder rewrite.
  */
 export default async function AscendAppLayout({ children }: { children: ReactNode }) {
-  const shell = await resolveShellContextForLayout();
+  // /app/* carries no [subAccountId] URL segment, unlike /sa/[id]/... — the
+  // "active_workspace_id" cookie (set by middleware.ts whenever a /sa/[id]/
+  // request is made) is the only signal this layout has for which workspace
+  // to resolve when the caller belongs to more than one. This is NEVER
+  // trusted as authorization: resolveShellContextForLayout ->
+  // resolveWorkspaceIdentity -> resolveSubAccountAccess independently
+  // re-verifies real membership regardless of where the id came from, so a
+  // forged/stale cookie can at worst cause a harmless redirect below, never
+  // real access to a workspace the caller isn't really in.
+  const activeWorkspaceId = (await cookies()).get("active_workspace_id")?.value;
+  const shell = await resolveShellContextForLayout(
+    activeWorkspaceId ? { explicitWorkspaceId: activeWorkspaceId } : undefined,
+  );
 
   if (!shell) {
     redirect("/login");
@@ -43,7 +56,12 @@ export default async function AscendAppLayout({ children }: { children: ReactNod
     redirect(
       decideShellFallbackRoute({
         sessionState: shell.identity.session.state,
-        workspaceId: shell.workspace?.workspaceId ?? null,
+        // Only pass a workspaceId through when it resolved to a real,
+        // active membership — a resolved-but-inactive/not-found workspace
+        // (e.g. from a stale/foreign cookie value) should fall through to
+        // the /agency picker, not bounce through a doomed /sa/{id}/...
+        // redirect first.
+        workspaceId: shell.workspace?.status === "active" ? shell.workspace.workspaceId : null,
       }),
     );
   }

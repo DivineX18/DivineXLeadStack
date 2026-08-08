@@ -336,6 +336,20 @@ export interface SubAccountDoc {
    */
   aiSuiteEnabledByAgency?: boolean;
   /**
+   * Ascend OS — whether this sub-account's Client Billing plan entitles it
+   * to the Full Ascend shell (`/app/*`, "Ascend Intelligence"). Unlike
+   * every other `*EnabledByAgency` field, this one does NOT gate a single
+   * Flow module/route — it's one of two conditions (the other being an
+   * active Ascend<->Flow workspace mapping) that
+   * `evaluate-workspace-entitlements.ts` requires before a workspace's
+   * `effectiveTier` can be `"full_ascend"` at all. `=== true` so legacy
+   * docs (undefined) stay off, matching every sibling field's convention.
+   * No agency-owner bypass on this one (see that file's doc comment) —
+   * unlike a billing-lapsed exemption, this is a deliberate plan decision,
+   * not a payment failure.
+   */
+  ascendIntelligenceEnabledByAgency?: boolean;
+  /**
    * Per-feature "hide vs. show as Locked" control for the sidebar-gated features
    * (Broadcasts, Website, Social Planner, Community, Get Leads). They ONLY take
    * effect when the matching `*EnabledByAgency` gate is off. Default behavior
