@@ -38,7 +38,7 @@ export function AscendShellSidebarContent({ branding, navigation, capabilities, 
         )}
         {capabilities.canSwitchWorkspace && (
           <a
-            href="/agency"
+            href="/agency?next=/app/home"
             className="rounded-md px-3 py-2 text-white/70 outline-none transition-colors hover:bg-white/5 hover:text-white focus-visible:ring-2 focus-visible:ring-white/40 motion-reduce:transition-none"
           >
             Switch workspace
@@ -46,7 +46,7 @@ export function AscendShellSidebarContent({ branding, navigation, capabilities, 
         )}
         {capabilities.canAccessAgency && (
           <a
-            href="/agency"
+            href="/agency?next=/app/home"
             className="rounded-md px-3 py-2 text-white/70 outline-none transition-colors hover:bg-white/5 hover:text-white focus-visible:ring-2 focus-visible:ring-white/40 motion-reduce:transition-none"
           >
             Agency home

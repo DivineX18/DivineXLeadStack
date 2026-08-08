@@ -49,6 +49,14 @@ function AgencyHomeContent() {
   const { user, loading, agencyId, agencyRole, memberships } = useAuth();
   const [filter, setFilter] = useState("");
   const isOwner = agencyRole === "owner";
+  // Ascend OS launch pass, Pass 2C — when arrived at from the Ascend shell's
+  // "Switch workspace"/"Agency home" links (?next=/app/home), route the
+  // picked sub-account through /sa/{id}/switch instead of straight to its
+  // dashboard, so the workspace-selection cookie gets set (via middleware,
+  // same as any /sa/[id]/... visit) before forwarding into /app/home. Zero
+  // effect on the normal picker flow — next is only ever present when it
+  // was explicitly passed in.
+  const nextParam = useSearchParams().get("next");
 
   const visible = memberships.filter((m) =>
     m.name.toLowerCase().includes(filter.trim().toLowerCase()),
@@ -193,7 +201,11 @@ function AgencyHomeContent() {
                 {visible.map((m) => (
                   <li key={m.subAccountId} className="relative">
                     <Link
-                      href={`/sa/${m.subAccountId}/dashboard`}
+                      href={
+                        nextParam
+                          ? `/sa/${m.subAccountId}/switch?next=${encodeURIComponent(nextParam)}`
+                          : `/sa/${m.subAccountId}/dashboard`
+                      }
                       className="group flex h-full flex-col justify-between gap-3 rounded-xl border bg-background p-4 transition-colors hover:border-primary/40 hover:bg-muted/30"
                     >
                       <div>
@@ -253,7 +265,9 @@ function AgencyHomeContent() {
 export default function AgencyHomePage() {
   return (
     <div className="mx-auto max-w-5xl">
-      <AgencyHomeContent />
+      <Suspense fallback={null}>
+        <AgencyHomeContent />
+      </Suspense>
     </div>
   );
 }

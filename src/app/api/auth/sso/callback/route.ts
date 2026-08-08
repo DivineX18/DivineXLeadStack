@@ -5,6 +5,8 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { issueSsoBridgeToken } from "@/lib/auth/sso-bridge-token";
 import { resolveOrProvisionFirebaseUser } from "@/lib/auth/sso-jit-provisioning";
+import { createIdentityLinkIdempotent } from "@/lib/auth/identity-links-service";
+import { createMappingIdempotent, getMappingBySubAccountId, updateMappingStatus } from "@/lib/workspace/workspace-mappings-service";
 import type { SubAccountDoc, SubAccountRole } from "@/types/tenancy";
 
 export const dynamic = "force-dynamic";
@@ -158,6 +160,52 @@ export async function GET(request: Request): Promise<NextResponse> {
     return errorRedirect(request, resolved.errorPage);
   }
   const uid = resolved.uid;
+
+  // ── Phase C.5 — Full Ascend provisioning (Ascend OS launch pass, 2026-08-08) ──
+  // Closes the launch-blocking gap where a successful, legitimate SSO login
+  // still left the workspace stuck in crm_only mode because nothing ever
+  // created the Flow-side identityLinks/workspaceMappings docs that
+  // evaluate-workspace-entitlements.ts requires for full_ascend — those were
+  // previously script-only (scripts/backfill-identity-link.mts,
+  // scripts/migrate-single-workspace-mapping.mts), run by hand per customer.
+  // "sso_bridge_jit" is an already-defined IdentityLinkSource (see
+  // types/identity-links.ts) specifically anticipating this call site.
+  // Best-effort: a failure here must never block the login itself (the
+  // customer still gets into Flow at crm_only tier; this can retry on their
+  // next SSO login, since both calls below are idempotent). Deliberately
+  // does NOT set a primaryAscendBusinessProfileId — null is an
+  // already-handled state (see GrowthScoreCard/memory-card's
+  // "no_linked_business_profile" prompt), not a gap being papered over.
+  try {
+    await createIdentityLinkIdempotent({
+      clerkUserId: identity.clerkUserId,
+      firebaseUid: uid,
+      emailAtLinkTime: identity.email,
+      linkSource: "sso_bridge_jit",
+      linkedByUid: uid,
+    });
+
+    const existingMapping = await getMappingBySubAccountId(leadstackSubAccountId);
+    if (!existingMapping) {
+      const created = await createMappingIdempotent({
+        flowSubAccountId: leadstackSubAccountId,
+        agencyId: sub.agencyId,
+        ownerFirebaseUid: uid,
+        primaryAscendBusinessProfileId: null,
+        actingAsUid: "system:sso-bridge",
+      });
+      if (created.ok && created.value.mapping.status === "pending_provision") {
+        await updateMappingStatus(created.value.mapping.workspaceId, "active", "system:sso-bridge");
+      }
+    } else if (existingMapping.status === "pending_provision") {
+      // Only auto-activate a freshly-created mapping still awaiting its
+      // first activation. "suspended" and "archived" are deliberate operator
+      // actions — an SSO login must never silently override those.
+      await updateMappingStatus(existingMapping.workspaceId, "active", "system:sso-bridge");
+    }
+  } catch (err) {
+    console.warn("[sso/callback] full-Ascend provisioning failed (non-blocking)", err);
+  }
 
   // ── Phase D — bridge creation ──────────────────────────────────────────
   const bridgeRef = db.collection("ssoBridge").doc();

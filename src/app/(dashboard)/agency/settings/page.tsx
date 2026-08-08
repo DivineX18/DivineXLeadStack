@@ -9,6 +9,7 @@ import { AppThemeSection } from "@/components/agency/app-theme-section";
 import { MessagingSection } from "@/components/agency/messaging-section";
 import { AiModelSection } from "@/components/agency/ai-model-section";
 import { AgencyAssistantSection } from "@/components/agency/agency-assistant-section";
+import { AscendRolloutSection } from "@/components/agency/ascend-rollout-section";
 import { AgencyAiKbSection } from "@/components/agency/agency-ai-kb-section";
 import { SeedDemoSection } from "@/components/agency/seed-demo-section";
 import { PasswordSection } from "@/components/settings/password-section";
@@ -82,6 +83,12 @@ export default function AgencySettingsPage() {
       {/* Zeno (agency level) master switch — OFF by default; every reply spends
           OpenRouter credits so the owner opts in deliberately. */}
       <AgencyAssistantSection />
+
+      {/* Ascend OS launch-pass Pass 2B — GA cutover control for the
+          unified_shell/unified_navigation rollout flags. Previously no UI
+          existed at all; the only writer was an agency-owner-gated API
+          nothing called. */}
+      <AscendRolloutSection />
 
       {/* AI Suite knowledge-base review — renders ONLY in local dev (the
           availability probe is false on deployed instances, where there's no
