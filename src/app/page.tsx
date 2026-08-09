@@ -1,3 +1,5 @@
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { LANDING_VARIANT } from "@/config/landing";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import { resolveHeroVariant } from "@/lib/hero-variant-server";
@@ -48,7 +50,43 @@ import { Footer as CustomFooter } from "@/components/landing-custom/footer";
  * Flip LANDING_VARIANT to swap. Code-level defaults for the custom
  * variant live in src/config/landing.ts (CUSTOM_BRAND).
  */
+/** Mirrors resolve-shell-context.ts's server-side hostname normalization
+ *  (that file's helpers aren't exported — this is a small, self-contained
+ *  copy, same pattern legacy-redirect.tsx already uses client-side). */
+function normalizeHostname(raw: string | null): string | null {
+  if (!raw) return null;
+  const lower = raw.split(":")[0].toLowerCase();
+  return lower.startsWith("www.") ? lower.slice(4) : lower;
+}
+
+function safeAscendHostname(): string | null {
+  const url = process.env.NEXT_PUBLIC_ASCEND_APP_URL;
+  if (!url) return null;
+  try {
+    return normalizeHostname(new URL(url).hostname);
+  } catch {
+    return null;
+  }
+}
+
 export default async function HomePage() {
+  // Ascend OS — an already-authenticated caller hitting the bare
+  // app.divinex.io root previously always saw the public Flow marketing
+  // pitch (this page has no auth awareness at all) instead of landing in
+  // their own product. Route them straight through the same /dashboard ->
+  // LegacyRedirect chain every other legacy entry point uses (which
+  // already knows how to pick a workspace and, on the Ascend hostname,
+  // land on /app/home) rather than re-deriving workspace selection here.
+  // Unauthenticated visitors and everyone on any other hostname
+  // (including crm.divinex.io) see the unchanged marketing page below.
+  const hdrs = await headers();
+  const uid = hdrs.get("x-user-uid");
+  const hostname = normalizeHostname(hdrs.get("host"));
+  const ascendHostname = safeAscendHostname();
+  if (uid && hostname && ascendHostname && hostname === ascendHostname) {
+    redirect("/dashboard");
+  }
+
   if (LANDING_VARIANT === "custom") {
     const [brand, { plans }] = await Promise.all([
       resolveCustomBrand(),
