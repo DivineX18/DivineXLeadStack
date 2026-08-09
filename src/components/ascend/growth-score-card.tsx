@@ -24,6 +24,11 @@ export function GrowthScoreCard({ dashboardSummary }: { dashboardSummary: WithMe
             {data.scoreLabel && <span className="ml-1 text-xs text-white/50">{data.scoreLabel}</span>}
           </div>
           {data.primaryConstraint && <p className="mt-2 text-xs text-white/60">Primary constraint: {data.primaryConstraint}</p>}
+          {data.scoreSource && (
+            <p className="mt-1 text-[11px] text-white/30">
+              From your latest {data.scoreSource === "website_scan" ? "Website Scan" : "Business Assessment"}
+            </p>
+          )}
         </>
       ) : (
         <p className="text-sm text-white/40">

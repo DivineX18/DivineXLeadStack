@@ -332,6 +332,35 @@ function parseDashboardTimelineEvent(raw: unknown): DashboardTimelineEvent | nul
   };
 }
 
+function parseDashboardScoreSource(v: unknown): DashboardSummary["scoreSource"] {
+  return v === "website_scan" || v === "business_assessment" ? v : null;
+}
+
+function parseLatestWebsiteScan(raw: unknown): DashboardSummary["latestWebsiteScan"] {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  if (
+    typeof o.id !== "number" ||
+    typeof o.overallScore !== "number" ||
+    typeof o.scoreLabel !== "string" ||
+    typeof o.biggestBottleneck !== "string" ||
+    typeof o.recommendedFunnelType !== "string" ||
+    typeof o.shareToken !== "string" ||
+    typeof o.createdAt !== "string"
+  ) {
+    return null;
+  }
+  return {
+    id: o.id,
+    createdAt: o.createdAt,
+    overallScore: o.overallScore,
+    scoreLabel: o.scoreLabel,
+    biggestBottleneck: o.biggestBottleneck,
+    recommendedFunnelType: o.recommendedFunnelType,
+    shareToken: o.shareToken,
+  };
+}
+
 function parseDashboardSummary(body: unknown): DashboardSummary | null {
   if (!body || typeof body !== "object") return null;
   const obj = body as Record<string, unknown>;
@@ -341,6 +370,7 @@ function parseDashboardSummary(body: unknown): DashboardSummary | null {
   return {
     latestGrowthScore: num(obj.latestGrowthScore),
     scoreLabel,
+    scoreSource: parseDashboardScoreSource(obj.scoreSource),
     primaryConstraint: str(obj.primaryConstraint),
     recommendedFunnel: str(obj.recommendedFunnel),
     recommendedAction: str(obj.recommendedAction),
@@ -349,6 +379,7 @@ function parseDashboardSummary(body: unknown): DashboardSummary | null {
     blueprintId: num(obj.blueprintId),
     latestBlueprintAssessmentId: num(obj.latestBlueprintAssessmentId),
     hasScan: bool(obj.hasScan, false),
+    latestWebsiteScan: parseLatestWebsiteScan(obj.latestWebsiteScan),
     lastFiveAssets: Array.isArray(obj.lastFiveAssets) ? obj.lastFiveAssets.map(parseDashboardAsset).filter((a): a is DashboardAsset => a !== null) : [],
     lastFiveTimeline: Array.isArray(obj.lastFiveTimeline)
       ? obj.lastFiveTimeline.map(parseDashboardTimelineEvent).filter((t): t is DashboardTimelineEvent => t !== null)
