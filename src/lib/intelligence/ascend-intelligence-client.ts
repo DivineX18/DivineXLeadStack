@@ -502,6 +502,103 @@ function parseReports(body: unknown): IntelligenceReportSummary[] | null {
   return body.map(parseReportItem).filter((i): i is IntelligenceReportSummary => i !== null);
 }
 
+// ── Growth Scan trigger + poll (write + status, not a cached read) ──────
+//
+// Deliberately NOT built on readAscendResource: that helper is GET-only,
+// caches responses, and (via fetchWithRetry) automatically retries on
+// failure — all correct for an idempotent read, all wrong for a scan
+// trigger (retrying a failed POST could start a second scan) and
+// unnecessary for a status poll (the caller re-polls on its own cadence
+// already). Single-attempt fetch, no cache, same 8s TIMEOUT_MS as reads
+// — the trigger route itself responds fast (fast validation only, the
+// actual scan runs on Ascend's own background continuation), so this
+// never needs a long timeout even though a scan takes 30-90+ seconds.
+
+export type GrowthScanTriggerOutcome = { ok: true; jobId: number } | { ok: false; code: string; message: string };
+
+export interface GrowthScanJobResult {
+  id: number;
+  overallScore: number;
+  scoreLabel: string;
+  biggestBottleneck: string;
+  recommendedFunnelType: string;
+  shareToken: string;
+  createdAt: string;
+}
+
+export type GrowthScanJobStatusOutcome =
+  | { ok: true; status: "processing" }
+  | { ok: true; status: "completed"; scan: GrowthScanJobResult }
+  | { ok: true; status: "failed"; errorMessage: string | null }
+  | { ok: false; code: string; message: string };
+
+async function serviceFetch(params: {
+  resource: string;
+  method: "POST" | "GET";
+  path: string;
+  businessProfileId: string;
+  fetchImpl: FetchImpl;
+  body?: unknown;
+}): Promise<{ ok: true; data: unknown } | { ok: false; code: string; message: string }> {
+  if (!ascendIntelligenceConfigured()) {
+    recordIntelligenceAuditEvent({ kind: "not_configured", resource: params.resource });
+    return { ok: false, code: "not_configured", message: "Ascend Intelligence bridge is not configured on this deployment." };
+  }
+  const base = ascendIntelligenceBaseUrl()!;
+  const secret = ascendIntelligenceSharedSecret()!;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const started = Date.now();
+  recordIntelligenceAuditEvent({ kind: "bridge_request_sent", resource: params.resource });
+  try {
+    const res = await params.fetchImpl(`${base}${params.path}`, {
+      method: params.method,
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        "X-Intelligence-Business-Profile-Id": params.businessProfileId,
+        Accept: "application/json",
+        ...(params.body ? { "Content-Type": "application/json" } : {}),
+      },
+      body: params.body ? JSON.stringify(params.body) : undefined,
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    const durationMs = Date.now() - started;
+    let body: unknown = null;
+    try {
+      body = await res.json();
+    } catch {
+      // fall through — isBridgeEnvelope(null) is false, handled below
+    }
+
+    if (!isBridgeEnvelope(body)) {
+      recordIntelligenceAuditEvent({ kind: "fetch_failure", resource: params.resource, reasonCode: "malformed_response", durationMs });
+      return { ok: false, code: "malformed_response", message: "Unexpected response from the intelligence bridge." };
+    }
+    if (!body.ok) {
+      const code = body.error?.code ?? "internal_error";
+      recordIntelligenceAuditEvent({ kind: "bridge_envelope_error", resource: params.resource, errorCode: code, durationMs });
+      return { ok: false, code, message: body.error?.message ?? "Request failed." };
+    }
+    recordIntelligenceAuditEvent({ kind: "bridge_envelope_ok", resource: params.resource, durationMs });
+    return { ok: true, data: body.data };
+  } catch (err) {
+    clearTimeout(timer);
+    const durationMs = Date.now() - started;
+    const timedOut = err instanceof Error && err.name === "AbortError";
+    recordIntelligenceAuditEvent(
+      timedOut
+        ? { kind: "fetch_timeout", resource: params.resource, durationMs }
+        : { kind: "fetch_failure", resource: params.resource, reasonCode: "network_error", durationMs },
+    );
+    return {
+      ok: false,
+      code: timedOut ? "timeout" : "network_error",
+      message: timedOut ? "Request to the intelligence bridge timed out." : "Could not reach the intelligence bridge.",
+    };
+  }
+}
+
 // ── Public client ─────────────────────────────────────────────────────────
 
 export interface AscendIntelligenceClientOptions {
@@ -567,6 +664,68 @@ export function createAscendIntelligenceClient(options: AscendIntelligenceClient
         parse: parseReports,
       });
     },
+
+    async triggerGrowthScan(businessProfileId: string, websiteUrl?: string): Promise<GrowthScanTriggerOutcome> {
+      const result = await serviceFetch({
+        resource: "growth-scan-trigger",
+        method: "POST",
+        path: `/internal/intelligence/business-profiles/${encodeURIComponent(businessProfileId)}/growth-scan`,
+        businessProfileId,
+        fetchImpl,
+        body: websiteUrl ? { websiteUrl } : {},
+      });
+      if (!result.ok) return { ok: false, code: result.code, message: result.message };
+      const data = result.data as { jobId?: unknown } | null;
+      const jobId = typeof data?.jobId === "number" ? data.jobId : null;
+      if (jobId === null) return { ok: false, code: "malformed_response", message: "Bridge did not return a job id." };
+      return { ok: true, jobId };
+    },
+
+    async getGrowthScanJobStatus(businessProfileId: string, jobId: number): Promise<GrowthScanJobStatusOutcome> {
+      const result = await serviceFetch({
+        resource: "growth-scan-status",
+        method: "GET",
+        path: `/internal/intelligence/business-profiles/${encodeURIComponent(businessProfileId)}/growth-scan/jobs/${jobId}`,
+        businessProfileId,
+        fetchImpl,
+      });
+      if (!result.ok) return { ok: false, code: result.code, message: result.message };
+      const data = result.data as { status?: unknown; errorMessage?: unknown; scan?: unknown } | null;
+      const status = data?.status;
+      if (status === "processing") return { ok: true, status: "processing" };
+      if (status === "failed") return { ok: true, status: "failed", errorMessage: typeof data?.errorMessage === "string" ? data.errorMessage : null };
+      if (status === "completed") {
+        const scan = parseGrowthScanJobResult(data?.scan);
+        if (!scan) return { ok: false, code: "malformed_response", message: "Bridge reported completion without a scan result." };
+        return { ok: true, status: "completed", scan };
+      }
+      return { ok: false, code: "malformed_response", message: "Unexpected job status from the intelligence bridge." };
+    },
+  };
+}
+
+function parseGrowthScanJobResult(raw: unknown): GrowthScanJobResult | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  if (
+    typeof o.id !== "number" ||
+    typeof o.overallScore !== "number" ||
+    typeof o.scoreLabel !== "string" ||
+    typeof o.biggestBottleneck !== "string" ||
+    typeof o.recommendedFunnelType !== "string" ||
+    typeof o.shareToken !== "string" ||
+    typeof o.createdAt !== "string"
+  ) {
+    return null;
+  }
+  return {
+    id: o.id,
+    overallScore: o.overallScore,
+    scoreLabel: o.scoreLabel,
+    biggestBottleneck: o.biggestBottleneck,
+    recommendedFunnelType: o.recommendedFunnelType,
+    shareToken: o.shareToken,
+    createdAt: o.createdAt,
   };
 }
 
