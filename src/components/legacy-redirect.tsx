@@ -42,19 +42,24 @@ export function LegacyRedirect({
 
   useEffect(() => {
     if (loading) return;
-    const target = memberships[0];
-    if (!target) {
+    if (!memberships[0]) {
       // No sub-accounts: agency owner lands on /agency to create one;
       // anyone else lands on /agency to see the no-access state.
       router.replace("/agency");
       return;
     }
-    // Agency owners with no current sub-account context land on /agency
-    // when they hit the bare /dashboard URL — gives them the picker.
-    if (agencyRole === "owner" && toSubPath === "/dashboard") {
-      router.replace("/agency");
-      return;
-    }
+    // Best-effort, not a guarantee: memberships arrives in whatever order
+    // the userMemberships onSnapshot listener happened to return docs in
+    // (Firestore default order, NOT sorted) — for an agency owner with
+    // several sub-accounts, memberships[0] could be any of them. Sorting
+    // by accountNumber picks the lowest-numbered one (Main is
+    // conventionally #1000, the account most likely to be the real,
+    // Ascend-entitled workspace), which is a meaningfully better guess
+    // than raw snapshot order without adding a client-side entitlement
+    // round trip to a redirect stub. Never a correctness issue either
+    // way — every downstream route this picks re-verifies real access.
+    const target = [...memberships].sort((a, b) => (a.accountNumber ?? 0) - (b.accountNumber ?? 0))[0];
+
     // Ascend OS — the bare /dashboard landing (what login lands on by
     // default, and every hardcoded "Go to Dashboard" link) previously
     // always sent the visitor into plain Flow regardless of hostname, so
@@ -64,13 +69,23 @@ export function LegacyRedirect({
     // /sa/{id}/switch?next=/app/home redirector "Switch workspace" already
     // uses — that route re-verifies real entitlement server-side and
     // falls back to crm_only automatically for a non-entitled workspace,
-    // so this never needs its own entitlement check here.
+    // so this never needs its own entitlement check here. MUST be checked
+    // before the agency-owner-to-/agency shortcut below, which would
+    // otherwise always win for the agency owner and make this branch
+    // unreachable for the account that most needs the unified shell.
     if (
       toSubPath === "/dashboard" &&
       typeof window !== "undefined" &&
       window.location.hostname === safeAscendHostname()
     ) {
       router.replace(`/sa/${target.subAccountId}/switch?next=${encodeURIComponent("/app/home")}`);
+      return;
+    }
+    // Agency owners with no current sub-account context land on /agency
+    // when they hit the bare /dashboard URL on the CRM host — gives them
+    // the picker.
+    if (agencyRole === "owner" && toSubPath === "/dashboard") {
+      router.replace("/agency");
       return;
     }
     router.replace(`/sa/${target.subAccountId}${toSubPath}`);
