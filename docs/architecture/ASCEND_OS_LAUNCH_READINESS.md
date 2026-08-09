@@ -68,6 +68,10 @@ Sidebar lock icons are workspace-specific (driven by whether that workspace's en
 | Client Billing plan bundling | ✅ VERIFIED WORKING | `PLAN_GATE_KEYS` auto-flows into plan editor UI; confirmed no plan-route changes needed when the gate was added |
 | No agency-owner bypass on the Ascend gate | ✅ DELIBERATE | Unlike the billing-lapsed exemption elsewhere, this gate is a plan decision, not a payment failure — owner sees exactly what the client's plan grants |
 
+## Known issue — client-role dashboard on the standalone Ascend BI app
+
+❌ BROKEN (found live, 2026-08-08, during an active customer call — worked around live by manually upgrading the affected account's role; the underlying bug is NOT fixed). A brand-new `client`-role account (`dekotadangelo@gmail.com`, standalone `ascend.divinex.io`) hit a non-working `/dashboard` after clicking the nav "Dashboard" button. Root-caused to `ExecutiveMode.tsx` (the component `DashboardRoute` renders for `client`/`user`/`auditor_trainer` roles) depending on `useActiveProfile()` resolving a Business Profile — a brand-new client with zero business profiles yet likely hits a broken or unhelpful state here rather than a graceful "create your first business profile" prompt. Not yet fixed — needs a proper empty-state pass on `ExecutiveMode.tsx` for the zero-profile case. Tracked here so it isn't lost; deliberately not chased mid-launch-pass since a live workaround was already applied.
+
 ## Known data-hygiene issue
 
 ⚠️ Two sub-accounts named identically "DivineX" exist under the same agency (#1000 — real/active, has a QA test member; #1001 — a leftover artifact from earlier SSO bridge testing, owner-only membership). Confirmed via direct Firestore inspection. This is a real footgun for the sub-account switcher — recommend archiving/renaming #1001 before launch. Not fixed this pass (data cleanup decision, not a code defect).
