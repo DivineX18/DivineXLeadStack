@@ -56,6 +56,42 @@ Success criteria — would we proudly use this page on the DivineX portfolio? Wo
 
 **Note**: this touches gitpage.site's generation pipeline — see the existing "Content-fabrication guardrail" section elsewhere in CLAUDE.md before starting; that guardrail (fabricated testimonials/stats/credentials) is a real, already-discovered integrity problem in the current template output and is directly relevant to "never generic."
 
+#### Landing Page Calibration Engine (locked)
+
+Added 2026-08-09. Extends Priority 3 — the difference between a good prompt and a learning system. A static "generate a premium page" prompt never gets better after the first page it produces. The calibration engine is what makes Ascend's landing-page generation improve measurably over time instead of converging on one template forever.
+
+**Calibration sources** — continuously learn from: pages built by the agency, client pages, pages manually edited after generation, ClickFunnels examples, high-performing pages, award-winning landing pages, competitor pages, user feedback, internal design reviews, A/B test winners.
+
+**Every generated page gets an internal design review before it's returned.** Score each of these 1–10: visual hierarchy, typography, spacing, section rhythm, emotional flow, CTA placement, trust building, visual storytelling, industry authenticity, conversion psychology, originality, premium feel, overall cohesion. Any category scoring below 8 gets redesigned before the page is returned — not shipped with a caveat.
+
+**Design memory — memorize principles, never memorize layouts or one client's branding.** Store reusable observations, e.g. "luxury HVAC companies perform better with large environmental photography," "roofing pages perform better with before/after sections," "medical practices benefit from lighter layouts," "legal pages require stronger authority positioning."
+
+**Human feedback loop.** Whenever a human edits a generated page, treat the edit as design feedback: what changed, why, what improved. Store only the reusable principle behind the edit, never the specific client's branding or copy.
+
+**Inspiration analysis.** When reference sites are supplied, never generate immediately — first run an internal design audit and extract layout rhythm, typography system, spacing, hierarchy, color strategy, CTA placement, image usage, trust placement, section pacing, emotional progression, design personality. Store those observations, then generate from them.
+
+**Design evolution.** Every generation should improve on previous generations. Never become repetitive; never converge toward one template. The design library should get more diverse over time, not less.
+
+**Portfolio certification**, before returning any page: would DivineX proudly showcase this publicly? Would a designer believe this came from a premium agency? Would a client feel this justified a $5k–20k investment? If not, keep improving — don't return it yet.
+
+**Internal Design Knowledge Vault** — a reusable design-intelligence library. Store structured knowledge, not templates or raw HTML:
+- Visual systems: modern luxury, trades authority, editorial, minimal premium, corporate, boutique, industrial, healthcare, legal, coaching, restaurant, fitness, nonprofit.
+- Section patterns: hero, trust, process, CTA, social proof, pricing, FAQ, comparison, storytelling, guarantee variants.
+- Typography systems: headline scales, body scales, spacing ratios, grid systems, visual density, content rhythm.
+- CRO principles: attention, interest, trust, authority, urgency, risk reversal, proof, commitment, friction reduction.
+
+**Calibration mode.** When enough new reference sites accumulate, run a calibration pass: compare old design principles against new inspiration, human edits, user feedback, and winning pages, then produce new reusable design principles. Never overwrite previous knowledge — merge intelligently.
+
+**Golden rule**: Ascend should never become a template generator. Ascend should become an agency that continuously learns how to design better landing pages.
+
+**Architecture — this is a first-class feature, not just a prompt.** Consistent with the Memory/Knowledge Vault/Command Center patterns already built elsewhere in Ascend, not a one-off prompt tweak:
+- **Landing Page Knowledge Vault** — stores extracted design principles (text/structured data), never HTML or templates.
+- **Calibration Queue** — uploading or manually improving a landing page enters it into a review queue where Ascend extracts reusable design patterns from it.
+- **Command Center → Design Intelligence** — surfaces how many landing pages have been analyzed, common winning patterns by industry, top-performing section types, recent calibration insights. (Natural extension of the Command Center built 2026-08-09 — reuse its existing agency-owner gating and layout, don't stand up a parallel admin surface for this.)
+- **Designer feedback loop** — after a generated page is tweaked, Ascend asks "what improved?" and learns from the stated reasoning, not by silently diffing and copying the edit.
+
+Sequencing note, per this doc's own Priority 1 rule: this is Priority 3 scope. Do not start building the Calibration Engine while Priority 1 (functional stability — Growth Scan currently broken) is still open. Scoping/design work on this can happen in parallel; implementation should not jump the queue.
+
 ### Priority 4 — Intelligence layer
 
 Continue improving what makes Ascend unique: Business Profile, Growth Score, Memory, Recommendations, Blueprints, Timeline, Action Plans, Explainability, Zeno. Every improvement should make Ascend smarter, not busier.
