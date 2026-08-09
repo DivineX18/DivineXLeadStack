@@ -11,6 +11,12 @@ A production-ready, all-in-one CRM styled after GoHighLevel and HubSpot, scoped 
 
 The codebase ships with every core surface already functional: contacts, pipeline, calendar, tasks, forms (with public hosted pages + iframe embed), reports, global search, shared-sender email + SMS, plus AI Agents — one persona per client sub-account answering across **Web Chat, SMS, WhatsApp, and Voice (inbound)**, and proactively dialing out via **Outbound Voice** (single click-to-call + bulk campaigns). All external dependencies are user-provided credentials; the repo contains no embedded secrets.
 
+## DivineX V1 North Star — read before implementing anything
+
+**[docs/architecture/DIVINEX_V1_NORTH_STAR.md](docs/architecture/DIVINEX_V1_NORTH_STAR.md) is the locked governing document for the remainder of V1.** It's not a task list — it's how to think about every implementation decision on the unified DivineX product (Ascend intelligence layer + Flow execution engine, `app.divinex.io`). Measure every change against it before writing code, not after.
+
+The single rule that matters most, restated here because it's easy to skip past: **before implementing any feature, spend at least 80% of the effort understanding the existing architecture and 20% writing code.** Default to extending, composing, or reusing existing infrastructure. Only create new components, services, or routes when there is no clean extension point, and be able to state why reuse wasn't possible when you do. Current priority order per that doc: (1) functional stability — no new features while Growth Scan, Identify execution, workspace switching/resolution, provisioning, auth, navigation, cross-app routing, or permissions are broken; (2) Ascend UX redesign — the unified shell must stop feeling like Flow wrapped in Ascend chrome; (3) Landing Page Intelligence V2; (4) intelligence layer depth; (5) polish + launch certification.
+
 ## Auth & Tenancy Model
 
 LeadStack is a **GHL-style multi-tenant CRM**: an agency operator owns one or more **sub-accounts**, each an isolated workspace with its own contacts, deals, pipeline, etc. Sub-accounts are URL-scoped at `/sa/[subAccountId]/...`.
