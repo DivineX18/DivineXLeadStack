@@ -40,17 +40,21 @@ The single most important finding of this audit. Getting ONE existing internal u
 | Section | Status | Notes |
 |---|---|---|
 | Home | ✅ VERIFIED WORKING | Composes Flow operational data + Ascend intelligence in parallel; degrades gracefully per-card on partial failure |
-| Identify | ✅ VERIFIED WORKING | Composes Ascend intelligence data (growth score, assessments, recommendations, memory, timeline, blueprint) |
-| Create | ⬜ MISSING (real UI) | Currently a placeholder linking to `/sa/{id}/funnels` + `/sa/{id}/website`. Scoped for Pass 3, not built this pass. Research already confirms `FunnelsList`/`FunnelBuilder`/`WebsiteBuilder` are prop-driven and directly reusable — lowest-risk of the six stubs. |
-| Launch | ⬜ MISSING (real UI) | Placeholder linking to `/sa/{id}/broadcasts` + `/sa/{id}/workflows`. Pass 3. |
-| Grow | ⬜ MISSING (real UI) | Placeholder linking to `/sa/{id}/pipeline`. Pass 3. |
-| Optimize | ⬜ MISSING (real UI) | Placeholder linking to `/sa/{id}/reports`. Pass 3. |
-| Scale | ⬜ MISSING (real UI) | Placeholder linking to `/sa/{id}/ai-suite` (Zeno). Highest-risk of the six (execution-authority questions) — needs dedicated scoping before Pass 3 touches it. |
-| Settings | ⬜ MISSING (real UI) | Placeholder deep-linking to the legacy `/sa/{id}/dashboard/settings` page — notably hosts zero real settings UI itself, contrary to initial assumption during this audit. Pass 3. |
+| Identify | 🔧 FIXED THIS PASS (Task H) | Was already real (composed intelligence data); the "no linked business profile" / "no assessment yet" prompts were static text with no way to act — now real links out to `ascend.divinex.io` (the actual owner of business-profile creation and assessment-running, per the locked product model — not rebuilt in Flow) |
+| Create | 🔧 FIXED THIS PASS (Task B) | Real Funnel Builder (list + editor) and Website Builder mounted natively in Ascend chrome, reusing `FunnelsList`/`FunnelBuilder`/`WebsiteBuilder` as-is. `/sa/{id}/funnels` and `/sa/{id}/website` untouched. |
+| Grow | 🔧 FIXED THIS PASS (Task C) | Contacts, Pipeline, Tasks, Calendar, Conversations all mounted natively — the exact, unmodified legacy page components wrapped in the same `SubAccountProvider` context they already expect. Zero forking of their internal logic. |
+| Settings | 🔧 FIXED THIS PASS (Task D) | The full ~20-section legacy settings page mounted natively; each section's existing role-based visibility (not a new curation layer) governs what a given caller sees, same as it does today for CRM-only collaborators vs. admins. |
+| Launch | 🔧 FIXED THIS PASS (Task E) | Broadcasts (list + detail) and Workflows (list, editor, live runs) mounted natively, reusing the underlying prop-driven components directly. |
+| Optimize | 🔧 FIXED THIS PASS (Task F) | Composes Growth Score + CRO recommendations (real Ascend intelligence, no invented metrics) above the real, unmodified Flow Reports page. |
+| Scale | 🔧 FIXED THIS PASS (Task G) | Mounts the existing, already-built confirmation-gated workspace AI Suite/Zeno (`src/lib/ai-suite/capabilities.ts`) as-is — no new execution-authority code was written; this was reuse only. |
 
-**2 of 8 sections are real. The other 6 are the identical placeholder component**, each honest about being a stub ("arrives in a future slice").
+**All 8 sections are now real** — 2 were already real (Home, Identify's data); the other 6 went from static placeholder to native, working functionality this pass, entirely via reuse (zero duplicated engines, zero new CRM/funnel/website/workflow/reports systems).
 
-Sidebar lock icons are workspace-specific (driven by whether that workspace's entitlements include the matching module), not a global flag. The permission→module mapping is explicitly flagged in code as a first-pass Slice 8 decision, not finalized — revisit once each section's real UI exists.
+**Known scope boundary, consistent across all six**: internal deep-links *within* these pages (e.g. clicking into a specific contact's detail view, or a funnel's live-preview link) still point at the legacy `/sa/{id}/...` path for that one nested destination — the list/board/builder/settings surfaces themselves are fully native, but not literally every possible click, several layers deep, has its own dedicated `/app/*` route yet. Not a defect; a deliberate, documented boundary matching the time available this pass.
+
+Sidebar lock icons are workspace-specific (driven by whether that workspace's entitlements include the matching module), not a global flag. The permission→module mapping is explicitly flagged in code as a first-pass Slice 8 decision, not finalized.
+
+**Production build verified**: a full `pnpm build` (not just `tsc --noEmit`) was run after all six tasks — every new `/app/*` route compiled successfully with real bundle sizes, and every original `/sa/[subAccountId]/...` route remains present and unchanged. This specifically validates the "import the legacy page component directly, wrap in the same context it already expects" reuse pattern used throughout — it's not just type-safe, it's confirmed buildable.
 
 ## Workspace selection cookie
 
@@ -89,9 +93,18 @@ Sidebar lock icons are workspace-specific (driven by whether that workspace's en
 | 2B — Operator UI for `unified_shell`/`unified_navigation` flag rollout | 🔧 FIXED THIS PASS |
 | 2C — Workspace switching returns to `/app/home` instead of stranding in Flow | 🔧 FIXED THIS PASS |
 
+## Pass 3 summary (this session)
+
+All six previously-stub `/app/*` sections (Create, Grow, Settings, Launch, Optimize, Scale) are now real, plus Identify's actionability gap (Task H) — see the lifecycle table above for the per-section breakdown and reuse method. Order followed: Create → Grow → Settings → Launch → Optimize → Scale → Identify actionability, per the mandate's own priority sequencing. Verified via full `pnpm tsc --noEmit`, full `pnpm eslint` sweep, full `pnpm build`, and all six `verify-*.mts` regression scripts — all clean/passing after every task.
+
 ## Outstanding for launch (in priority order)
 
-1. 🚫 **Ascend-side `divinex_workspace_mappings` provisioning** — the true remaining blocker; requires a decision on the other repo.
-2. ⬜ Real UI for Create, Launch, Grow, Optimize, Scale, Settings (Pass 3 — sequenced, not bundled).
+1. 🚫 **Ascend-side `divinex_workspace_mappings` provisioning** — the true remaining blocker; requires a product-owner decision on the other repo (its `dev`/`main` divergence — 67/50 commits apart, real file-level conflicts on `render.yaml` and `App.tsx`, the exact two files this session's earlier fixes touched — has to be resolved or explicitly worked around first).
+2. ⚠️ The known scope boundary noted in the lifecycle table above (nested deep-links inside the six native sections still point at `/sa/{id}/...` for that one destination) — real, but non-blocking; the primary surfaces are fully native.
 3. ⚠️ Duplicate "DivineX" sub-account cleanup.
 4. ⚠️ Full regression pass on `ascend.divinex.io` given the depth of the auth bug found and fixed tonight.
+5. ❌ The client-role Ascend BI dashboard bug (`ExecutiveMode.tsx` zero-business-profile state) — worked around live for one customer, not yet fixed for the general case.
+
+## Final verdict
+
+**CONDITIONAL GO.** The Full Ascend customer journey (Home → Identify → Create → Launch → Grow → Optimize → Scale → Settings) is now real and functional end-to-end for any workspace that's already correctly provisioned into `full_ascend` mode, with zero regression to `crm.divinex.io` or `ascend.divinex.io`. The condition: item 1 above is a genuine launch blocker for *new* customers specifically — until the Ascend-side Postgres provisioning gap is closed (or explicitly worked around per-customer as an accepted interim process), every new Full Ascend customer needs the same manual database intervention performed for the first customer tonight. Everything else outstanding is a real but non-blocking limitation.
