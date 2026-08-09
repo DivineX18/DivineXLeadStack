@@ -1,4 +1,4 @@
-import { resolveShellContextForLayout } from "@/lib/shell/shell-context-wrappers";
+import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-placeholder";
 import { AscendCreateContent } from "@/components/shell/ascend-create-content";
 import { getAdminDb } from "@/lib/firebase/admin";
@@ -15,7 +15,7 @@ import type { SubAccountDoc } from "@/types/tenancy";
  * useSubAccount() client-side.
  */
 export default async function AscendCreatePage() {
-  const shell = await resolveShellContextForLayout();
+  const shell = await resolveShellContextForPage();
   const saId = shell?.workspace?.workspaceId ?? null;
   const effectiveRole = shell?.workspace?.effectiveRole ?? null;
 

@@ -1,4 +1,4 @@
-import { resolveShellContextForLayout } from "@/lib/shell/shell-context-wrappers";
+import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-placeholder";
 import { WorkflowBuilderLoader } from "@/components/workflows/workflow-builder-loader";
 import type { BuilderReadiness } from "@/components/workflows/workflow-builder";
@@ -33,7 +33,7 @@ export default async function AscendLaunchWorkflowEditorPage({
   params: Promise<{ workflowId: string }>;
 }) {
   const { workflowId } = await params;
-  const shell = await resolveShellContextForLayout();
+  const shell = await resolveShellContextForPage();
   const saId = shell?.workspace?.workspaceId ?? null;
 
   if (!saId) {

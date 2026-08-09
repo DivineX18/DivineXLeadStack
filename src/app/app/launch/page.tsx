@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Send, Zap } from "lucide-react";
-import { resolveShellContextForLayout } from "@/lib/shell/shell-context-wrappers";
+import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-placeholder";
 
 /**
@@ -15,7 +15,7 @@ const SECTIONS = [
 ];
 
 export default async function AscendLaunchPage() {
-  const shell = await resolveShellContextForLayout();
+  const shell = await resolveShellContextForPage();
   const saId = shell?.workspace?.workspaceId ?? null;
 
   if (!saId) {

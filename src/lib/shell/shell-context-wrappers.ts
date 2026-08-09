@@ -1,6 +1,6 @@
 import "server-only";
 
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { resolveShellContext } from "@/lib/shell/resolve-shell-context";
 import type { AscendShellContext } from "@/types/ascend-shell";
 
@@ -31,6 +31,29 @@ export async function resolveShellContextForLayout(options?: {
   const uid = hdrs.get("x-user-uid");
   if (!uid) return null;
   return resolveShellContext(uid, options);
+}
+
+// ── 1b. Page Component reached under /app/* ───────────────────────────────
+
+/**
+ * Every page under /app/* is a separate Server Component render from
+ * AscendAppLayout — Next.js does not thread a layout's resolved data down
+ * to its page automatically, so each page that needs `shell.workspace`
+ * (not just the chrome the layout already rendered) has always had to call
+ * resolveShellContextForLayout() again itself. Until this wrapper existed,
+ * every one of those call sites called it with NO options, meaning the
+ * page's own resolution never saw the "active_workspace_id" cookie the
+ * layout reads — for a multi-membership caller this fell through
+ * decideWorkspaceSelection's "multiple_available, don't guess" branch and
+ * silently produced workspace: null (an honest "No active workspace yet."
+ * empty state on every /app/* page), even though the layout's OWN
+ * cookie-aware call had already resolved a real workspace and rendered the
+ * full_ascend chrome around it. This wrapper is the fix: the one place a
+ * page should call to get the SAME workspace resolution the layout used.
+ */
+export async function resolveShellContextForPage(): Promise<AscendShellContext | null> {
+  const activeWorkspaceId = (await cookies()).get("active_workspace_id")?.value;
+  return resolveShellContextForLayout(activeWorkspaceId ? { explicitWorkspaceId: activeWorkspaceId } : undefined);
 }
 
 // ── 2. Server Action / explicit uid already known ────────────────────────

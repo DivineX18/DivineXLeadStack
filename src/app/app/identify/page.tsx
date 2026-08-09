@@ -1,4 +1,4 @@
-import { resolveShellContextForLayout } from "@/lib/shell/shell-context-wrappers";
+import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 import { resolveIdentifyDashboard } from "@/lib/intelligence/intelligence-wrappers";
 import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-placeholder";
 import { GrowthScoreCard } from "@/components/ascend/growth-score-card";
@@ -14,7 +14,7 @@ import { GrowthTimelineCard } from "@/components/ascend/timeline-card";
  * operational data — see compose-identify-dashboard.ts's header comment).
  */
 export default async function AscendIdentifyPage() {
-  const shell = await resolveShellContextForLayout();
+  const shell = await resolveShellContextForPage();
   const uid = shell?.identity.session.user?.uid ?? null;
   const workspaceId = shell?.workspace?.workspaceId ?? null;
 

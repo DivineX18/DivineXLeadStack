@@ -1,4 +1,4 @@
-import { resolveShellContextForLayout } from "@/lib/shell/shell-context-wrappers";
+import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 import { resolveIntelligenceSnapshot } from "@/lib/intelligence/intelligence-wrappers";
 import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-placeholder";
 import { RecommendationsListCard } from "@/components/ascend/recommendation-card";
@@ -17,7 +17,7 @@ import ReportsPage from "@/app/(dashboard)/sa/[subAccountId]/reports/page";
  * already-authoritative source.
  */
 export default async function AscendOptimizePage() {
-  const shell = await resolveShellContextForLayout();
+  const shell = await resolveShellContextForPage();
   const uid = shell?.identity.session.user?.uid ?? null;
   const saId = shell?.workspace?.workspaceId ?? null;
 

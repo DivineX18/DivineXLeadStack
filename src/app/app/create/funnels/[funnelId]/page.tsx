@@ -1,4 +1,4 @@
-import { resolveShellContextForLayout } from "@/lib/shell/shell-context-wrappers";
+import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-placeholder";
 import { FunnelBuilder } from "@/components/funnels/funnel-builder";
 
@@ -16,7 +16,7 @@ export default async function AscendFunnelEditorPage({
   params: Promise<{ funnelId: string }>;
 }) {
   const { funnelId } = await params;
-  const shell = await resolveShellContextForLayout();
+  const shell = await resolveShellContextForPage();
   const saId = shell?.workspace?.workspaceId ?? null;
 
   if (!saId) {

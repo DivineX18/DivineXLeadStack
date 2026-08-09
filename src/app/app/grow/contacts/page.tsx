@@ -1,4 +1,4 @@
-import { resolveShellContextForLayout } from "@/lib/shell/shell-context-wrappers";
+import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-placeholder";
 import { SubAccountProvider } from "@/context/sub-account-context";
 import ContactsPage from "@/app/(dashboard)/sa/[subAccountId]/contacts/page";
@@ -24,7 +24,7 @@ import ContactsPage from "@/app/(dashboard)/sa/[subAccountId]/contacts/page";
  * itself is fully native.
  */
 export default async function AscendGrowContactsPage() {
-  const shell = await resolveShellContextForLayout();
+  const shell = await resolveShellContextForPage();
   const saId = shell?.workspace?.workspaceId ?? null;
 
   if (!saId) {

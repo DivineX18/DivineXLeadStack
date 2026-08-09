@@ -1,4 +1,4 @@
-import { resolveShellContextForLayout } from "@/lib/shell/shell-context-wrappers";
+import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-placeholder";
 import { SubAccountProvider } from "@/context/sub-account-context";
 import BroadcastDetailPage from "@/app/(dashboard)/sa/[subAccountId]/broadcasts/[broadcastId]/page";
@@ -10,7 +10,7 @@ import BroadcastDetailPage from "@/app/(dashboard)/sa/[subAccountId]/broadcasts/
  * SubAccountProvider below) — same zero-fork reuse pattern throughout.
  */
 export default async function AscendLaunchBroadcastDetailPage() {
-  const shell = await resolveShellContextForLayout();
+  const shell = await resolveShellContextForPage();
   const saId = shell?.workspace?.workspaceId ?? null;
 
   if (!saId) {

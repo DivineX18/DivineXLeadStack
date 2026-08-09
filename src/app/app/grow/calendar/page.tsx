@@ -1,4 +1,4 @@
-import { resolveShellContextForLayout } from "@/lib/shell/shell-context-wrappers";
+import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-placeholder";
 import { SubAccountProvider } from "@/context/sub-account-context";
 import CalendarPage from "@/app/(dashboard)/sa/[subAccountId]/calendar/page";
@@ -8,7 +8,7 @@ import CalendarPage from "@/app/(dashboard)/sa/[subAccountId]/calendar/page";
  * Same zero-fork reuse pattern as grow/contacts/page.tsx.
  */
 export default async function AscendGrowCalendarPage() {
-  const shell = await resolveShellContextForLayout();
+  const shell = await resolveShellContextForPage();
   const saId = shell?.workspace?.workspaceId ?? null;
 
   if (!saId) {

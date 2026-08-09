@@ -1,4 +1,4 @@
-import { resolveShellContextForLayout } from "@/lib/shell/shell-context-wrappers";
+import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-placeholder";
 import { SubAccountProvider } from "@/context/sub-account-context";
 import SubAccountAiSuitePage from "@/app/(dashboard)/sa/[subAccountId]/ai-suite/page";
@@ -16,7 +16,7 @@ import SubAccountAiSuitePage from "@/app/(dashboard)/sa/[subAccountId]/ai-suite/
  * capability registry own that already.
  */
 export default async function AscendScalePage() {
-  const shell = await resolveShellContextForLayout();
+  const shell = await resolveShellContextForPage();
   const saId = shell?.workspace?.workspaceId ?? null;
 
   if (!saId) {

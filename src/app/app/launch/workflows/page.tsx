@@ -1,4 +1,4 @@
-import { resolveShellContextForLayout } from "@/lib/shell/shell-context-wrappers";
+import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-placeholder";
 import { WorkflowsList } from "@/components/workflows/workflows-list";
 
@@ -10,7 +10,7 @@ import { WorkflowsList } from "@/components/workflows/workflows-list";
  * shell context instead of a [subAccountId] URL segment.
  */
 export default async function AscendLaunchWorkflowsPage() {
-  const shell = await resolveShellContextForLayout();
+  const shell = await resolveShellContextForPage();
   const saId = shell?.workspace?.workspaceId ?? null;
 
   if (!saId) {

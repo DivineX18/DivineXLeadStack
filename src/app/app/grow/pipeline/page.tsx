@@ -1,4 +1,4 @@
-import { resolveShellContextForLayout } from "@/lib/shell/shell-context-wrappers";
+import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-placeholder";
 import { SubAccountProvider } from "@/context/sub-account-context";
 import PipelinePage from "@/app/(dashboard)/sa/[subAccountId]/pipeline/page";
@@ -10,7 +10,7 @@ import PipelinePage from "@/app/(dashboard)/sa/[subAccountId]/pipeline/page";
  * zero-argument component the legacy /sa/[id]/pipeline route renders.
  */
 export default async function AscendGrowPipelinePage() {
-  const shell = await resolveShellContextForLayout();
+  const shell = await resolveShellContextForPage();
   const saId = shell?.workspace?.workspaceId ?? null;
 
   if (!saId) {

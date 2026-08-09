@@ -1,4 +1,4 @@
-import { resolveShellContextForLayout } from "@/lib/shell/shell-context-wrappers";
+import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 import { resolveHomeDashboard } from "@/lib/intelligence/intelligence-wrappers";
 import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-placeholder";
 import { BusinessHealthCard } from "@/components/ascend/business-health-card";
@@ -18,7 +18,7 @@ import { LatestAssessmentCard, ReportsCard } from "@/components/ascend/assessmen
  * Slice 8 shipped, rather than crashing.
  */
 export default async function AscendHomePage() {
-  const shell = await resolveShellContextForLayout();
+  const shell = await resolveShellContextForPage();
   const uid = shell?.identity.session.user?.uid ?? null;
   const workspaceId = shell?.workspace?.workspaceId ?? null;
 

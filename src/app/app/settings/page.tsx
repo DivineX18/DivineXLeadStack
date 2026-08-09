@@ -1,4 +1,4 @@
-import { resolveShellContextForLayout } from "@/lib/shell/shell-context-wrappers";
+import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-placeholder";
 import { SubAccountProvider } from "@/context/sub-account-context";
 import SettingsPage from "@/app/(dashboard)/sa/[subAccountId]/dashboard/settings/page";
@@ -20,7 +20,7 @@ import SettingsPage from "@/app/(dashboard)/sa/[subAccountId]/dashboard/settings
  * of inventing a parallel one.
  */
 export default async function AscendSettingsPage() {
-  const shell = await resolveShellContextForLayout();
+  const shell = await resolveShellContextForPage();
   const saId = shell?.workspace?.workspaceId ?? null;
 
   if (!saId) {
