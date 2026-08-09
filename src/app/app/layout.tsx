@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { resolveShellContextForLayout } from "@/lib/shell/shell-context-wrappers";
 import { decideShellFallbackRoute } from "@/lib/shell/resolve-shell-fallback-route";
+import { ascendDarkBranding } from "@/lib/shell/resolve-shell-branding";
 import { AscendShellSidebarContent } from "@/components/shell/ascend-shell-sidebar-content";
 import { AscendMobileNav } from "@/components/shell/ascend-mobile-nav";
 import { AscendUserMenu } from "@/components/shell/ascend-user-menu";
@@ -52,7 +53,25 @@ export default async function AscendAppLayout({ children }: { children: ReactNod
     redirect("/login");
   }
 
-  if (shell.mode !== "full_ascend") {
+  // Command Center (docs/architecture/ASCEND_OS_LAUNCH_READINESS.md) is the
+  // one /app/* surface that intentionally works without an active
+  // full_ascend workspace — an agency owner managing the whole platform may
+  // have no workspace selected, or their selected workspace may be
+  // CRM-only. This is a narrow, path-scoped carve-out from the strict
+  // full_ascend gate below, not a relaxation of it: every other lifecycle
+  // page is completely unaffected, and even command-center itself only
+  // bypasses here for a verified agency owner with an active session —
+  // anyone else hitting /app/command-center falls straight through to the
+  // existing fallback redirect, unchanged. This is never treated as
+  // authorization on its own: every command-center route/server action
+  // independently re-checks requireAgencyOwnerAny() itself.
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  const allowCommandCenterBypass =
+    pathname.startsWith("/app/command-center") &&
+    shell.capabilities.isAgencyOwner &&
+    shell.identity.session.state === "active";
+
+  if (shell.mode !== "full_ascend" && !allowCommandCenterBypass) {
     redirect(
       decideShellFallbackRoute({
         sessionState: shell.identity.session.state,
@@ -68,6 +87,12 @@ export default async function AscendAppLayout({ children }: { children: ReactNod
 
   const zenoHref = shell.workspace ? `/sa/${shell.workspace.workspaceId}/ai-suite` : null;
   const email = shell.identity.session.user?.email ?? null;
+  // shell.branding tracks the REAL resolved mode, which is "crm_only" for
+  // a command-center-bypass render (no active full_ascend workspace) —
+  // Command Center still renders inside Ascend chrome per its own spec, so
+  // it requests the dark branding directly rather than inheriting
+  // whatever crm_only would otherwise resolve to.
+  const branding = shell.mode === "full_ascend" ? shell.branding : ascendDarkBranding();
 
   return (
     <div className="theme-ascend flex min-h-dvh bg-[#08090d] text-white">
@@ -79,13 +104,13 @@ export default async function AscendAppLayout({ children }: { children: ReactNod
       </a>
 
       <aside className="hidden w-64 shrink-0 border-r border-white/10 bg-black/40 p-4 md:flex">
-        <AscendShellSidebarContent branding={shell.branding} navigation={shell.navigation} capabilities={shell.capabilities} zenoHref={zenoHref} />
+        <AscendShellSidebarContent branding={branding} navigation={shell.navigation} capabilities={shell.capabilities} zenoHref={zenoHref} />
       </aside>
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-white/10 px-4 md:justify-end md:px-6">
-          <AscendMobileNav branding={shell.branding} navigation={shell.navigation} capabilities={shell.capabilities} zenoHref={zenoHref} />
-          <span className="text-sm font-medium text-white/80 md:hidden">{shell.branding.productName}</span>
+          <AscendMobileNav branding={branding} navigation={shell.navigation} capabilities={shell.capabilities} zenoHref={zenoHref} />
+          <span className="text-sm font-medium text-white/80 md:hidden">{branding.productName}</span>
           <div className="ml-auto md:ml-0">
             <AscendUserMenu email={email} />
           </div>

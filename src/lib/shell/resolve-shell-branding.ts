@@ -17,6 +17,24 @@ import type { ResolvedBrand } from "@/config/landing";
  * `globals.css`'s new `.theme-ascend` block consumes them via
  * `hsl(var(--jade))`.
  */
+/** The full_ascend branding literal, independent of `mode` -- extracted so
+ *  the Command Center's agency-owner bypass (rendered while the REAL
+ *  resolved mode is "crm_only", since no workspace is active) can request
+ *  Ascend-dark chrome without needing a ResolvedBrand it doesn't have. */
+export function ascendDarkBranding(): AscendBrandingContext {
+  return {
+    mode: "full_ascend",
+    productName: "Ascend",
+    tagline: "One connected growth operating system.",
+    theme: "ascend_dark",
+    tokens: {
+      jade: "158 64% 45%",
+      indigo: "239 84% 67%",
+      cobalt: "217 91% 60%",
+    },
+  };
+}
+
 export function resolveShellBranding(mode: ShellMode, flowBrand: ResolvedBrand): AscendBrandingContext {
   if (mode === "crm_only") {
     return {
@@ -28,15 +46,5 @@ export function resolveShellBranding(mode: ShellMode, flowBrand: ResolvedBrand):
     };
   }
 
-  return {
-    mode,
-    productName: "Ascend",
-    tagline: "One connected growth operating system.",
-    theme: "ascend_dark",
-    tokens: {
-      jade: "158 64% 45%",
-      indigo: "239 84% 67%",
-      cobalt: "217 91% 60%",
-    },
-  };
+  return ascendDarkBranding();
 }

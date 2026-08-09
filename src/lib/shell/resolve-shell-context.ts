@@ -75,6 +75,7 @@ export async function resolveShellContext(
       canAccessSettings: identity.workspace?.status === "active" || isAgencyOwner,
       canAccessAgency: !!identity.session.user?.agencyId,
       canUseZeno: identity.workspace?.allowedPermissions.includes("zeno.advise") ?? false,
+      isAgencyOwner,
     },
   };
 }

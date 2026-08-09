@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AscendShellNav } from "@/components/shell/ascend-shell-nav";
 import type { AscendNavigationSection, AscendShellCapabilities, AscendBrandingContext } from "@/types/ascend-shell";
 
@@ -28,6 +29,14 @@ export function AscendShellSidebarContent({ branding, navigation, capabilities, 
       <AscendShellNav sections={navigation} />
 
       <nav aria-label="Account and workspace" className="mt-auto flex flex-col gap-1 border-t border-white/10 px-3 pt-4 text-sm">
+        {capabilities.isAgencyOwner && (
+          <Link
+            href="/app/command-center"
+            className="rounded-md px-3 py-2 font-medium text-white/85 outline-none transition-colors hover:bg-white/5 hover:text-white focus-visible:ring-2 focus-visible:ring-white/40 motion-reduce:transition-none"
+          >
+            Command Center
+          </Link>
+        )}
         {capabilities.canUseZeno && zenoHref && (
           <a
             href={zenoHref}

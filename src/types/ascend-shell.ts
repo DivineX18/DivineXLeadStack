@@ -126,6 +126,12 @@ export interface AscendShellCapabilities {
   /** Reuses Slice 5's real "zeno.advise" permission -- not a new ad hoc
    *  check. False whenever no workspace is active. */
   canUseZeno: boolean;
+  /** identity.session.user?.agencyRole === "owner" -- true regardless of
+   *  whether any workspace is currently active. Gates the Ascend Command
+   *  Center nav link (sidebar-only; the actual routes independently
+   *  re-check requireAgencyOwnerAny() server-side -- this flag is never
+   *  treated as authorization on its own). */
+  isAgencyOwner: boolean;
 }
 
 // ── Shell context (the composed result) ─────────────────────────────────

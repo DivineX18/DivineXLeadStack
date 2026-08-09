@@ -7,11 +7,13 @@ import { getAdminAuth } from "@/lib/firebase/admin";
 type Claims = {
   status?: string;
   agencyRole?: string;
+  agencyId?: string;
 };
 
 interface AuthedOwner {
   uid: string;
   email: string;
+  agencyId: string;
 }
 
 /**
@@ -29,8 +31,8 @@ export async function getCurrentAgencyOwner(): Promise<AuthedOwner | null> {
     const record = await getAdminAuth().getUser(uid);
     const claims = (record.customClaims ?? {}) as Claims;
     if (claims.status !== "active") return null;
-    if (claims.agencyRole !== "owner") return null;
-    return { uid, email: record.email ?? hdrs.get("x-user-email") ?? "" };
+    if (claims.agencyRole !== "owner" || !claims.agencyId) return null;
+    return { uid, email: record.email ?? hdrs.get("x-user-email") ?? "", agencyId: claims.agencyId };
   } catch {
     return null;
   }
@@ -54,12 +56,13 @@ export async function requireAgencyOwner(
     if (claims.status !== "active") {
       return NextResponse.json({ error: "Account inactive" }, { status: 403 });
     }
-    if (claims.agencyRole !== "owner") {
+    if (claims.agencyRole !== "owner" || !claims.agencyId) {
       return NextResponse.json({ error: "Agency owner only" }, { status: 403 });
     }
     return {
       uid,
       email: record.email ?? request.headers.get("x-user-email") ?? "",
+      agencyId: claims.agencyId,
     };
   } catch {
     return NextResponse.json({ error: "Auth check failed" }, { status: 500 });

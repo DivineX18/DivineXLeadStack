@@ -375,6 +375,14 @@ export default async function middleware(request: NextRequest) {
       // Attach user info to headers for downstream use
       headers.set("x-user-uid", decodedToken.uid);
       headers.set("x-user-email", decodedToken.email ?? "");
+      // Ascend Command Center — AscendAppLayout needs to know whether the
+      // current request targets /app/command-center specifically (a
+      // narrow, agency-owner-only carve-out from the strict full_ascend
+      // gate) without a Server Component layout having any other way to
+      // read the current pathname. Never used for authorization itself —
+      // every command-center route re-checks requireAgencyOwnerAny()
+      // independently server-side.
+      headers.set("x-pathname", request.nextUrl.pathname);
 
       return NextResponse.next({ request: { headers } });
     },
