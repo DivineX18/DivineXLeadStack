@@ -45,7 +45,21 @@ export function BusinessMemoryCard({ memory }: { memory: WithMeta<MemoryActionIt
         </>
       ) : (
         <p className="text-sm text-white/40">
-          {memory.meta.reasonCode === "no_linked_business_profile" ? "Link a business profile to build Business Memory here." : "Nothing recorded yet."}
+          {memory.meta.reasonCode === "no_linked_business_profile" ? (
+            <>
+              <a
+                href="https://ascend.divinex.io/dashboard"
+                target="_blank"
+                rel="noreferrer"
+                className="underline decoration-white/30 underline-offset-2 hover:text-white hover:decoration-white/60"
+              >
+                Link a business profile
+              </a>{" "}
+              to build Business Memory here.
+            </>
+          ) : (
+            "Nothing recorded yet."
+          )}
         </p>
       )}
     </AscendCardShell>

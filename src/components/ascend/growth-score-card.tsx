@@ -27,9 +27,21 @@ export function GrowthScoreCard({ dashboardSummary }: { dashboardSummary: WithMe
         </>
       ) : (
         <p className="text-sm text-white/40">
-          {dashboardSummary.meta.reasonCode === "no_linked_business_profile"
-            ? "Link a business profile to see your Growth Score here."
-            : "No score available yet."}
+          {dashboardSummary.meta.reasonCode === "no_linked_business_profile" ? (
+            <>
+              <a
+                href="https://ascend.divinex.io/dashboard"
+                target="_blank"
+                rel="noreferrer"
+                className="underline decoration-white/30 underline-offset-2 hover:text-white hover:decoration-white/60"
+              >
+                Link a business profile
+              </a>{" "}
+              to see your Growth Score here.
+            </>
+          ) : (
+            "No score available yet."
+          )}
         </p>
       )}
     </AscendCardShell>

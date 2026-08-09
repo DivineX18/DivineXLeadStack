@@ -20,7 +20,18 @@ export function LatestAssessmentCard({ dashboardSummary }: { dashboardSummary: W
           {data.recommendedAction && <p className="mt-2 text-xs text-white/60">{data.recommendedAction}</p>}
         </>
       ) : (
-        <p className="text-sm text-white/40">No assessment run yet.</p>
+        <p className="text-sm text-white/40">
+          No assessment run yet.{" "}
+          <a
+            href="https://ascend.divinex.io/growth-scanner"
+            target="_blank"
+            rel="noreferrer"
+            className="underline decoration-white/30 underline-offset-2 hover:text-white hover:decoration-white/60"
+          >
+            Run a Growth Audit
+          </a>
+          .
+        </p>
       )}
     </AscendCardShell>
   );
@@ -42,7 +53,18 @@ export function AssessmentHistoryCard({ dashboardSummary }: { dashboardSummary: 
           </li>
         </ul>
       ) : (
-        <p className="text-sm text-white/40">No assessments recorded yet. Run a Growth Scan to start your history.</p>
+        <p className="text-sm text-white/40">
+          No assessments recorded yet.{" "}
+          <a
+            href="https://ascend.divinex.io/growth-scanner"
+            target="_blank"
+            rel="noreferrer"
+            className="underline decoration-white/30 underline-offset-2 hover:text-white hover:decoration-white/60"
+          >
+            Run a Growth Scan
+          </a>{" "}
+          to start your history.
+        </p>
       )}
       <p className="mt-3 text-[11px] text-white/30">
         Showing the latest assessment only — full paginated history is a follow-up once a dedicated bridge endpoint exists.
