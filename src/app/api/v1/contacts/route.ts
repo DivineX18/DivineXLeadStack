@@ -5,6 +5,7 @@ import { getAdminDb } from "@/lib/firebase/admin";
 import { withApiAuth } from "@/lib/api/auth";
 import { apiError, apiOk } from "@/lib/api/responses";
 import { emitWebhookEvent } from "@/lib/api/webhooks/dispatch";
+import { fireWorkflowTrigger } from "@/lib/workflows/engine";
 import {
   parseContactCreate,
   serializeContactForApi,
@@ -156,6 +157,21 @@ export const POST = withApiAuth(async ({ body, ctx }) => {
     type: "contact.created",
     payload: { contact: wire },
   });
+
+  // Fixed 2026-08-10: this route previously never fired the internal
+  // Workflow engine, only external webhook subscribers -- a contact
+  // created via the Public API silently could not be picked up by any
+  // "contact.created" Workflow, contradicting createContactServerSide()'s
+  // own documented promise that dashboard-created and API-created contacts
+  // behave identically. Same live-mode-only gate that helper already uses.
+  if (ctx.mode === "live") {
+    void fireWorkflowTrigger({
+      subAccountId: ctx.subAccountId,
+      agencyId: ctx.agencyId,
+      type: "contact.created",
+      contactId: created.id,
+    });
+  }
 
   return apiOk(ctx, { contact: wire }, { status: 201 });
 });
