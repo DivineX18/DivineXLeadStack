@@ -289,6 +289,114 @@ export function parseContactCreate(raw: unknown): ParseResult<ContactCreateInput
 }
 
 /**
+ * Parsed + validated POST /v1/forms/inbound body — the generic,
+ * no-pre-built-form-required inbound lead capture used by external site
+ * builders (WordPress, Squarespace, Wix, hand-built pages). Unlike
+ * `ContactCreateInput`, `name` is optional here (resolved from
+ * `first_name`/`last_name`/email/phone) since a caller posting a raw
+ * plugin form payload often has no single "full name" field.
+ */
+export interface InboundLeadCreateInput {
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  source: string;
+  tags: string[];
+  message: string;
+  pageUrl: string;
+}
+
+const MAX_MESSAGE = 4000;
+
+/**
+ * Parse + validate a POST /v1/forms/inbound body. At least one of
+ * name/first_name+last_name/email/phone must resolve to something
+ * non-empty — mirrors the identifying-field rule the formId-scoped
+ * submissions endpoint already enforces.
+ */
+export function parseInboundLeadCreate(
+  raw: unknown,
+): ParseResult<InboundLeadCreateInput> {
+  if (!raw || typeof raw !== "object") {
+    return { ok: false, error: "Body must be a JSON object." };
+  }
+  const b = raw as Record<string, unknown>;
+
+  const name = asString(b.name, MAX_NAME);
+  if (name === null) return { ok: false, error: "`name` must be a string." };
+  const firstName = asString(b.first_name, MAX_NAME);
+  if (firstName === null) {
+    return { ok: false, error: "`first_name` must be a string." };
+  }
+  const lastName = asString(b.last_name, MAX_NAME);
+  if (lastName === null) {
+    return { ok: false, error: "`last_name` must be a string." };
+  }
+
+  const email = asString(b.email, MAX_FIELD);
+  if (email === null) return { ok: false, error: "`email` must be a string." };
+
+  const phone = asString(b.phone, MAX_FIELD);
+  if (phone === null) return { ok: false, error: "`phone` must be a string." };
+
+  const company = asString(b.company, MAX_FIELD);
+  if (company === null) {
+    return { ok: false, error: "`company` must be a string." };
+  }
+
+  const resolvedName =
+    name || [firstName, lastName].filter(Boolean).join(" ").trim();
+  if (!resolvedName && !email && !phone) {
+    return {
+      ok: false,
+      error:
+        "Provide at least one of `name` (or `first_name`/`last_name`), `email`, or `phone`.",
+    };
+  }
+
+  const source = asString(b.source, MAX_FIELD);
+  if (source === null) {
+    return { ok: false, error: "`source` must be a string." };
+  }
+
+  const tags = asTags(b.tags);
+  if (tags === null) {
+    return {
+      ok: false,
+      error: `\`tags\` must be an array of ≤${MAX_TAG_LEN}-char strings (max ${MAX_TAGS}).`,
+    };
+  }
+
+  const message = asString(b.message, MAX_MESSAGE);
+  if (message === null) {
+    return {
+      ok: false,
+      error: `\`message\` must be a string (≤${MAX_MESSAGE} chars).`,
+    };
+  }
+
+  const pageUrl = asString(b.page_url, MAX_FIELD);
+  if (pageUrl === null) {
+    return { ok: false, error: "`page_url` must be a string." };
+  }
+
+  return {
+    ok: true,
+    value: {
+      name: resolvedName || email || phone,
+      email,
+      phone,
+      company,
+      source,
+      tags,
+      message,
+      pageUrl,
+    },
+  };
+}
+
+/**
  * Parse + validate a PATCH body. Every field is optional; unknown fields
  * are tolerated but ignored. Returns the subset that was provided as a
  * partial update payload.

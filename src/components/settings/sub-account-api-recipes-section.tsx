@@ -9,6 +9,7 @@ import {
   Copy,
   ExternalLink,
   FormInput,
+  Globe,
   Loader2,
   Megaphone,
   MessageSquare,
@@ -35,7 +36,7 @@ import type { ApiKeyResponse, ApiKeyScope } from "@/types/api";
  * screenshots are worse than no screenshots.
  */
 
-type RecipeId = "meta-ads" | "website-form" | "slack-alert";
+type RecipeId = "meta-ads" | "website-form" | "wordpress" | "slack-alert";
 
 interface Recipe {
   id: RecipeId;
@@ -59,11 +60,22 @@ const RECIPES: Recipe[] = [
   },
   {
     id: "website-form",
-    title: "Submit a custom website form",
-    subtitle: "Pipe Webflow / WordPress / Squarespace form submissions in.",
+    title: "Submit a Flow-hosted form via a custom site",
+    subtitle:
+      "Point a Webflow (or similar) form action at one of your existing Flow forms, with full field mapping.",
     icon: FormInput,
     duration: "~5 min on your site",
     presetName: "Webflow form ingest",
+    presetScope: "forms-ingest",
+  },
+  {
+    id: "wordpress",
+    title: "Connect WordPress (or any other site)",
+    subtitle:
+      "No Flow form to build. Works with WordPress, Squarespace, Wix, or a hand-built page — no Zapier needed.",
+    icon: Globe,
+    duration: "~5 min on your site",
+    presetName: "WordPress / external site",
     presetScope: "forms-ingest",
   },
   {
@@ -142,13 +154,13 @@ export function SubAccountApiRecipesSection() {
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-semibold">Quick start</h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Three preset integrations. Pick one, mint the right key for it,
+            Preset integrations. Pick one, mint the right key for it,
             follow the steps. You can always set up something custom below.
           </p>
         </div>
       </header>
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {RECIPES.map((r) => {
           const Icon = r.icon;
           const isOpen = openId === r.id;
@@ -209,6 +221,14 @@ export function SubAccountApiRecipesSection() {
           onMint={() =>
             handleMint(RECIPES.find((r) => r.id === "website-form")!)
           }
+          onCopy={copy}
+        />
+      )}
+      {openId === "wordpress" && (
+        <WordpressGuide
+          mintedKey={mintedKey?.recipeId === "wordpress" ? mintedKey.key : null}
+          minting={minting}
+          onMint={() => handleMint(RECIPES.find((r) => r.id === "wordpress")!)}
           onCopy={copy}
         />
       )}
@@ -438,7 +458,161 @@ function WebsiteFormGuide({
   );
 }
 
-// ── Recipe 3: Slack alert ───────────────────────────────────────────────
+// ── Recipe 3: WordPress / any external site ─────────────────────────────
+
+function WordpressGuide({
+  mintedKey,
+  minting,
+  onMint,
+  onCopy,
+}: {
+  mintedKey: ApiKeyResponse | null;
+  minting: boolean;
+  onMint: () => void;
+  onCopy: (text: string) => Promise<void>;
+}) {
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+  const endpoint = `${baseUrl}/api/v1/forms/inbound`;
+  const secret = mintedKey?.secret ?? "<paste your key from step 1>";
+  const cf7Snippet = `add_action( 'wpcf7_mail_sent', function( $contact_form ) {
+    $submission = WPCF7_Submission::get_instance();
+    if ( ! $submission ) return;
+    $data = $submission->get_posted_data();
+
+    wp_remote_post( '${endpoint}', array(
+        'headers' => array(
+            'Authorization' => 'Bearer ${secret}',
+            'Content-Type'  => 'application/json',
+        ),
+        'body' => wp_json_encode( array(
+            'name'     => $data['your-name']    ?? '',
+            'email'    => $data['your-email']   ?? '',
+            'phone'    => $data['your-phone']   ?? '',
+            'message'  => $data['your-message'] ?? '',
+            'source'   => 'wordpress',
+            'page_url' => $submission->get_meta( 'url' ),
+        ) ),
+        'timeout' => 10,
+    ) );
+} );`;
+  const jsonTemplate = `{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "phone": "+15551234567",
+  "message": "Their message from the form",
+  "source": "wordpress",
+  "page_url": "https://client-site.com/contact"
+}`;
+
+  return (
+    <div className="mt-4 space-y-4 rounded-lg border bg-background p-4">
+      <p className="text-[11px] text-muted-foreground">
+        This endpoint doesn&apos;t require a Flow form to be built first —
+        send it whatever fields your form has, by name. Works the same way
+        for WordPress, Squarespace, Wix, or a hand-built page (Lovable,
+        Replit, etc) — only the &quot;how do I make my site POST here&quot;
+        step below differs by platform.
+      </p>
+
+      <Step n={1} title="Mint a forms-ingest key">
+        <p>
+          Write-only, safe to embed in a plugin snippet or your site&apos;s
+          code — it can only create contacts, nothing else.
+        </p>
+        {mintedKey?.secret ? (
+          <KeyReveal secret={mintedKey.secret} onCopy={() => onCopy(mintedKey.secret!)} />
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            onClick={onMint}
+            disabled={minting}
+            className="mt-2"
+          >
+            {minting ? (
+              <>
+                <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                Creating…
+              </>
+            ) : (
+              "Create my WordPress key"
+            )}
+          </Button>
+        )}
+      </Step>
+
+      <Step n={2} title="Send your form data here">
+        <Field
+          label="Endpoint URL"
+          value={endpoint}
+          onCopy={() => onCopy(endpoint)}
+        />
+        <Field
+          label="Headers"
+          value={`Authorization: Bearer ${secret}\nContent-Type: application/json`}
+          onCopy={() =>
+            onCopy(`Authorization: Bearer ${secret}\nContent-Type: application/json`)
+          }
+          multiline
+        />
+        <Field
+          label="Body (JSON)"
+          value={jsonTemplate}
+          onCopy={() => onCopy(jsonTemplate)}
+          hint="Every field is optional except you need at least one of name/email/phone. tags (array) and message are also accepted."
+          multiline
+        />
+      </Step>
+
+      <Step n={3} title="WordPress: if your form plugin has webhooks">
+        <p>
+          Fluent Forms (free), Gravity Forms, and WPForms Pro all have a
+          native webhook / &quot;Custom Payload&quot; delivery option in
+          their form settings. Paste the URL + headers above, then map
+          your form&apos;s fields into the JSON body shape from step 2.
+        </p>
+      </Step>
+
+      <Step n={4} title="WordPress: no webhook option? Use this snippet">
+        <p>
+          For Contact Form 7 (free, no native webhooks), add this to your
+          theme&apos;s <Code>functions.php</Code> or a small site-specific
+          plugin. Swap the <Code>your-name</Code> / <Code>your-email</Code>{" "}
+          field names for whatever tag names your form actually uses.
+        </p>
+        <Field
+          label="functions.php snippet"
+          value={cf7Snippet}
+          onCopy={() => onCopy(cf7Snippet)}
+          multiline
+        />
+      </Step>
+
+      <Step n={5} title="Squarespace / Wix / hand-built sites">
+        <p>
+          Squarespace and Wix (via Velo) both support a custom &quot;form
+          action&quot; or a bit of custom code on submit — point it at the
+          endpoint from step 2 with the same headers and body shape. For a
+          site you built yourself (Lovable, Replit, or anywhere else),
+          call this endpoint directly from your form&apos;s submit handler
+          the same way.
+        </p>
+      </Step>
+
+      <Step n={6} title="Test it">
+        <p>
+          Submit a real form on your site. The new contact should appear
+          in Contacts within seconds, with <Code>source: wordpress</Code>{" "}
+          (or whatever you set) on it, and the message (if any) saved as a
+          note. A 401 means the Authorization header didn&apos;t copy
+          correctly.
+        </p>
+      </Step>
+    </div>
+  );
+}
+
+// ── Recipe 4: Slack alert ───────────────────────────────────────────────
 
 function SlackAlertGuide() {
   return (
