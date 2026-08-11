@@ -80,9 +80,27 @@ export interface DashboardAsset {
 /** `GET /internal/intelligence/business-profiles/:id/dashboard-summary` —
  *  the real, flat shape computed by `getDashboardSummary()`. Replaces
  *  Slice 9's invented nested `GrowthAssessment.growthScore` object. */
+/** Which of the two genuinely distinct sources the headline score/fields
+ *  above came from — a Growth Scan (website audit) or the onboarding
+ *  Business Assessment. Null when neither exists yet. Added alongside the
+ *  dashboard-summary provenance fix (2026-08-09) — never inferred client-
+ *  side, always the server's own determination of which was more recent. */
+export type DashboardScoreSource = "website_scan" | "business_assessment" | null;
+
+export interface DashboardLatestWebsiteScan {
+  id: number;
+  createdAt: string;
+  overallScore: number;
+  scoreLabel: string;
+  biggestBottleneck: string;
+  recommendedFunnelType: string;
+  shareToken: string;
+}
+
 export interface DashboardSummary {
   latestGrowthScore: number | null;
   scoreLabel: "Optimized" | "Ready to Scale" | "Growing" | "Needs Work" | null;
+  scoreSource: DashboardScoreSource;
   primaryConstraint: string | null;
   recommendedFunnel: string | null;
   recommendedAction: string | null;
@@ -91,6 +109,11 @@ export interface DashboardSummary {
   blueprintId: number | null;
   latestBlueprintAssessmentId: number | null;
   hasScan: boolean;
+  /** Raw latest Growth Scan summary, always present alongside the merged
+   *  headline fields above so a caller that wants to show the website
+   *  scan as its OWN distinct section (never conflated with the Business
+   *  Assessment) can, regardless of which one scoreSource points at. */
+  latestWebsiteScan: DashboardLatestWebsiteScan | null;
   lastFiveAssets: DashboardAsset[];
   lastFiveTimeline: DashboardTimelineEvent[];
 }
