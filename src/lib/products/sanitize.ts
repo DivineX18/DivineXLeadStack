@@ -14,6 +14,11 @@ export interface CreateProductPayload {
   unitPriceCents?: number;
   currency?: string;
   active?: boolean;
+  deliveryType?: "none" | "file";
+  fileStoragePath?: string | null;
+  fileName?: string | null;
+  fileSizeBytes?: number | null;
+  fileContentType?: string | null;
 }
 
 export function sanitizeProductPayload(
@@ -38,6 +43,37 @@ export function sanitizeProductPayload(
   }
   if (typeof body.active === "boolean") {
     out.active = body.active;
+  }
+
+  if (body.deliveryType === "none" || body.deliveryType === "file") {
+    out.deliveryType = body.deliveryType;
+    // Clearing delivery back to "none" drops any attached file metadata
+    // too — the Storage object itself is left in place (no delete-on-
+    // change plumbing in v1; an orphaned file costs nothing to leave).
+    if (body.deliveryType === "none") {
+      out.fileStoragePath = null;
+      out.fileName = null;
+      out.fileSizeBytes = null;
+      out.fileContentType = null;
+    }
+  }
+  if (body.fileStoragePath === null || typeof body.fileStoragePath === "string") {
+    out.fileStoragePath = body.fileStoragePath?.trim().slice(0, 1_000) || null;
+  }
+  if (body.fileName === null || typeof body.fileName === "string") {
+    out.fileName = body.fileName?.trim().slice(0, 300) || null;
+  }
+  if (
+    body.fileSizeBytes === null ||
+    (typeof body.fileSizeBytes === "number" && Number.isFinite(body.fileSizeBytes))
+  ) {
+    out.fileSizeBytes =
+      typeof body.fileSizeBytes === "number"
+        ? Math.max(0, Math.round(body.fileSizeBytes))
+        : null;
+  }
+  if (body.fileContentType === null || typeof body.fileContentType === "string") {
+    out.fileContentType = body.fileContentType?.trim().slice(0, 200) || null;
   }
 
   return out;

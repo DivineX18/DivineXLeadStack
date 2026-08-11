@@ -9,6 +9,7 @@ import { emitDealCreatedById } from "@/lib/server/deals-service";
 import { computeQuoteTotals } from "@/lib/quotes/calc";
 import { formatCurrency } from "@/lib/format";
 import { maybeSendReviewRequest } from "@/lib/reviews/request";
+import { deliverDigitalProductsForQuote } from "@/lib/products/delivery";
 import type { ActivityType } from "@/types/contacts";
 import type { WebhookEventType } from "@/types/webhooks";
 import { GLOBAL_TERRITORY_ID, type AutomationTriggerType } from "@/types";
@@ -338,4 +339,6 @@ export async function markQuotePaid(
     contactId: quote.contactId,
     trigger: "quote_paid",
   });
+
+  void deliverDigitalProductsForQuote(quote);
 }

@@ -3,6 +3,7 @@ import "server-only";
 import { initializeApp, getApps, cert, type App } from "firebase-admin/app";
 import { getAuth, type Auth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 
 let _app: App | null = null;
 
@@ -44,4 +45,14 @@ export function getAdminDb(): Firestore {
     // Already configured on a prior import; nothing to do.
   }
   return db;
+}
+
+/** Admin SDK Storage bucket — same bucket the client SDK uploads to
+ *  (NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET). Bypasses storage.rules entirely
+ *  (Admin SDK always has full access), so callers are responsible for
+ *  their own authorization before reading/writing/signing a URL. */
+export function getAdminStorageBucket() {
+  return getStorage(getAdminApp()).bucket(
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  );
 }

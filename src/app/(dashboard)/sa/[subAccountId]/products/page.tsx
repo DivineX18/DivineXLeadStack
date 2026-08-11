@@ -1,7 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Archive, Loader2, Package, Pencil, Plus, RotateCcw } from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
+import {
+  Archive,
+  FileText,
+  Loader2,
+  Package,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Upload,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -18,6 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubAccount } from "@/context/sub-account-context";
 import { subscribeToProducts } from "@/lib/firestore/products";
+import { uploadProductFile } from "@/lib/products/upload-file";
 import type { Product } from "@/types/products";
 
 /**
@@ -182,7 +200,20 @@ function ProductRow({
 
   return (
     <tr className="border-b last:border-0">
-      <td className="px-4 py-3 font-medium">{product.name}</td>
+      <td className="px-4 py-3 font-medium">
+        <div className="flex items-center gap-1.5">
+          {product.name}
+          {product.deliveryType === "file" && (
+            <span
+              title={`Delivers a file automatically on purchase${product.fileName ? `: ${product.fileName}` : ""}`}
+              className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-medium text-violet-700 dark:bg-violet-400/15 dark:text-violet-300"
+            >
+              <FileText className="h-2.5 w-2.5" />
+              Delivers file
+            </span>
+          )}
+        </div>
+      </td>
       <td className="max-w-md truncate px-4 py-3 text-muted-foreground">
         {product.description || (
           <span className="italic text-muted-foreground/60">No description</span>
@@ -246,6 +277,16 @@ function ProductDialog({
   const [currency, setCurrency] = useState("USD");
   const [saving, setSaving] = useState(false);
 
+  const [deliveryType, setDeliveryType] = useState<"none" | "file">("none");
+  const [fileMeta, setFileMeta] = useState<{
+    storagePath: string;
+    fileName: string;
+    sizeBytes: number;
+    contentType: string;
+  } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (!open) return;
     if (product) {
@@ -253,13 +294,46 @@ function ProductDialog({
       setDescription(product.description);
       setPriceDollars((product.unitPriceCents / 100).toFixed(2));
       setCurrency(product.currency);
+      setDeliveryType(product.deliveryType === "file" ? "file" : "none");
+      setFileMeta(
+        product.deliveryType === "file" && product.fileStoragePath
+          ? {
+              storagePath: product.fileStoragePath,
+              fileName: product.fileName ?? "file",
+              sizeBytes: product.fileSizeBytes ?? 0,
+              contentType: product.fileContentType ?? "",
+            }
+          : null,
+      );
     } else {
       setName("");
       setDescription("");
       setPriceDollars("");
       setCurrency("USD");
+      setDeliveryType("none");
+      setFileMeta(null);
     }
   }, [open, product]);
+
+  async function handleFilePick(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    try {
+      const uploaded = await uploadProductFile(
+        file,
+        subAccountId,
+        crypto.randomUUID(),
+      );
+      setFileMeta(uploaded);
+      toast.success("File uploaded.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -273,6 +347,10 @@ function ProductDialog({
       toast.error("Price must be a non-negative number.");
       return;
     }
+    if (deliveryType === "file" && !fileMeta) {
+      toast.error("Upload a file, or switch delivery back to \"No file\".");
+      return;
+    }
     const unitPriceCents = Math.round(priceNum * 100);
 
     setSaving(true);
@@ -282,6 +360,11 @@ function ProductDialog({
         description: description.trim(),
         unitPriceCents,
         currency: currency.trim().toUpperCase(),
+        deliveryType,
+        fileStoragePath: deliveryType === "file" ? fileMeta!.storagePath : null,
+        fileName: deliveryType === "file" ? fileMeta!.fileName : null,
+        fileSizeBytes: deliveryType === "file" ? fileMeta!.sizeBytes : null,
+        fileContentType: deliveryType === "file" ? fileMeta!.contentType : null,
       };
       const res = await fetch(
         editing
@@ -364,11 +447,106 @@ function ProductDialog({
               />
             </div>
           </div>
+
+          <div className="space-y-1.5 rounded-lg border p-3">
+            <Label>Delivery</Label>
+            <p className="text-xs text-muted-foreground">
+              Attach a file to have it emailed automatically the moment a
+              quote or invoice with this product on it is marked paid.
+            </p>
+            <div className="flex gap-2 pt-1">
+              <Button
+                type="button"
+                size="sm"
+                variant={deliveryType === "none" ? "default" : "outline"}
+                onClick={() => setDeliveryType("none")}
+              >
+                No file
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={deliveryType === "file" ? "default" : "outline"}
+                onClick={() => setDeliveryType("file")}
+              >
+                Deliver a file
+              </Button>
+            </div>
+
+            {deliveryType === "file" && (
+              <div className="pt-2">
+                {fileMeta ? (
+                  <div className="flex items-center justify-between gap-2 rounded-md border bg-muted/40 p-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-medium">{fileMeta.fileName}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {formatBytes(fileMeta.sizeBytes)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                      >
+                        Replace
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setFileMeta(null)}
+                        disabled={uploading}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    {uploading ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Uploading…
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-3.5 w-3.5" />
+                        Choose file
+                      </>
+                    )}
+                  </Button>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleFilePick}
+                />
+                <p className="mt-1.5 text-[10px] text-muted-foreground">
+                  Up to 250 MB. The buyer gets a secure download link by
+                  email — the file itself is never public.
+                </p>
+              </div>
+            )}
+          </div>
+
           <div className="flex items-center justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
               Cancel
             </Button>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || uploading}>
               {saving ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -385,6 +563,12 @@ function ProductDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function formatPrice(cents: number, currency: string): string {

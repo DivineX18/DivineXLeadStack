@@ -38,6 +38,25 @@ service firebase.storage {
         && isActiveMemberOrOwner(subAccountId);
     }
 
+    // Digital product delivery files (Products → "Deliver a file"). PRIVATE
+    // — unlike community images, these are the paid deliverable itself, so
+    // there is no public read. Only an active member/owner of the owning
+    // sub-account can read (operator preview/re-download) or write. Buyers
+    // never hit this path directly — they get a short-lived signed URL
+    // minted server-side by lib/products/delivery.ts via the Admin SDK
+    // (which bypasses these rules entirely), so a paying customer with no
+    // Firebase account of their own can still download.
+    match /productFiles/{subAccountId}/{uploadId}/{fileName} {
+      allow read: if request.auth != null && isActiveMemberOrOwner(subAccountId);
+
+      allow write: if request.auth != null
+        && isActiveMemberOrOwner(subAccountId)
+        && request.resource.size < 250 * 1024 * 1024;
+
+      allow delete: if request.auth != null
+        && isActiveMemberOrOwner(subAccountId);
+    }
+
     // Default deny everything else.
     match /{allPaths=**} {
       allow read, write: if false;
