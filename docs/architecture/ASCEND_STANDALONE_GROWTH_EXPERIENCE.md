@@ -1,10 +1,10 @@
 # Ascend Standalone — Growth Experience & Conversion Engine (LOCKED)
 
-**Status:** Locked implementation specification for Ascend Standalone V1.
+**Status:** Locked implementation specification for Ascend Standalone V1. Superseded/expanded 2026-08-11 with two first-class locked sections (Sales Experience, Partner & Affiliate Platform) replacing the original single-pass draft.
 
 This document governs the evolution of the standalone Ascend experience after launch certification.
 
-Its purpose is to transform the Growth Scan from a diagnostic report into the highest-converting sales experience in the platform.
+Its purpose is to transform the Growth Scan from a diagnostic report into the highest-converting sales experience in the platform, and to build the partner/affiliate ecosystem that scales acquisition around it.
 
 This phase exists **before** the unified Ascend + Flow experience.
 
@@ -14,29 +14,19 @@ This phase exists **before** the unified Ascend + Flow experience.
 
 Flow operates only as DivineX's internal customer lifecycle platform during this phase.
 
-> **Where this lives:** the actual implementation surface for this spec (Growth Scan report, Asset Studio, trial onboarding, analytics) is the Ascend BI repo (`DivineX-Business-Intelligence`, `artifacts/divinex` frontend + `artifacts/api-server` backend) — not this repo. This doc is filed alongside [DIVINEX_V1_NORTH_STAR.md](DIVINEX_V1_NORTH_STAR.md) for a single place to find every locked governing spec. Flow (this repo) is touched only where the spec calls for "Flow lifecycle integration" verification — lead capture, attribution storage, nurture, lifecycle triggers — never as a customer-facing product surface during this phase.
+> **Where this lives:** the actual implementation surface for this spec (Growth Scan report, Asset Studio, trial onboarding, partner platform, analytics) is the Ascend BI repo (`DivineX-Business-Intelligence`, `artifacts/divinex` frontend + `artifacts/api-server` backend) — not this repo. This doc is filed alongside [DIVINEX_V1_NORTH_STAR.md](DIVINEX_V1_NORTH_STAR.md) for a single place to find every locked governing spec. Flow (this repo) is touched only where the spec calls for "Flow lifecycle integration" verification — lead capture, attribution storage, nurture, lifecycle triggers, commission payout bookkeeping — never as a customer-facing product surface during this phase.
 
 ---
 
 ## Mission
 
-Ascend is not simply a website auditor.
+Ascend is not simply a website auditor. It is a Business Intelligence Platform.
 
-It is a Business Intelligence Platform.
-
-The Growth Scan should not end with a diagnosis.
-
-It should naturally lead users into the next step of their growth journey.
-
-The report itself becomes the product demonstration.
-
----
+The Growth Scan should not end with a diagnosis. It should naturally lead users into the next step of their growth journey. The report itself becomes the product demonstration.
 
 ## Core Philosophy
 
-Do not sell software.
-
-Sell clarity. Sell strategy. Sell momentum. Sell outcomes.
+Do not sell software. Sell clarity. Sell strategy. Sell momentum. Sell outcomes.
 
 The customer should leave believing:
 
@@ -44,18 +34,10 @@ The customer should leave believing:
 
 The trial simply allows them to continue.
 
----
-
 ## Customer Journey
 
 ```
-Google Ads
-  ↓
-Affiliate
-  ↓
-Organic Search
-  ↓
-Email
+Google Ads / Affiliate / Organic Search / Email
   ↓
 Free Growth Scan
   ↓
@@ -72,196 +54,132 @@ Flow quietly manages the lifecycle internally.
 
 Customers should not feel like they are buying multiple products.
 
----
-
 ## Product Boundary
 
-This phase is Ascend only. Flow is invisible.
+This phase is Ascend only. Flow is invisible. Flow should never be marketed during this phase.
 
-Flow should never be marketed during this phase.
-
-Flow exists only to:
-- Capture leads
-- Store attribution
-- Run nurture
-- Manage lifecycle
-- Track conversions
-- Trigger onboarding
+Flow exists only to: capture leads, store attribution, run nurture, manage lifecycle, track conversions, trigger onboarding.
 
 Customers buy Ascend. Not Flow.
 
 ---
 
-## Primary Objective
+# SECTION 1 — THE ASCEND SALES EXPERIENCE (LOCKED)
 
-Transform the Growth Report into a personalized product demonstration.
+The Growth Scan is no longer a report. It is Ascend's primary salesperson.
 
-Every recommendation should naturally answer: **"What can Ascend help me do next?"**
+The customer should finish the report already believing Ascend is the obvious next step. The objective is to let customers **experience** the product before asking them to buy it.
 
-Never present generic upgrade banners. Never interrupt the customer. Never ask for payment before demonstrating value.
+## Every Finding Becomes A Product Demonstration
 
----
-
-## Sales Experience Framework
-
-Every major finding should follow this progression:
+Every recommendation must follow this structure:
 
 ```
-Current Finding
+Current Problem
   ↓
-Why This Matters
+Why It Matters
   ↓
-What Ascend Can Do
+Business Impact
   ↓
-Live Preview
+What Ascend Can Build
+  ↓
+Interactive Preview
   ↓
 Expected Outcome
   ↓
-Continue Inside Ascend
+Start Free Trial
 ```
 
-Never:
-
-```
-Finding
-  ↓
-Upgrade Now
-```
+Never show generic upgrade banners. Never ask customers to buy without first demonstrating value.
 
 ### Example
 
-**Finding:** Your website is losing visitors because there is no structured follow-up.
+**Finding:** Your website is not capturing leads.
 
-**Why It Matters:** Most businesses lose over 90% of visitors after they leave. Without follow-up, marketing becomes increasingly expensive because you're constantly replacing lost opportunities.
+**Business Impact:** Every visitor that leaves without taking action represents lost revenue.
 
-**What Ascend Can Build:** Ascend can generate email nurture sequences, lead magnets, landing page messaging, offer positioning, lead capture strategy, growth roadmap.
+**What Ascend Can Build:** Ascend can instantly generate a landing page, lead magnet, email nurture, CTA strategy, follow-up messaging, offer positioning.
 
-**Preview:** Show the first email, lead magnet title, landing page hero, offer statement, roadmap summary. Use real business context whenever possible. **Never fabricate examples.**
+**Interactive Preview:** Show the landing page hero → lead magnet title → Email #1 → growth roadmap → recommended CTA. This should be generated using the customer's **actual business**. Not placeholders.
 
-**CTA:** "Continue Building Inside Ascend" / "Start My Trial" / "Build My Growth Plan"
+**CTA:** "Continue Building" / "Start Free Trial"
 
-Avoid: "Upgrade" / "Buy Now" / "Unlock Premium"
+The customer experiences Ascend. They don't imagine Ascend.
 
-The CTA should feel like the natural continuation of the report.
+## Every Category Has A Matching Product Demo
 
----
-
-## Feature Demonstration Engine
-
-Every Growth Scan category should have associated Ascend capabilities, previewed (not just described):
-
-| Category | Preview |
+| Category | Demo |
 |---|---|
-| Marketing | Landing page copy, lead magnet, offer messaging, email sequence, content strategy |
-| SEO | Content calendar, topic clusters, authority roadmap, optimization priorities |
-| Conversion | Landing page redesign, CTA improvements, page hierarchy, trust strategy, offer improvements |
-| Sales | Offer positioning, value proposition, sales messaging, customer journey |
-| Operations | 90-day roadmap, priority planner, strategic recommendations, Growth Timeline |
-| Brand | Messaging framework, positioning, differentiation, brand voice |
+| Marketing | Landing pages, offers, ads, messaging |
+| SEO | Content strategy, topic clusters, authority roadmap |
+| Conversion | Landing page redesign, conversion roadmap, trust improvements |
+| Sales | Offer positioning, sales messaging, pricing strategy |
+| Brand | Brand messaging, positioning, voice, differentiation |
+| Operations | 90-day roadmap, priority planner, Business Memory, Growth Timeline |
 
-Each preview should **demonstrate** capability. Not simply describe it.
+Every category should naturally transition into the feature that solves it.
 
----
+## Preview System
 
-## Asset Preview System
+Do not simply describe features. Actually preview them.
 
-Whenever appropriate, show previews of: landing pages, email campaigns, lead magnets, ads, website copy, sales pages, funnels, business roadmap, Growth Timeline, Business Memory, recommendations, blueprints, action plans.
+- **Landing page** → show first section
+- **Lead magnet** → show title, outline, table of contents
+- **Email sequence** → show first email, timeline, campaign overview
+- **Growth roadmap** → show Month One
+- **Business Memory** → show what Ascend will remember
+- **Blueprint** → show first page
+- **Action Plan** → show first three priorities
 
-Customers should begin experiencing Ascend before starting a trial.
+Customers should think: **"I already have part of this."**
 
----
+## Product Experience Rules
 
-## The 90-Day Growth Roadmap
+Every recommendation should answer:
+- What happens if I continue?
+- What will Ascend actually create?
+- How will my business improve?
+- Why should I start now?
 
-Every report should conclude with a personalized roadmap.
+Never: "Upgrade" / "Unlock" / "Premium" / "Buy"
 
-**Month One:** Clarify messaging, improve homepage, create lead magnet, launch nurture strategy.
+Instead: "Continue Building" / "Build My Growth Plan" / "Generate My Assets" / "Start My Roadmap"
 
-**Month Two:** Improve conversion, optimize SEO, publish authority content, expand lead generation.
+## Future State Visualization
 
-**Month Three:** Scale acquisition, increase lifetime value, improve retention, create automation opportunities.
+Every section should show:
 
-The roadmap creates momentum. The CTA becomes: **"Continue Building Month One Inside Ascend."**
+```
+Current
+  ↓
+Potential
+  ↓
+Transformation
+  ↓
+Ascend
+```
 
----
+People buy transformation. Not reports.
 
-## Product Demonstration Rules
+## Personalized Roadmap
 
-Do not show every premium feature. Only demonstrate features relevant to the customer's findings.
+Every report ends with **Your Next 90 Days**: Month One, Month Two, Month Three.
 
-- If Marketing scored well → don't sell Marketing assets.
-- If SEO scored poorly → lead with SEO.
-- If Conversion is weak → lead with conversion.
-
-Everything should feel contextual.
-
----
+The CTA becomes: **"Continue Month One Inside Ascend."**
 
 ## Trial Experience
 
-The trial should continue exactly where the report stopped. Never restart the journey.
-
-When the user enters Ascend they should immediately see: their scan, their roadmap, their priorities, their recommendations, their generated assets, their Growth Timeline.
-
-Nothing should feel disconnected.
-
----
+The trial should continue exactly where the report stopped. Never restart the journey. When the user enters Ascend they should immediately see their scan, roadmap, priorities, recommendations, generated assets, Growth Timeline. Nothing should feel disconnected.
 
 ## Conversion Principles
 
 Always educate before selling. Always demonstrate before asking. Always personalize before promoting.
 
-Every CTA should answer: **"Why should this customer continue?"**
+Every CTA should answer: **"Why should this customer continue?"** If the answer is weak, do not show the CTA.
 
-If the answer is weak, do not show the CTA.
+## Product Demonstration Rules (contextual relevance)
 
----
-
-## Lead Lifecycle (Internal Only)
-
-Flow manages the customer lifecycle. Customers should never need to understand this architecture.
-
-```
-Growth Scan
-  ↓
-Lead Created
-  ↓
-Affiliate Stored
-  ↓
-UTMs Stored
-  ↓
-Source Stored
-  ↓
-Trial Started
-  ↓
-Email Sequence
-  ↓
-Behavior Tracking
-  ↓
-Subscription
-  ↓
-Onboarding
-```
-
-Flow remains invisible.
-
----
-
-## Affiliate Readiness
-
-The Growth Experience must preserve: referral source, affiliate ID, UTMs, campaign, ad group, keyword, landing page, trial attribution, subscription attribution, future commission attribution.
-
-**Do not build affiliate dashboards during this task.** Simply preserve attribution throughout the customer journey.
-
----
-
-## Analytics
-
-Instrument the complete funnel. Track: Growth Scan starts, Growth Scan completions, report views, time on report, section engagement, feature preview views, feature preview clicks, CTA clicks, trial starts, trial completion, subscription conversion, revenue, affiliate source, traffic source, campaign, keyword, landing page, industry, business type, growth score, primary bottleneck, conversion by bottleneck, conversion by industry, conversion by score.
-
-Everything should become measurable.
-
----
+Do not show every premium feature. Only demonstrate features relevant to the customer's findings — if Marketing scored well, don't sell Marketing assets; if SEO scored poorly, lead with SEO; if Conversion is weak, lead with conversion. Everything should feel contextual.
 
 ## User Experience Principles
 
@@ -271,81 +189,121 @@ Never: salesy, pushy, generic, AI-generated, template-driven, banner-heavy.
 
 Customers should forget they're reading software. It should feel like a consultant reviewing their business.
 
----
-
-## Future State Visualization
-
-Do not only show current problems. Show the future business.
-
-```
-Current
-  ↓
-Potential
-  ↓
-Roadmap
-  ↓
-Ascend
-```
-
-People buy the future. Not the diagnosis.
-
----
-
-## Engineering Principles
-
-**Before writing code:**
-- Audit the current report architecture
-- Audit trial onboarding
-- Audit entitlements
-- Audit Asset Studio
-- Audit analytics
-- Audit CTA components
-- Audit Flow lifecycle integration
-
-Reuse existing infrastructure. Do not create parallel systems.
-
-**Spend 80% understanding the architecture. 20% implementing.** (Same discipline as [DIVINEX_V1_NORTH_STAR.md](DIVINEX_V1_NORTH_STAR.md).)
-
----
-
-## Testing
-
-Certify: desktop, tablet, mobile, report rendering, trial transition, generated previews, tracking, affiliate attribution, lead capture, email lifecycle, repeat visits, returning users, subscription conversion.
-
-No broken states.
-
----
-
-## Deliverables
-
-Provide: architecture plan, reuse analysis, files changed, components reused, analytics events added, CTA locations, preview components added, trial journey updates, Flow lifecycle verification, attribution verification, testing evidence, screenshots, remaining gaps, production recommendation.
-
----
-
-## Definition of Done
+## Definition of Done (Section 1)
 
 A customer should complete a free Growth Scan and think:
 
 > "This platform already understands my business better than anyone else I've talked to."
 
-The report should naturally transition into: **"Let's keep building."**
-
-The customer should want to continue because they've already experienced the value — not because they encountered another paywall.
+The report should naturally transition into: **"Let's keep building."** The customer should want to continue because they've already experienced the value — not because they encountered another paywall.
 
 ---
 
+# SECTION 2 — ASCEND PARTNER & AFFILIATE PLATFORM (LOCKED)
+
+Ascend should become easy to recommend. The goal is to allow agencies, creators, consultants, educators, YouTubers, affiliates, and partners to confidently send traffic knowing they can transparently track performance and earn recurring commissions.
+
+The affiliate system should feel like **a business platform** — not a simple referral link.
+
+## Partner Types
+
+Support multiple partner roles: Affiliate, Agency, Strategic Partner, Creator, Educator, Community, Referral Partner. Future roles may expand, but V1 should support flexible partner classification.
+
+## Partner Dashboard
+
+Every partner gets a dedicated dashboard displaying: referral link, QR code, clicks, Growth Scans started, Growth Scans completed, trial starts, paid subscribers, MRR referred, pending commissions, paid commissions, conversion rate, average customer value, top performing campaigns, leaderboard position (optional).
+
+## Referral Attribution
+
+Preserve attribution across the full lifecycle: partner ID, referral link, UTMs, campaign, source, medium, landing page → Growth Scan → trial → subscription → renewals → upgrades.
+
+Do not lose attribution if the customer returns later. Support reasonable, configurable attribution windows.
+
+## Commission Engine (V1)
+
+Track: qualified leads, completed Growth Scans, trial activations, paid conversions, recurring subscription revenue, pending payouts, approved payouts, rejected commissions (with reason).
+
+**No multi-level commissions in V1.** Keep the rules transparent and easy to audit.
+
+## Partner Marketing Center
+
+Provide ready-to-use promotional assets: referral links, email templates, social media posts, ad copy, landing pages, banners, logos, videos, brand guidelines, product screenshots, case studies. One-click copy buttons where appropriate. Make promoting Ascend effortless.
+
+## Agency Experience
+
+Agencies get an enhanced dashboard: view all referred businesses, track each client's status, see Growth Scan completion, monitor trial activity, track subscriptions, monitor recurring revenue, identify upsell opportunities.
+
+**Future-ready hooks (not V1 implementation):** client management, white-label reports, implementation services, shared workspaces, agency analytics.
+
+## Admin Partner Center
+
+Internal management interface: all partners, performance metrics, top referrers, conversion rates, commission history, pending approvals, fraud indicators, manual adjustments, payout history, exportable reports.
+
+## Partner Notifications
+
+Automatically notify partners when: a referral completes a Growth Scan, a trial starts, a subscription begins, a renewal occurs, a payout is approved, monthly performance summaries are available.
+
+## Analytics (Partner Funnel)
+
+Track the complete acquisition funnel: impressions (if available), clicks, landing page conversion, Growth Scan starts/completions, report engagement, trial starts/conversions, subscription conversions, retention, churn, LTV, revenue by partner/campaign/industry, top performing assets.
+
+## Future Expansion
+
+Design the architecture so future versions can support partner tiers, performance bonuses, co-branded landing pages, agency implementation services, marketplace listings, white-label programs, certification programs, partner training — **without requiring a major rewrite.**
+
+## Guiding Principle
+
+The affiliate platform is not just about paying commissions. It is about creating an ecosystem where partners are motivated to grow alongside DivineX because they have visibility, trust, resources, and recurring value.
+
+---
+
+## Analytics (Growth Scan Funnel — Section 1)
+
+Instrument the complete funnel: Growth Scan starts, Growth Scan completions, report views, time on report, section engagement, feature preview views, feature preview clicks, CTA clicks, trial starts, trial completion, subscription conversion, revenue, affiliate source, traffic source, campaign, keyword, landing page, industry, business type, growth score, primary bottleneck, conversion by bottleneck, conversion by industry, conversion by score.
+
+Everything should become measurable.
+
+## Lead Lifecycle (Internal Only)
+
+Flow manages the customer lifecycle. Customers should never need to understand this architecture.
+
+```
+Growth Scan → Lead Created → Affiliate Stored → UTMs Stored → Source Stored
+  → Trial Started → Email Sequence → Behavior Tracking → Subscription → Onboarding
+```
+
+Flow remains invisible.
+
+---
+
+## Engineering Principles (both sections)
+
+**Before writing code, audit:** the current report architecture, trial onboarding, entitlements, Asset Studio, analytics, CTA components, Flow lifecycle integration — and, for Section 2, any existing referral/attribution scaffolding before assuming none exists.
+
+Reuse existing infrastructure. Do not create parallel systems.
+
+**Spend 80% understanding the architecture. 20% implementing.** (Same discipline as [DIVINEX_V1_NORTH_STAR.md](DIVINEX_V1_NORTH_STAR.md).)
+
+## Testing
+
+Certify: desktop, tablet, mobile, report rendering, trial transition, generated previews, tracking, affiliate attribution, lead capture, email lifecycle, repeat visits, returning users, subscription conversion, partner dashboard accuracy, commission calculation correctness, payout audit trail. No broken states.
+
+## Deliverables
+
+Provide: architecture plan, reuse analysis, files changed, components reused, analytics events added, CTA locations, preview components added, trial journey updates, Flow lifecycle verification, attribution verification, testing evidence, screenshots, remaining gaps, production recommendation.
+
 ## Final Mandate
 
-The Growth Scan is no longer just a diagnostic report. It becomes Ascend's primary salesperson.
+The Growth Scan is no longer just a diagnostic report. It becomes Ascend's primary salesperson. Every recommendation should educate. Every preview should inspire. Every CTA should feel like the obvious next step. The objective is not to maximize clicks — it is to maximize confidence.
 
-Every recommendation should educate. Every preview should inspire. Every CTA should feel like the obvious next step.
+The affiliate platform is not a bolt-on referral link — it is a business platform partners are motivated to grow alongside DivineX.
 
-The objective is not to maximize clicks. The objective is to maximize confidence.
-
-When customers begin their trial, they should already believe Ascend is the strategic partner that will help them grow their business.
+Those two systems together become the commercial engine while the unified Ascend + Flow platform continues in parallel.
 
 ---
 
 ## Process note — how this gets executed
 
-Per the user's own explicit recommendation attached to this spec (2026-08-11): the first deliverable against this document is an **audit of the current Growth Scan report architecture + wireframes for the new sales experience** — not code. That audit/wireframe pass gets its own dedicated Explore-then-Plan cycle and user approval checkpoint before any implementation starts, matching how every other major feature this project ships gets scoped. It is sequenced behind the in-flight work already committed to at the time this spec landed (digital product delivery, DivineX Reconnect Series) rather than interrupting them mid-build.
+Per the user's own explicit recommendation attached to this spec: the first deliverable against **Section 1** is an **audit of the current Growth Scan report architecture + wireframes for the new sales experience** — not code. **Section 2** (Partner & Affiliate Platform) needs its own separate audit-first pass (existing attribution/UTM scaffolding, any prior referral-link work, entitlements model) before design, since it's a materially different system (commission accounting, payouts, partner-facing dashboards) from the report-experience work in Section 1 — treat them as two sequenced audits, not one combined pass.
+
+Each audit/wireframe pass gets its own dedicated Explore-then-Plan cycle and user approval checkpoint before any implementation starts, matching how every other major feature this project ships gets scoped. Both are sequenced behind the in-flight work already committed to at the time this spec landed (digital product delivery, DivineX Reconnect Series) rather than interrupting them mid-build.
