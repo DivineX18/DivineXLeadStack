@@ -12,6 +12,13 @@
  *   {{bookingLink}}        — sub-account's configured Calendly / Cal.com /
  *                            TidyCal URL. Empty string when not set.
  *   {{unsubscribeLink}}    — required in email bodies.
+ *   {{tagLink:some-tag}}   — per-contact, per-tag "click to segment
+ *                            yourself" URL (lib/automations/tag-link-token.ts).
+ *                            Visiting it adds `some-tag` to the contact and
+ *                            fires contact.tag.added, so a Workflow can
+ *                            branch on which link a recipient clicked
+ *                            without them filling out a form. Tag must be
+ *                            letters/numbers/"-"/"_" only.
  *
  * Per-type slugged booking tags ({{bookingLink:30min}}) are reserved for a
  * future multi-link booking integration.
@@ -19,6 +26,8 @@
 
 export interface MergeTagSubject {
   contact: {
+    /** Optional — only needed by callers that resolve {{tagLink:slug}}. */
+    id?: string;
     name: string;
     email: string;
     phone: string;
@@ -38,6 +47,23 @@ export interface MergeTagSubject {
   bookingLink: string;
   /** Pre-built fully-qualified unsubscribe URL. Empty string for SMS templates. */
   unsubscribeLink: string;
+  /** Pre-built {{tagLink:slug}} URLs, keyed by slug (without the "tagLink:"
+   *  prefix). Server-only callers build these (lib/automations/tag-link-token.ts
+   *  needs "server-only" + the contact id) via extractTagLinkSlugs() below,
+   *  then pass the resolved map in here — keeps this module itself safe to
+   *  import from the client-side template-editor preview. */
+  tagLinks?: Record<string, string>;
+}
+
+/** Pure — scans a template body for every distinct {{tagLink:slug}} used,
+ *  so a server-only caller (e.g. the Workflow engine's send_email node)
+ *  knows exactly which per-contact links to build before resolving. */
+export function extractTagLinkSlugs(body: string): string[] {
+  const slugs = new Set<string>();
+  for (const m of body.matchAll(/\{\{\s*tagLink:([A-Za-z0-9_-]{1,80})\s*\}\}/g)) {
+    slugs.add(m[1]!);
+  }
+  return Array.from(slugs);
 }
 
 const TAG_RE = /\{\{\s*([a-zA-Z0-9_.:-]+)\s*\}\}/g;
@@ -61,6 +87,10 @@ export function resolveMergeTags(
   subject: MergeTagSubject,
 ): string {
   return body.replace(TAG_RE, (_match, tag: string) => {
+    if (tag.startsWith("tagLink:")) {
+      const slug = tag.slice("tagLink:".length);
+      return subject.tagLinks?.[slug] ?? "";
+    }
     switch (tag) {
       case "contact.firstName":
         return firstWord(subject.contact.name);

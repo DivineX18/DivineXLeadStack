@@ -94,6 +94,10 @@ const PUBLIC_PATHS = [
   "/api/pwa",
   "/u",
   "/api/u",
+  // Public "click this link to tag yourself" landing page — {{tagLink:slug}}
+  // merge tag. Same HMAC-token trust model as /u; no session.
+  "/r",
+  "/api/r",
   // Public quote pages — recipient-facing /q/[token] view (server-rendered)
   // and the accept/decline endpoint. Both gated by HMAC-signed token
   // verification inside the route; no session needed.

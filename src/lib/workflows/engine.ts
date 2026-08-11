@@ -15,8 +15,10 @@ import { resolveTemplateVariables } from "@/lib/comms/whatsapp/resolve-template-
 import { createTaskServerSide } from "@/lib/server/tasks-service";
 import {
   resolveMergeTags,
+  extractTagLinkSlugs,
   type MergeTagSubject,
 } from "@/lib/automations/merge-tags";
+import { buildTagLinkUrl } from "@/lib/automations/tag-link-token";
 import { buildUnsubscribeUrl } from "@/lib/automations/unsubscribe-token";
 import { publishCallback, qstashIsConfigured } from "@/lib/automations/qstash";
 import { evalConditionGroup } from "./conditions";
@@ -81,10 +83,12 @@ type NodeExecutor = (
 
 function mergeSubject(
   ctx: NodeContext,
-  unsubscribeLink: string
+  unsubscribeLink: string,
+  tagLinks?: Record<string, string>,
 ): MergeTagSubject {
   return {
     contact: {
+      id: ctx.contact.id,
       name: ctx.contact.name,
       email: ctx.contact.email,
       phone: ctx.contact.phone,
@@ -93,7 +97,27 @@ function mergeSubject(
     workspace: { name: ctx.subAccount?.name ?? "" },
     bookingLink: ctx.subAccount?.bookingLink ?? "",
     unsubscribeLink,
+    tagLinks,
   };
+}
+
+/** Build the {{tagLink:slug}} → URL map for every slug referenced in the
+ *  given template text(s). Best-effort per slug — a bad AUTOMATIONS_TOKEN_SECRET
+ *  or malformed slug drops that one link (resolves to "") rather than
+ *  failing the whole send. */
+function buildTagLinksFor(contactId: string, ...texts: string[]): Record<string, string> {
+  const slugs = new Set<string>();
+  for (const t of texts) for (const s of extractTagLinkSlugs(t ?? "")) slugs.add(s);
+  const out: Record<string, string> = {};
+  for (const slug of slugs) {
+    try {
+      out[slug] = buildTagLinkUrl(contactId, slug);
+    } catch (err) {
+      console.warn(`[workflows/engine] tagLink:${slug} build failed`, err);
+      out[slug] = "";
+    }
+  }
+  return out;
 }
 
 /**
@@ -149,17 +173,18 @@ const execSendEmail: NodeExecutor = async (ctx) => {
 
   const UNSUB_TOKEN = "@@UNSUBSCRIBE_LINK@@";
   const unsubscribeLink = buildUnsubscribeUrl(contact.id);
+  const tagLinks = buildTagLinksFor(contact.id, cfg.subject ?? "", cfg.body ?? "");
   const subject = resolveMergeTags(
     cfg.subject ?? "",
-    mergeSubject(ctx, unsubscribeLink)
+    mergeSubject(ctx, unsubscribeLink, tagLinks)
   );
   const text = resolveMergeTags(
     cfg.body ?? "",
-    mergeSubject(ctx, unsubscribeLink)
+    mergeSubject(ctx, unsubscribeLink, tagLinks)
   );
   const resolvedForHtml = resolveMergeTags(
     cfg.body ?? "",
-    mergeSubject(ctx, UNSUB_TOKEN)
+    mergeSubject(ctx, UNSUB_TOKEN, tagLinks)
   );
   const html = wrapEmailHtml(
     ctx.subAccount?.name ?? "",
