@@ -321,11 +321,7 @@ function ProductDialog({
     if (!file) return;
     setUploading(true);
     try {
-      const uploaded = await uploadProductFile(
-        file,
-        subAccountId,
-        crypto.randomUUID(),
-      );
+      const uploaded = await uploadProductFile(file, subAccountId);
       setFileMeta(uploaded);
       toast.success("File uploaded.");
     } catch (err) {
@@ -535,7 +531,7 @@ function ProductDialog({
                   onChange={handleFilePick}
                 />
                 <p className="mt-1.5 text-[10px] text-muted-foreground">
-                  Up to 250 MB. The buyer gets a secure download link by
+                  Up to 4 MB. The buyer gets a secure download link by
                   email — the file itself is never public.
                 </p>
               </div>
