@@ -38,6 +38,29 @@ service firebase.storage {
         && isActiveMemberOrOwner(subAccountId);
     }
 
+    // Digital product delivery files (Products → "Deliver a file"). PRIVATE
+    // — unlike community images, these are the paid deliverable itself, so
+    // there is no public read. Buyers never hit this path directly — they
+    // get a short-lived signed URL minted server-side by
+    // lib/products/delivery.ts via the Admin SDK (which bypasses these
+    // rules entirely), so a paying customer with no Firebase account of
+    // their own can still download.
+    //
+    // Writes are `if false` deliberately: the upload path is
+    // /api/sub-accounts/[id]/products/upload-file (Admin SDK, bypasses
+    // these rules), not a client-direct upload — the cross-service
+    // firestore.get() membership check used by the read rule below proved
+    // unreliable for this specific write path (stayed broken well past
+    // normal propagation time across two buckets in two regions), so the
+    // upload was moved server-side instead of depending on it. Read stays
+    // cross-service-gated for the operator preview/re-download use case,
+    // which isn't on the critical delivery path.
+    match /productFiles/{subAccountId}/{uploadId}/{fileName} {
+      allow read: if request.auth != null && isActiveMemberOrOwner(subAccountId);
+      allow write: if false;
+      allow delete: if false;
+    }
+
     // Default deny everything else.
     match /{allPaths=**} {
       allow read, write: if false;

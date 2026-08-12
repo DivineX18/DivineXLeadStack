@@ -99,6 +99,10 @@ const PUBLIC_PATHS = [
   // verification inside the route; no session needed.
   "/q",
   "/api/quotes",
+  // Public digital-product download redirect — /api/dl/[token]. Same
+  // HMAC-token trust model as /q and /u; the buyer has no Firebase
+  // account, so this must be reachable unauthenticated.
+  "/api/dl",
   // Public funnel pages — /lp/[funnelId] first-party ClickFunnels/GHL-style
   // landing pages. Fully public, zero token, doc-ID-is-the-URL — same model
   // as /f/[formId], since a funnel is meant for mass/anonymous ad traffic

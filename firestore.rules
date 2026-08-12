@@ -940,6 +940,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Digital-product delivery grants (lib/products/delivery.ts). Fully
+    // server-only — no dashboard UI reads this in v1, and it carries the
+    // download-token hash, which has no reason to ever reach a browser.
+    match /productDeliveries/{deliveryId} {
+      allow read, write: if false;
+    }
+
     // Social Planner posts. Reads from the browser (subscribeToSocialPosts
     // drives the content calendar); all writes go through admin-SDK API
     // routes (create/schedule/publish/delete), so client writes stay closed.

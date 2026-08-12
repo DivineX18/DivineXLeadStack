@@ -38,6 +38,22 @@ export interface Product {
    *  line items that snapshotted this product earlier. */
   active: boolean;
 
+  // ── Digital delivery ─────────────────────────────────────────────
+  /** "none" (default) = a plain quote/invoice line item, no fulfillment.
+   *  "file" = a Storage-backed file is attached; when a quote/invoice
+   *  carrying this product on a line item is marked paid, the buyer's
+   *  contact gets an automated email with a secure, expiring download
+   *  link. See lib/products/delivery.ts. */
+  deliveryType: "none" | "file";
+  /** Firebase Storage path, e.g. `productFiles/{subAccountId}/{uploadId}/{fileName}`.
+   *  Null when deliveryType is "none". */
+  fileStoragePath: string | null;
+  /** Original filename, shown to the buyer + used as the download's
+   *  suggested filename. */
+  fileName: string | null;
+  fileSizeBytes: number | null;
+  fileContentType: string | null;
+
   // ── Audit ────────────────────────────────────────────────────────
   createdAt: Timestamp | FieldValue | null;
   updatedAt: Timestamp | FieldValue | null;
@@ -52,4 +68,9 @@ export const DEFAULT_PRODUCT: Omit<
   unitPriceCents: 0,
   currency: "USD",
   active: true,
+  deliveryType: "none",
+  fileStoragePath: null,
+  fileName: null,
+  fileSizeBytes: null,
+  fileContentType: null,
 };
