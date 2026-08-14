@@ -118,7 +118,7 @@ export const POST = withApiAuth(async ({ body, ctx }) => {
     pipelineStage: input.pipelineStage,
     territoryId: input.territoryId ?? GLOBAL_TERRITORY_ID,
     customFields: cf.value,
-    attribution: null,
+    attribution: input.attribution ?? null,
     emailOptedOut: false,
     smsOptedOut: false,
     countryCode: null,

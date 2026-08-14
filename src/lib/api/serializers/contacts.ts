@@ -182,6 +182,11 @@ export interface ContactCreateInput {
   territoryId: string | null;
   /** Validated against the sub-account's contact field defs in the route. */
   customFields?: Record<string, CustomFieldValue> | null;
+  /** Optional marketing attribution — same shape the hosted-form submission
+   *  route captures, opened up to API callers (e.g. Ascend's cross-service
+   *  lead sync) so attribution survives a create that didn't go through a
+   *  hosted form. Wire format is snake_case per this API's convention. */
+  attribution?: ContactAttribution | null;
 }
 
 export interface ParseResult<T> {
@@ -215,6 +220,42 @@ function asTags(v: unknown): string[] | null {
     out.push(t);
   }
   return out;
+}
+
+const ATTRIBUTION_FIELD_MAP: Array<[wire: string, key: keyof ContactAttribution]> = [
+  ["utm_source", "utmSource"],
+  ["utm_medium", "utmMedium"],
+  ["utm_campaign", "utmCampaign"],
+  ["utm_content", "utmContent"],
+  ["utm_term", "utmTerm"],
+  ["fbclid", "fbclid"],
+  ["gclid", "gclid"],
+  ["landing_page", "landingPage"],
+  ["referrer", "referrer"],
+];
+
+/** Same normalization contract as the hosted-form route's local
+ *  normalizeAttribution() (all-fields-null -> null, 500-char cap per
+ *  field), just reading snake_case wire keys instead of a pre-shaped
+ *  camelCase object. Returns null (not an error) for a missing/malformed
+ *  attribution object — it's optional, callers that don't send it aren't
+ *  penalized. */
+function parseAttribution(v: unknown): ContactAttribution | null {
+  if (!v || typeof v !== "object") return null;
+  const b = v as Record<string, unknown>;
+  const out: ContactAttribution = {
+    utmSource: null, utmMedium: null, utmCampaign: null, utmContent: null,
+    utmTerm: null, fbclid: null, gclid: null, landingPage: null, referrer: null,
+  };
+  let touched = false;
+  for (const [wire, key] of ATTRIBUTION_FIELD_MAP) {
+    const raw = b[wire];
+    if (typeof raw === "string" && raw.trim().length > 0) {
+      out[key] = raw.trim().slice(0, 500);
+      touched = true;
+    }
+  }
+  return touched ? out : null;
 }
 
 /**
@@ -284,6 +325,7 @@ export function parseContactCreate(raw: unknown): ParseResult<ContactCreateInput
       tags,
       pipelineStage: pipelineStage.length === 0 ? null : pipelineStage,
       territoryId: territoryId.length === 0 ? null : territoryId,
+      attribution: parseAttribution(b.attribution),
     },
   };
 }
