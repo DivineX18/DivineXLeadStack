@@ -140,10 +140,6 @@ const PUBLIC_PATHS = [
   // reach crawlers unauthenticated.
   "/robots.txt",
   "/sitemap.xml",
-  // Affiliate program — own session model (magic-link HMAC cookie), not
-  // Firebase Auth. Auth checks happen inside each route/page.
-  "/affiliate",
-  "/api/affiliate",
   // Community + Courses (Skool-style) member surface — own session model
   // (magic-link HMAC cookie scoped to the sub-account), NOT Firebase Auth.
   // The agency gate + member-session checks happen inside each route/page;
