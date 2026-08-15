@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
-import { LANDING_VARIANT } from "@/config/landing";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { requireAgencyOwner } from "@/lib/auth/require-agency-owner";
 import type { AffiliateStatus } from "@/types/affiliate";
@@ -13,10 +12,6 @@ export async function POST(
   request: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  if (LANDING_VARIANT !== "leadstack") {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
   const authed = await requireAgencyOwner(request);
   if (authed instanceof NextResponse) return authed;
 

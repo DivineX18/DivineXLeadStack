@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
-import { LANDING_VARIANT } from "@/config/landing";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { requireAgencyOwner } from "@/lib/auth/require-agency-owner";
 import type { Referral } from "@/types/affiliate";
@@ -17,10 +16,6 @@ export const dynamic = "force-dynamic";
  * reads the current status first and bails if it's already "paid".
  */
 export async function POST(request: Request) {
-  if (LANDING_VARIANT !== "leadstack") {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
   const authed = await requireAgencyOwner(request);
   if (authed instanceof NextResponse) return authed;
 

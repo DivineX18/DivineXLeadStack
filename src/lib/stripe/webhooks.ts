@@ -4,8 +4,6 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { sendFoundersWelcomeEmail } from "@/lib/stripe/welcome-email";
 import { LANDING_VARIANT } from "@/config/landing";
-import { ensureAffiliateAccount } from "@/lib/affiliate/account";
-import { createReferral } from "@/lib/affiliate/referrals";
 import { mintGitpageAgencyCode } from "@/lib/gitpage/agency-code";
 import { REMINDER_DELAY_SECONDS } from "@/lib/gitpage/reminder-config";
 import { publishCallback, qstashIsConfigured } from "@/lib/automations/qstash";
@@ -317,44 +315,19 @@ async function handleFoundersCheckout(session: Stripe.Checkout.Session) {
     }
   }
 
-  // Affiliate program — only runs on the LeadStack-branded variant. Buyer
-  // clones (LANDING_VARIANT === "custom") skip this whole block; their
-  // welcome email goes out without affiliate copy and no Firestore writes
-  // hit the affiliates/referrals collections.
-  let buyerAffiliateCode: string | null = null;
-  let referralOutcome: string | null = null;
-  // Gitpage Agency code mint — same gate as affiliate. Buyer clones get
-  // no Gitpage bonus (the offer is LeadStack-specific). Mint is best-
-  // effort: a failure logs + stores the error string but doesn't break
-  // the rest of the welcome flow.
+  // Affiliate program is now managed manually by the agency owner (see
+  // /agency/affiliates) — the owner logs a referred sale by hand once
+  // they're aware of it, rather than this webhook auto-crediting one.
+  // buyerAffiliateCode/referralOutcome stay null; kept as fields so the
+  // purchase-doc shape and welcome email below don't need to change.
+  const buyerAffiliateCode: string | null = null;
+  const referralOutcome: string | null = null;
+  // Gitpage Agency code mint — buyer clones get no Gitpage bonus (the
+  // offer is LeadStack-specific). Mint is best-effort: a failure logs +
+  // stores the error string but doesn't break the rest of the welcome flow.
   let gitpageAgencyCode: string | null = null;
   let gitpageAgencyCodeError: string | null = null;
   if (LANDING_VARIANT === "leadstack") {
-    try {
-      const buyerAffiliate = await ensureAffiliateAccount({
-        email,
-        displayName: session.customer_details?.name ?? null,
-      });
-      buyerAffiliateCode = buyerAffiliate.code;
-
-      if (refCode) {
-        const outcome = await createReferral({
-          refCode,
-          purchaseSessionId: sessionId,
-          buyerEmail: email,
-          amountPaidCents,
-        });
-        referralOutcome =
-          outcome.status === "credited"
-            ? `credited:${outcome.commissionCents}`
-            : `skipped:${outcome.reason}`;
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      console.error(`[founders] Affiliate flow failed for ${sessionId}: ${message}`);
-      // Non-fatal — we still send the welcome email + record the purchase.
-    }
-
     try {
       const minted = await mintGitpageAgencyCode({ email });
       if (minted) {
