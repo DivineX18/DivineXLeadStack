@@ -1,6 +1,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "funnelDesignReviews",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "funnelId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "voiceCalls",
       "queryScope": "COLLECTION",
       "fields": [

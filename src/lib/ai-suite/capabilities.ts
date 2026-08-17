@@ -73,6 +73,7 @@ import {
   updateFunnelServerSide,
   FunnelValidationError,
 } from "@/lib/server/funnels-service";
+import { scoreFunnelDesign } from "@/lib/design-intelligence/scoring";
 import type { FunnelSection, FunnelSectionType, HeroConfig, PhotoGalleryConfig, TicketTiersConfig } from "@/types/funnels";
 import type { DesignPackId } from "@/lib/funnels/design-packs";
 import { FUNNEL_FRAMEWORKS } from "@/lib/funnels/frameworks";
@@ -4476,6 +4477,22 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           throw new CapabilityUserError(err.message);
         }
         throw err;
+      }
+
+      // Calibration Engine v1 — every AI-generated funnel gets the locked
+      // spec's 12-criteria design review the moment its real content lands
+      // (not right after createFunnelServerSide, which only has the seed
+      // sections — this runs after updateFunnelServerSide above wrote the
+      // actual copy). Best-effort: a scoring failure (model hiccup, rate
+      // limit) must never break funnel creation itself, so it's swallowed
+      // here exactly like every other lifecycle side-effect in this
+      // codebase (see lib/quotes/lifecycle.ts).
+      try {
+        const scoredFunnel = await getFunnel(subAccountId, funnelId);
+        if (scoredFunnel) await scoreFunnelDesign(scoredFunnel);
+      } catch {
+        // Swallowed — the operator can always trigger a manual re-score
+        // from the funnel builder if this silently didn't run.
       }
 
       const displayName = (args.funnelName as string) || (args.headline as string);

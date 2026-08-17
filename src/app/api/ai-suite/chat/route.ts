@@ -15,6 +15,10 @@ import { recordAiSuiteUsage } from "@/lib/ai-suite/usage";
 import { retrieveKnowledge } from "@/lib/ai-suite/retrieve";
 import { buildAiSuiteSystemPrompt } from "@/lib/ai-suite/prompt";
 import {
+  listActivePrinciplesForArchetype,
+  renderPrinciplesAsCards,
+} from "@/lib/design-intelligence/principles";
+import {
   CapabilityUserError,
   capabilityNamesForLevel,
   getCapability,
@@ -189,6 +193,25 @@ export async function POST(request: Request) {
     .filter(Boolean)
     .join("\n");
   const cards = retrieveKnowledge(retrievalQuery, lvl);
+
+  // Calibration Engine v1 — inject the Design Knowledge Vault's learned
+  // principles as additional REFERENCE MATERIAL cards, exactly like the
+  // static knowledge base above, whenever this turn can call create_funnel.
+  // This is the actual "gets better every week" mechanism: every principle
+  // extracted from operator feedback (see lib/design-intelligence) makes
+  // every future funnel generation smarter platform-wide, with zero
+  // changes needed to buildAiSuiteSystemPrompt's own rendering — it already
+  // knows how to render an AiSuiteKnowledgeCard[]. Best-effort: a vault
+  // read failure must never block the chat turn itself.
+  if (actionNames.some((a) => a.name === "create_funnel")) {
+    try {
+      const principles = await listActivePrinciplesForArchetype(null);
+      cards.push(...renderPrinciplesAsCards(principles));
+    } catch {
+      // Swallowed — Zeno still generates funnels fine with zero learned
+      // principles, same as before this feature existed.
+    }
+  }
 
   const systemPrompt = buildAiSuiteSystemPrompt({
     level: lvl,

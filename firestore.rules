@@ -978,6 +978,22 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Landing Page Calibration Engine v1 — platform-wide design-intelligence
+    // learning (Knowledge Vault + per-funnel reviews + human feedback
+    // queue). Deliberately server-only, same as funnelOrders above: every
+    // read/write goes through Admin-SDK API routes so principles stay
+    // scoped to agency-owner visibility and can never be spoofed/mined by
+    // a sub-account member reading Firestore directly.
+    match /designPrinciples/{principleId} {
+      allow read, write: if false;
+    }
+    match /funnelDesignReviews/{reviewId} {
+      allow read, write: if false;
+    }
+    match /designFeedback/{feedbackId} {
+      allow read, write: if false;
+    }
+
     // Import jobs (bulk migration ingest). Members can read to watch progress
     // + see the run summary; all writes go through the admin-SDK import routes.
     match /importJobs/{jobId} {

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getCurrentAgencyOwner } from "@/lib/auth/require-agency-owner";
 import { CommandCenterWorkspaceList } from "@/components/shell/command-center-workspace-list";
 import { AscendRolloutSection } from "@/components/agency/ascend-rollout-section";
+import { DesignIntelligenceSection } from "@/components/shell/design-intelligence-section";
 
 /**
  * Ascend Command Center — the super-admin-only, native-to-Ascend-chrome
@@ -32,6 +33,15 @@ export default async function CommandCenterPage() {
         <h2 className="mb-1 text-sm font-medium text-white/70">Platform rollout</h2>
         <p className="mb-4 text-xs text-white/40">Applies across the whole deployment, not per workspace.</p>
         <AscendRolloutSection />
+      </section>
+
+      <section className="rounded-2xl border border-white/10 p-5" style={{ background: "var(--glass-1)", backdropFilter: "blur(12px)" }}>
+        <h2 className="mb-1 text-sm font-medium text-white/70">Design Intelligence</h2>
+        <p className="mb-4 text-xs text-white/40">
+          The Landing Page Calibration Engine — every generated funnel is scored against a 13-point premium bar, and
+          operator feedback trains the design vault Zeno draws on for every future page, across every workspace.
+        </p>
+        <DesignIntelligenceSection />
       </section>
     </div>
   );
