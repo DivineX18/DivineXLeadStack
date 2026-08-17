@@ -22,7 +22,6 @@
  *  rewritten; anything deeper falls through to the legacy /sa route. */
 const EXACT_MAP: Record<string, string> = {
   "/dashboard": "/app/home",
-  "/contacts": "/app/grow/contacts",
   "/pipeline": "/app/grow/pipeline",
   "/tasks": "/app/grow/tasks",
   "/calendar": "/app/grow/calendar",
@@ -37,6 +36,7 @@ const EXACT_MAP: Record<string, string> = {
  *  so the whole subtree is rewritten. `to` replaces `from`. */
 const PREFIX_MAP: Array<{ from: string; to: string }> = [
   { from: "/dashboard/settings", to: "/app/settings" },
+  { from: "/contacts", to: "/app/grow/contacts" },
   { from: "/funnels", to: "/app/create/funnels" },
   { from: "/broadcasts", to: "/app/launch/broadcasts" },
   { from: "/workflows", to: "/app/launch/workflows" },
