@@ -18,7 +18,7 @@ export default async function AscendGrowPipelinePage() {
   }
 
   return (
-    <SubAccountProvider subAccountId={saId}>
+    <SubAccountProvider subAccountId={saId} inAscendShell>
       <PipelinePage />
     </SubAccountProvider>
   );

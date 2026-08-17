@@ -17,7 +17,7 @@ export default async function AscendGrowTasksPage() {
 
   return (
     <div className="rounded-2xl bg-white p-6 text-foreground shadow-sm">
-      <SubAccountProvider subAccountId={saId}>
+      <SubAccountProvider subAccountId={saId} inAscendShell>
         <TasksPage />
       </SubAccountProvider>
     </div>

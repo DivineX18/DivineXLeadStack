@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { doc, onSnapshot } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { resolveAscendShellHref } from "@/lib/shell/ascend-shell-paths";
 import type { SubAccountDoc, SubAccountRole } from "@/types";
 
 export interface SubAccountContextValue {
@@ -39,9 +40,19 @@ const SubAccountContext = createContext<SubAccountContextValue | undefined>(
 export function SubAccountProvider({
   subAccountId,
   children,
+  inAscendShell = false,
 }: {
   subAccountId: string;
   children: ReactNode;
+  /**
+   * When true, saPath() resolves in-app links to their Ascend-shell (/app/*)
+   * equivalents where one exists, so a Flow component mounted inside the
+   * Ascend shell keeps the user in Ascend chrome instead of bouncing them
+   * to the legacy /sa/{id} layout. Paths with no /app route fall back to
+   * the exact legacy path (never a 404). Default false — the canonical
+   * /sa/[id] routes are entirely unaffected.
+   */
+  inAscendShell?: boolean;
 }) {
   const router = useRouter();
   const {
@@ -127,6 +138,7 @@ export function SubAccountProvider({
     agencyId: subAccount?.agencyId ?? claimAgencyId,
     saPath: (path: string) => {
       if (!path.startsWith("/")) return path;
+      if (inAscendShell) return resolveAscendShellHref(subAccountId, path);
       return `/sa/${subAccountId}${path}`;
     },
   };

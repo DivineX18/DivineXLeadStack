@@ -44,7 +44,7 @@ export default async function AscendOptimizePage() {
       )}
 
       <section className="rounded-2xl bg-white p-6 text-foreground shadow-sm">
-        <SubAccountProvider subAccountId={saId}>
+        <SubAccountProvider subAccountId={saId} inAscendShell>
           <ReportsPage />
         </SubAccountProvider>
       </section>

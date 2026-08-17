@@ -17,7 +17,7 @@ export default async function AscendGrowConversationsPage() {
 
   return (
     <div className="rounded-2xl bg-white p-6 text-foreground shadow-sm">
-      <SubAccountProvider subAccountId={saId}>
+      <SubAccountProvider subAccountId={saId} inAscendShell>
         <ConversationsPage />
       </SubAccountProvider>
     </div>
