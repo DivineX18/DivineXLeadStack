@@ -48,6 +48,57 @@ interface ScoringLlmResult {
   notes: Partial<Record<DesignReviewCriterion, string>>;
 }
 
+/** Fields that carry structural/styling info rather than reader-facing
+ *  copy — excluded so the reviewer sees content, not config noise. */
+const NON_CONTENT_KEYS = new Set([
+  "id",
+  "formId",
+  "photoUrl",
+  "mediaUrl",
+  "mediaType",
+  "mediaPlaceholderBrief",
+  "ctaHref",
+  "videoUrl",
+  "iconType",
+  "style",
+  "layout",
+  "popupLayout",
+  "group",
+  "bookingPageSlug",
+  "phoneNumber",
+  "productImageUrl",
+  "priceCents",
+  "strikethroughPriceCents",
+  "currency",
+  "checkoutMode",
+  "billingMode",
+]);
+
+/** Recursively pulls every reader-facing string out of a section's config —
+ *  headline/subheadline/eyebrow/byline/paragraphs/item titles+descriptions/
+ *  badge labels/FAQ Q&A/guarantee copy/etc. Generalizes across every
+ *  FunnelSectionConfig shape instead of hardcoding each one, so a new
+ *  section type is reviewed correctly with zero changes here. A section
+ *  with nothing left after filtering reads as "(no content yet)" — which
+ *  is exactly what an empty section IS, and should tank the relevant
+ *  score rather than silently reading as "fine, nothing to say." */
+function extractSectionText(value: unknown, keyHint?: string): string[] {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    return [keyHint ? `${keyHint}="${trimmed.slice(0, 200)}"` : `"${trimmed.slice(0, 200)}"`];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => extractSectionText(item, keyHint));
+  }
+  if (value && typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>).flatMap(([k, v]) =>
+      NON_CONTENT_KEYS.has(k) ? [] : extractSectionText(v, k),
+    );
+  }
+  return [];
+}
+
 function summarizeFunnelForReview(funnel: FunnelDoc): string {
   const lines: string[] = [];
   lines.push(`Genre: ${funnel.genre}`);
@@ -61,12 +112,8 @@ function summarizeFunnelForReview(funnel: FunnelDoc): string {
   }
   lines.push(`Sections (${funnel.sections.length}):`);
   for (const section of funnel.sections) {
-    const config = section.config as unknown as Record<string, unknown>;
-    const headline = typeof config.headline === "string" ? config.headline : undefined;
-    const bullets = Array.isArray(config.bullets) ? (config.bullets as string[]).join(" | ") : undefined;
-    lines.push(
-      `- [${section.type}]${headline ? ` headline="${headline}"` : ""}${bullets ? ` bullets="${bullets}"` : ""}`,
-    );
+    const text = extractSectionText(section.config).join(", ");
+    lines.push(`- [${section.type}] ${text || "(no content yet)"}`);
   }
   return lines.join("\n");
 }
