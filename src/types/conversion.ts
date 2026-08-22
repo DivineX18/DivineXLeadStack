@@ -207,6 +207,56 @@ export interface DerivedStrategy {
 /** Current schema version of the Campaign Strategy Object. */
 export const CAMPAIGN_STRATEGY_VERSION = "1.0.0";
 
+// ─── Shared Intelligence Layer (Ascend → Flow handoff) ────────────────────
+
+/**
+ * The unified DivineX Intelligence Layer, as CONSUMED by Flow. Ascend
+ * (Diagnose / Analyze / Recommend / Prioritize) populates it and hands it to
+ * Flow (Execute / Build / Automate / Measure) so a campaign is built from what
+ * DivineX already knows about the business — never re-asked, never invented.
+ *
+ * Every field is optional: absent = not handed off (a direct-in-Flow build),
+ * and the Strategy Builder records the resulting gap in `unknowns` rather than
+ * guessing. The Ascend side owns populating these shapes; Flow only reads them.
+ */
+export interface GrowthScanContext {
+  overallScore: number | null; // 0-100 growth score
+  primaryConstraint: string | null; // the #1 growth constraint Ascend diagnosed
+  growthStage: string | null;
+  topOpportunities: string[];
+  websiteUrl: string | null;
+  businessType: string | null;
+}
+export interface BrandVoiceContext {
+  tone: string | null; // e.g. "warm, plain-spoken, confident"
+  descriptors: string[];
+  avoid: string[]; // words/phrases the brand does not use
+  sampleCopy: string | null;
+}
+export interface CroContext {
+  findings: string[]; // CRO audit findings
+  primaryLeak: string | null; // e.g. "no lead capture above the fold"
+}
+export interface BusinessMemoryContext {
+  summary: string | null; // persistent business description
+  differentiators: string[];
+  pastAssets: string[];
+  knownAudience: string | null;
+  knownOffer: string | null;
+}
+export interface AnalyticsContext {
+  topTrafficSource: string | null;
+  topConvertingPage: string | null;
+  notableMetrics: string[];
+}
+export interface IntelligenceContext {
+  businessMemory?: BusinessMemoryContext;
+  brandVoice?: BrandVoiceContext;
+  growthScan?: GrowthScanContext;
+  cro?: CroContext;
+  analytics?: AnalyticsContext;
+}
+
 export interface CampaignStrategy {
   /** Schema version — pinned so a later schema change can migrate safely. */
   version: string;
@@ -226,6 +276,11 @@ export interface CampaignStrategy {
    *  around these, never invent a value to fill them. This is the
    *  anti-fabrication guardrail made concrete at the data layer. */
   unknowns: string[];
+  /** The shared Intelligence Layer this strategy was built from, if any —
+   *  carried whole so downstream generation and the orchestrator can read the
+   *  full diagnosis (growth-scan constraint, CRO leak, brand voice) that
+   *  informed it, not just the fields it hydrated. */
+  intelligence?: IntelligenceContext;
   /** Firestore Timestamps once persisted. */
   createdAt?: unknown;
   updatedAt?: unknown;

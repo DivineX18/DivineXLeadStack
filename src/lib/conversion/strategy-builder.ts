@@ -23,7 +23,7 @@ import type {
   CampaignContext,
   CampaignObjective,
   DerivedStrategy,
-  StrategyFieldSource,
+  IntelligenceContext,
 } from "@/types/conversion";
 import { CAMPAIGN_STRATEGY_VERSION } from "@/types/conversion";
 import type { FunnelGenre } from "@/types/funnels";
@@ -123,6 +123,42 @@ export interface StrategyBuilderInput {
   audience?: Partial<CampaignAudience>;
   offer?: Partial<CampaignOffer>;
   context?: Partial<CampaignContext>;
+  /** Shared Intelligence Layer handed off from Ascend, if any. Fills gaps the
+   *  user didn't provide — never overrides an explicit user value. */
+  intelligence?: IntelligenceContext;
+}
+
+/**
+ * Fill empty fields of the coalesced blocks from the Intelligence Layer.
+ * User input always wins (only nulls/empties are filled). Returns which blocks
+ * the intelligence actually contributed to, for honest provenance.
+ */
+function hydrateFromIntelligence(
+  business: CampaignBusiness,
+  audience: CampaignAudience,
+  offer: CampaignOffer,
+  context: CampaignContext,
+  intel: IntelligenceContext,
+): { business: boolean; audience: boolean; offer: boolean; context: boolean } {
+  const from = { business: false, audience: false, offer: false, context: false };
+  const gs = intel.growthScan;
+  const bm = intel.businessMemory;
+  const bv = intel.brandVoice;
+  const an = intel.analytics;
+
+  if (!business.businessType && gs?.businessType) { business.businessType = gs.businessType; from.business = true; }
+  if (!business.website && gs?.websiteUrl) { business.website = gs.websiteUrl; from.business = true; }
+  if (!business.brandVoice && bv?.tone) { business.brandVoice = bv.tone; from.business = true; }
+  if (business.differentiators.length === 0 && bm?.differentiators?.length) { business.differentiators = [...bm.differentiators]; from.business = true; }
+  if (business.existingAssets.length === 0 && bm?.pastAssets?.length) { business.existingAssets = [...bm.pastAssets]; from.business = true; }
+
+  if (!audience.icp && bm?.knownAudience) { audience.icp = bm.knownAudience; from.audience = true; }
+
+  if (!offer.productOrService && bm?.knownOffer) { offer.productOrService = bm.knownOffer; from.offer = true; }
+
+  if (!context.trafficSource && an?.topTrafficSource) { context.trafficSource = an.topTrafficSource; from.context = true; }
+
+  return from;
 }
 
 function coalesceBusiness(b?: Partial<CampaignBusiness>): CampaignBusiness {
@@ -218,6 +254,24 @@ export function buildCampaignStrategy(input: StrategyBuilderInput): CampaignStra
   const audience = coalesceAudience(input.audience);
   const offer = coalesceOffer(input.offer);
   const context = coalesceContext(input.context);
+
+  const nonEmpty = (obj: object): boolean =>
+    Object.values(obj).some((v) => (Array.isArray(v) ? v.length > 0 : v !== null && v !== undefined));
+
+  // Snapshot what the USER actually supplied (before intelligence fills gaps),
+  // so provenance can tell user-owned facts from Ascend-supplied ones.
+  const userProvided = {
+    business: nonEmpty(business),
+    audience: nonEmpty(audience),
+    offer: nonEmpty(offer),
+    context: nonEmpty(context),
+  };
+
+  // Hydrate the gaps from the shared Intelligence Layer, if handed off.
+  const fromIntel = input.intelligence
+    ? hydrateFromIntelligence(business, audience, offer, context, input.intelligence)
+    : { business: false, audience: false, offer: false, context: false };
+
   const priced = isPricedOffer(offer);
 
   const genre = funnelGenreForObjective(context.objective, priced);
@@ -247,14 +301,16 @@ export function buildCampaignStrategy(input: StrategyBuilderInput): CampaignStra
     frameworkStack,
   };
 
-  const nonEmpty = (obj: object): boolean =>
-    Object.values(obj).some((v) => (Array.isArray(v) ? v.length > 0 : v !== null && v !== undefined));
+  // Provenance, 3-way: user input wins; else Ascend intelligence if it filled
+  // the block; else genuinely unknown.
+  const provenance = (userOwned: boolean, intelFilled: boolean): "user_input" | "ascend_profile" | "unknown" =>
+    userOwned ? "user_input" : intelFilled ? "ascend_profile" : "unknown";
 
   const sources: CampaignStrategy["sources"] = {
-    business: nonEmpty(business) ? "user_input" : "unknown",
-    audience: nonEmpty(audience) ? "user_input" : "unknown",
-    offer: nonEmpty(offer) ? "user_input" : "unknown",
-    context: nonEmpty(context) ? "user_input" : "unknown",
+    business: provenance(userProvided.business, fromIntel.business),
+    audience: provenance(userProvided.audience, fromIntel.audience),
+    offer: provenance(userProvided.offer, fromIntel.offer),
+    context: provenance(userProvided.context, fromIntel.context),
     derived: "inferred",
   };
 
@@ -270,6 +326,9 @@ export function buildCampaignStrategy(input: StrategyBuilderInput): CampaignStra
     context,
     derived,
     sources,
+    // unknowns are computed AFTER intelligence hydration, so a handoff from
+    // Ascend genuinely shrinks the gap list.
     unknowns: computeUnknowns({ business, audience, offer, context }),
+    ...(input.intelligence ? { intelligence: input.intelligence } : {}),
   };
 }

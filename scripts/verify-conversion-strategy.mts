@@ -85,5 +85,44 @@ function check(label: string, ok: boolean, detail?: string) {
   check("6. Every id in the derived framework stack exists in the library", allValid, s.derived.frameworkStack.join(","));
 }
 
+// --- 7. Intelligence Layer hydration (Ascend → Flow handoff) ---
+{
+  const intelligence = {
+    growthScan: { overallScore: 58, primaryConstraint: "Weak homepage value prop", growthStage: "plateau", topOpportunities: ["Add lead capture"], websiteUrl: "https://acmehvac.com", businessType: "HVAC" },
+    brandVoice: { tone: "warm, plain-spoken", descriptors: ["local", "reliable"], avoid: ["revolutionary"], sampleCopy: null },
+    businessMemory: { summary: null, differentiators: ["24/7 dispatch"], pastAssets: [], knownAudience: "Homeowners with aging AC units", knownOffer: "Same-day AC repair", },
+    cro: { findings: ["No CTA above the fold"], primaryLeak: "no lead capture above the fold" },
+    analytics: { topTrafficSource: "google_search", topConvertingPage: null, notableMetrics: [] },
+  };
+  const s = buildCampaignStrategy({ context: { objective: "lead_generation" }, intelligence });
+  check("7a. business type hydrated from growth scan", s.business.businessType === "HVAC");
+  check("7b. website hydrated from growth scan", s.business.website === "https://acmehvac.com");
+  check("7c. brand voice hydrated", s.business.brandVoice === "warm, plain-spoken");
+  check("7d. differentiators hydrated from business memory", s.business.differentiators.includes("24/7 dispatch"));
+  check("7e. offer hydrated from known offer", s.offer.productOrService === "Same-day AC repair");
+  check("7f. audience icp hydrated from known audience", s.audience.icp === "Homeowners with aging AC units");
+  check("7g. traffic source hydrated from analytics", s.context.trafficSource === "google_search");
+  check("7h. provenance marks intel-filled blocks 'ascend_profile'", s.sources.business === "ascend_profile" && s.sources.offer === "ascend_profile");
+  check("7i. unknowns SHRINK — offer + business type + traffic no longer unknown", !s.unknowns.includes("what the offer actually is") && !s.unknowns.includes("business type / industry") && !s.unknowns.includes("traffic source"));
+  check("7j. the intelligence is carried whole on the strategy (diagnosis available downstream)", s.intelligence?.growthScan?.primaryConstraint === "Weak homepage value prop");
+}
+
+// --- 8. User input WINS over intelligence (never overridden) ---
+{
+  const s = buildCampaignStrategy({
+    business: { businessType: "Dental" },
+    intelligence: { growthScan: { overallScore: null, primaryConstraint: null, growthStage: null, topOpportunities: [], websiteUrl: null, businessType: "HVAC" } },
+  });
+  check("8a. user-provided business type is not overridden by intel", s.business.businessType === "Dental");
+  check("8b. a user-provided block is provenance 'user_input', not ascend_profile", s.sources.business === "user_input");
+}
+
+// --- 9. No intelligence → M2 behavior preserved ---
+{
+  const s = buildCampaignStrategy({ business: { businessType: "Law" } });
+  check("9a. no intelligence field carried when none supplied", s.intelligence === undefined);
+  check("9b. provenance unchanged (user_input / unknown)", s.sources.business === "user_input" && s.sources.offer === "unknown");
+}
+
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);
 if (failures > 0) process.exit(1);
