@@ -74,6 +74,7 @@ import {
   FunnelValidationError,
 } from "@/lib/server/funnels-service";
 import { scoreFunnelDesign } from "@/lib/design-intelligence/scoring";
+import { reviewFunnelCopy, type FunnelCopyReview } from "@/lib/conversion/funnel-copy-review";
 import type { FunnelSection, FunnelSectionType, HeroConfig, PhotoGalleryConfig, TicketTiersConfig } from "@/types/funnels";
 import type { DesignPackId } from "@/lib/funnels/design-packs";
 import { FUNNEL_FRAMEWORKS } from "@/lib/funnels/frameworks";
@@ -4487,9 +4488,18 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // limit) must never break funnel creation itself, so it's swallowed
       // here exactly like every other lifecycle side-effect in this
       // codebase (see lib/quotes/lifecycle.ts).
+      let copyReview: FunnelCopyReview | null = null;
       try {
         const scoredFunnel = await getFunnel(subAccountId, funnelId);
-        if (scoredFunnel) await scoreFunnelDesign(scoredFunnel);
+        if (scoredFunnel) {
+          await scoreFunnelDesign(scoredFunnel);
+          // Conversion Engine (M6b) — deterministic copy-quality + anti-
+          // fabrication review alongside the design score. No LLM cost; flags
+          // generic filler / invented proof / vague CTAs for operator review
+          // (persisted to funnelCopyReviews, mirroring the design score).
+          // Best-effort, same swallow as the design score.
+          copyReview = await reviewFunnelCopy(scoredFunnel);
+        }
       } catch {
         // Swallowed — the operator can always trigger a manual re-score
         // from the funnel builder if this silently didn't run.
@@ -4552,6 +4562,21 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           "— No capture form (this is a priced offer — wire up Stripe checkout on the offer section, no lead-form opt-in needed).",
         );
       }
+      // Conversion Engine (M6b) — surface the copy review so the operator knows
+      // to check before sharing. Only shown when something was actually flagged;
+      // a clean pass stays quiet. Never a "score/grade" for its own sake.
+      if (copyReview && copyReview.issues.length > 0) {
+        summaryLines.push("", "COPY REVIEW");
+        if (copyReview.fabricationRisk) {
+          summaryLines.push(
+            "⚠️ Possible fabricated proof/stats detected — verify or remove before publishing (never publish invented testimonials, numbers, or guarantees).",
+          );
+        }
+        summaryLines.push(
+          `Copy check: ${copyReview.score}/100 · ${copyReview.issues.length} item(s) flagged for a quick review (e.g. generic phrasing, vague CTA). Open the funnel to tighten them.`,
+        );
+      }
+
       summaryLines.push(
         "",
         "STATUS",

@@ -86,8 +86,12 @@ const VAGUE_CTAS = new Set([
 
 /** Likely-fabrication signals in generated copy (see note per pattern). */
 const FABRICATION = [
-  // Invented social-proof COUNTS — the clearest integrity red flag.
-  { re: /\b\d[\d,]*\+?\s?(customers|clients|users|members|businesses|companies|people|students|patients|families|subscribers|downloads|reviews)\b/i, severity: "high" as const, note: "Looks like an invented customer/usage count — only use real, supplied numbers." },
+  // Invented social-proof COUNTS — the clearest integrity red flag. Matches a
+  // sizeable number (3+ digits, or any number with a "+") within a couple of
+  // words of a people/usage noun, so "10,000+ happy customers" and "500+
+  // satisfied clients" are caught, not just "500 customers". A bare small
+  // literal ("3 clients") is left alone to keep the HIGH signal precise.
+  { re: /\b(?:\d[\d,]{2,}\+?|\d+\+)\s*(?:[a-z]+\s+){0,2}(customers|clients|users|members|businesses|companies|people|students|patients|families|subscribers|downloads|reviews)\b/i, severity: "high" as const, note: "Looks like an invented customer/usage count — only use real, supplied numbers." },
   // Star ratings.
   { re: /\b\d(\.\d)?\s?(?:\/\s?5\s?)?(?:star|stars|★)\b/i, severity: "medium" as const, note: "Star-rating claim — must be a real, verifiable rating, not generated." },
   // Bare statistic percentages (excluding pricing discounts, handled below).
