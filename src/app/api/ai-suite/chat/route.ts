@@ -19,6 +19,10 @@ import {
   renderPrinciplesAsCards,
 } from "@/lib/design-intelligence/principles";
 import {
+  CONVERSION_FRAMEWORKS,
+  renderFrameworksAsCards,
+} from "@/lib/conversion/framework-library";
+import {
   CapabilityUserError,
   capabilityNamesForLevel,
   getCapability,
@@ -211,6 +215,18 @@ export async function POST(request: Request) {
       // Swallowed — Zeno still generates funnels fine with zero learned
       // principles, same as before this feature existed.
     }
+    // Conversion Engine (P1) — inject the DivineX Conversion Framework Library
+    // as REFERENCE MATERIAL so Zeno REASONS from distilled principles when it
+    // builds a funnel: awareness/sophistication routing, page-architecture-by-
+    // intent, offer value-stacking, honest proof/guarantee/urgency, and
+    // message-matched email sequences — principles applied to THIS business,
+    // never a fixed template. The full library is injected (not a per-strategy
+    // subset) because the model reasons with it BEFORE it picks a genre; the
+    // per-strategy selection is used later by the Build-Campaign orchestrator.
+    // Static canon (no DB read), so no try/catch is needed here. Rendered via
+    // the same AiSuiteKnowledgeCard mechanism the prompt builder already knows,
+    // so buildAiSuiteSystemPrompt needs zero changes.
+    cards.push(...renderFrameworksAsCards(CONVERSION_FRAMEWORKS));
   }
 
   const systemPrompt = buildAiSuiteSystemPrompt({
