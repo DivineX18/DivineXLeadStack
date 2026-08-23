@@ -199,6 +199,8 @@ export function defaultSectionConfig(type: FunnelSectionType): FunnelSectionConf
       return { beforeItems: [], afterItems: [] };
     case "included":
       return { items: [] };
+    case "value_stack":
+      return { items: [] };
     case "comparison":
       return { usLabel: "Us", themLabel: "Doing it yourself", rows: [] };
     case "testimonials":

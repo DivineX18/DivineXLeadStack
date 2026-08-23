@@ -37,6 +37,7 @@ export type FunnelSectionType =
   | "problem_solution"
   | "before_after"
   | "included"
+  | "value_stack"
   | "comparison"
   | "testimonials"
   | "stats"
@@ -331,6 +332,23 @@ export interface IncludedConfig {
   items: { title: string; description?: string }[];
 }
 
+/** The Grand-Slam / ClickFunnels value stack: the operator's REAL deliverables,
+ *  each with an honest value, summed to an anchor total, then the actual price
+ *  revealed beneath it — the gap does the persuading. Values are the operator's
+ *  own honest numbers; never fabricated or padded (see offer-value-stack in the
+ *  conversion framework library). */
+export interface ValueStackConfig {
+  headline?: string;
+  /** Each real deliverable + an honest value string, e.g. value: "$500". */
+  items: { title: string; description?: string; value?: string }[];
+  /** The summed anchor, e.g. "Total value: $2,970". Shown struck-through. */
+  totalValueLabel?: string;
+  /** The real price revealed under the anchor, e.g. "Today: $497" or "Free". */
+  priceLabel?: string;
+  /** Optional line under the price (e.g. a real guarantee restatement). */
+  footnote?: string;
+}
+
 /** Us vs. the alternative — rows are our own real offer facts vs. a
  *  generic "the old way" / "doing it yourself" comparison, never a named
  *  real competitor's specific claims (which we have no way to verify). */
@@ -420,6 +438,7 @@ export type FunnelSectionConfig =
   | ProblemSolutionConfig
   | BeforeAfterConfig
   | IncludedConfig
+  | ValueStackConfig
   | ComparisonConfig
   | TestimonialsConfig
   | StatsConfig

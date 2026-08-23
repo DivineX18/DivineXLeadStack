@@ -21,6 +21,7 @@ import { BenefitsGridSection } from "./sections/benefits-grid-section";
 import { ProblemSolutionSection } from "./sections/problem-solution-section";
 import { BeforeAfterSection } from "./sections/before-after-section";
 import { IncludedSection } from "./sections/included-section";
+import { ValueStackSection } from "./sections/value-stack-section";
 import { ComparisonSection } from "./sections/comparison-section";
 import { TestimonialsSection } from "./sections/testimonials-section";
 import { StatsSection } from "./sections/stats-section";
@@ -63,6 +64,7 @@ const SECTION_COMPONENTS: Record<FunnelSectionType, ComponentType<any>> = {
   problem_solution: ProblemSolutionSection,
   before_after: BeforeAfterSection,
   included: IncludedSection,
+  value_stack: ValueStackSection,
   comparison: ComparisonSection,
   testimonials: TestimonialsSection,
   stats: StatsSection,
