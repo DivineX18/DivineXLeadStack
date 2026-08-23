@@ -23,6 +23,7 @@ import { resolveDesignPack } from "./design-packs";
  */
 
 export type VisualArchetype =
+  | "direct_response"
   | "local_service"
   | "saas_technology"
   | "luxury_premium"
@@ -273,6 +274,28 @@ export const VISUAL_ARCHETYPES: Record<VisualArchetype, VisualArchetypeDefinitio
     recommendedCtaStyles: ["popup_calendar", "dual"],
     recommendedMedia: ["product_screenshot", "abstract", "video"],
     galleryLayout: "masonry",
+  },
+  direct_response: {
+    id: "direct_response",
+    label: "Direct Response",
+    audienceHint: "The default for high-converting sales & lead pages (offers, lead magnets, VSLs, applications, webinars, most local-service lead-gen). ClickFunnels/Brunson-style.",
+    characteristics: "Dark, high-contrast, oversized bold headlines, one punchy high-visibility CTA color, strong alternating section bands, sharp layered cards, high energy — engineered to convert, not to look tastefully minimal.",
+    palettes: [
+      { id: "high_voltage_orange", label: "High-Voltage Orange", accentColor: "#f97316", colorMode: "dark", headlineGradient: ["#f97316", "#facc15"], iconPalette: ["#f97316", "#facc15", "#22c55e", "#38bdf8", "#f472b6"] },
+      { id: "conversion_green", label: "Conversion Green", accentColor: "#22c55e", colorMode: "dark", headlineGradient: ["#22c55e", "#a3e635"], iconPalette: ["#22c55e", "#a3e635", "#f97316", "#38bdf8"] },
+      { id: "electric_blue", label: "Electric Blue", accentColor: "#3b82f6", colorMode: "dark", headlineGradient: ["#38bdf8", "#818cf8"], iconPalette: ["#38bdf8", "#818cf8", "#f97316", "#22c55e"] },
+    ],
+    typography: ["sans_modern"],
+    cardStyle: "sharp",
+    borderRadiusStyle: "soft",
+    iconStyle: "filled",
+    visualDensity: "high",
+    animationLevel: "moderate",
+    backgroundRhythm: ["dark", "dark", "gradient", "dark", "elevated"],
+    recommendedHeroLayouts: ["centered", "split", "background_image"],
+    recommendedCtaStyles: ["sticky_desktop", "popup_form", "dual"],
+    recommendedMedia: ["video", "product_screenshot", "abstract", "none"],
+    galleryLayout: "grid",
   },
   professional_enterprise: {
     id: "professional_enterprise",

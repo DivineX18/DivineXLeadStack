@@ -3290,7 +3290,9 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       "(7) PROOF stays REAL — congruent with the claim, exact non-round numbers, no vanity metrics, and NEVER fabricated (no invented testimonials, counts, stats, or guarantees — write around missing proof with mechanism + specificity instead). " +
       "Enter the conversation already happening in the prospect's head; use their words for the problem and the outcome, not industry jargon. " +
       "DESIGN — you are both the conversion strategist AND the landing-page designer. This is Phase 2's job, not the user's: NEVER ask what color/font/template/border-radius/layout they want — infer a visual_archetype from the business/audience/offer you already have, and only ask when a real fact is genuinely missing and unsafe to guess (existing brand colors, whether a named person is the founder, whether a testimonial may be published, a video URL, which booking calendar). Pick ONE visual_archetype: " +
-      "local_service (home services, automotive, clinics, contractors, appointment-driven local businesses — warm/high-trust palette, friendly sans, rounded cards, low complexity, minimal motion, phone/booking/estimate CTAs). " +
+      "For a sales or lead-generation page — which is MOST funnels, INCLUDING local-service lead-gen — DEFAULT to direct_response; only pick a softer archetype when the brand genuinely calls for it (luxury, wellness, nonprofit, or a brand that explicitly wants a calm/premium feel). " +
+      "direct_response (THE DEFAULT for high-converting sales & lead pages — offers, lead magnets, VSLs, applications, webinars, and most local-service lead-gen: dark, high-contrast, oversized bold headlines, ONE punchy high-visibility CTA color, strong alternating dark section bands, sharp layered cards, high energy — the ClickFunnels/direct-response look, built to CONVERT, not to look tastefully minimal. Never default a normal sales/lead page to a flat, light, tasteful look). " +
+      "local_service (home services, automotive, clinics, contractors — ONLY when a calm warm/high-trust look genuinely converts better than the bold direct-response look for this specific brand: warm palette, friendly sans, rounded cards, low complexity, phone/booking/estimate CTAs). " +
       "saas_technology (SaaS, AI, dev tools, platforms, apps — high-contrast light/dark/mixed, controlled gradients, dashboard/browser mockups, modern type, moderate motion, tight geometry). " +
       "luxury_premium (executive consulting, luxury services, wealth, premium professional services — cream/charcoal/deep-neutral, restrained gold/metallic accents, serif display, editorial imagery, generous whitespace, minimal icons, subtle motion). " +
       "nonprofit_mission (nonprofits, causes, community/mission-driven programs — story-led, community/impact imagery, human-centered hierarchy, warm-but-credible palette, highly accessible). " +
@@ -3516,6 +3518,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         visual_archetype: {
           type: "string",
           enum: [
+            "direct_response",
             "local_service",
             "saas_technology",
             "luxury_premium",
@@ -3525,7 +3528,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             "agency_creative",
             "professional_enterprise",
           ],
-          description: "The industry-aware visual design system for the whole page — see the DESIGN section above. ALWAYS set this for a new funnel; it resolves a full, professionally-constrained token set (palette, typography, card geometry, icon style, density, background rhythm, animation, hero layout, CTA) in one shot.",
+          description: "The industry-aware visual design system for the whole page — see the DESIGN section above. ALWAYS set this for a new funnel; it resolves a full, professionally-constrained token set (palette, typography, card geometry, icon style, density, background rhythm, animation, hero layout, CTA) in one shot. DEFAULT to 'direct_response' for sales/lead conversion pages (the bold, high-converting look) unless the business clearly calls for a softer aesthetic (luxury, wellness, nonprofit).",
         },
         palette_variant: {
           type: "string",
