@@ -219,6 +219,137 @@ export const CONVERSION_FRAMEWORKS: ConversionFramework[] = [
     tags: ["cta", "call to action", "button", "conversion", "next step"],
     source: `${TRAINING}`,
   },
+  {
+    id: "one-argument",
+    family: "copywriting",
+    name: "The One Argument",
+    version: "1.0.0",
+    purpose:
+      "Build the ENTIRE page around a single belief the prospect must accept to want the offer — one coherent argument, not a pile of features or sections that each make a different point.",
+    useCases: ["The organizing spine of every page before a word is written", "Any offer where the reader must be persuaded, not just informed"],
+    whenNotToUse: ["Pure transactional pages for already-decided buyers (a reorder page needs no argument)"],
+    requiredInputs: ["uniqueMechanism", "primaryDesiredOutcome", "the old way that's failing"],
+    decisionRules: [
+      "State the one argument as: '[specific mechanism] is why you're not getting [result] now — and why [better result] is possible.'",
+      "The mechanism is the ROUTE to the result, never a list of deliverables.",
+      "Congruence: every section must reinforce this one argument. If a section argues a different point, cut it or refit it.",
+      "Everything on the page is either setting up, proving, or acting on this single belief.",
+    ],
+    psychologicalPrinciples: ["A single, repeated belief is persuasive; a scattered list of claims is forgettable", "Coherence itself signals competence and truth"],
+    structure: ["Name the one belief → make the reader feel the old way fails → introduce the mechanism as the route → prove it → act on it"],
+    evaluationCriteria: [
+      "Can you state the page's one argument in a single sentence?",
+      "Does every section serve that one argument, or do some wander?",
+      "Is the mechanism framed as the reason the result happens, not as deliverables?",
+    ],
+    failureModes: ["A feature list with no through-line", "Multiple competing arguments diluting each other", "The mechanism reduced to 'what you get' instead of 'why it works'"],
+    compatibleFrameworks: ["headline-outcome-mechanism", "mechanism-reveal", "old-way-new-way", "slippery-slide"],
+    tags: ["one argument", "congruence", "big idea", "through-line", "belief"],
+    source: `${TRAINING} (Winning Ads & VSL Formula — The One Argument)`,
+  },
+  {
+    id: "amplification-test",
+    family: "copywriting",
+    name: "The Amplification Test",
+    version: "1.0.0",
+    purpose:
+      "The line-level filter that kills bland copy: every line must make the outcome MORE desirable, certain, achievable, or urgent than the line before it — otherwise it's filler.",
+    useCases: ["Reviewing/tightening any draft", "Deciding whether a sentence earns its place"],
+    whenNotToUse: ["Never skip it — it's the difference between persuasion and description"],
+    requiredInputs: ["the drafted copy", "primaryDesiredOutcome"],
+    decisionRules: [
+      "More DESIRABLE: make the outcome physical and specific — 'case-study-worthy clients', not 'better leads'.",
+      "More CERTAIN: make the result feel controllable/proven — 'a dial you can turn up and down', not 'scalable'.",
+      "More ACHIEVABLE: make effort/time/complexity feel lower — 'three belief shifts', not 'endless content'.",
+      "More URGENT: sharpen the cost of the old way — 'your content is training people to see you as free'.",
+      "If a line does NONE of these four jobs, it's explanation, tangent, or filler — cut it, move it, or rewrite it.",
+    ],
+    psychologicalPrinciples: ["Every sentence either raises or lowers momentum and desire — none are neutral", "Concrete, physical language outsells abstract adjectives"],
+    structure: ["Draft → test each line against desirable/certain/achievable/urgent → cut or rewrite every line that fails"],
+    evaluationCriteria: [
+      "Does every line raise desire, certainty, achievability, or urgency?",
+      "Are outcomes stated physically ('case-study-worthy clients') rather than abstractly ('better results')?",
+      "Would removing the line weaken the argument? If not, it was filler.",
+    ],
+    failureModes: ["Flat descriptive lines that inform but don't move", "Abstract adjectives standing in for physical outcomes", "'Feature, feature, feature' with no amplification"],
+    compatibleFrameworks: ["one-argument", "slippery-slide", "feature-to-benefit-ladder", "headline-outcome-mechanism"],
+    tags: ["amplification", "line filter", "desirable", "certain", "achievable", "urgent", "cut filler"],
+    source: `${TRAINING} (Winning Ads & VSL Formula — What Every Line Must Do)`,
+  },
+  {
+    id: "hook-types",
+    family: "copywriting",
+    name: "The Hook (four types)",
+    version: "1.0.0",
+    purpose:
+      "Earn the first few seconds by answering 'is this for me?' and 'is it worth my attention?' with context about the PROSPECT's situation plus a core claim — using one of four proven hook shapes.",
+    useCases: ["The opening line/headline of any page or ad", "The eyebrow + headline pairing of a hero"],
+    whenNotToUse: ["Most-aware audiences who just need the offer — open on the offer, not a hook"],
+    requiredInputs: ["primaryCustomer / their situation", "the core claim, mechanism, or outcome"],
+    decisionRules: [
+      "Pick ONE hook type: (1) Villain/contrarian — 'the thing you were told to do is wrong'; (2) Bold claim — 'this outcome is possible'; (3) Identity/situation — 'if you're this person in this situation…'; (4) Story/before-after — 'here was the before; here's the result'.",
+      "Be specific enough to EXCLUDE the wrong person — a hook that speaks to everyone speaks to no one.",
+      "Context is about the prospect's world (their tool, result, pain), never the creator's biography.",
+      "Match the hook to awareness: villain/story for colder, bold-claim/identity for warmer.",
+    ],
+    psychologicalPrinciples: ["Self-identification: the right person must feel the message is about them", "Skepticism validated (villain hook) lowers the reader's guard"],
+    structure: ["Context (name the prospect + situation) + Core claim (the outcome/diagnosis/mechanism worth their next 10 seconds)"],
+    evaluationCriteria: ["Would the RIGHT prospect feel 'this is about me'?", "Is it specific enough to exclude the wrong person?", "Does it earn the next sentence, or just describe?"],
+    failureModes: ["Generic 'grow your business' hooks that exclude no one", "Creator-biography openings instead of prospect-situation", "Trying to appeal to everyone"],
+    compatibleFrameworks: ["headline-outcome-mechanism", "awareness-routing", "old-way-new-way"],
+    tags: ["hook", "opening", "attention", "self-identification", "headline"],
+    source: `${TRAINING} (Winning Ads & VSL Formula — The Hook Formula)`,
+  },
+  {
+    id: "old-way-new-way",
+    family: "copywriting",
+    name: "Old Way vs New Way",
+    version: "1.0.0",
+    purpose:
+      "Give the prospect a clean, blameless explanation for past failure, then position the mechanism as the logical alternative — so trying again feels safe instead of shameful.",
+    useCases: ["The problem/solution beat of any persuasion page", "Markets where the prospect has tried and failed before"],
+    whenNotToUse: ["Brand-new problems the prospect has never tried to solve (there's no 'old way' to indict)"],
+    requiredInputs: ["the old way / prevailing approach that fails", "uniqueMechanism"],
+    decisionRules: [
+      "The villain is a BEHAVIOR, belief, approach, system, or category — NEVER a named person, coach, or competitor.",
+      "Reframe past failure: 'You didn't fail because you're incapable — you were using a method that creates the wrong result.'",
+      "Make the contrast FELT (show the two side by side), don't announce 'the old way is… the new way is…'.",
+      "The prospect should conclude the new mechanism is the logical alternative on their own.",
+    ],
+    psychologicalPrinciples: ["Relief from self-blame restores hope and re-opens the buying decision", "Contrast makes the new mechanism's value legible"],
+    structure: ["Name the old way → why it structurally produces the wrong result (no blame) → the mechanism as the natural alternative → the better future it makes possible"],
+    evaluationCriteria: ["Is the villain a behavior/system, not a person?", "Does it remove self-blame rather than pile it on?", "Is the contrast shown rather than announced?"],
+    failureModes: ["Attacking the reader or a named competitor", "Announcing 'old way/new way' instead of making it felt", "Blaming the prospect for past failure (kills the reframe)"],
+    compatibleFrameworks: ["one-argument", "mechanism-reveal", "hook-types"],
+    tags: ["old way", "new way", "villain", "reframe", "self-blame", "contrast"],
+    source: `${TRAINING} (Winning Ads & VSL Formula — Old Way vs New Way)`,
+  },
+  {
+    id: "slippery-slide",
+    family: "copywriting",
+    name: "Slippery-Slide Cadence",
+    version: "1.0.0",
+    purpose:
+      "Make reading the next line feel easier than stopping — momentum built from open loops, tension-and-payoff, contrast, and one idea per line, all serving the one argument.",
+    useCases: ["Long-form pages, VSLs, sales letters, email bodies", "Any copy where the reader can bail at every line"],
+    whenNotToUse: ["Ultra-short one-fold pages where there's barely a slide to grease (still keep one-idea-per-line)"],
+    requiredInputs: ["the drafted copy", "the one argument it serves"],
+    decisionRules: [
+      "Open loops: a line raises a question the next line answers.",
+      "Tension then payoff: one line sharpens the pain, the next releases it with the mechanism.",
+      "Contrast: show old way and new way side by side.",
+      "Long setup → short snap: a descriptive sentence followed by a decisive one.",
+      "One point per line: each idea lands before the next begins.",
+      "The line filter: every line must amplify more than the line before it, or it slows the slide.",
+    ],
+    psychologicalPrinciples: ["Unresolved tension compels continued reading", "Cognitive ease: short, single-idea lines are effortless to consume"],
+    structure: ["Congruence (every line serves the one argument) + cadence (loops, tension/payoff, contrast, snap, one idea per line)"],
+    evaluationCriteria: ["Does each line pull you into the next?", "Is there one idea per line?", "Do open loops get paid off?"],
+    failureModes: ["Dense multi-idea paragraphs that stall the reader", "No tension or open loops — pure exposition", "Lines that don't advance the argument"],
+    compatibleFrameworks: ["one-argument", "amplification-test", "single-idea-email"],
+    tags: ["cadence", "slippery slide", "momentum", "open loop", "tension", "flow"],
+    source: `${TRAINING} (Winning Ads & VSL Formula — Slippery-Slide Cadence)`,
+  },
 
   // ─── BUYER PSYCHOLOGY ─────────────────────────────────────────────────────
   {
@@ -314,6 +445,54 @@ export const CONVERSION_FRAMEWORKS: ConversionFramework[] = [
     compatibleFrameworks: ["awareness-routing", "objection-preemption"],
     tags: ["emotion", "logic", "motivation", "persuasion arc", "sequencing"],
     source: `${TRAINING}`,
+  },
+  {
+    id: "enter-the-conversation",
+    family: "buyer_psychology",
+    name: "Enter the Conversation in Their Mind",
+    version: "1.0.0",
+    purpose:
+      "Align the message with the desire and internal conversation already happening in the prospect's head — copy channels existing hopes, fears, and dreams onto the offer; it doesn't manufacture new desire.",
+    useCases: ["Setting the opening angle of any page", "Choosing which existing desire/fear the offer attaches to"],
+    whenNotToUse: ["Genuinely novel categories with no existing desire to tap — there you must first educate the desire into existence"],
+    requiredInputs: ["audience.primaryPain / desiredOutcome / fears / motivations", "audience.awareness"],
+    decisionRules: [
+      "Find the conversation already occurring in the prospect's mind and enter it — don't start a new one.",
+      "Copy cannot create desire; it channels the hopes, dreams, fears, and desires the prospect already has onto this offer.",
+      "The more aware the prospect, the closer to the offer you open; the less aware, the more you meet them at the problem/desire.",
+      "Mirror the prospect's own words for their problem and outcome, not industry jargon.",
+    ],
+    psychologicalPrinciples: ["Relevance: a message that matches the reader's current thought feels meant for them", "Least resistance: attaching to an existing desire is far cheaper than creating one"],
+    structure: ["Identify the live internal conversation (desire + fear) → enter at the matching awareness level → attach the mechanism to that existing desire"],
+    evaluationCriteria: ["Does the opening match a thought the prospect is already having?", "Is it in the prospect's language, not the company's?", "Does it tap an existing desire rather than trying to invent one?"],
+    failureModes: ["Company-centric opening ('We are a leading…') that ignores the reader's conversation", "Jargon the prospect wouldn't use", "Trying to manufacture a desire that isn't there"],
+    compatibleFrameworks: ["awareness-routing", "hook-types", "one-argument"],
+    tags: ["enter the conversation", "existing desire", "relevance", "voice of customer", "schwartz"],
+    source: "Copywriting principles (Eugene Schwartz / Robert Collier — enter the conversation already in the prospect's mind) — applied per DivineX",
+  },
+  {
+    id: "emotional-motivations",
+    family: "buyer_psychology",
+    name: "Core Human Motivations",
+    version: "1.0.0",
+    purpose:
+      "Anchor the offer to the primal driver that actually moves this audience — then justify it rationally — instead of listing features and hoping logic sells.",
+    useCases: ["Deciding the dominant emotional angle of a campaign", "Choosing which drive the headline + story lean on"],
+    whenNotToUse: ["Never skip identifying the driver — but don't stack all of them; pick the dominant one"],
+    requiredInputs: ["audience.motivations", "audience.fears", "the transformation the offer delivers"],
+    decisionRules: [
+      "Identify the ONE dominant human motivation for this audience — commonly: gain, fear/self-preservation, pride/status, love/belonging, duty, or self-indulgence.",
+      "Lead the copy with that emotional driver; supply the rational justification near the decision point.",
+      "A single, deeply-felt driver beats a shallow appeal to several.",
+      "Attach the driver to a concrete, physical picture of the outcome (identity projection), not an abstract benefit.",
+    ],
+    psychologicalPrinciples: ["Decisions are made emotionally and justified rationally", "Identity projection: people buy the version of themselves the offer implies"],
+    structure: ["Name the dominant drive → dramatize it with a physical outcome → justify rationally → CTA"],
+    evaluationCriteria: ["Is there a clear dominant emotional driver, not a scattered mix?", "Is the drive tied to a concrete outcome/identity?", "Is there rational justification to close?"],
+    failureModes: ["Feature lists with no emotional driver", "Appealing to every motivation shallowly", "Emotion with no logical justification (buyer's remorse / refunds)"],
+    compatibleFrameworks: ["emotion-then-justification", "value-equation-lens", "feature-to-benefit-ladder"],
+    tags: ["motivation", "emotion", "desire", "identity", "status", "fear", "collier"],
+    source: "Copywriting principles (Robert Collier's human motivations; identity projection) — applied per DivineX",
   },
 
   // ─── OFFER ────────────────────────────────────────────────────────────────
@@ -525,7 +704,15 @@ export function frameworksForStrategy(input: {
 }): string[] {
   const stack = new Set<string>();
 
-  // Foundational reasoning frameworks apply to every campaign.
+  // Foundational reasoning frameworks apply to every campaign — the core
+  // persuasion operating system (one argument, amplification, hook, old/new
+  // way, cadence) is what keeps copy from reading as a bland template.
+  stack.add("one-argument");
+  stack.add("amplification-test");
+  stack.add("hook-types");
+  stack.add("old-way-new-way");
+  stack.add("slippery-slide");
+  stack.add("enter-the-conversation");
   stack.add("awareness-routing");
   stack.add("sophistication-routing");
   stack.add("value-equation-lens");
