@@ -3304,11 +3304,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       "Legacy design_pack (classic/executive/bold/premium/startup/local_business/wellness) still works if you use it instead, but visual_archetype is the current, richer system — prefer it for every new funnel. Don't set BOTH design_pack and accent_color when you've picked a real archetype/pack — they'd conflict. " +
       "STRUCTURE — this is a conversion-framework generator, not a paragraph generator: every funnel follows Attention → Problem → Solution → Benefits → Process → Offer → Trust → FAQ → CTA, and each genre maps that sequence onto a recommended sequence of REUSABLE LAYOUTS (cards, grids, timelines, comparisons — favor these over walls of text): " +
       "lead_magnet = Hero ONLY — one fold, no scrolling required. A free lead magnet is a low-commitment ask; the hero itself carries the value prop, 3-5 bullets (what they get), and the capture form as a popup behind the CTA button. Write MORE into eyebrow/headline/subheadline/bullets than you would for a multi-section genre, since the hero is the entire page — but still no separate sections below it. " +
-      "vsl = Hero → Video → Problem/Solution → Offer → FAQ → CTA banner. " +
+      "vsl = Hero → Video → Problem/Solution → Value Stack → Offer → FAQ → CTA banner (fill the value_stack param with the real deliverables + values)." +
       "webinar = Hero → Agenda (process timeline) → Benefits (grid) → Host (founder story) → FAQ → Register (capture form). " +
       "application = Hero → Who It's For (benefits grid) → Who This Isn't For (cards — real disqualifying criteria, not a vague adjective) → Process (timeline) → Results (before/after, or real testimonials if given) → Application (capture form). " +
       "challenge = Hero → Problem/Solution → What You'll Get (benefits grid) → Challenge Schedule (process timeline) → Register (ticket tiers) → FAQ. " +
-      "tripwire (sales-page style) = Hero → Problem/Solution → Opportunity (callout — why this matters now) → Features (benefits grid) → Trust badges (or real testimonials, if given) → Offer (priced) → Guarantee → FAQ. " +
+      "tripwire (sales-page style) = Hero → Problem/Solution → Opportunity (callout — why this matters now) → Features (benefits grid) → Trust badges (or real testimonials, if given) → Value Stack → Offer (priced) → Guarantee → FAQ (fill the value_stack param with the real deliverables + honest values + total + price)." +
       "lead_gen = Hero → Trust Logos → Benefits (grid) → Offer (capture form) → FAQ. " +
       "LENGTH — match page length to commitment level, not a fixed habit: lead_magnet is the one exception at a true single fold (above); every other genre's stage count already reflects what its ask requires, so use the full sequence rather than trimming it. A free download needs zero persuasion runway; a webinar/lead_gen registration (6/5 stages) needs a little context before someone hands over their email; a multi-day challenge or a qualify-before-you-can-apply application (6 stages each) needs to show the process and set expectations; a priced tripwire offer (8 stages, sales-page style) needs the most — problem, proof, guarantee, objection-handling — because asking for a card number is the highest-commitment ask on this list. For an especially high-ticket / SaaS-style offer within any priced genre, lean into writing MORE substantive copy per stage (richer stage_content, fuller story_paragraphs) rather than adding new sections — the framework's stage count is fixed per genre; depth of copy is where 'long-form' actually lives. " +
       "Some stages have a fixed layout; a few (marked above with 'or') allow an alternate — use layout_choices ONLY to pick that alternate when the business/evidence genuinely calls for it (e.g. real testimonials exist), never as a default habit. Workflow: (1) pick the genre — lead_magnet (free book/PDF opt-in, one-fold), vsl (high-ticket video sales page), challenge (multi-day registration), application (qualify leads before a call), tripwire (low-ticket entry offer), webinar (single-session registration), lead_gen (generic interest capture); (2) write a specific, concrete headline — never a generic tagline; (3) bullets must name a specific outcome or mechanism, never a vague adjective ('transformative', 'game-changing', 'cutting-edge' are banned); (4) ONLY include faq_items if you have enough real detail to answer honestly — never invent generic filler Q&A or fabricated guarantees/stats; (5) price_cents only applies to genres with a priced offer (tripwire, vsl, challenge) — omit for a free lead magnet, and when a price IS set, skip the capture form (a paid offer needs checkout, not a lead form — the operator wires up Stripe checkout on that section afterward); (6) leave include_capture_form at its default (true) unless the user is clearly building a pure sales/checkout page with no opt-in step; (7) confirmation_email_body should read like a real, brief, human confirmation (what they'll get, what's next) — it can be genuinely short, but must never invent guarantees, stats, or promises the funnel copy itself didn't make; (8) ALWAYS write story_paragraphs whenever the genre's framework includes a Story/Founder-Story/Host stage. Two cases: if the user gave you a REAL testimonial (an actual customer's words, name, location, or result), use it close to verbatim as story_paragraphs with story_byline set to their real attribution (e.g. 'From: Jane Doe, Austin, TX') — don't rewrite their claim into something stronger than what they said. Otherwise (the common case — no testimonial offered), write 2-4 paragraphs of synthesized 'why this works' copy — the mechanism, the reasoning — from the headline/bullets you already wrote, with a generic byline like 'Why this works' (or 'Your host: ...' for a webinar), and NEVER invent a fictional customer name/location/quote to make it look like a testimonial; (9) guarantee_headline/guarantee_body — ONLY when the user told you a real guarantee they actually offer, never invented; (10) trust_badges — safe generic ones (e.g. 'Secure checkout', 'Privacy protected') are fine whenever there's a form or checkout, but only add a guarantee-related badge if guarantee_headline is also set; (11) cta_banner_headline/cta_banner_subtext (VSL genre) should restate the real offer, never introduce a new claim; (12) process_steps — write these whenever the genre's framework includes a process-timeline stage (most do); (13) stage_content — write one entry per remaining stage the genre's framework includes (video/benefits grid/problem-solution/before-after/included/comparison/callout), per that param's own field-mapping description; never include a testimonials entry unless the user gave you real quotes; (14) visual_archetype — ALWAYS pick one that matches this business's audience (see the DESIGN section above); omitting it skips Phase 2's design intelligence entirely and falls back to a plain, generic look, which defeats the point — only override its palette/typography/animation/CTA defaults when you have a genuine reason from what the user told you, not by default habit. Every genre's full stage sequence renders on the page regardless of which fields you fill — an unfilled stage shows placeholder/nothing, so fill every stage the genre actually has, not just headline/offer/faq. After creating, feel free to suggest one or two concrete improvements in your reply (e.g. a sharper headline angle, a stronger CTA placement, a trust element to add) — but only as a suggestion the user can act on, never as a score or grade.",
@@ -3489,6 +3489,32 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             required: ["section_type"],
             additionalProperties: false,
           },
+        },
+        value_stack: {
+          type: "object",
+          description:
+            "For PRICED sales genres (tripwire, vsl) — the value stack that renders right before the offer/price. List the operator's REAL deliverables, each with an honest value, then a summed total and the real price. Use only real, defensible values — NEVER fabricate or pad the numbers (an inflated stack is a fabrication). Omit entirely for free genres (lead_magnet, lead_gen, webinar, application) — there's no price to anchor.",
+          properties: {
+            headline: { type: "string", description: "e.g. \"Here's everything you get\"." },
+            items: {
+              type: "array",
+              description: "3-7 real deliverables the buyer actually receives, each with an honest value.",
+              items: {
+                type: "object",
+                properties: {
+                  title: { type: "string", description: "The deliverable, e.g. \"12-month roof warranty\"." },
+                  description: { type: "string", description: "One short line on what it is/does. Optional." },
+                  value: { type: "string", description: "Honest value string, e.g. \"$500\". Only real/defensible values, never invented." },
+                },
+                required: ["title"],
+                additionalProperties: false,
+              },
+            },
+            total_value_label: { type: "string", description: "The summed anchor, e.g. \"Total value: $2,970\" (shown struck-through)." },
+            price_label: { type: "string", description: "The real price revealed beneath, e.g. \"Today: $497\"." },
+            footnote: { type: "string", description: "Optional line under the price (e.g. a REAL guarantee restatement). Never invent a guarantee." },
+          },
+          additionalProperties: false,
         },
         design_pack: {
           type: "string",
@@ -3786,6 +3812,32 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             })),
         }));
 
+      // Value stack (priced sales genres) — real deliverables + honest values,
+      // an anchor total, and the price reveal. Parsed defensively like
+      // stage_content; empty/absent leaves the section blank (renders nothing).
+      const vsRaw = raw.value_stack && typeof raw.value_stack === "object" ? (raw.value_stack as Record<string, unknown>) : null;
+      const vsStr = (o: Record<string, unknown>, snake: string, camel: string, cap: number): string => {
+        const v = o[snake] ?? o[camel];
+        return (typeof v === "string" ? v : "").slice(0, cap);
+      };
+      const valueStack = vsRaw
+        ? {
+            headline: vsStr(vsRaw, "headline", "headline", 100),
+            items: (Array.isArray(vsRaw.items) ? vsRaw.items : [])
+              .filter((i): i is Record<string, unknown> => !!i && typeof i === "object")
+              .slice(0, 8)
+              .map((i) => ({
+                title: typeof i.title === "string" ? i.title.slice(0, 80) : "",
+                description: typeof i.description === "string" ? fixLiteralNewlines(i.description).slice(0, 200) : "",
+                value: typeof i.value === "string" ? i.value.slice(0, 24) : "",
+              }))
+              .filter((i) => i.title),
+            totalValueLabel: vsStr(vsRaw, "total_value_label", "totalValueLabel", 60),
+            priceLabel: vsStr(vsRaw, "price_label", "priceLabel", 60),
+            footnote: vsStr(vsRaw, "footnote", "footnote", 160),
+          }
+        : null;
+
       const DESIGN_PACK_IDS = ["classic", "executive", "bold", "premium", "startup", "local_business", "wellness"];
       const designPackRaw = str(raw, "design_pack");
       const designPack = DESIGN_PACK_IDS.includes(designPackRaw) ? designPackRaw : "classic";
@@ -3878,6 +3930,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           layoutChoices,
           processSteps,
           stageContent,
+          valueStack,
           designPack,
           heroLayout,
           ctaStyle,
@@ -4162,6 +4215,33 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               ...(ctaExtras ? { cta: ctaExtras } : {}),
             },
           };
+        }
+        if (section.type === "value_stack") {
+          const vs = args.valueStack as {
+            headline: string;
+            items: { title: string; description: string; value: string }[];
+            totalValueLabel: string;
+            priceLabel: string;
+            footnote: string;
+          } | null;
+          if (vs && vs.items.length > 0) {
+            return {
+              ...section,
+              config: {
+                ...(vs.headline ? { headline: vs.headline } : {}),
+                items: vs.items.map((i) => ({
+                  title: i.title,
+                  ...(i.description ? { description: i.description } : {}),
+                  ...(i.value ? { value: i.value } : {}),
+                })),
+                ...(vs.totalValueLabel ? { totalValueLabel: vs.totalValueLabel } : {}),
+                ...(vs.priceLabel ? { priceLabel: vs.priceLabel } : {}),
+                ...(vs.footnote ? { footnote: vs.footnote } : {}),
+              },
+            };
+          }
+          // No stack supplied → leave the section's empty default (renders nothing).
+          return section;
         }
         if (section.type === "faq" && faqItems.length > 0) {
           return { ...section, config: { items: faqItems } };

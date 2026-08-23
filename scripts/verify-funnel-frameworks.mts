@@ -59,8 +59,8 @@ function check(label: string, ok: boolean, detail?: string) {
 {
   const sections = buildFrameworkSections("vsl");
   check(
-    "1b. vsl default sequence matches the spec exactly",
-    sections.map((s) => s.type).join(",") === "hero,video,problem_solution,offer,faq,cta_banner",
+    "1b. vsl default sequence matches the spec exactly (value_stack before the offer)",
+    sections.map((s) => s.type).join(",") === "hero,video,problem_solution,value_stack,offer,faq,cta_banner",
     sections.map((s) => s.type).join(","),
   );
 }
@@ -124,9 +124,9 @@ function check(label: string, ok: boolean, detail?: string) {
 {
   const sections = buildFrameworkSections("tripwire");
   check(
-    "2e. tripwire's enriched sales-page sequence matches spec (RC 1.1)",
+    "2e. tripwire's enriched sales-page sequence matches spec (value_stack before the offer)",
     sections.map((s) => s.type).join(",") ===
-      "hero,problem_solution,callout,benefits_grid,trust_badges,offer,guarantee,faq",
+      "hero,problem_solution,callout,benefits_grid,trust_badges,value_stack,offer,guarantee,faq",
     sections.map((s) => s.type).join(","),
   );
 }
@@ -335,6 +335,43 @@ try {
     );
     const trustBadges = sections.find((s) => s.type === "trust_badges");
     check("4i. trust_badges is never in the resolved sections once overridden to testimonials (only one of the two competes for that slot)", !trustBadges);
+  }
+
+  // 6. value_stack auto-population — a tripwire with a value_stack fills the
+  // section that now sits right before the offer with real items/values/total/
+  // price. Values are the operator's own; the tool forbids fabricating them.
+  const vsValidated = cap.validate!({
+    genre: "tripwire",
+    headline: "Know If Your Roof Needs Replacing",
+    bullets: ["A real, specific benefit"],
+    price_cents: 0,
+    value_stack: {
+      headline: "Here's everything your free inspection includes",
+      items: [
+        { title: "Full roof inspection", description: "Every slope, valley, and flashing point", value: "$300" },
+        { title: "Written plain-English condition report", value: "$150" },
+      ],
+      total_value_label: "Total value: $450",
+      price_label: "Today: Free",
+      footnote: "No obligation, no pressure.",
+    },
+  });
+  check("6a. tripwire-with-value_stack validates", vsValidated.ok);
+  if (vsValidated.ok) {
+    const result = await cap.execute!(fakeCtx(), vsValidated.args);
+    createdFunnelIds.push(result.ref!.id);
+    const snap = await db.doc(`funnels/${result.ref!.id}`).get();
+    const sections = snap.data()?.sections as { type: string; config: Record<string, unknown> }[];
+    const vs = sections.find((s) => s.type === "value_stack");
+    check("6b. value_stack section exists in the tripwire sequence", !!vs);
+    const items = (vs?.config.items as { title: string; value?: string }[]) ?? [];
+    check("6c. value_stack items populated with values", items.length === 2 && items[0]?.value === "$300");
+    check(
+      "6d. total + price + footnote populated",
+      vs?.config.totalValueLabel === "Total value: $450" && vs?.config.priceLabel === "Today: Free" && vs?.config.footnote === "No obligation, no pressure.",
+    );
+    const types = sections.map((s) => s.type);
+    check("6e. value_stack renders right before the offer", types.indexOf("value_stack") === types.indexOf("offer") - 1);
   }
 } finally {
   for (const id of createdFunnelIds) await db.doc(`funnels/${id}`).delete().catch(() => {});

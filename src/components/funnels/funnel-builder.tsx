@@ -1922,6 +1922,73 @@ function SectionFields({
         </div>
       );
     }
+    case "value_stack": {
+      const c = section.config as ValueStackConfig;
+      return (
+        <div className="space-y-3">
+          <Field label="Headline (optional)">
+            <Input
+              placeholder="Here's everything you get"
+              value={c.headline ?? ""}
+              onChange={(e) => onChange({ ...c, headline: e.target.value })}
+              className="h-9"
+            />
+          </Field>
+          <ListEditor
+            items={c.items}
+            onChange={(items) => onChange({ ...c, items })}
+            empty={{ title: "", description: "", value: "" } as ValueStackConfig["items"][number]}
+            renderRow={(item, update) => (
+              <div className="space-y-2">
+                <Input
+                  placeholder="Deliverable (e.g. Full roof inspection)"
+                  value={item.title}
+                  onChange={(e) => update({ ...item, title: e.target.value })}
+                  className="h-9"
+                />
+                <Input
+                  placeholder="Description (optional)"
+                  value={item.description ?? ""}
+                  onChange={(e) => update({ ...item, description: e.target.value })}
+                  className="h-9"
+                />
+                <Input
+                  placeholder="Value, e.g. $500 (optional — use only real values)"
+                  value={item.value ?? ""}
+                  onChange={(e) => update({ ...item, value: e.target.value })}
+                  className="h-9"
+                />
+              </div>
+            )}
+            addLabel="Add deliverable"
+          />
+          <Field label="Total value label (optional)">
+            <Input
+              placeholder="Total value: $2,970"
+              value={c.totalValueLabel ?? ""}
+              onChange={(e) => onChange({ ...c, totalValueLabel: e.target.value })}
+              className="h-9"
+            />
+          </Field>
+          <Field label="Price label (optional)">
+            <Input
+              placeholder="Today: $497"
+              value={c.priceLabel ?? ""}
+              onChange={(e) => onChange({ ...c, priceLabel: e.target.value })}
+              className="h-9"
+            />
+          </Field>
+          <Field label="Footnote (optional)">
+            <Input
+              placeholder="30-day money-back guarantee"
+              value={c.footnote ?? ""}
+              onChange={(e) => onChange({ ...c, footnote: e.target.value })}
+              className="h-9"
+            />
+          </Field>
+        </div>
+      );
+    }
     case "comparison": {
       const c = section.config as ComparisonConfig;
       return (
