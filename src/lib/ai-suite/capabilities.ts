@@ -4009,9 +4009,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const SOFT_ARCHETYPES = ["luxury_premium", "wellness", "nonprofit_mission", "agency_creative", "direct_response"];
       const modelChoseKeeper = SOFT_ARCHETYPES.includes(visualArchetypeArg);
       const effectiveArchetype = (modelChoseKeeper ? visualArchetypeArg : "direct_response") as VisualArchetype;
-      const designStrategy = resolveDesignStrategy(
-        effectiveArchetype,
-        modelChoseKeeper
+      const designStrategy = resolveDesignStrategy(effectiveArchetype, {
+        // When the model's own (soft) archetype is kept, carry through all its
+        // overrides. When we FORCE direct_response, drop palette/mode/layout
+        // (those would re-lighten it) but ALWAYS honor a real CTA fact — a phone
+        // number or booking slug the operator gave — so call-now / booking
+        // still work in the bold default (they convert well for local funnels).
+        ...(modelChoseKeeper
           ? {
               paletteId: (args.paletteVariant as string) || undefined,
               colorMode: ((args.colorMode as string) || undefined) as ColorMode | undefined,
@@ -4020,10 +4024,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               animationLevel: ((args.animationLevel as string) || undefined) as AnimationLevel | undefined,
               visualDensity: ((args.visualDensity as string) || undefined) as VisualDensity | undefined,
               mediaStrategy: ((args.mediaStrategy as string) || undefined) as MediaStrategyId | undefined,
-              ctaStrategy: ((args.ctaStyle as string) || undefined) as CtaStrategyId | undefined,
             }
-          : {},
-      );
+          : {}),
+        ctaStrategy: ((args.ctaStyle as string) || undefined) as CtaStrategyId | undefined,
+      });
       const funnelId = await createFunnelServerSide({
         subAccountId,
         createdByUid: ctx.uid,

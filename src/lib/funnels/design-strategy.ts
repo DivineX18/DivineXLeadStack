@@ -296,7 +296,9 @@ export const VISUAL_ARCHETYPES: Record<VisualArchetype, VisualArchetypeDefinitio
     // headline-left / media-right split. Media defaults to none (pure copy) or
     // a CENTERED video below — never a side screenshot box.
     recommendedHeroLayouts: ["centered", "background_image"],
-    recommendedCtaStyles: ["popup_form", "sticky_desktop", "dual"],
+    // popup_form leads (capture-safe), but phone + booking are supported so a
+    // real call-now / booking CTA survives even in the bold default.
+    recommendedCtaStyles: ["popup_form", "phone", "popup_calendar", "sticky_desktop", "dual"],
     recommendedMedia: ["none", "video", "abstract"],
     galleryLayout: "grid",
   },

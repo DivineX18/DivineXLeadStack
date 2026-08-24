@@ -170,12 +170,12 @@ try {
     createdFunnelIds.push(result.ref!.id);
     const snap = await db.doc(`funnels/${result.ref!.id}`).get();
     const data = snap.data()!;
-    check("5b. designStrategy stored on the funnel doc with the right archetype", data.designStrategy?.visualArchetype === "saas_technology", JSON.stringify(data.designStrategy));
+    check("5b. non-soft archetype (SaaS) is forced to the bold direct_response default", data.designStrategy?.visualArchetype === "direct_response", JSON.stringify(data.designStrategy));
     check("5c. Accent/theme on the doc reflect the resolved palette (dark or light, a real archetype color, not the plain genre default)", typeof data.accentColor === "string" && /^#[0-9a-f]{6}$/i.test(data.accentColor));
     const hero = (data.sections as { type: string; config: Record<string, unknown> }[]).find((s) => s.type === "hero");
     check("5d. Real hero_media_url lands on the hero section (no placeholder needed since real media was given)", hero?.config.mediaUrl === "https://example.com/dashboard.png" && !hero?.config.mediaPlaceholderLabel);
-    check("5e. Hero layout resolved to one of SaaS's recommended device-mockup/split layouts", ["browser_mockup", "split", "phone_mockup"].includes(hero?.config.layout as string), hero?.config.layout as string);
-    check("5f. Summary includes a DESIGN rationale section", result.resultText.includes("DESIGN") && result.resultText.includes("SaaS & Technology"));
+    check("5e. Hero resolves to the centered sales-letter layout (not a website split/mockup)", hero?.config.layout === "centered", hero?.config.layout as string);
+    check("5f. Summary includes a DESIGN rationale section (bold Direct Response)", result.resultText.includes("DESIGN") && result.resultText.includes("Direct Response"));
   }
 
   // 5g. Local-service archetype with NO real media — media_strategy
@@ -203,13 +203,13 @@ try {
     const cta = hero?.config.cta as { style?: string; phoneNumber?: string } | undefined;
     check("5h. Phone CTA style + real number wired onto the hero", cta?.style === "phone" && cta?.phoneNumber === "+15551234567", JSON.stringify(cta));
     check(
-      "5i. A Photo Gallery section was added with an honest labeled placeholder (never nothing, never fabricated)",
-      !!gallery && typeof gallery.config.placeholderLabel === "string" && (gallery.config.placeholderLabel as string).length > 0,
+      "5i. Bold sales-letter mode uses centered copy, not a website photo gallery (media strategy is none)",
+      !gallery,
       JSON.stringify(gallery?.config),
     );
-    check("5i2. The gallery lands right after the hero", sections.findIndex((s) => s.type === "photo_gallery") === sections.findIndex((s) => s.type === "hero") + 1);
+    check("5i2. Local funnel also resolves to the centered bold layout", hero?.config.layout === "centered");
     check("5i3. The hero itself carries NO media placeholder (freed up for a real logo, per the multi-photo redirect)", !hero?.config.mediaPlaceholderLabel);
-    check("5j. local_service's low visual density / minimal animation applied", data.designStrategy?.visualDensity === "low" && data.designStrategy?.animationLevel === "minimal");
+    check("5j. forced direct_response density/animation applied (high / moderate)", data.designStrategy?.visualDensity === "high" && data.designStrategy?.animationLevel === "moderate");
   }
 
   // 5k. Contrasting archetypes actually produce MATERIALLY different
@@ -220,10 +220,9 @@ try {
     const saasStrategy = saasSnap.data()!.designStrategy;
     const localStrategy = localSnap.data()!.designStrategy;
     check(
-      "5k. SaaS vs. local-service resolve to genuinely different archetypes/typography/CTA (not renamed clones)",
-      saasStrategy.visualArchetype !== localStrategy.visualArchetype &&
-        saasStrategy.typographyPairing !== localStrategy.typographyPairing,
-      `${saasStrategy.visualArchetype}/${saasStrategy.typographyPairing} vs ${localStrategy.visualArchetype}/${localStrategy.typographyPairing}`,
+      "5k. Both non-soft funnels are forced to the bold direct_response default (funnels convert best as sales letters)",
+      saasStrategy.visualArchetype === "direct_response" && localStrategy.visualArchetype === "direct_response",
+      `${saasStrategy.visualArchetype} vs ${localStrategy.visualArchetype}`,
     );
   }
 
@@ -241,7 +240,23 @@ try {
     createdFunnelIds.push(result.ref!.id);
     const snap = await db.doc(`funnels/${result.ref!.id}`).get();
     const data = snap.data()!;
-    check("5m. designStrategy field is absent entirely (not null, not a default archetype — just never written)", data.designStrategy === undefined, JSON.stringify(data.designStrategy));
+    check("5m. A no-archetype funnel is forced to the bold direct_response default (never a flat/light default)", data.designStrategy?.visualArchetype === "direct_response", JSON.stringify(data.designStrategy));
+  }
+  // 5n. Soft archetypes (luxury / wellness / nonprofit) are the EXCEPTION —
+  // respected, not forced to direct_response, since those looks convert better
+  // calm. This is how a premium/website-style page stays possible.
+  const luxuryValidated = cap.validate!({
+    genre: "lead_gen",
+    headline: "Private Wealth Advisory for Founders",
+    bullets: ["Discreet, senior-led", "By referral only"],
+    visual_archetype: "luxury_premium",
+  });
+  check("5n. Luxury proposal validates", luxuryValidated.ok);
+  if (luxuryValidated.ok) {
+    const result = await cap.execute!(fakeCtx(), luxuryValidated.args);
+    createdFunnelIds.push(result.ref!.id);
+    const data = (await db.doc(`funnels/${result.ref!.id}`).get()).data()!;
+    check("5n2. luxury_premium is RESPECTED, not overridden to direct_response", data.designStrategy?.visualArchetype === "luxury_premium", String(data.designStrategy?.visualArchetype));
   }
 } finally {
   for (const id of createdFunnelIds) await db.doc(`funnels/${id}`).delete().catch(() => {});
