@@ -67,16 +67,16 @@ function check(label: string, ok: boolean, detail?: string) {
 {
   const sections = buildFrameworkSections("webinar");
   check(
-    "1c. webinar default sequence matches the spec exactly (RC 1.1: Agenda before Benefits)",
-    sections.map((s) => s.type).join(",") === "hero,agenda,benefits_grid,story,faq,offer",
+    "1c. webinar default sequence matches the spec exactly (RC 1.1: Agenda before Benefits; mid-page CTA banner)",
+    sections.map((s) => s.type).join(",") === "hero,agenda,benefits_grid,cta_banner,story,faq,offer",
     sections.map((s) => s.type).join(","),
   );
 }
 {
   const sections = buildFrameworkSections("application");
   check(
-    "1d. application default sequence matches the spec exactly (RC 1.1: adds Who This Isn't For)",
-    sections.map((s) => s.type).join(",") === "hero,benefits_grid,included,agenda,before_after,offer",
+    "1d. application default sequence matches the spec exactly (RC 1.1: adds Who This Isn't For; mid-page CTA banner)",
+    sections.map((s) => s.type).join(",") === "hero,benefits_grid,included,cta_banner,agenda,before_after,offer",
     sections.map((s) => s.type).join(","),
   );
 }
@@ -124,9 +124,9 @@ function check(label: string, ok: boolean, detail?: string) {
 {
   const sections = buildFrameworkSections("tripwire");
   check(
-    "2e. tripwire's enriched sales-page sequence matches spec (value_stack before the offer)",
+    "2e. tripwire's enriched sales-page sequence matches spec (value_stack before the offer; closing CTA banner)",
     sections.map((s) => s.type).join(",") ===
-      "hero,problem_solution,callout,benefits_grid,trust_badges,value_stack,offer,guarantee,faq",
+      "hero,problem_solution,callout,benefits_grid,trust_badges,value_stack,offer,guarantee,faq,cta_banner",
     sections.map((s) => s.type).join(","),
   );
 }

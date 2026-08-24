@@ -68,6 +68,7 @@ export const FUNNEL_FRAMEWORKS: Record<FunnelGenre, FrameworkStage[]> = {
     { id: "attention", label: "Hero", section: "hero" },
     { id: "agenda", label: "Agenda", section: "agenda" },
     { id: "benefits", label: "Benefits", section: "benefits_grid" },
+    { id: "cta", label: "CTA", section: "cta_banner" },
     { id: "host", label: "Host", section: "story" },
     { id: "faq", label: "FAQ", section: "faq" },
     { id: "register", label: "Register", section: "offer", isCapture: true },
@@ -79,6 +80,7 @@ export const FUNNEL_FRAMEWORKS: Record<FunnelGenre, FrameworkStage[]> = {
     // matches by resolved type, so two stages can never share one
     // (see the uniqueness check in verify-funnel-frameworks.mts).
     { id: "who_not_for", label: "Who This Isn't For", section: "included" },
+    { id: "cta", label: "CTA", section: "cta_banner" },
     { id: "process", label: "Process", section: "agenda" },
     {
       id: "results",
@@ -100,6 +102,7 @@ export const FUNNEL_FRAMEWORKS: Record<FunnelGenre, FrameworkStage[]> = {
     { id: "schedule", label: "Challenge Schedule", section: "agenda" },
     { id: "register", label: "Register", section: "ticket_tiers", isCapture: true },
     { id: "faq", label: "FAQ", section: "faq" },
+    { id: "cta", label: "CTA", section: "cta_banner" },
   ],
   // Enriched to the "Sales Page" sequence (RC 1.1): Problem/Opportunity/
   // Solution collapse into problem_solution + a callout ("the opportunity"
@@ -128,6 +131,7 @@ export const FUNNEL_FRAMEWORKS: Record<FunnelGenre, FrameworkStage[]> = {
     { id: "offer", label: "Offer", section: "offer" },
     { id: "guarantee", label: "Guarantee", section: "guarantee" },
     { id: "faq", label: "FAQ", section: "faq" },
+    { id: "cta", label: "CTA", section: "cta_banner" },
   ],
   lead_gen: [
     { id: "attention", label: "Hero", section: "hero" },
@@ -135,6 +139,7 @@ export const FUNNEL_FRAMEWORKS: Record<FunnelGenre, FrameworkStage[]> = {
     { id: "benefits", label: "Benefits", section: "benefits_grid" },
     { id: "offer", label: "Offer", section: "offer", isCapture: true },
     { id: "faq", label: "FAQ", section: "faq" },
+    { id: "cta", label: "CTA", section: "cta_banner" },
   ],
 };
 

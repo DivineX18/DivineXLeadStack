@@ -172,6 +172,9 @@ export interface CtaBannerConfig {
   ctaLabel: string;
   ctaHref: string;
   cta?: CtaExtras;
+  /** When set, the banner's CTA opens this capture form (popup) — same as the
+   *  offer/hero, so a mid/late-page repeat CTA actually converts. */
+  formId?: string | null;
 }
 
 export interface CountdownConfig {

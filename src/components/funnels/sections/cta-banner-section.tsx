@@ -1,4 +1,5 @@
 import type { CtaBannerConfig } from "@/types/funnels";
+import type { LeadForm } from "@/types/forms";
 import { CtaButton } from "./cta-button";
 
 export function CtaBannerSection({
@@ -7,13 +8,16 @@ export function CtaBannerSection({
   theme,
   subAccountId,
   ctaAnimationLevel,
+  forms,
 }: {
   config: CtaBannerConfig;
   accentColor: string;
   theme?: "light" | "dark";
   subAccountId?: string;
   ctaAnimationLevel?: "none" | "minimal" | "moderate" | "expressive";
+  forms?: Record<string, LeadForm>;
 }) {
+  const form = config.formId && forms ? forms[config.formId] ?? null : null;
   return (
     <section className="px-4 py-16">
       <div
@@ -39,6 +43,7 @@ export function CtaBannerSection({
             label={config.ctaLabel}
             href={config.ctaHref}
             cta={config.cta}
+            form={form}
             accentColor={accentColor}
             subAccountId={subAccountId}
             pageTheme={theme}
