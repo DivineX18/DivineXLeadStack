@@ -292,9 +292,12 @@ export const VISUAL_ARCHETYPES: Record<VisualArchetype, VisualArchetypeDefinitio
     visualDensity: "high",
     animationLevel: "moderate",
     backgroundRhythm: ["dark", "dark", "gradient", "dark", "elevated"],
-    recommendedHeroLayouts: ["centered", "split", "background_image"],
+    // Sales-letter hero: a big CENTERED headline, not a website-style
+    // headline-left / media-right split. Media defaults to none (pure copy) or
+    // a CENTERED video below — never a side screenshot box.
+    recommendedHeroLayouts: ["centered", "background_image"],
     recommendedCtaStyles: ["popup_form", "sticky_desktop", "dual"],
-    recommendedMedia: ["video", "product_screenshot", "abstract", "none"],
+    recommendedMedia: ["none", "video", "abstract"],
     galleryLayout: "grid",
   },
   professional_enterprise: {
