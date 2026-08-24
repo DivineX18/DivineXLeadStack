@@ -20,10 +20,14 @@ import "server-only";
 
 export async function captureFunnelScreenshot(url: string): Promise<string | null> {
   try {
-    // @ts-ignore optional dependency — install on deploy to activate screenshots
-    const chromiumMod = await import("@sparticuz/chromium");
-    // @ts-ignore optional dependency — install on deploy to activate screenshots
-    const puppeteerMod = await import("puppeteer-core");
+    // Optional deps resolved by NAME at runtime: the bundler never tries to
+    // bundle them (build stays green whether or not they're installed), TS
+    // treats them as `any` (no missing-module error, no banned @ts-comment), and
+    // the try/catch turns "not installed" into a graceful null. Install on the
+    // deploy to activate: `pnpm add puppeteer-core @sparticuz/chromium`.
+    const optionalImport = (name: string) => import(/* webpackIgnore: true */ name);
+    const chromiumMod = await optionalImport("@sparticuz/chromium");
+    const puppeteerMod = await optionalImport("puppeteer-core");
     const chromium = chromiumMod.default ?? chromiumMod;
     const puppeteer = puppeteerMod.default ?? puppeteerMod;
 
