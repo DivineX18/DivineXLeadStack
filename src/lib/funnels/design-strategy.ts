@@ -299,7 +299,9 @@ export const VISUAL_ARCHETYPES: Record<VisualArchetype, VisualArchetypeDefinitio
     // popup_form leads (capture-safe), but phone + booking are supported so a
     // real call-now / booking CTA survives even in the bold default.
     recommendedCtaStyles: ["popup_form", "phone", "popup_calendar", "sticky_desktop", "dual"],
-    recommendedMedia: ["none", "video", "abstract"],
+    // VSL-first: a centered video area under the headline (the Brunson sales-
+    // letter setup), falling back to none (pure copy) — never a side screenshot.
+    recommendedMedia: ["video", "none", "abstract"],
     galleryLayout: "grid",
   },
   professional_enterprise: {

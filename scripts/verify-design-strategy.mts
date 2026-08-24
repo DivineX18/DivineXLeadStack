@@ -208,7 +208,7 @@ try {
       JSON.stringify(gallery?.config),
     );
     check("5i2. Local funnel also resolves to the centered bold layout", hero?.config.layout === "centered");
-    check("5i3. The hero itself carries NO media placeholder (freed up for a real logo, per the multi-photo redirect)", !hero?.config.mediaPlaceholderLabel);
+    check("5i3. The hero carries a VSL/video placeholder area under the headline (the Brunson video setup)", typeof hero?.config.mediaPlaceholderLabel === "string" && (hero.config.mediaPlaceholderLabel as string).length > 0);
     check("5j. forced direct_response density/animation applied (high / moderate)", data.designStrategy?.visualDensity === "high" && data.designStrategy?.animationLevel === "moderate");
   }
 
@@ -242,9 +242,9 @@ try {
     const data = snap.data()!;
     check("5m. A no-archetype funnel is forced to the bold direct_response default (never a flat/light default)", data.designStrategy?.visualArchetype === "direct_response", JSON.stringify(data.designStrategy));
   }
-  // 5n. Soft archetypes (luxury / wellness / nonprofit) are the EXCEPTION —
-  // respected, not forced to direct_response, since those looks convert better
-  // calm. This is how a premium/website-style page stays possible.
+  // 5n. Funnels are ALWAYS bold sales letters — even a luxury-picked archetype
+  // is forced to direct_response. (Soft / premium / website looks are website-
+  // mode's job, separate from the funnel builder.)
   const luxuryValidated = cap.validate!({
     genre: "lead_gen",
     headline: "Private Wealth Advisory for Founders",
@@ -256,7 +256,7 @@ try {
     const result = await cap.execute!(fakeCtx(), luxuryValidated.args);
     createdFunnelIds.push(result.ref!.id);
     const data = (await db.doc(`funnels/${result.ref!.id}`).get()).data()!;
-    check("5n2. luxury_premium is RESPECTED, not overridden to direct_response", data.designStrategy?.visualArchetype === "luxury_premium", String(data.designStrategy?.visualArchetype));
+    check("5n2. Even a luxury-picked funnel is forced to the bold direct_response default", data.designStrategy?.visualArchetype === "direct_response", String(data.designStrategy?.visualArchetype));
   }
 } finally {
   for (const id of createdFunnelIds) await db.doc(`funnels/${id}`).delete().catch(() => {});

@@ -3996,36 +3996,16 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // layout, CTA strategy, media placeholders) read from the same
       // resolved strategy — never two independent decisions that could
       // disagree with each other.
-      const visualArchetypeArg = (args.visualArchetype as string) || "";
-      // DETERMINISTIC bold default: the operator wants high-converting,
-      // direct-response pages — never a flat, light "default-template" look. The
-      // model kept picking light archetypes (coach_consultant, local_service,
-      // …) for lead pages, so recommendation alone wasn't enough. Force
-      // direct_response UNLESS the model deliberately chose a genuinely soft
-      // archetype (luxury / wellness / nonprofit — the only looks that convert
-      // better calm) or agency_creative (already bold). When we force it, we
-      // ignore the model's palette/colorMode overrides (they were meant for a
-      // different, lighter archetype) so the bold dark look is guaranteed.
-      const SOFT_ARCHETYPES = ["luxury_premium", "wellness", "nonprofit_mission", "agency_creative", "direct_response"];
-      const modelChoseKeeper = SOFT_ARCHETYPES.includes(visualArchetypeArg);
-      const effectiveArchetype = (modelChoseKeeper ? visualArchetypeArg : "direct_response") as VisualArchetype;
+      // EVERY AI-generated funnel gets the bold direct-response sales-letter
+      // look — funnels convert best that way, so we do NOT defer to the model's
+      // archetype pick (it kept choosing light looks: wellness for a med spa,
+      // coach_consultant for leadership, local_service for a roofer). A soft /
+      // premium / website look is website-mode's job (separate); the operator
+      // can also switch the archetype in the builder. A real CTA fact (a phone
+      // number or booking slug the operator gave) is still honored so call-now /
+      // booking survive the bold default.
+      const effectiveArchetype = "direct_response" as VisualArchetype;
       const designStrategy = resolveDesignStrategy(effectiveArchetype, {
-        // When the model's own (soft) archetype is kept, carry through all its
-        // overrides. When we FORCE direct_response, drop palette/mode/layout
-        // (those would re-lighten it) but ALWAYS honor a real CTA fact — a phone
-        // number or booking slug the operator gave — so call-now / booking
-        // still work in the bold default (they convert well for local funnels).
-        ...(modelChoseKeeper
-          ? {
-              paletteId: (args.paletteVariant as string) || undefined,
-              colorMode: ((args.colorMode as string) || undefined) as ColorMode | undefined,
-              typographyPairing: ((args.typographyPairing as string) || undefined) as TypographyPairingId | undefined,
-              heroLayout: ((args.heroLayout as string) || undefined) as HeroLayoutId | undefined,
-              animationLevel: ((args.animationLevel as string) || undefined) as AnimationLevel | undefined,
-              visualDensity: ((args.visualDensity as string) || undefined) as VisualDensity | undefined,
-              mediaStrategy: ((args.mediaStrategy as string) || undefined) as MediaStrategyId | undefined,
-            }
-          : {}),
         ctaStrategy: ((args.ctaStyle as string) || undefined) as CtaStrategyId | undefined,
       });
       const funnelId = await createFunnelServerSide({
