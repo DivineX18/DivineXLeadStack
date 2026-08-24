@@ -4086,8 +4086,16 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // the missing slug/number before building) is what lets the model
       // omit cta_style entirely and never have to block on it — the
       // funnel is always fully working the moment it's created.
-      const ctaStyle =
-        rawCtaStyle === "popup_calendar" && !args.ctaBookingPageSlug
+      // A real booking slug is ONLY ever supplied for calendar intent, so it
+      // UPGRADES the CTA to popup_calendar even when the archetype default is
+      // popup_form — otherwise the deterministic direct_response override
+      // (which defaults to popup_form) would silently discard a booking link
+      // the user actually gave. Mirror for a real phone number + a "phone"
+      // choice. Then the reverse: a popup_calendar/phone style with no
+      // slug/number still degrades to popup_form (never a dead CTA).
+      const ctaStyle = args.ctaBookingPageSlug
+        ? "popup_calendar"
+        : rawCtaStyle === "popup_calendar" && !args.ctaBookingPageSlug
           ? "popup_form"
           : rawCtaStyle === "phone" && !args.ctaPhoneNumber
             ? "popup_form"
