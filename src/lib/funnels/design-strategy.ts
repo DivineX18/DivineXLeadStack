@@ -293,7 +293,7 @@ export const VISUAL_ARCHETYPES: Record<VisualArchetype, VisualArchetypeDefinitio
     animationLevel: "moderate",
     backgroundRhythm: ["dark", "dark", "gradient", "dark", "elevated"],
     recommendedHeroLayouts: ["centered", "split", "background_image"],
-    recommendedCtaStyles: ["sticky_desktop", "popup_form", "dual"],
+    recommendedCtaStyles: ["popup_form", "sticky_desktop", "dual"],
     recommendedMedia: ["video", "product_screenshot", "abstract", "none"],
     galleryLayout: "grid",
   },

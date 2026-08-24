@@ -307,6 +307,11 @@ try {
       if (formSnap.exists) await formSnap.ref.delete().catch(() => {});
     }
     check("5h. summary confirms the Growth System package was built (not skipped as a priced offer)", result.resultText.includes("Capture Form"));
+    // Deterministic bold default: a funnel built WITHOUT an archetype (as the
+    // model often does) must still come out as the bold, dark direct_response
+    // look — never a flat/light default. This is the fix for "still white".
+    const ds = snap.data()?.designStrategy as { visualArchetype?: string; colorMode?: string } | undefined;
+    check("5i. no-archetype funnel forced to bold direct_response (dark)", ds?.visualArchetype === "direct_response" && ds?.colorMode === "dark", `${ds?.visualArchetype}/${ds?.colorMode}`);
   }
 
   // 4f. Anti-fabrication: a testimonials stage_content entry with NO real
