@@ -311,7 +311,7 @@ try {
     // model often does) must still come out as the bold, dark direct_response
     // look — never a flat/light default. This is the fix for "still white".
     const ds = snap.data()?.designStrategy as { visualArchetype?: string; colorMode?: string } | undefined;
-    check("5i. no-archetype funnel forced to bold direct_response (dark)", ds?.visualArchetype === "direct_response" && ds?.colorMode === "dark", `${ds?.visualArchetype}/${ds?.colorMode}`);
+    check("5i. no-archetype funnel forced to bold direct_response (bold LIGHT default, not the washed template)", ds?.visualArchetype === "direct_response" && ds?.colorMode === "light", `${ds?.visualArchetype}/${ds?.colorMode}`);
   }
 
   // 4f. Anti-fabrication: a testimonials stage_content entry with NO real

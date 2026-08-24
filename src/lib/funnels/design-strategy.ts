@@ -279,11 +279,20 @@ export const VISUAL_ARCHETYPES: Record<VisualArchetype, VisualArchetypeDefinitio
     id: "direct_response",
     label: "Direct Response",
     audienceHint: "The default for high-converting sales & lead pages (offers, lead magnets, VSLs, applications, webinars, most local-service lead-gen). ClickFunnels/Brunson-style.",
-    characteristics: "Dark, high-contrast, oversized bold headlines, one punchy high-visibility CTA color, strong alternating section bands, sharp layered cards, high energy — engineered to convert, not to look tastefully minimal.",
+    characteristics: "High-contrast — LIGHT by default (clean near-white base, one punchy high-visibility CTA color, near-black oversized headlines, strong accent bands + a single dark punch section), or a bold dark VSL treatment when the offer suits it. Sharp layered cards, images/video throughout, high energy — engineered to convert, never the washed gray/blue 'template' look and never tastefully minimal.",
     palettes: [
-      { id: "high_voltage_orange", label: "High-Voltage Orange", accentColor: "#f97316", colorMode: "dark", headlineGradient: ["#f97316", "#facc15"], iconPalette: ["#f97316", "#facc15", "#22c55e", "#38bdf8", "#f472b6"] },
-      { id: "conversion_green", label: "Conversion Green", accentColor: "#22c55e", colorMode: "dark", headlineGradient: ["#22c55e", "#a3e635"], iconPalette: ["#22c55e", "#a3e635", "#f97316", "#38bdf8"] },
-      { id: "electric_blue", label: "Electric Blue", accentColor: "#3b82f6", colorMode: "dark", headlineGradient: ["#38bdf8", "#818cf8"], iconPalette: ["#38bdf8", "#818cf8", "#f97316", "#22c55e"] },
+      // Bold LIGHT defaults — a clean near-white sales letter with a STRONG
+      // saturated accent + high-visibility colored CTA and near-black oversized
+      // headlines. High energy without being dark; never the low-contrast
+      // gray/blue template. This is the default the user asked for.
+      { id: "high_voltage_orange", label: "High-Voltage Orange", accentColor: "#ea580c", colorMode: "light", headlineGradient: ["#ea580c", "#f59e0b"], iconPalette: ["#ea580c", "#f59e0b", "#16a34a", "#2563eb", "#db2777"] },
+      { id: "conversion_green", label: "Conversion Green", accentColor: "#16a34a", colorMode: "light", headlineGradient: ["#16a34a", "#65a30d"], iconPalette: ["#16a34a", "#65a30d", "#ea580c", "#2563eb"] },
+      { id: "electric_blue", label: "Electric Blue", accentColor: "#2563eb", colorMode: "light", headlineGradient: ["#2563eb", "#0ea5e9"], iconPalette: ["#2563eb", "#0ea5e9", "#ea580c", "#16a34a"] },
+      // Bold DARK alternates — the ClickFunnels/Brunson dark VSL look, for when
+      // a dark sales letter genuinely suits the offer (pick via palette_variant).
+      { id: "voltage_orange_dark", label: "Voltage Orange (Dark)", accentColor: "#f97316", colorMode: "dark", headlineGradient: ["#f97316", "#facc15"], iconPalette: ["#f97316", "#facc15", "#22c55e", "#38bdf8", "#f472b6"] },
+      { id: "signal_green_dark", label: "Signal Green (Dark)", accentColor: "#22c55e", colorMode: "dark", headlineGradient: ["#22c55e", "#a3e635"], iconPalette: ["#22c55e", "#a3e635", "#f97316", "#38bdf8"] },
+      { id: "electric_blue_dark", label: "Electric Blue (Dark)", accentColor: "#3b82f6", colorMode: "dark", headlineGradient: ["#38bdf8", "#818cf8"], iconPalette: ["#38bdf8", "#818cf8", "#f97316", "#22c55e"] },
     ],
     typography: ["sans_modern"],
     cardStyle: "sharp",
@@ -291,7 +300,11 @@ export const VISUAL_ARCHETYPES: Record<VisualArchetype, VisualArchetypeDefinitio
     iconStyle: "filled",
     visualDensity: "high",
     animationLevel: "moderate",
-    backgroundRhythm: ["dark", "dark", "gradient", "dark", "elevated"],
+    // Light-first, high-contrast rhythm: a clean base, accent-gradient washes,
+    // an elevated card band, and ONE dark punch section for a bold break — the
+    // "strong but light" sales-letter look. Adapts automatically to a dark
+    // palette (the *_dark variants) too, since only "dark" forces a band.
+    backgroundRhythm: ["white", "gradient", "elevated", "gradient", "dark"],
     // Sales-letter hero: a big CENTERED headline, not a website-style
     // headline-left / media-right split. Media defaults to none (pure copy) or
     // a CENTERED video below — never a side screenshot box.
