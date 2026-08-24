@@ -4189,7 +4189,12 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               // on the hero — same bullets/CTA every other genre puts on
               // its offer section, since there's no separate offer stage
               // to hold them.
-              ...(heroIsCaptureStage ? { bullets, ...(args.ctaLabel ? { ctaLabel: args.ctaLabel as string } : {}) } : {}),
+              // Bullets only on one-fold heroes (they carry the whole offer).
+              ...(heroIsCaptureStage ? { bullets } : {}),
+              // An above-the-fold CTA on EVERY funnel, across all industries — a
+              // visible primary button in the hero (Brunson-style), not one
+              // buried on the offer section far below.
+              ctaLabel: (args.ctaLabel as string) || "Get started",
               ...(ctaExtras ? { cta: ctaExtras } : {}),
               ...(heroMediaUrl
                 ? { mediaUrl: heroMediaUrl, mediaType: heroMediaType as HeroConfig["mediaType"] }
@@ -4454,7 +4459,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         });
         sectionsToSave = sectionsToSave.map((s) => {
           if (s.type === "offer") return { ...s, config: { ...s.config, formId: createdFormId } };
-          if (s.type === "hero" && heroIsCaptureStage) {
+          // Wire the capture form to the hero on EVERY capture funnel (not just
+          // one-fold), so its above-the-fold CTA opens the form popup — the CTA
+          // the visitor sees first actually works.
+          if (s.type === "hero") {
             return { ...s, config: { ...s.config, formId: createdFormId } };
           }
           if (s.type === "ticket_tiers") {
