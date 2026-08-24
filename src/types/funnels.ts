@@ -101,6 +101,12 @@ export interface HeroConfig {
    *  page's substitute for a separate Benefits/Included section, since it
    *  has none. Optional; renders nothing extra when omitted. */
   bullets?: string[];
+  /** Short trust signals shown as a small row directly under the hero CTA
+   *  (Brunson-style "risk-reversal" cluster) — e.g. "No credit card",
+   *  "Cancel anytime", "Trusted by 500+ local businesses". Each renders as a
+   *  check-marked pill. Keep them TRUE (no invented ratings/counts) — they're
+   *  optional and render nothing when omitted. */
+  trustBadges?: string[];
   /** A substring of `headline` to render in the design pack's gradient
    *  accent (packs without headlineGradient ignore this — plain text).
    *  Must match the headline text exactly (case-sensitive) or it's a

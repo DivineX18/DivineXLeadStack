@@ -140,6 +140,17 @@ export function HeroSection({
     </ul>
   );
 
+  const trustNode = config.trustBadges && config.trustBadges.length > 0 && (
+    <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm opacity-70">
+      {config.trustBadges.map((b, i) => (
+        <span key={i} className="inline-flex items-center gap-1.5">
+          <Check className="h-4 w-4 shrink-0" style={{ color: accentColor }} />
+          <span>{b}</span>
+        </span>
+      ))}
+    </div>
+  );
+
   const cta = (config.ctaLabel || form) && (
     <div className="mt-10">
       <CtaButton
@@ -152,6 +163,7 @@ export function HeroSection({
         pageTheme={theme}
         animationLevel={ctaAnimationLevel}
       />
+      {trustNode}
     </div>
   );
 
