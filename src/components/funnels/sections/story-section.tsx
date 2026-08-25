@@ -53,9 +53,21 @@ export function StorySection({
               {config.byline}
             </p>
             <div className="mt-4 space-y-4 text-[1.05rem] leading-relaxed opacity-85">
-              {config.paragraphs.map((p, i) => (
-                <p key={i}>{p}</p>
-              ))}
+              {config.paragraphs.map((p, i) =>
+                // Editorial lead-in: the first line of a multi-paragraph story
+                // reads as a larger serif-italic pull (the design target's
+                // personality touch). Single-paragraph stories stay plain.
+                i === 0 && config.paragraphs.length > 1 ? (
+                  <p
+                    key={i}
+                    className="flow-serif-accent text-[1.22rem] leading-snug opacity-95"
+                  >
+                    {p}
+                  </p>
+                ) : (
+                  <p key={i}>{p}</p>
+                ),
+              )}
             </div>
           </div>
         </div>

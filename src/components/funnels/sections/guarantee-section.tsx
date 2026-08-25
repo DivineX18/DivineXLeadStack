@@ -14,7 +14,7 @@ export function GuaranteeSection({
   const Icon = ICONS[config.badgeIcon ?? "shield"];
 
   return (
-    <section className="px-4 py-10">
+    <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
       <div
         className="mx-auto flex max-w-xl items-start gap-4 border bg-[var(--card-bg)] p-6 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.25)] sm:items-center sm:p-7"
         style={
