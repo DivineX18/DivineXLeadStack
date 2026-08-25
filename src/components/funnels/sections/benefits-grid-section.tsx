@@ -60,25 +60,22 @@ export function BenefitsGridSection({
       </section>
     );
   }
-  const cols =
-    config.items.length === 1
-      ? "sm:grid-cols-1"
-      : config.items.length === 2
-        ? "sm:grid-cols-2"
-        : "sm:grid-cols-2 lg:grid-cols-3";
-
+  // Sales-letter layout: a CENTERED single-column flowing checklist (icon +
+  // title + text in a narrow column), NOT a 3-column boxed card grid. The card
+  // grid read as a "website"; this reads as one continuous letter — the whole
+  // point of a Brunson-style funnel.
   return (
     <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-2xl">
         {config.headline && (
           <h2
-            className="mb-10 text-balance text-center font-extrabold tracking-tight"
-            style={{ fontSize: "clamp(1.5rem, 4vw, 2.25rem)", lineHeight: 1.15 }}
+            className="mb-9 text-balance text-center font-extrabold tracking-tight"
+            style={{ fontSize: "clamp(1.7rem, 4.5vw, 2.6rem)", lineHeight: 1.1 }}
           >
             {config.headline}
           </h2>
         )}
-        <div className={`grid grid-cols-1 gap-5 ${cols}`}>
+        <div className="flex flex-col gap-6">
           {config.items.map((item, i) => {
             const Icon = ICONS[item.iconType ?? "check"];
             const badgeColor = iconPalette && iconPalette.length > 0 ? iconPalette[i % iconPalette.length] : accentColor;
@@ -89,28 +86,19 @@ export function BenefitsGridSection({
                   ? { backgroundColor: "transparent", color: badgeColor, boxShadow: `inset 0 0 0 1.5px ${badgeColor}55` }
                   : { backgroundColor: `${badgeColor}1a`, color: badgeColor };
             return (
-              <div
-                key={i}
-                className="border bg-[var(--card-bg)] p-6 shadow-sm ring-1 ring-black/[0.04] transition-shadow hover:shadow-md dark:ring-white/[0.06]"
-                style={
-                  {
-                    "--card-bg": "color-mix(in oklab, currentColor 2.5%, transparent)",
-                    borderRadius: "var(--flow-radius, 1rem)",
-                  } as React.CSSProperties
-                }
-              >
+              <div key={i} className="flex items-start gap-4">
                 <span
-                  className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl"
+                  className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
                   style={badgeStyle}
                 >
                   <Icon className="h-5 w-5" />
                 </span>
-                <h3 className="font-bold tracking-tight">{item.title}</h3>
-                {item.description && (
-                  <p className="mt-2 text-sm leading-relaxed opacity-75">
-                    {item.description}
-                  </p>
-                )}
+                <div className="min-w-0">
+                  <h3 className="text-lg font-bold tracking-tight">{item.title}</h3>
+                  {item.description && (
+                    <p className="mt-1 leading-relaxed opacity-80">{item.description}</p>
+                  )}
+                </div>
               </div>
             );
           })}

@@ -156,7 +156,10 @@ export function PublicFunnelView({
   forms: Record<string, LeadForm>;
 }) {
   const dark = funnel.theme === "dark";
-  const bg = dark ? "#0a0a0a" : "#ffffff";
+  // Warm off-white base instead of stark #fff — softens the "website" feel and
+  // reads as an intentional sales-letter ground. Neutral-warm so it works under
+  // any accent (orange/green/blue). Dark theme unchanged.
+  const bg = dark ? "#0a0a0a" : "#faf9f6";
   const fg = dark ? "#f5f5f5" : "#0a0a0a";
   const tokens = resolveEffectiveDesignTokens(funnel);
   // Body reads in Inter for every archetype; headings take the display face —
