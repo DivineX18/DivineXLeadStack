@@ -385,7 +385,7 @@ export function FunnelBuilder({
                 value={heroLayout}
                 onChange={(e) =>
                   updateSection(heroSection.id, {
-                    ...heroSection.config,
+                    ...(heroSection.config as HeroConfig),
                     layout: e.target.value as HeroConfig["layout"],
                   })
                 }
