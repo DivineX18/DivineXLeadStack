@@ -174,7 +174,7 @@ try {
     check("5c. Accent/theme on the doc reflect the resolved palette (dark or light, a real archetype color, not the plain genre default)", typeof data.accentColor === "string" && /^#[0-9a-f]{6}$/i.test(data.accentColor));
     const hero = (data.sections as { type: string; config: Record<string, unknown> }[]).find((s) => s.type === "hero");
     check("5d. Real hero_media_url lands on the hero section (no placeholder needed since real media was given)", hero?.config.mediaUrl === "https://example.com/dashboard.png" && !hero?.config.mediaPlaceholderLabel);
-    check("5e. Hero resolves to the centered sales-letter layout (not a website split/mockup)", hero?.config.layout === "centered", hero?.config.layout as string);
+    check("5e. Hero resolves to the genre-aware SPLIT layout for lead_gen (value prop + CTA left, media right)", hero?.config.layout === "split", hero?.config.layout as string);
     check("5f. Summary includes a DESIGN rationale section (bold Direct Response)", result.resultText.includes("DESIGN") && result.resultText.includes("Direct Response"));
   }
 
@@ -207,7 +207,7 @@ try {
       !gallery,
       JSON.stringify(gallery?.config),
     );
-    check("5i2. Local funnel also resolves to the centered bold layout", hero?.config.layout === "centered");
+    check("5i2. Local lead_gen funnel also resolves to the genre-aware split layout", hero?.config.layout === "split");
     check("5i3. The hero carries a VSL/video placeholder area under the headline (the Brunson video setup)", typeof hero?.config.mediaPlaceholderLabel === "string" && (hero.config.mediaPlaceholderLabel as string).length > 0);
     check("5j. forced direct_response density/animation applied (high / moderate)", data.designStrategy?.visualDensity === "high" && data.designStrategy?.animationLevel === "moderate");
   }
@@ -256,7 +256,7 @@ try {
     const result = await cap.execute!(fakeCtx(), luxuryValidated.args);
     createdFunnelIds.push(result.ref!.id);
     const data = (await db.doc(`funnels/${result.ref!.id}`).get()).data()!;
-    check("5n2. Even a luxury-picked funnel is forced to the bold direct_response default", data.designStrategy?.visualArchetype === "direct_response", String(data.designStrategy?.visualArchetype));
+    check("5n2. A luxury-picked funnel now KEEPS its distinct premium archetype (reconciled §20: a VSL look would hurt luxury/nonprofit/professional)", data.designStrategy?.visualArchetype === "luxury_premium", String(data.designStrategy?.visualArchetype));
   }
 } finally {
   for (const id of createdFunnelIds) await db.doc(`funnels/${id}`).delete().catch(() => {});

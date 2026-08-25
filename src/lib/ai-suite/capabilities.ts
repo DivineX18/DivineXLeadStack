@@ -4054,15 +4054,27 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // layout, CTA strategy, media placeholders) read from the same
       // resolved strategy — never two independent decisions that could
       // disagree with each other.
-      // EVERY AI-generated funnel gets the bold direct-response sales-letter
-      // look — funnels convert best that way, so we do NOT defer to the model's
-      // archetype pick (it kept choosing light looks: wellness for a med spa,
-      // coach_consultant for leadership, local_service for a roofer). A soft /
-      // premium / website look is website-mode's job (separate); the operator
-      // can also switch the archetype in the builder. A real CTA fact (a phone
-      // number or booking slug the operator gave) is still honored so call-now /
-      // booking survive the bold default.
-      const effectiveArchetype = "direct_response" as VisualArchetype;
+      // Bold direct-response is the DEFAULT (funnels convert best that way, and
+      // the model kept choosing washed-light looks — wellness for a med spa,
+      // local_service for a roofer). RECONCILED with the spec's industry-design
+      // intelligence (§20/§30): a small set of genuinely-distinct, premium-by-
+      // nature industries — luxury (restraint), nonprofit (human/mission), and
+      // professional/healthcare/legal (calm authority) — where a ClickFunnels
+      // VSL look would actively HURT credibility, keep their own archetype when
+      // the model deliberately picked it. Everything else (SaaS, local service,
+      // coaching, agency, ecommerce) stays on the bold default; the operator can
+      // switch archetype in the builder either way. A real CTA fact (phone/
+      // booking) is still honored so call-now/booking survive.
+      const DISTINCT_INDUSTRY_ARCHETYPES = new Set<VisualArchetype>([
+        "luxury_premium",
+        "nonprofit_mission",
+        "professional_enterprise",
+      ]);
+      const modelArchetype = (args.visualArchetype as VisualArchetype) || undefined;
+      const effectiveArchetype: VisualArchetype =
+        modelArchetype && DISTINCT_INDUSTRY_ARCHETYPES.has(modelArchetype)
+          ? modelArchetype
+          : ("direct_response" as VisualArchetype);
       const designStrategy = resolveDesignStrategy(effectiveArchetype, {
         ctaStrategy: ((args.ctaStyle as string) || undefined) as CtaStrategyId | undefined,
       });
