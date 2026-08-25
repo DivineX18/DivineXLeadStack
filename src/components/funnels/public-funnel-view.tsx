@@ -1,5 +1,6 @@
 "use client";
 
+import { Archivo, Fraunces, Inter } from "next/font/google";
 import type { ComponentType } from "react";
 import type { FunnelDoc, FunnelSectionType } from "@/types/funnels";
 import type { LeadForm } from "@/types/forms";
@@ -103,6 +104,33 @@ function backgroundWrapStyle(bg: SectionBackground, pageDark: boolean, accentCol
 const SYSTEM_FONT_STACK =
   'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
+// Premium funnel typography (the visual port of the approved design target):
+// Archivo for oversized display headlines, Inter for body, Fraunces for the
+// editorial serif accent. Loaded via next/font (self-hosted, CSP-safe, no
+// layout shift) and exposed as CSS variables so the render can apply display
+// vs body vs serif independently — a big step up from the old single system
+// stack that made every funnel read as generic.
+const displaySans = Archivo({
+  subsets: ["latin"],
+  weight: ["600", "700", "800", "900"],
+  variable: "--flow-font-display",
+  display: "swap",
+});
+const bodySans = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--flow-font-body",
+  display: "swap",
+});
+const accentSerif = Fraunces({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  style: ["normal", "italic"],
+  variable: "--flow-font-serif",
+  display: "swap",
+});
+const FONT_VARS = `${displaySans.variable} ${bodySans.variable} ${accentSerif.variable}`;
+
 /** Vertical section padding per visual-density token — consumed via the
  *  `--flow-py` custom property every section component's outer <section>
  *  now reads (see sections/*.tsx). Sections without this token default to
@@ -131,7 +159,13 @@ export function PublicFunnelView({
   const bg = dark ? "#0a0a0a" : "#ffffff";
   const fg = dark ? "#f5f5f5" : "#0a0a0a";
   const tokens = resolveEffectiveDesignTokens(funnel);
-  const fontStack = tokens.headingFont === "serif" ? SERIF_FONT_STACK : SYSTEM_FONT_STACK;
+  // Body reads in Inter for every archetype; headings take the display face —
+  // Archivo for sans archetypes, Fraunces for serif/editorial ones.
+  const headingIsSerif = tokens.headingFont === "serif";
+  const bodyFamily = `var(--flow-font-body), ${SYSTEM_FONT_STACK}`;
+  const headingFamily = headingIsSerif
+    ? `var(--flow-font-serif), ${SERIF_FONT_STACK}`
+    : `var(--flow-font-display), ${SYSTEM_FONT_STACK}`;
   // A sticky/floating CTA is a fixed-position bar overlaying the bottom of
   // the viewport — without this, it silently covers the last section's
   // content (FAQ answers, fine print) on short pages. Cheap to check
@@ -146,18 +180,20 @@ export function PublicFunnelView({
       {/* Forces html/body background so next-themes' system-preference
        *  class on <html> can't leak a mismatched background through —
        *  same fix the public form page (/f/[formId]) already applies. */}
-      <style>{`html, body { background: ${bg} !important; background-color: ${bg} !important; }`}</style>
+      <style>{`html, body { background: ${bg} !important; background-color: ${bg} !important; }
+        .flow-funnel-root h1, .flow-funnel-root h2, .flow-funnel-root h3 { font-family: ${headingFamily}; letter-spacing: -0.02em; }
+        .flow-funnel-root .flow-serif-accent { font-family: var(--flow-font-serif), ${SERIF_FONT_STACK}; font-style: italic; }`}</style>
       <div
         style={
           {
             background: bg,
             color: fg,
-            fontFamily: fontStack,
+            fontFamily: bodyFamily,
             "--flow-py": DENSITY_TO_PY[tokens.visualDensity] ?? "3rem",
             "--flow-radius": RADIUS_TO_PX[tokens.borderRadiusStyle] ?? "0.75rem",
           } as React.CSSProperties
         }
-        className={`min-h-screen${hasFixedBottomCta ? " pb-24" : ""}`}
+        className={`flow-funnel-root ${FONT_VARS} min-h-screen${hasFixedBottomCta ? " pb-24" : ""}`}
       >
         {funnel.logoUrl && (
           <div className="flex justify-center px-4 pt-8">
