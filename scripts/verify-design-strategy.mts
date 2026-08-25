@@ -174,7 +174,7 @@ try {
     check("5c. Accent/theme on the doc reflect the resolved palette (dark or light, a real archetype color, not the plain genre default)", typeof data.accentColor === "string" && /^#[0-9a-f]{6}$/i.test(data.accentColor));
     const hero = (data.sections as { type: string; config: Record<string, unknown> }[]).find((s) => s.type === "hero");
     check("5d. Real hero_media_url lands on the hero section (no placeholder needed since real media was given)", hero?.config.mediaUrl === "https://example.com/dashboard.png" && !hero?.config.mediaPlaceholderLabel);
-    check("5e. Hero resolves to the genre-aware SPLIT layout for lead_gen (value prop + CTA left, media right)", hero?.config.layout === "split", hero?.config.layout as string);
+    check("5e. Hero resolves to the CENTERED sales-letter layout (Brunson default; only webinar splits)", hero?.config.layout === "centered", hero?.config.layout as string);
     check("5f. Summary includes a DESIGN rationale section (bold Direct Response)", result.resultText.includes("DESIGN") && result.resultText.includes("Direct Response"));
   }
 
@@ -207,7 +207,7 @@ try {
       !gallery,
       JSON.stringify(gallery?.config),
     );
-    check("5i2. Local lead_gen funnel also resolves to the genre-aware split layout", hero?.config.layout === "split");
+    check("5i2. Local lead_gen funnel also resolves to the centered sales-letter layout", hero?.config.layout === "centered");
     check("5i3. The hero carries a VSL/video placeholder area under the headline (the Brunson video setup)", typeof hero?.config.mediaPlaceholderLabel === "string" && (hero.config.mediaPlaceholderLabel as string).length > 0);
     check("5j. forced direct_response density/animation applied (high / moderate)", data.designStrategy?.visualDensity === "high" && data.designStrategy?.animationLevel === "moderate");
   }

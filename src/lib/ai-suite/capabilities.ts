@@ -4075,7 +4075,28 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         modelArchetype && DISTINCT_INDUSTRY_ARCHETYPES.has(modelArchetype)
           ? modelArchetype
           : ("direct_response" as VisualArchetype);
+      // Color variety (funnels were ALL orange — the call never passed a
+      // paletteId, so pickPalette always returned palettes[0]). Honor the
+      // model's explicit palette_variant when valid; otherwise deterministically
+      // rotate through the archetype's LIGHT palettes by a hash of the funnel
+      // name, so different businesses get visibly different colors instead of
+      // identical orange.
+      const archetypePalettes = VISUAL_ARCHETYPES[effectiveArchetype].palettes;
+      const modelPalette =
+        (args.paletteVariant as string) && archetypePalettes.some((p) => p.id === args.paletteVariant)
+          ? (args.paletteVariant as string)
+          : undefined;
+      const lightPalettes = archetypePalettes.filter((p) => p.colorMode === "light");
+      const paletteSeed = (args.funnelName as string) || (args.headline as string) || "funnel";
+      let paletteHash = 0;
+      for (let i = 0; i < paletteSeed.length; i++) paletteHash = (paletteHash * 31 + paletteSeed.charCodeAt(i)) | 0;
+      const variedPaletteId =
+        modelPalette ??
+        (lightPalettes.length > 0
+          ? lightPalettes[Math.abs(paletteHash) % lightPalettes.length].id
+          : undefined);
       const designStrategy = resolveDesignStrategy(effectiveArchetype, {
+        ...(variedPaletteId ? { paletteId: variedPaletteId } : {}),
         ctaStrategy: ((args.ctaStyle as string) || undefined) as CtaStrategyId | undefined,
       });
       // Adaptive funnel depth (Conversion Engine P0): a most-aware reader or
@@ -4141,7 +4162,12 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // the left, host/preview visual on the right) than a centered VSL. The
       // model's explicit hero_layout still wins; otherwise these genres default
       // to split and everything else uses the archetype's resolved layout.
-      const GENRE_SPLIT_HERO = new Set<string>(["webinar", "lead_gen", "application"]);
+      // Sales-letter is the DEFAULT (centered, single-column, flowing — the
+      // Brunson look): only WEBINAR registration defaults to the split
+      // (event/register layout). Everything else stays centered; the operator
+      // can switch any funnel to split via the Page-layout toggle. A split
+      // lead-gen/application read as a "website", not a sales letter.
+      const GENRE_SPLIT_HERO = new Set<string>(["webinar"]);
       const heroLayout =
         GENRE_SPLIT_HERO.has(genre) && !args.heroLayout
           ? "split"
