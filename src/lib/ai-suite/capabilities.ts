@@ -3595,7 +3595,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             "agency_creative",
             "professional_enterprise",
           ],
-          description: "The industry-aware visual design system for the whole page — see the DESIGN section above. ALWAYS set this for a new funnel; it resolves a full, professionally-constrained token set (palette, typography, card geometry, icon style, density, background rhythm, animation, hero layout, CTA) in one shot. DEFAULT to 'direct_response' for sales/lead conversion pages (the bold, high-converting look) unless the business clearly calls for a softer aesthetic (luxury, wellness, nonprofit).",
+          description: "The industry-aware visual design system for the whole page — see the DESIGN section above. ALWAYS set this. DEFAULT to 'direct_response' (the bold, high-converting sales-letter look) for MOST sales/lead pages — local service, coaching, agency, SaaS, ecommerce, generic lead-gen. BUT for industries where a bold ClickFunnels-VSL look actively HURTS credibility, pick the fitting distinct archetype instead (these three are honored as-is; every other pick still resolves to the bold default): healthcare / dental / medical / therapy / legal / financial / accounting / insurance / any trust-heavy professional service → 'professional_enterprise' (calm authority); luxury / high-end / concierge / private / bespoke → 'luxury_premium' (restraint); nonprofit / charity / church / cause → 'nonprofit_mission' (human, mission-led). When unsure, 'direct_response'.",
         },
         palette_variant: {
           type: "string",
