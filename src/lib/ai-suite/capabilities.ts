@@ -4124,7 +4124,16 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // over the raw params (which resolveDesignStrategy already folded in
       // as overrides above) — falling back to the raw values, unchanged,
       // when no archetype was resolved (today's exact pre-Phase-2 behavior).
-      const heroLayout = designStrategy?.heroLayout ?? (args.heroLayout as string);
+      // Genre-aware hero layout (visual port): webinar registration + generic
+      // lead-gen/application convert better as a SPLIT hero (value prop + CTA on
+      // the left, host/preview visual on the right) than a centered VSL. The
+      // model's explicit hero_layout still wins; otherwise these genres default
+      // to split and everything else uses the archetype's resolved layout.
+      const GENRE_SPLIT_HERO = new Set<string>(["webinar", "lead_gen", "application"]);
+      const heroLayout =
+        GENRE_SPLIT_HERO.has(genre) && !args.heroLayout
+          ? "split"
+          : (designStrategy?.heroLayout ?? (args.heroLayout as string));
       // designStrategy.ctaStrategy (when an archetype resolved) already
       // incorporated any explicit args.ctaStyle override during
       // resolveDesignStrategy() above, and always returns a real value —
@@ -4250,8 +4259,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const heroMediaPlaceholder =
         !heroMediaUrl && resolvedMediaStrategy && !wantsGallerySection
           ? MEDIA_PLACEHOLDER_LABELS[resolvedMediaStrategy]
-          : undefined;
-      const heroMediaBrief = heroMediaPlaceholder ? mediaBrief(resolvedMediaStrategy) : undefined;
+          : // A split hero needs a right-column visual to actually render as a
+            // split (otherwise it falls back to centered) — give it an honest,
+            // replaceable placeholder (now a designed panel, not an empty box).
+            !heroMediaUrl && heroLayout === "split" && !wantsGallerySection
+            ? "Add your host photo or preview"
+            : undefined;
+      const heroMediaBrief =
+        heroMediaPlaceholder && resolvedMediaStrategy ? mediaBrief(resolvedMediaStrategy) : undefined;
       const nextSections = created.sections.map((section): FunnelSection => {
         const content = contentFor(section.type);
         if (section.type === "hero") {

@@ -19,7 +19,7 @@ export function CtaBannerSection({
 }) {
   const form = config.formId && forms ? forms[config.formId] ?? null : null;
   return (
-    <section className="px-4 py-16">
+    <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
       <div
         className="relative mx-auto max-w-2xl overflow-hidden rounded-3xl px-6 py-12 text-center shadow-[0_20px_60px_-20px_var(--accent-shadow)]"
         style={
