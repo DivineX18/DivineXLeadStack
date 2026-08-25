@@ -4,6 +4,7 @@ import type {
   FunnelSectionConfig,
   FunnelSectionType,
 } from "@/types/funnels";
+import type { AwarenessLevel, TrafficTemperature } from "@/types/conversion";
 
 /**
  * Conversion-framework definitions — the "Landing Page Generator RC".
@@ -238,11 +239,53 @@ export function defaultSectionConfig(type: FunnelSectionType): FunnelSectionConf
  * stage_content, leaving every new-layout section blank — real live-model
  * testing caught this (2026-08-02).
  */
+/** Adaptive funnel DEPTH (Conversion Engine P0 — awareness/traffic drives
+ *  composition, per Schwartz's awareness levels + the funnel-depth mandate).
+ *  "lean" strips the persuasion runway a high-intent visitor doesn't need;
+ *  "standard" keeps the genre's full sequence (today's behavior). */
+export type FunnelDepth = "lean" | "standard";
+
+/** Sections a LEAN (high-intent) page keeps — hero, quick proof, the core
+ *  offer/benefits, FAQ, and a CTA. Everything else is education/persuasion a
+ *  most-aware reader or hot-traffic click doesn't need to reach the CTA. The
+ *  capture stage (isCapture) is always kept regardless — a page must convert. */
+const LEAN_KEEP: ReadonlySet<FunnelSectionType> = new Set<FunnelSectionType>([
+  "hero",
+  "proof_strip",
+  "trust_badges",
+  "benefits_grid",
+  "offer",
+  "ticket_tiers",
+  "faq",
+  "cta_banner",
+]);
+
+/**
+ * Decide funnel depth from buyer state. A most-aware reader or hot traffic
+ * gets a LEAN page that reaches the CTA fast; everyone else keeps the full
+ * persuasion sequence. Priced sales genres are never leaned by the caller
+ * (asking for a card number always earns the full page) — this only reports
+ * what the buyer state suggests; the caller gates on priced.
+ */
+export function funnelDepthForBuyer(
+  awareness?: AwarenessLevel | null,
+  temperature?: TrafficTemperature | null,
+): FunnelDepth {
+  if (awareness === "most_aware" || temperature === "hot") return "lean";
+  return "standard";
+}
+
 export function buildFrameworkSections(
   genre: FunnelGenre,
   sectionOverrides?: Record<string, FunnelSectionType>,
+  depth: FunnelDepth = "standard",
 ): FunnelSection[] {
-  const framework = FUNNEL_FRAMEWORKS[genre];
+  // Lean pages drop education/persuasion stages a high-intent visitor doesn't
+  // need — but always keep the capture stage (so the page still converts) and
+  // the core LEAN_KEEP stages. Standard keeps the genre's full sequence.
+  const framework = FUNNEL_FRAMEWORKS[genre].filter(
+    (stage) => depth === "standard" || stage.isCapture || LEAN_KEEP.has(stage.section),
+  );
   return framework.map((stage, i) => {
     const requested = sectionOverrides?.[stage.section];
     const allowed = stageAllowedLayouts(stage);

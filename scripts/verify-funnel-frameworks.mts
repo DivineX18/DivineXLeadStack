@@ -27,7 +27,7 @@ for (const line of readFileSync(new URL("../.env.local", import.meta.url), "utf8
 
 const { getAdminDb, getAdminAuth } = await import("../src/lib/firebase/admin");
 const { AI_SUITE_CAPABILITIES } = await import("../src/lib/ai-suite/capabilities");
-const { FUNNEL_FRAMEWORKS, buildFrameworkSections, stageAllowedLayouts } = await import(
+const { FUNNEL_FRAMEWORKS, buildFrameworkSections, stageAllowedLayouts, funnelDepthForBuyer } = await import(
   "../src/lib/funnels/frameworks"
 );
 type AiSuiteActionContext = import("../src/lib/ai-suite/capabilities").AiSuiteActionContext;
@@ -383,6 +383,27 @@ try {
   await db.doc(`subAccounts/${SUB_ID}`).delete().catch(() => {});
   await db.doc(`agencies/${AGENCY_ID}`).delete().catch(() => {});
   await auth.deleteUser(user.uid).catch(() => {});
+}
+
+// --- 7. Adaptive funnel depth (Conversion Engine P0 — awareness drives composition) ---
+{
+  check("7a. funnelDepthForBuyer: most_aware -> lean", funnelDepthForBuyer("most_aware") === "lean");
+  check("7b. funnelDepthForBuyer: hot traffic -> lean", funnelDepthForBuyer(null, "hot") === "lean");
+  check("7c. funnelDepthForBuyer: problem_aware/cold -> standard", funnelDepthForBuyer("problem_aware", "cold") === "standard");
+  check("7d. funnelDepthForBuyer: nothing known -> standard (safe default)", funnelDepthForBuyer(null, null) === "standard");
+
+  const full = buildFrameworkSections("webinar").map((s) => s.type);
+  const lean = buildFrameworkSections("webinar", undefined, "lean").map((s) => s.type);
+  check("7e. lean webinar is SHORTER than standard", lean.length < full.length, `${lean.length} < ${full.length}`);
+  check("7f. lean webinar keeps hero + offer (still converts)", lean.includes("hero") && lean.includes("offer"));
+  check("7g. lean webinar drops the education stages (story/agenda)", !lean.includes("story") && !lean.includes("agenda"), lean.join(","));
+
+  // The capture stage is always kept, even when its section type isn't in LEAN_KEEP.
+  const leanChallenge = buildFrameworkSections("challenge", undefined, "lean").map((s) => s.type);
+  check("7h. lean keeps the capture stage regardless (challenge's ticket_tiers)", leanChallenge.includes("ticket_tiers"), leanChallenge.join(","));
+
+  // Standard is unchanged from the default (no regression to existing behavior).
+  check("7i. explicit standard === default (no regression)", buildFrameworkSections("tripwire", undefined, "standard").length === buildFrameworkSections("tripwire").length);
 }
 
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);

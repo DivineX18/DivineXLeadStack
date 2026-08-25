@@ -4,7 +4,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { getStripeForTenant } from "@/lib/stripe/tenant-server";
 import { materializeCheckoutPrice } from "@/lib/funnels/materialize-price";
-import { buildFrameworkSections } from "@/lib/funnels/frameworks";
+import { buildFrameworkSections, type FunnelDepth } from "@/lib/funnels/frameworks";
 import { resolveDesignPack, type DesignPackId } from "@/lib/funnels/design-packs";
 import { resolveEffectiveDesignTokens, type DesignStrategy } from "@/lib/funnels/design-strategy";
 import type {
@@ -99,6 +99,10 @@ export async function createFunnelServerSide(opts: {
    *  FUNNEL_FRAMEWORKS. Ignored for chain steps. Omitted/invalid stages
    *  fall back to that stage's recommended layout. */
   stageOverrides?: Record<string, FunnelSection["type"]>;
+  /** Adaptive funnel depth (Conversion Engine P0). "lean" strips education
+   *  stages a high-intent visitor doesn't need; "standard" (default) keeps the
+   *  genre's full sequence. Ignored for chain steps. */
+  depth?: FunnelDepth;
   /** Landing Page Design System (RC 1.1) pack — when set, its
    *  defaultAccentColor/defaultTheme take priority over the genre's plain
    *  DEFAULT_ACCENT/DEFAULT_THEME (a design pack's whole point is a
@@ -143,7 +147,7 @@ export async function createFunnelServerSide(opts: {
           },
         ],
       }
-    : { sections: buildFrameworkSections(opts.genre, opts.stageOverrides) };
+    : { sections: buildFrameworkSections(opts.genre, opts.stageOverrides, opts.depth) };
 
   const ref = db.collection("funnels").doc();
   const doc: Omit<FunnelDoc, "id"> = {
