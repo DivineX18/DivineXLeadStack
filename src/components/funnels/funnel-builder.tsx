@@ -619,6 +619,23 @@ function SectionFields({
       const c = section.config as HeroConfig;
       return (
         <div className="space-y-3">
+          <Field label="Page layout">
+            <select
+              value={c.layout ?? "centered"}
+              onChange={(e) => onChange({ ...c, layout: e.target.value as HeroConfig["layout"] })}
+              className={fieldClass}
+            >
+              <option value="centered">Sales letter — centered, media below (VSL / sales pages)</option>
+              <option value="split">Webinar / lead-gen — split, media beside the text</option>
+              <option value="background_image">Background — full-bleed media, text overlay</option>
+              <option value="founder_image">Founder — small framed photo above text</option>
+              <option value="browser_mockup">Browser mockup — media in a browser frame</option>
+              <option value="phone_mockup">Phone mockup — media in a phone frame</option>
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Sales letter flows straight down the page (best for VSLs &amp; long-form sales). Webinar/split puts the media beside the text (best for registrations). Split needs a media slot — set Media below.
+            </p>
+          </Field>
           <Field label="Eyebrow">
             <Input
               value={c.eyebrow ?? ""}
@@ -661,22 +678,6 @@ function SectionFields({
                   onChange={(e) => onChange({ ...c, mediaUrl: e.target.value })}
                   className="h-9"
                 />
-              </Field>
-              <Field label="Layout">
-                <select
-                  value={c.layout ?? "centered"}
-                  onChange={(e) =>
-                    onChange({ ...c, layout: e.target.value as HeroConfig["layout"] })
-                  }
-                  className={fieldClass}
-                >
-                  <option value="centered">Centered — media below text</option>
-                  <option value="split">Split — media beside text</option>
-                  <option value="background_image">Background — full-bleed media, text overlay</option>
-                  <option value="founder_image">Founder — small framed photo above text</option>
-                  <option value="browser_mockup">Browser mockup — media in a browser frame</option>
-                  <option value="phone_mockup">Phone mockup — media in a phone frame</option>
-                </select>
               </Field>
             </>
           )}
