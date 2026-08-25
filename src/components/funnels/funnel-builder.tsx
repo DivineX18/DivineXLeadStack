@@ -374,6 +374,36 @@ export function FunnelBuilder({
             />
           </div>
         </div>
+        {(() => {
+          const heroSection = sections.find((s) => s.type === "hero");
+          if (!heroSection) return null;
+          const heroLayout = (heroSection.config as HeroConfig).layout ?? "centered";
+          return (
+            <div className="col-span-2">
+              <label className={labelClass}>Page layout</label>
+              <select
+                value={heroLayout}
+                onChange={(e) =>
+                  updateSection(heroSection.id, {
+                    ...heroSection.config,
+                    layout: e.target.value as HeroConfig["layout"],
+                  })
+                }
+                className={fieldClass}
+              >
+                <option value="centered">Sales letter — centered, media below (VSL / sales pages)</option>
+                <option value="split">Webinar / lead-gen — split, media beside the text</option>
+                <option value="background_image">Background — full-bleed media, text overlay</option>
+                <option value="founder_image">Founder — small framed photo above text</option>
+                <option value="browser_mockup">Browser mockup — media in a browser frame</option>
+                <option value="phone_mockup">Phone mockup — media in a phone frame</option>
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Switch this funnel between the centered sales-letter and the split webinar/lead-gen layouts.
+              </p>
+            </div>
+          );
+        })()}
         <div className="col-span-2">
           <label className={labelClass}>Visual style</label>
           <select
