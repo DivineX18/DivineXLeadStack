@@ -22,45 +22,50 @@ export function ProblemSolutionSection({
       </section>
     );
   }
+  // Sales-letter narrative: the problem stated plainly, a visual "turn", then
+  // the solution — STACKED in a narrow centered column, flowing like a letter,
+  // not two side-by-side website cards.
   return (
     <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
-      <div className="mx-auto grid max-w-5xl gap-5 sm:grid-cols-2">
-        <div
-          className="border border-black/[0.06] bg-black/[0.02] p-7 dark:border-white/[0.08] dark:bg-white/[0.03]"
-          style={{ borderRadius: "var(--flow-radius, 1rem)" }}
-        >
-          <span className="mb-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/[0.06] dark:bg-white/[0.08]">
-            <X className="h-4 w-4 opacity-60" />
+      <div className="mx-auto flex max-w-2xl flex-col gap-5 text-center">
+        <div>
+          <span className="mb-3 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest opacity-50">
+            <X className="h-3.5 w-3.5" /> The problem
           </span>
           {config.problemHeadline && (
             <h3
-              className="font-bold tracking-tight"
-              style={{ fontSize: "clamp(1.1rem, 2.5vw, 1.375rem)" }}
+              className="text-balance font-extrabold tracking-tight"
+              style={{ fontSize: "clamp(1.4rem, 3.6vw, 2.1rem)", lineHeight: 1.14 }}
             >
               {config.problemHeadline}
             </h3>
           )}
-          <p className="mt-3 text-sm leading-relaxed opacity-75">{config.problemText}</p>
+          {config.problemText && (
+            <p className="mx-auto mt-3 max-w-xl text-[1.08rem] leading-relaxed opacity-80">{config.problemText}</p>
+          )}
         </div>
         <div
-          className="border p-7"
-          style={{ borderColor: `${accentColor}33`, backgroundColor: `${accentColor}0d`, borderRadius: "var(--flow-radius, 1rem)" }}
-        >
+          className="mx-auto h-9 w-px"
+          style={{ background: `linear-gradient(to bottom, transparent, ${accentColor})` }}
+        />
+        <div>
           <span
-            className="mb-4 flex h-9 w-9 items-center justify-center rounded-full"
-            style={{ backgroundColor: `${accentColor}26`, color: accentColor }}
+            className="mb-3 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest"
+            style={{ color: accentColor }}
           >
-            <Check className="h-4 w-4" />
+            <Check className="h-3.5 w-3.5" /> The fix
           </span>
           {config.solutionHeadline && (
             <h3
-              className="font-bold tracking-tight"
-              style={{ fontSize: "clamp(1.1rem, 2.5vw, 1.375rem)" }}
+              className="text-balance font-extrabold tracking-tight"
+              style={{ fontSize: "clamp(1.4rem, 3.6vw, 2.1rem)", lineHeight: 1.14 }}
             >
               {config.solutionHeadline}
             </h3>
           )}
-          <p className="mt-3 text-sm leading-relaxed opacity-85">{config.solutionText}</p>
+          {config.solutionText && (
+            <p className="mx-auto mt-3 max-w-xl text-[1.08rem] leading-relaxed opacity-90">{config.solutionText}</p>
+          )}
         </div>
       </div>
     </section>

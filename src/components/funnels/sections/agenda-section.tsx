@@ -33,60 +33,57 @@ export function AgendaSection({
             className="min-h-32"
           />
         )}
-        <div className="grid gap-5 sm:grid-cols-2">
+        {/* Centered vertical timeline — steps flow down a single column with a
+            connecting line, like a sales letter, not a 2-col card grid. */}
+        <ol className="mx-auto flex max-w-2xl flex-col">
           {config.days.map((day, i) => {
             const stepColor = iconPalette && iconPalette.length > 0 ? iconPalette[i % iconPalette.length] : accentColor;
             const stepBadgeStyle: React.CSSProperties =
               iconStyle === "outline"
                 ? { backgroundColor: "transparent", color: stepColor, boxShadow: `inset 0 0 0 1.5px ${stepColor}` }
                 : { backgroundColor: stepColor, color: "#fff" };
+            const isLast = i === config.days.length - 1;
             return (
-            <div
-              key={i}
-              className="border bg-[var(--card-bg)] p-6 shadow-[0_12px_30px_-15px_rgba(0,0,0,0.25)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_20px_45px_-18px_rgba(0,0,0,0.35)]"
-              style={
-                {
-                  "--card-bg": "color-mix(in oklab, currentColor 2%, transparent)",
-                  borderColor: `${accentColor}26`,
-                  borderRadius: "var(--flow-radius, 1rem)",
-                } as React.CSSProperties
-              }
-            >
-              <div className="flex items-center gap-3">
-                <span
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-base font-extrabold"
-                  style={stepBadgeStyle}
-                >
-                  {i + 1}
-                </span>
-                {day.label && (
+              <li key={i} className="flex gap-4">
+                <div className="flex flex-col items-center">
                   <span
-                    className="inline-block rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide"
-                    style={{ backgroundColor: `${stepColor}1a`, color: stepColor }}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-extrabold"
+                    style={stepBadgeStyle}
                   >
-                    {day.label}
+                    {i + 1}
                   </span>
-                )}
-              </div>
-              <h3 className="mt-3.5 text-lg font-bold tracking-tight">
-                {day.title}
-              </h3>
-              {day.bullets.length > 0 && (
-                <ul className="mt-3.5 space-y-2 text-sm opacity-80">
-                  {day.bullets.map((b, j) => (
-                    <li key={j} className="flex gap-2.5">
-                      <span className="font-bold" style={{ color: accentColor }}>
-                        •
-                      </span>
-                      <span>{b}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                  {!isLast && (
+                    <span
+                      className="my-1 w-px flex-1"
+                      style={{ background: `linear-gradient(to bottom, ${accentColor}66, ${accentColor}1a)` }}
+                    />
+                  )}
+                </div>
+                <div className={`min-w-0 pt-1 ${isLast ? "" : "pb-7"}`}>
+                  {day.label && (
+                    <span
+                      className="inline-block rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide"
+                      style={{ backgroundColor: `${stepColor}1a`, color: stepColor }}
+                    >
+                      {day.label}
+                    </span>
+                  )}
+                  <h3 className="mt-2 text-lg font-bold tracking-tight">{day.title}</h3>
+                  {day.bullets.length > 0 && (
+                    <ul className="mt-2.5 space-y-2 opacity-80">
+                      {day.bullets.map((b, j) => (
+                        <li key={j} className="flex gap-2.5">
+                          <span className="font-bold" style={{ color: accentColor }}>•</span>
+                          <span>{b}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </li>
             );
           })}
-        </div>
+        </ol>
       </div>
     </section>
   );
