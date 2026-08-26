@@ -495,6 +495,16 @@ export interface FunnelSection {
   /** Art-direction canvas for this section (see SectionCanvas). Optional —
    *  absent keeps the archetype's background rhythm. */
   canvas?: SectionCanvas;
+  /** This section's JOB in the sales argument (Sales Argument Engine):
+   *  hook / belief_shift / promise / mechanism / proof / offer /
+   *  risk_reversal / objections / close / action. Every section must be able
+   *  to answer "what persuasion job would be lost if this disappeared?" —
+   *  stored so the answer lives in data, not in a discarded prompt. */
+  argumentRole?: string;
+  /** The specific belief (verbatim from salesArgument.beliefChain) this
+   *  section is responsible for establishing — the data-level proof the
+   *  belief chain is CONSUMED by composition, not decorative. */
+  servesBelief?: string;
 }
 
 export interface FunnelDoc {
@@ -534,6 +544,39 @@ export interface FunnelDoc {
     energy: "calm" | "balanced" | "urgent";
     density: "minimal" | "medium" | "rich";
     humanity: "product_led" | "balanced" | "people_led";
+  };
+  /** The Sales Argument Plan this funnel was built to EXECUTE — the belief
+   *  work the page does, constructed BEFORE composition and stored so the
+   *  argument is explainable (Zeno: "what must this prospect believe?") and
+   *  auditable per section (see FunnelSection.argumentRole). The page is the
+   *  visual execution of this argument, not a collection of components.
+   *  Absent on funnels created before the Sales Argument Engine shipped. */
+  salesArgument?: {
+    /** Who exactly is being persuaded, in a sentence. */
+    prospect: string;
+    /** What likely happened right before they arrived (the conversation
+     *  already in their head). */
+    arrivalContext: string;
+    /** What they believe right now that stops them acting. */
+    currentBelief: string;
+    /** The ordered belief chain the page must walk: current belief →
+     *  required beliefs → action. 3-6 steps. */
+    beliefChain: string[];
+    /** The conventional/alternative experience (only when supportable —
+     *  never a manufactured strawman). Empty = not used. */
+    oldWay: string;
+    /** Why the old way creates the friction the prospect recognizes. */
+    whyOldWayFails: string;
+    /** Why THIS solution works — the legitimate mechanism. */
+    mechanism: string;
+    /** The single credible outcome the page promises. */
+    corePromise: string;
+    /** The one objection most likely to block action. */
+    primaryObjection: string;
+    /** How legitimate risk is reduced (real policies only). */
+    riskReversal: string;
+    /** Why acting now makes sense (legitimate reasons only). */
+    closeReason: string;
   };
   /** Small brand mark shown at the very top of the public page, above the
    *  hero — not a nav bar (funnels intentionally have no navigation away

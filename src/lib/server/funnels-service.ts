@@ -182,6 +182,8 @@ export interface FunnelPatch {
   designStrategy?: DesignStrategy | null;
   /** Stored Campaign Art Direction profile (see FunnelDoc.artDirection). */
   artDirection?: FunnelDoc["artDirection"];
+  /** Stored Sales Argument Plan (see FunnelDoc.salesArgument). */
+  salesArgument?: FunnelDoc["salesArgument"];
   logoUrl?: string;
   sections?: FunnelSection[];
 }
@@ -350,6 +352,7 @@ export async function updateFunnelServerSide(opts: {
   if (patch.designPack !== undefined) write.designPack = patch.designPack;
   if (patch.designStrategy !== undefined) write.designStrategy = patch.designStrategy;
   if (patch.artDirection !== undefined) write.artDirection = patch.artDirection;
+  if (patch.salesArgument !== undefined) write.salesArgument = patch.salesArgument;
   if (patch.logoUrl !== undefined) write.logoUrl = patch.logoUrl;
   if (patch.sections !== undefined) {
     await assertNoChainCycle(opts.subAccountId, opts.funnelId, patch.sections);

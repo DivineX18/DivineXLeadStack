@@ -67,6 +67,11 @@ export const FUNNEL_FRAMEWORKS: Record<FunnelGenre, FrameworkStage[]> = {
   ],
   webinar: [
     { id: "attention", label: "Hero", section: "hero" },
+    // Sales Argument Engine: the BELIEF SHIFT — agitate the old belief /
+    // conventional experience, then reframe (why this session is different).
+    // Lean (high-intent) depth drops it automatically: most-aware visitors
+    // don't need belief education.
+    { id: "belief_shift", label: "Belief Shift", section: "problem_solution" },
     { id: "agenda", label: "Agenda", section: "agenda" },
     { id: "benefits", label: "Benefits", section: "benefits_grid" },
     { id: "cta", label: "CTA", section: "cta_banner" },
@@ -137,6 +142,11 @@ export const FUNNEL_FRAMEWORKS: Record<FunnelGenre, FrameworkStage[]> = {
   lead_gen: [
     { id: "attention", label: "Hero", section: "hero" },
     { id: "trust_logos", label: "Trust Logos", section: "proof_strip" },
+    // Sales Argument Engine: the BELIEF SHIFT — the "old way → why it
+    // fails → reframe" move that gives the benefits a reason to exist
+    // (hero jumping straight to benefits is a website, not an argument).
+    // Lean (high-intent) depth drops it automatically.
+    { id: "belief_shift", label: "Belief Shift", section: "problem_solution" },
     { id: "benefits", label: "Benefits", section: "benefits_grid" },
     { id: "offer", label: "Offer", section: "offer", isCapture: true },
     { id: "faq", label: "FAQ", section: "faq" },

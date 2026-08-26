@@ -68,7 +68,7 @@ function check(label: string, ok: boolean, detail?: string) {
   const sections = buildFrameworkSections("webinar");
   check(
     "1c. webinar default sequence matches the spec exactly (RC 1.1: Agenda before Benefits; mid-page CTA banner)",
-    sections.map((s) => s.type).join(",") === "hero,agenda,benefits_grid,cta_banner,story,faq,offer",
+    sections.map((s) => s.type).join(",") === "hero,problem_solution,agenda,benefits_grid,cta_banner,story,faq,offer",
     sections.map((s) => s.type).join(","),
   );
 }

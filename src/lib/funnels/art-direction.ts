@@ -181,6 +181,139 @@ export function isBaselineProfile(p: ArtDirectionProfile): boolean {
   return p.transformation === null && p.energy === "balanced" && p.humanity === "balanced" && p.density === "medium";
 }
 
+// ─── Sales Argument roles (every section must have a JOB) ──────────────────
+
+/** Deterministic map: which persuasion job each section type performs. The
+ *  final cta_banner is the CLOSE; a mid-page one is an ACTION beat. Stored on
+ *  every section (FunnelSection.argumentRole) so "why does this section
+ *  exist?" is answerable from data — the Sales Argument Engine's §4 rule. */
+const SECTION_ARGUMENT_ROLES: Record<string, string> = {
+  hero: "hook",
+  problem_solution: "belief_shift",
+  before_after: "belief_shift",
+  comparison: "belief_shift",
+  callout: "promise",
+  benefits_grid: "promise",
+  video: "mechanism",
+  story: "mechanism",
+  agenda: "mechanism",
+  image_text: "mechanism",
+  testimonials: "proof",
+  proof_strip: "proof",
+  trust_badges: "proof",
+  stats: "proof",
+  team: "proof",
+  photo_gallery: "proof",
+  included: "offer",
+  value_stack: "offer",
+  offer: "offer",
+  ticket_tiers: "offer",
+  checkout: "action",
+  upsell_offer: "offer",
+  guarantee: "risk_reversal",
+  faq: "objections",
+  countdown: "close",
+  cta_banner: "action", // final banner upgraded to "close" below
+};
+
+/** Stamp every section with its argument role. Pure; returns new objects. */
+export function stampArgumentRoles(sections: FunnelSection[]): FunnelSection[] {
+  const lastCta = sections.reduce((last, s, i) => (s.type === "cta_banner" ? i : last), -1);
+  return sections.map((s, i) => {
+    const role = i === lastCta ? "close" : SECTION_ARGUMENT_ROLES[s.type];
+    return role ? { ...s, argumentRole: role } : s;
+  });
+}
+
+/** The Sales Argument Plan shape consumed here (structurally matches
+ *  FunnelDoc.salesArgument). */
+export interface SalesArgumentPlanLike {
+  beliefChain: string[];
+  corePromise: string;
+  closeReason: string;
+}
+
+/**
+ * Make the stored Sales Argument Plan STRUCTURALLY CONSUMED (never a
+ * decorative intelligence object):
+ *
+ * 1. Belief assignment — each belief-chain step is assigned to the section(s)
+ *    responsible for establishing it (stored as `servesBelief`): the hook
+ *    carries the arrival belief; belief_shift/promise/mechanism/proof carry
+ *    the middle beliefs in page order; offer/close/action carry the final
+ *    action belief; objections/risk_reversal defend the last middle belief.
+ * 2. Offer ≠ benefits — offer bullets that verbatim duplicate benefit titles
+ *    are removed (offer = what you get / what happens next; benefits = why
+ *    the promise is believable). Skipped when benefits were themselves seeded
+ *    from the bullets (the missing-content fallback), and the offer always
+ *    keeps at least one bullet.
+ * 3. The close closes — a closing banner with no subtext is seeded from
+ *    corePromise + closeReason so the final section restates the outcome and
+ *    the reason to act, never a bare "Ready?" box.
+ *
+ * Pure; returns new objects. Requires roles to be stamped first.
+ */
+export function applySalesArgument(
+  sections: FunnelSection[],
+  plan: SalesArgumentPlanLike,
+): FunnelSection[] {
+  const chain = plan.beliefChain.filter((b) => b.trim().length > 0);
+  if (chain.length < 2) return sections;
+  const first = chain[0];
+  const last = chain[chain.length - 1];
+  const middle = chain.slice(1, -1);
+  const CARRIERS = new Set(["belief_shift", "promise", "mechanism", "proof"]);
+
+  // Benefits titles for the dedupe guard (and whether they came from bullets).
+  const benefits = sections.find((s) => s.type === "benefits_grid");
+  const benefitTitles = new Set(
+    ((benefits?.config as BenefitsGridConfig | undefined)?.items ?? []).map((it) => it.title.trim().toLowerCase()),
+  );
+
+  let mi = 0;
+  return sections.map((s) => {
+    let next = s;
+    const role = s.argumentRole;
+
+    // 1. Belief assignment.
+    if (role === "hook") next = { ...next, servesBelief: first };
+    else if (role && CARRIERS.has(role)) {
+      const belief = middle.length > 0 ? middle[Math.min(mi++, middle.length - 1)] : first;
+      next = { ...next, servesBelief: belief };
+    } else if (role === "offer" || role === "action" || role === "close") {
+      next = { ...next, servesBelief: last };
+    } else if (role === "objections" || role === "risk_reversal") {
+      next = { ...next, servesBelief: middle[middle.length - 1] ?? last };
+    }
+
+    // 2. Offer must not duplicate benefits.
+    if (s.type === "offer" && benefitTitles.size > 0) {
+      const cfg = next.config as { bullets?: string[] };
+      const bullets = cfg.bullets ?? [];
+      const allDuplicated = bullets.length > 0 && bullets.every((b) => benefitTitles.has(b.trim().toLowerCase()));
+      // allDuplicated = the benefits were seeded FROM these bullets (fallback)
+      // — dedup would empty the offer, so leave it alone.
+      if (!allDuplicated) {
+        const deduped = bullets.filter((b) => !benefitTitles.has(b.trim().toLowerCase()));
+        if (deduped.length >= 1 && deduped.length !== bullets.length) {
+          next = { ...next, config: { ...next.config, bullets: deduped } };
+        }
+      }
+    }
+
+    // 3. The close restates the promise + reason to act.
+    if (role === "close" && s.type === "cta_banner") {
+      const cfg = next.config as CtaBannerConfig;
+      if (!cfg.subtext && (plan.corePromise || plan.closeReason)) {
+        const subtext = [plan.corePromise, plan.closeReason].filter(Boolean).join(" — ").slice(0, 180);
+        next = { ...next, config: { ...cfg, subtext } };
+      }
+    }
+
+    return next;
+  });
+}
+
 // ─── Profile → composition mapping ─────────────────────────────────────────
 
 /**

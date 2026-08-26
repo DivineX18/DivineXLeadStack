@@ -75,7 +75,7 @@ import {
 } from "@/lib/server/funnels-service";
 import { scoreFunnelDesign } from "@/lib/design-intelligence/scoring";
 import { reviewFunnelCopy, type FunnelCopyReview } from "@/lib/conversion/funnel-copy-review";
-import type { BenefitsGridConfig, CtaBannerConfig, FunnelSection, FunnelSectionType, HeroConfig, PhotoGalleryConfig, TicketTiersConfig } from "@/types/funnels";
+import type { BenefitsGridConfig, CtaBannerConfig, FunnelDoc, FunnelSection, FunnelSectionType, HeroConfig, PhotoGalleryConfig, TicketTiersConfig } from "@/types/funnels";
 import { imageryConfigured, searchSubjectImages } from "@/lib/funnels/imagery";
 import type { DesignPackId } from "@/lib/funnels/design-packs";
 import { FUNNEL_FRAMEWORKS, funnelDepthForBuyer } from "@/lib/funnels/frameworks";
@@ -83,7 +83,9 @@ import {
   EMOTIONAL_TRANSFORMATIONS,
   applyArtDirection,
   deriveArtDirection,
+  applySalesArgument,
   inferEmotionalTransformation,
+  stampArgumentRoles,
   type CampaignEnergy,
   type CampaignHumanity,
   type EmotionalTransformation,
@@ -3322,7 +3324,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       "tripwire (sales-page style) = Hero → Problem/Solution → Opportunity (callout — why this matters now) → Features (benefits grid) → Trust badges (or real testimonials, if given) → Value Stack → Offer (priced) → Guarantee → FAQ (fill the value_stack param with the real deliverables + honest values + total + price)." +
       "lead_gen = Hero → Trust Logos → Benefits (grid) → Offer (capture form) → FAQ. " +
       "LENGTH — match page length to commitment level, not a fixed habit: lead_magnet is the one exception at a true single fold (above); every other genre's stage count already reflects what its ask requires, so use the full sequence rather than trimming it. A free download needs zero persuasion runway; a webinar/lead_gen registration (6/5 stages) needs a little context before someone hands over their email; a multi-day challenge or a qualify-before-you-can-apply application (6 stages each) needs to show the process and set expectations; a priced tripwire offer (8 stages, sales-page style) needs the most — problem, proof, guarantee, objection-handling — because asking for a card number is the highest-commitment ask on this list. For an especially high-ticket / SaaS-style offer within any priced genre, lean into writing MORE substantive copy per stage (richer stage_content, fuller story_paragraphs) rather than adding new sections — the framework's stage count is fixed per genre; depth of copy is where 'long-form' actually lives. " +
-      "Some stages have a fixed layout; a few (marked above with 'or') allow an alternate — use layout_choices ONLY to pick that alternate when the business/evidence genuinely calls for it (e.g. real testimonials exist), never as a default habit. Workflow: (1) pick the genre — lead_magnet (free book/PDF opt-in, one-fold), vsl (high-ticket video sales page), challenge (multi-day registration), application (qualify leads before a call), tripwire (low-ticket entry offer), webinar (single-session registration), lead_gen (generic interest capture); (2) write a specific, concrete headline — never a generic tagline; (3) bullets must name a specific outcome or mechanism, never a vague adjective ('transformative', 'game-changing', 'cutting-edge' are banned); (4) ONLY include faq_items if you have enough real detail to answer honestly — never invent generic filler Q&A or fabricated guarantees/stats; (5) price_cents only applies to genres with a priced offer (tripwire, vsl, challenge) — omit for a free lead magnet, and when a price IS set, skip the capture form (a paid offer needs checkout, not a lead form — the operator wires up Stripe checkout on that section afterward); (6) leave include_capture_form at its default (true) unless the user is clearly building a pure sales/checkout page with no opt-in step; (7) confirmation_email_body should read like a real, brief, human confirmation (what they'll get, what's next) — it can be genuinely short, but must never invent guarantees, stats, or promises the funnel copy itself didn't make; (8) ALWAYS write story_paragraphs whenever the genre's framework includes a Story/Founder-Story/Host stage. Two cases: if the user gave you a REAL testimonial (an actual customer's words, name, location, or result), use it close to verbatim as story_paragraphs with story_byline set to their real attribution (e.g. 'From: Jane Doe, Austin, TX') — don't rewrite their claim into something stronger than what they said. Otherwise (the common case — no testimonial offered), write 2-4 paragraphs of synthesized 'why this works' copy — the mechanism, the reasoning — from the headline/bullets you already wrote, with a generic byline like 'Why this works' (or 'Your host: ...' for a webinar), and NEVER invent a fictional customer name/location/quote to make it look like a testimonial; (9) guarantee_headline/guarantee_body — ONLY when the user told you a real guarantee they actually offer, never invented; (10) trust_badges — safe generic ones (e.g. 'Secure checkout', 'Privacy protected') are fine whenever there's a form or checkout, but only add a guarantee-related badge if guarantee_headline is also set; ALSO write hero_trust_badges (2-3 honest risk-reversal signals like 'No credit card required' / 'Free — no obligation' / 'Licensed & insured') for the check-marked row under the hero's above-the-fold CTA — every genre, never an invented rating or 'trusted by N'; (11) cta_banner_headline/cta_banner_subtext — every multi-section genre now carries a repeat CTA banner (mid-page or closing), so ALWAYS write these for any genre except the one-fold lead_magnet; restate the real offer, never introduce a new claim; (12) process_steps — write these whenever the genre's framework includes a process-timeline stage (most do); (13) stage_content — write one entry per remaining stage the genre's framework includes (video/benefits grid/problem-solution/before-after/included/comparison/callout), per that param's own field-mapping description; never include a testimonials entry unless the user gave you real quotes; (14) visual_archetype — ALWAYS pick one that matches this business's audience (see the DESIGN section above); omitting it skips Phase 2's design intelligence entirely and falls back to a plain, generic look, which defeats the point — only override its palette/typography/animation/CTA defaults when you have a genuine reason from what the user told you, not by default habit; (15) emotional_transformation — ALWAYS set it (see its param description): it drives the page's ART DIRECTION so an emergency-service page and an anxious-patient page come out structurally different, not the same layout recolored. Every genre's full stage sequence renders on the page regardless of which fields you fill — an unfilled stage shows placeholder/nothing, so fill every stage the genre actually has, not just headline/offer/faq. After creating, feel free to suggest one or two concrete improvements in your reply (e.g. a sharper headline angle, a stronger CTA placement, a trust element to add) — but only as a suggestion the user can act on, never as a score or grade.",
+      "Some stages have a fixed layout; a few (marked above with 'or') allow an alternate — use layout_choices ONLY to pick that alternate when the business/evidence genuinely calls for it (e.g. real testimonials exist), never as a default habit. Workflow: (1) pick the genre — lead_magnet (free book/PDF opt-in, one-fold), vsl (high-ticket video sales page), challenge (multi-day registration), application (qualify leads before a call), tripwire (low-ticket entry offer), webinar (single-session registration), lead_gen (generic interest capture); (2) write a specific, concrete headline — never a generic tagline; (3) bullets must name a specific outcome or mechanism, never a vague adjective ('transformative', 'game-changing', 'cutting-edge' are banned); (4) ONLY include faq_items if you have enough real detail to answer honestly — never invent generic filler Q&A or fabricated guarantees/stats; (5) price_cents only applies to genres with a priced offer (tripwire, vsl, challenge) — omit for a free lead magnet, and when a price IS set, skip the capture form (a paid offer needs checkout, not a lead form — the operator wires up Stripe checkout on that section afterward); (6) leave include_capture_form at its default (true) unless the user is clearly building a pure sales/checkout page with no opt-in step; (7) confirmation_email_body should read like a real, brief, human confirmation (what they'll get, what's next) — it can be genuinely short, but must never invent guarantees, stats, or promises the funnel copy itself didn't make; (8) ALWAYS write story_paragraphs whenever the genre's framework includes a Story/Founder-Story/Host stage. Two cases: if the user gave you a REAL testimonial (an actual customer's words, name, location, or result), use it close to verbatim as story_paragraphs with story_byline set to their real attribution (e.g. 'From: Jane Doe, Austin, TX') — don't rewrite their claim into something stronger than what they said. Otherwise (the common case — no testimonial offered), write 2-4 paragraphs of synthesized 'why this works' copy — the mechanism, the reasoning — from the headline/bullets you already wrote, with a generic byline like 'Why this works' (or 'Your host: ...' for a webinar), and NEVER invent a fictional customer name/location/quote to make it look like a testimonial; (9) guarantee_headline/guarantee_body — ONLY when the user told you a real guarantee they actually offer, never invented; (10) trust_badges — safe generic ones (e.g. 'Secure checkout', 'Privacy protected') are fine whenever there's a form or checkout, but only add a guarantee-related badge if guarantee_headline is also set; ALSO write hero_trust_badges (2-3 honest risk-reversal signals like 'No credit card required' / 'Free — no obligation' / 'Licensed & insured') for the check-marked row under the hero's above-the-fold CTA — every genre, never an invented rating or 'trusted by N'; (11) cta_banner_headline/cta_banner_subtext — every multi-section genre now carries a repeat CTA banner (mid-page or closing), so ALWAYS write these for any genre except the one-fold lead_magnet; restate the real offer, never introduce a new claim; (12) process_steps — write these whenever the genre's framework includes a process-timeline stage (most do); (13) stage_content — write one entry per remaining stage the genre's framework includes (video/benefits grid/problem-solution/before-after/included/comparison/callout), per that param's own field-mapping description; never include a testimonials entry unless the user gave you real quotes; (14) visual_archetype — ALWAYS pick one that matches this business's audience (see the DESIGN section above); omitting it skips Phase 2's design intelligence entirely and falls back to a plain, generic look, which defeats the point — only override its palette/typography/animation/CTA defaults when you have a genuine reason from what the user told you, not by default habit; (15) emotional_transformation — ALWAYS set it (see its param description): it drives the page's ART DIRECTION so an emergency-service page and an anxious-patient page come out structurally different, not the same layout recolored; (16) sales_argument — construct it FIRST and derive EVERY section's copy from it. The page is the visual execution of ONE argument (current belief → required beliefs → action), not a collection of components. The Belief Shift stage (the problem_solution entry in stage_content — every multi-section genre now has one, including lead_gen and webinar) is where the argument TURNS: its problem side voices the prospect's CURRENT belief and the conventional experience that creates the friction they recognize (from old_way/why_old_way_fails — e.g. 'call center, voicemail, a slot next week, an unknown price', or 'you're probably not avoiding the dentist because you don't care — you're avoiding the lecture, the embarrassment, the loss of control') — never a manufactured strawman; its solution side is the REFRAME (the new opportunity + mechanism: 'so we changed the first visit', 'built around a different promise: one call, a real person, a technician today, the price before the wrench turns'). The benefits then PROVE the reframed promise — each item should serve a step in belief_chain, never a generic feature list. The offer section makes the ACTION tangible and must NOT repeat the benefits items (offer bullets = what they concretely get + what happens next; benefits = why the promise is believable). The closing CTA banner is the CLOSE, not a 'Ready?' box: restate core_promise, resolve the last hesitation (primary_objection/risk_reversal), and give close_reason. Every genre's full stage sequence renders on the page regardless of which fields you fill — an unfilled stage shows placeholder/nothing, so fill every stage the genre actually has, not just headline/offer/faq. After creating, feel free to suggest one or two concrete improvements in your reply (e.g. a sharper headline angle, a stronger CTA placement, a trust element to add) — but only as a suggestion the user can act on, never as a score or grade.",
     parameters: {
       type: "object",
       properties: {
@@ -3367,6 +3369,25 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           type: "boolean",
           description:
             "Your explicit decision: does this funnel NEED a lead magnet / opt-in, or should it go straight to the primary action? High-intent prospects (e.g. 'emergency plumber near me') convert better sent DIRECTLY to a call/booking — a lead magnet adds friction. Educational/cold traffic often needs one. Set false to route a high-intent funnel straight to its CTA (also set include_capture_form false + a phone/booking cta_style). Defaults to the include_capture_form behavior when omitted.",
+        },
+        sales_argument: {
+          type: "object",
+          description:
+            "THE SALES ARGUMENT PLAN — construct this FIRST, before writing ANY copy. The page is the visual execution of ONE deliberate argument that moves THIS prospect from their current belief to the belief required for action — never a collection of components. Ground every field in what the user actually told you; never invent proof, guarantees, or differentiation.",
+          properties: {
+            prospect: { type: "string", description: "Who exactly is being persuaded, in one sentence." },
+            arrival_context: { type: "string", description: "What likely happened right before they landed here — the conversation already in their head." },
+            current_belief: { type: "string", description: "What they believe right now that stops them acting (the REAL obstacle belief — e.g. 'dentists lecture people like me', 'repair companies make you wait and surprise you on price')." },
+            belief_chain: { type: "array", items: { type: "string" }, description: "The ordered chain of 3-6 beliefs the page must establish, from current belief to action. Each step must logically lead to the next; every section you then write should serve a step in this chain." },
+            old_way: { type: "string", description: "The conventional/alternative experience the prospect knows — ONLY when genuinely supportable, never a manufactured strawman. Omit/empty if none." },
+            why_old_way_fails: { type: "string", description: "Why that conventional experience creates the exact friction the prospect recognizes." },
+            mechanism: { type: "string", description: "Why THIS solution works — the legitimate method/process/model difference. Never a fake proprietary mechanism." },
+            core_promise: { type: "string", description: "The single credible outcome the whole page promises." },
+            primary_objection: { type: "string", description: "The one objection most likely to block action." },
+            risk_reversal: { type: "string", description: "How legitimate risk is reduced — REAL policies/processes only (free, no-obligation, explained-first, cancel-anytime — whatever is actually true)." },
+            close_reason: { type: "string", description: "Why acting NOW makes sense — legitimate reasons only, never fake urgency." },
+          },
+          required: ["prospect", "arrival_context", "current_belief", "belief_chain", "mechanism", "core_promise", "primary_objection", "close_reason"],
         },
         emotional_transformation: {
           type: "string",
@@ -3682,7 +3703,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           description: "Only relevant when the archetype's media strategy calls for MULTIPLE real photos (service_photo/team_photo/community_photo) — Zeno then adds a dedicated photo-gallery section (see media_strategy) instead of a single hero image, freeing the hero for a clean headline/logo. Omit to use the archetype's own recommended gallery layout.",
         },
       },
-      required: ["headline", "bullets", "emotional_transformation"],
+      required: ["headline", "bullets", "emotional_transformation", "sales_argument"],
       additionalProperties: false,
     },
     validate: (rawIn) => {
@@ -4002,6 +4023,34 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           trafficTemperature: (["cold", "warm", "hot"] as readonly string[]).includes(str(raw, "traffic_temperature")) ? str(raw, "traffic_temperature") : null,
           objective: (["lead_generation", "appointment", "application", "free_trial", "purchase", "webinar_registration", "audit_request", "consultation", "event_registration", "donation"] as readonly string[]).includes(str(raw, "objective")) ? str(raw, "objective") : null,
           leadMagnetNeeded: typeof (raw as Record<string, unknown>)?.lead_magnet_needed === "boolean" ? ((raw as Record<string, unknown>).lead_magnet_needed as boolean) : null,
+          // Sales Argument Plan — validated + capped; too thin to be a real
+          // argument (no prospect, or a chain under 2 steps) = null (not stored).
+          salesArgument: (() => {
+            const saRaw = (raw as Record<string, unknown>).sales_argument;
+            if (!saRaw || typeof saRaw !== "object" || Array.isArray(saRaw)) return null;
+            const sa = saRaw as Record<string, unknown>;
+            const sstr = (k: string, cap: number) => (typeof sa[k] === "string" ? (sa[k] as string).trim().slice(0, cap) : "");
+            const chain = Array.isArray(sa.belief_chain)
+              ? (sa.belief_chain as unknown[])
+                  .filter((b): b is string => typeof b === "string" && b.trim().length > 0)
+                  .slice(0, 6)
+                  .map((b) => b.trim().slice(0, 220))
+              : [];
+            const plan = {
+              prospect: sstr("prospect", 220),
+              arrivalContext: sstr("arrival_context", 300),
+              currentBelief: sstr("current_belief", 300),
+              beliefChain: chain,
+              oldWay: sstr("old_way", 300),
+              whyOldWayFails: sstr("why_old_way_fails", 300),
+              mechanism: sstr("mechanism", 300),
+              corePromise: sstr("core_promise", 220),
+              primaryObjection: sstr("primary_objection", 220),
+              riskReversal: sstr("risk_reversal", 220),
+              closeReason: sstr("close_reason", 220),
+            };
+            return plan.prospect && plan.beliefChain.length >= 2 ? plan : null;
+          })(),
           // Campaign Art Direction inputs — validated against the module's own
           // enum; invalid/absent = null (baseline profile, zero visual change).
           emotionalTransformation: (EMOTIONAL_TRANSFORMATIONS as readonly string[]).includes(str(raw, "emotional_transformation")) ? str(raw, "emotional_transformation") : null,
@@ -4823,6 +4872,21 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       }
 
       sectionsToSave = applyArtDirection(sectionsToSave, artProfile);
+      // Sales Argument Engine: every section carries its persuasion JOB
+      // (hook / belief_shift / promise / mechanism / proof / offer /
+      // risk_reversal / objections / close) — stored so the argument is
+      // auditable from data, never a discarded prompt.
+      sectionsToSave = stampArgumentRoles(sectionsToSave);
+      // ... and the plan is STRUCTURALLY CONSUMED: belief-chain steps are
+      // assigned to responsible sections (servesBelief), offer bullets that
+      // duplicate benefits are removed, and the close is seeded from
+      // corePromise + closeReason when left generic. Never decorative.
+      if (args.salesArgument) {
+        sectionsToSave = applySalesArgument(
+          sectionsToSave,
+          args.salesArgument as { beliefChain: string[]; corePromise: string; closeReason: string },
+        );
+      }
 
       // CONSUME the profile's density (it must never be unused metadata): it
       // overrides the archetype's spacing token, so an information-rich
@@ -4841,9 +4905,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           subAccountId,
           funnelId,
           patch: {
-            // Store the visual plan — composition must be explainable, never
-            // prompt-only metadata.
+            // Store the visual plan + sales argument — composition AND
+            // persuasion must be explainable, never prompt-only metadata.
             artDirection: artProfile,
+            ...(args.salesArgument ? { salesArgument: args.salesArgument as NonNullable<FunnelDoc["salesArgument"]> } : {}),
             ...(densityAdjustedStrategy ? { designStrategy: densityAdjustedStrategy } : {}),
             sections: sectionsToSave,
             ...(args.accentColor ? { accentColor: args.accentColor as string } : {}),
