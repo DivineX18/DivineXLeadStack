@@ -181,6 +181,10 @@ export interface CtaBannerConfig {
   /** When set, the banner's CTA opens this capture form (popup) — same as the
    *  offer/hero, so a mid/late-page repeat CTA actually converts. */
   formId?: string | null;
+  /** Art-direction layout variant. "banner" (default) = the contained
+   *  rounded CTA box. "full_bleed_close" = a full-width, high-contrast
+   *  accent close (big type, inverted button) — the urgent final close. */
+  variant?: "banner" | "full_bleed_close";
 }
 
 export interface CountdownConfig {
@@ -301,7 +305,12 @@ export interface VideoConfig {
  *  not a different section type. */
 export interface BenefitsGridConfig {
   headline?: string;
-  items: { title: string; description?: string; iconType?: BenefitIconType }[];
+  items: { title: string; description?: string; iconType?: BenefitIconType; imageUrl?: string }[];
+  /** Art-direction layout variant. "flowing_checklist" (default) = the
+   *  centered single-column sales-letter checklist. "alternating_image" =
+   *  zigzag image/text rows (people-led, calm campaigns) — items render
+   *  their imageUrl when set, else the designed placeholder panel. */
+  variant?: "flowing_checklist" | "alternating_image";
 }
 export type BenefitIconType =
   | "check"
@@ -322,6 +331,11 @@ export interface ProblemSolutionConfig {
   problemText: string;
   solutionHeadline: string;
   solutionText: string;
+  /** Art-direction layout variant. "stacked" (default) = the centered
+   *  flowing problem → turn → solution narrative. "before_after" = two
+   *  contrasting panels with a directional transition (the visualized
+   *  transformation — e.g. hot home → cool home for an urgent campaign). */
+  variant?: "stacked" | "before_after";
 }
 
 /** Two-column (or stacked) before/after contrast — real, concrete
@@ -456,10 +470,26 @@ export type FunnelSectionConfig =
   | ImageTextConfig
   | PhotoGalleryConfig;
 
+/** Per-section background "canvas" — the art-direction layer's assignable
+ *  surface treatment (replaces the fixed archetype background rhythm when
+ *  set). Absent = today's rhythm-by-index behavior, so stored funnels are
+ *  untouched. "photographic" renders the dark-immersive fallback until a
+ *  real section image is wired (never a fabricated stock photo). */
+export type SectionCanvas =
+  | "clean"
+  | "warm_paper"
+  | "brand_tint"
+  | "dark_immersive"
+  | "high_contrast_cta"
+  | "photographic";
+
 export interface FunnelSection {
   id: string;
   type: FunnelSectionType;
   config: FunnelSectionConfig;
+  /** Art-direction canvas for this section (see SectionCanvas). Optional —
+   *  absent keeps the archetype's background rhythm. */
+  canvas?: SectionCanvas;
 }
 
 export interface FunnelDoc {

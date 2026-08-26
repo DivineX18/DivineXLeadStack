@@ -31,6 +31,7 @@ export function CtaButton({
   pageTheme = "light",
   animationLevel = "none",
   className,
+  inverted = false,
 }: {
   label: string;
   href?: string;
@@ -48,17 +49,28 @@ export function CtaButton({
    *  prefers-reduced-motion via CSS, same as every other Flow animation. */
   animationLevel?: "none" | "minimal" | "moderate" | "expressive";
   className?: string;
+  /** Inverted color scheme (white button, accent text) — for buttons sitting
+   *  ON an accent/high-contrast field (e.g. the full_bleed_close banner),
+   *  where an accent-on-accent button would disappear. */
+  inverted?: boolean;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
   const style = cta?.style ?? "inline";
   const hasPopupTarget = style === "popup_calendar" ? !!(cta?.bookingPageSlug && subAccountId) : !!form;
   const pulseClass = animationLevel === "moderate" || animationLevel === "expressive" ? " flow-cta-pulse" : "";
 
-  const buttonStyle = {
-    backgroundColor: accentColor,
-    "--accent-shadow": `${accentColor}80`,
-    borderRadius: "var(--flow-radius, 0.75rem)",
-  } as React.CSSProperties;
+  const buttonStyle: React.CSSProperties = inverted
+    ? ({
+        backgroundColor: "#ffffff",
+        color: accentColor,
+        "--accent-shadow": "rgba(0,0,0,0.35)",
+        borderRadius: "var(--flow-radius, 0.75rem)",
+      } as React.CSSProperties)
+    : ({
+        backgroundColor: accentColor,
+        "--accent-shadow": `${accentColor}80`,
+        borderRadius: "var(--flow-radius, 0.75rem)",
+      } as React.CSSProperties);
   const btnClass =
     (className ??
       "inline-flex items-center justify-center gap-2 px-9 py-4 text-base font-bold text-white shadow-[0_8px_24px_-6px_var(--accent-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-6px_var(--accent-shadow)]") +

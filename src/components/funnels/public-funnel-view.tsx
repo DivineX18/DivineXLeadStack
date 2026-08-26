@@ -101,6 +101,45 @@ function backgroundWrapStyle(bg: SectionBackground, pageDark: boolean, accentCol
   }
 }
 
+/** Art-direction canvas treatments (per-section, assigned by the Campaign Art
+ *  Direction layer — see lib/funnels/art-direction.ts). Overrides the
+ *  archetype's rhythm-by-index background when a section carries `canvas`.
+ *  All theme-safe: each value resolves sensibly on light AND dark pages. */
+function canvasWrapStyle(
+  canvas: NonNullable<FunnelDoc["sections"][number]["canvas"]>,
+  pageDark: boolean,
+  accentColor: string,
+): React.CSSProperties {
+  switch (canvas) {
+    case "clean":
+      return {};
+    case "warm_paper":
+      // A breath of surface change against the page ground.
+      return { backgroundColor: pageDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.025)" };
+    case "brand_tint":
+      return {
+        backgroundImage: `linear-gradient(180deg, ${accentColor}14 0%, ${accentColor}05 100%)`,
+      };
+    case "photographic": // v1: designed immersive fallback — never a fabricated stock photo
+    case "dark_immersive":
+      return pageDark
+        ? {
+            backgroundColor: "rgba(255,255,255,0.045)",
+            backgroundImage: `radial-gradient(70% 55% at 50% 0%, ${accentColor}26, transparent 70%)`,
+          }
+        : {
+            backgroundColor: "#0a0a0a",
+            color: "#f5f5f5",
+            backgroundImage: `radial-gradient(70% 55% at 50% 0%, ${accentColor}33, transparent 70%), linear-gradient(180deg, #0c0c0c, #060606)`,
+          };
+    case "high_contrast_cta":
+      return {
+        backgroundImage: `linear-gradient(135deg, ${accentColor}, color-mix(in oklab, ${accentColor} 65%, black))`,
+        color: "#ffffff",
+      };
+  }
+}
+
 const SYSTEM_FONT_STACK =
   'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
@@ -207,7 +246,12 @@ export function PublicFunnelView({
         {funnel.sections.map((section, i) => {
           const Component = SECTION_COMPONENTS[section.type];
           if (!Component) return null;
-          const bgStyle = backgroundWrapStyle(backgroundForIndex(tokens, i), dark, funnel.accentColor);
+          // A section's art-direction canvas (when assigned) wins over the
+          // archetype's rhythm-by-index background — that's what lets two
+          // campaigns share components yet read structurally different.
+          const bgStyle = section.canvas
+            ? canvasWrapStyle(section.canvas, dark, funnel.accentColor)
+            : backgroundWrapStyle(backgroundForIndex(tokens, i), dark, funnel.accentColor);
           return (
             <div key={section.id} style={bgStyle}>
               <AnimatedSection level={tokens.animationLevel} index={i}>
