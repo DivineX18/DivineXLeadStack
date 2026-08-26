@@ -75,7 +75,8 @@ import {
 } from "@/lib/server/funnels-service";
 import { scoreFunnelDesign } from "@/lib/design-intelligence/scoring";
 import { reviewFunnelCopy, type FunnelCopyReview } from "@/lib/conversion/funnel-copy-review";
-import type { CtaBannerConfig, FunnelSection, FunnelSectionType, HeroConfig, PhotoGalleryConfig, TicketTiersConfig } from "@/types/funnels";
+import type { BenefitsGridConfig, CtaBannerConfig, FunnelSection, FunnelSectionType, HeroConfig, PhotoGalleryConfig, TicketTiersConfig } from "@/types/funnels";
+import { imageryConfigured, searchSubjectImages } from "@/lib/funnels/imagery";
 import type { DesignPackId } from "@/lib/funnels/design-packs";
 import { FUNNEL_FRAMEWORKS, funnelDepthForBuyer } from "@/lib/funnels/frameworks";
 import {
@@ -4774,6 +4775,53 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         humanity: (args.campaignHumanity as CampaignHumanity | null) ?? null,
         archetype: effectiveArchetype,
       });
+
+      // Auto-imagery (Pexels, HONESTY-GUARDED — see lib/funnels/imagery.ts):
+      // SUBJECT/ambient photography chosen by the campaign's imagery brief so
+      // pages feel warm and specific before the operator adds real photos.
+      // Structurally limited to the hero + benefits rows — never testimonial/
+      // team/proof contexts. Runs BEFORE applyArtDirection so an urgent hero
+      // with a real photo composes as the immersive full-bleed treatment
+      // instead of dropping media. Best-effort: any failure changes nothing.
+      try {
+        const imageryBrief = mediaSubject || heroMediaBrief || "";
+        if (imageryBrief && imageryConfigured()) {
+          const photos = await searchSubjectImages(imageryBrief, 4);
+          if (photos.length > 0) {
+            let photoIdx = 0;
+            sectionsToSave = sectionsToSave.map((s) => {
+              if (s.type === "hero") {
+                const c = s.config as HeroConfig;
+                if (!c.mediaUrl && c.mediaType !== "none" && photoIdx < photos.length) {
+                  const p = photos[photoIdx++];
+                  return { ...s, config: { ...c, mediaType: "image" as const, mediaUrl: p.url, mediaIsStock: true, mediaPlaceholderLabel: "" } };
+                }
+                return s;
+              }
+              // Benefits rows get imagery only on non-urgent campaigns (urgent
+              // pages run the checklist-on-dark band, where photos would dilute).
+              if (s.type === "benefits_grid" && artProfile.energy !== "urgent") {
+                const c = s.config as BenefitsGridConfig;
+                return {
+                  ...s,
+                  config: {
+                    ...c,
+                    items: c.items.map((it) =>
+                      !it.imageUrl && photoIdx < photos.length
+                        ? { ...it, imageUrl: photos[photoIdx++].url, imageIsStock: true }
+                        : it,
+                    ),
+                  },
+                };
+              }
+              return s;
+            });
+          }
+        }
+      } catch {
+        // Imagery is always best-effort — never blocks funnel creation.
+      }
+
       sectionsToSave = applyArtDirection(sectionsToSave, artProfile);
 
       // CONSUME the profile's density (it must never be unused metadata): it

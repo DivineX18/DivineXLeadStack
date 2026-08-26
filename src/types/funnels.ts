@@ -89,6 +89,11 @@ export interface HeroConfig {
   subheadline?: string;
   mediaType: "video" | "image" | "none";
   mediaUrl?: string;
+  /** True when mediaUrl was auto-filled with SUBJECT stock photography
+   *  (Pexels) at generation time — the builder labels it "stock — replace
+   *  with your real photo" so operators know to personalize. Cleared when
+   *  the operator sets their own media. */
+  mediaIsStock?: boolean;
   ctaLabel?: string;
   ctaHref?: string;
   /** Lets the hero itself BE the capture surface — a real one-fold page
@@ -305,7 +310,7 @@ export interface VideoConfig {
  *  not a different section type. */
 export interface BenefitsGridConfig {
   headline?: string;
-  items: { title: string; description?: string; iconType?: BenefitIconType; imageUrl?: string }[];
+  items: { title: string; description?: string; iconType?: BenefitIconType; imageUrl?: string; imageIsStock?: boolean }[];
   /** Art-direction layout variant. "flowing_checklist" (default) = the
    *  centered single-column sales-letter checklist. "alternating_image" =
    *  zigzag image/text rows (people-led, calm campaigns) — items render

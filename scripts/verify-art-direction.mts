@@ -89,7 +89,13 @@ const hvacOut = applyArtDirection(sampleSections(), deriveArtDirection({ transfo
     { id: "h2", type: "hero", config: { headline: "H", mediaType: "video", mediaUrl: "https://example.com/v" } },
   ] as unknown as FunnelSection[];
   const keptHero = applyArtDirection(heroWithRealMedia, deriveArtDirection({ transformation: "panic_to_relief" }))[0]!;
-  check("3h. HVAC: urgent hero KEEPS real media", (cfg(keptHero).mediaType as string) === "video");
+  check("3h. HVAC: urgent hero KEEPS real media (video stays the centered VSL)", (cfg(keptHero).mediaType as string) === "video" && cfg(keptHero).layout !== "background_image");
+
+  const heroWithRealPhoto = [
+    { id: "h3", type: "hero", config: { headline: "H", mediaType: "image", mediaUrl: "https://images.example/roof.jpg" } },
+  ] as unknown as FunnelSection[];
+  const immersiveHero = applyArtDirection(heroWithRealPhoto, deriveArtDirection({ transformation: "panic_to_relief" }))[0]!;
+  check("3i. HVAC: urgent hero with a real PHOTO upgrades to the immersive full-bleed layout", cfg(immersiveHero).layout === "background_image" && (cfg(immersiveHero).mediaType as string) === "image");
 }
 
 // --- 4. The dental benchmark (fear_to_safety): calm, human composition ---

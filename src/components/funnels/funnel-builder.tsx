@@ -705,9 +705,14 @@ function SectionFields({
               <Field label="Media URL">
                 <Input
                   value={c.mediaUrl ?? ""}
-                  onChange={(e) => onChange({ ...c, mediaUrl: e.target.value })}
+                  onChange={(e) => onChange({ ...c, mediaUrl: e.target.value, mediaIsStock: false })}
                   className="h-9"
                 />
+                {c.mediaIsStock && (
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    Stock photo (auto-selected) — replace with your real photo when you have one.
+                  </p>
+                )}
               </Field>
             </>
           )}
@@ -1800,6 +1805,11 @@ function SectionFields({
       const c = section.config as BenefitsGridConfig;
       return (
         <div className="space-y-3">
+          {c.items.some((it) => it.imageIsStock) && (
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+              Some row images are auto-selected stock photos — replace them with your real photos when you have them.
+            </p>
+          )}
           <Field label="Headline (optional)">
             <Input
               value={c.headline ?? ""}

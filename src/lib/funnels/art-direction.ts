@@ -25,6 +25,7 @@ import type { FunnelSection, SectionCanvas } from "@/types/funnels";
 import type {
   BenefitsGridConfig,
   CtaBannerConfig,
+  HeroConfig,
   ProblemSolutionConfig,
 } from "@/types/funnels";
 
@@ -210,10 +211,15 @@ export function applyArtDirection(
           // An urgent page never spends its prime viewport on an EMPTY media
           // placeholder — with no real asset, the hero drops media entirely so
           // the eye lands on the headline + CTA (asset-fallback rule: compose
-          // without the asset, don't design around it). Real media stays.
-          const cfg = section.config as { mediaUrl?: string; mediaType?: string; mediaPlaceholderLabel?: string };
+          // without the asset, don't design around it). A real PHOTO upgrades
+          // to the immersive full-bleed environmental hero (image + overlay —
+          // heat/urgency you can feel); a real video stays the centered VSL.
+          const cfg = section.config as HeroConfig;
+          if (cfg.mediaUrl && cfg.mediaType === "image") {
+            return { ...section, config: { ...cfg, layout: "background_image" as const } };
+          }
           if (!cfg.mediaUrl && cfg.mediaType !== "none") {
-            return { ...section, config: { ...section.config, mediaType: "none", mediaPlaceholderLabel: "" } };
+            return { ...section, config: { ...cfg, mediaType: "none" as const, mediaPlaceholderLabel: "" } };
           }
           return section;
         }
