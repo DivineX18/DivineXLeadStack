@@ -1,6 +1,5 @@
 import { Quote, Sparkles } from "lucide-react";
 import type { CalloutConfig } from "@/types/funnels";
-import { MediaPlaceholder } from "./media-placeholder";
 
 export function CalloutSection({
   config,
@@ -9,19 +8,7 @@ export function CalloutSection({
   config: CalloutConfig;
   accentColor: string;
 }) {
-  if (!config.text) {
-    return (
-      <section className="px-4 py-10">
-        <div className="mx-auto max-w-2xl">
-          <MediaPlaceholder
-            label="This section has no content yet — add it in the builder"
-            accentColor={accentColor}
-            className="min-h-24"
-          />
-        </div>
-      </section>
-    );
-  }
+  if (!config.text) return null;
   const Icon = config.tone === "highlight" ? Sparkles : Quote;
 
   return (

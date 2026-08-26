@@ -132,5 +132,20 @@ const dentalOut = applyArtDirection(sampleSections(), deriveArtDirection({ trans
   check("7e. a real transformation always beats the archetype fallback", explicit.energy === "urgent");
 }
 
+// --- 8. Guaranteed inference (art direction can NEVER silently no-op) ---
+{
+  const { inferEmotionalTransformation } = await import("../src/lib/funnels/art-direction");
+  check("8a. emergency-intent DR lead page infers panic_to_relief (phone CTA)", inferEmotionalTransformation({ archetype: "direct_response", ctaStyle: "phone", objective: "lead_generation" }) === "panic_to_relief");
+  check("8b. most-aware DR lead page infers panic_to_relief (no phone needed)", inferEmotionalTransformation({ archetype: "direct_response", awareness: "most_aware" }) === "panic_to_relief");
+  check("8c. professional archetype infers uncertainty_to_confidence", inferEmotionalTransformation({ archetype: "professional_enterprise", objective: "appointment" }) === "uncertainty_to_confidence");
+  check("8d. priced offer infers interest_to_ownership", inferEmotionalTransformation({ archetype: "direct_response", priced: true }) === "interest_to_ownership");
+  check("8e. the floor is NEVER baseline — every inference composes", (() => {
+    const t = inferEmotionalTransformation({ archetype: "direct_response" });
+    const profile = deriveArtDirection({ transformation: t });
+    const out = applyArtDirection(sampleSections(), profile);
+    return !isBaselineProfile(profile) && out.some((s) => s.canvas || cfg(s).variant);
+  })());
+}
+
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);
 if (failures > 0) process.exit(1);

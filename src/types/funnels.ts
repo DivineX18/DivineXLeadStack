@@ -517,6 +517,19 @@ export interface FunnelDoc {
    *  Zeno's industry-aware archetype selection at creation; editable
    *  afterward in the builder. */
   designStrategy?: import("@/lib/funnels/design-strategy").DesignStrategy | null;
+  /** The Campaign Art Direction profile this funnel was composed with (the
+   *  CAMPAIGN_VISUAL_PLAN's reasoning core) — STORED so the composition is
+   *  explainable and future re-renders/builder surfaces can consume it, never
+   *  metadata that exists only in a prompt. Structurally matches
+   *  ArtDirectionProfile in lib/funnels/art-direction.ts (declared inline here
+   *  to keep the types layer import-cycle-free). Absent on funnels created
+   *  before art direction shipped. */
+  artDirection?: {
+    transformation: string | null;
+    energy: "calm" | "balanced" | "urgent";
+    density: "minimal" | "medium" | "rich";
+    humanity: "product_led" | "balanced" | "people_led";
+  };
   /** Small brand mark shown at the very top of the public page, above the
    *  hero — not a nav bar (funnels intentionally have no navigation away
    *  from the CTA), just a real logo for recognition/trust. Always

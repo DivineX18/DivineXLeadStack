@@ -112,6 +112,47 @@ const TRANSFORMATION_DEFAULTS: Record<
   stagnation_to_clarity: { energy: "calm", density: "rich", humanity: "balanced" },
 };
 
+/**
+ * Deterministically infer the emotional transformation from signals the
+ * system ALWAYS has — so art direction is GUARANTEED on every funnel and can
+ * never silently no-op when the model omits the param. The model's explicit
+ * emotional_transformation (now schema-required) always wins over this; this
+ * is the floor, not the ceiling.
+ */
+export function inferEmotionalTransformation(s: {
+  archetype?: string | null;
+  objective?: string | null;
+  awareness?: string | null;
+  temperature?: string | null;
+  ctaStyle?: string | null;
+  priced?: boolean;
+}): EmotionalTransformation {
+  // Distinct-industry archetypes carry their buyer's emotional register.
+  switch (s.archetype) {
+    case "professional_enterprise":
+      return "uncertainty_to_confidence";
+    case "luxury_premium":
+      return "desire_to_aspiration";
+    case "nonprofit_mission":
+      return "concern_to_action";
+    case "wellness":
+      return "fear_to_safety";
+  }
+  // High-intent direct-response lead/appointment pages (a phone CTA, a
+  // most-aware reader, hot traffic) = the urgent "help right now" register.
+  const highIntent = s.ctaStyle === "phone" || s.awareness === "most_aware" || s.temperature === "hot";
+  const leadLike = !s.objective || s.objective === "lead_generation" || s.objective === "appointment" || s.objective === "consultation";
+  if (highIntent && leadLike) return "panic_to_relief";
+  if (s.objective === "free_trial") return "frustration_to_control";
+  if (s.priced || s.objective === "purchase") return "interest_to_ownership";
+  if (s.objective === "application" || s.objective === "consultation") return "stagnation_to_clarity";
+  if (s.objective === "webinar_registration" || s.objective === "event_registration") return "discouragement_to_possibility";
+  if (s.objective === "donation") return "concern_to_action";
+  // Everything else: the balanced premium-DR treatment (visualized
+  // transformation + strong close) — never the do-nothing baseline.
+  return "frustration_to_control";
+}
+
 /** Derive the Campaign Art Direction Profile from model-supplied inputs.
  *  Precedence: explicit dimension override > transformation default >
  *  archetype fallback > neutral baseline (which applyArtDirection treats as

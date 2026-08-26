@@ -180,6 +180,8 @@ export interface FunnelPatch {
   accentColor?: string;
   designPack?: DesignPackId;
   designStrategy?: DesignStrategy | null;
+  /** Stored Campaign Art Direction profile (see FunnelDoc.artDirection). */
+  artDirection?: FunnelDoc["artDirection"];
   logoUrl?: string;
   sections?: FunnelSection[];
 }
@@ -347,6 +349,7 @@ export async function updateFunnelServerSide(opts: {
   if (patch.accentColor !== undefined) write.accentColor = patch.accentColor;
   if (patch.designPack !== undefined) write.designPack = patch.designPack;
   if (patch.designStrategy !== undefined) write.designStrategy = patch.designStrategy;
+  if (patch.artDirection !== undefined) write.artDirection = patch.artDirection;
   if (patch.logoUrl !== undefined) write.logoUrl = patch.logoUrl;
   if (patch.sections !== undefined) {
     await assertNoChainCycle(opts.subAccountId, opts.funnelId, patch.sections);

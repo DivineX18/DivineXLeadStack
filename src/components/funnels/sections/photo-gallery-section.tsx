@@ -16,7 +16,9 @@ export function PhotoGallerySection({
   accentColor: string;
 }) {
   const images = config.images ?? [];
-  if (images.length === 0 && !config.placeholderLabel) return null;
+  // Asset-fallback rule: with no REAL images the composition adapts — the
+  // section renders nothing rather than a giant placeholder dead zone.
+  if (images.length === 0) return null;
   const layout = config.layout ?? "grid";
 
   return (

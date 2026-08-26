@@ -8,19 +8,7 @@ export function StorySection({
   config: StoryConfig;
   accentColor: string;
 }) {
-  if (config.paragraphs.length === 0) {
-    return (
-      <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
-        <div className="mx-auto max-w-xl">
-          <MediaPlaceholder
-            label="This section has no story yet — add it in the builder"
-            accentColor={accentColor}
-            className="min-h-32"
-          />
-        </div>
-      </section>
-    );
-  }
+  if (config.paragraphs.length === 0) return null;
   return (
     <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
       <div className="mx-auto max-w-xl">

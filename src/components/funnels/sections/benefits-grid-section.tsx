@@ -39,27 +39,9 @@ export function BenefitsGridSection({
    *  bg, colored icon only (luxury/professional, minimal icon usage). */
   iconStyle?: "outline" | "duotone" | "filled";
 }) {
-  if (config.items.length === 0) {
-    return (
-      <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
-        <div className="mx-auto max-w-5xl">
-          {config.headline && (
-            <h2
-              className="mb-10 text-balance text-center font-extrabold tracking-tight"
-              style={{ fontSize: "clamp(1.5rem, 4vw, 2.25rem)", lineHeight: 1.15 }}
-            >
-              {config.headline}
-            </h2>
-          )}
-          <MediaPlaceholder
-            label="This section has no content yet — add it in the builder"
-            accentColor={accentColor}
-            className="min-h-32"
-          />
-        </div>
-      </section>
-    );
-  }
+  // A section without valid content renders NOTHING on the customer-facing
+  // page — never an empty band or a builder message (art-direction mandate).
+  if (config.items.length === 0) return null;
   // Art-direction variant: "alternating_image" — zigzag image/text rows for
   // calm, people-led campaigns (comfort/reassurance reads through imagery, not
   // a checklist). Items render their real imageUrl when set; otherwise the

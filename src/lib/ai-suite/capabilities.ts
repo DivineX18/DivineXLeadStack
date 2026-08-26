@@ -82,6 +82,7 @@ import {
   EMOTIONAL_TRANSFORMATIONS,
   applyArtDirection,
   deriveArtDirection,
+  inferEmotionalTransformation,
   type CampaignEnergy,
   type CampaignHumanity,
   type EmotionalTransformation,
@@ -3680,7 +3681,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           description: "Only relevant when the archetype's media strategy calls for MULTIPLE real photos (service_photo/team_photo/community_photo) — Zeno then adds a dedicated photo-gallery section (see media_strategy) instead of a single hero image, freeing the hero for a clean headline/logo. Omit to use the archetype's own recommended gallery layout.",
         },
       },
-      required: ["headline", "bullets"],
+      required: ["headline", "bullets", "emotional_transformation"],
       additionalProperties: false,
     },
     validate: (rawIn) => {
@@ -4497,6 +4498,16 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             },
           };
         }
+        // Fallback: the model sometimes folds the benefits copy into `bullets`
+        // only — seed the benefits section from them rather than shipping an
+        // empty section (which now renders nothing at all). Repetition of the
+        // core promises down the page is classic direct response, not a bug.
+        if (section.type === "benefits_grid" && (!content || content.items.length === 0) && bullets.length > 0) {
+          return {
+            ...section,
+            config: { ...section.config, items: bullets.map((b) => ({ title: b })) },
+          };
+        }
         if (section.type === "problem_solution" && content && (content.text || content.secondaryText)) {
           return {
             ...section,
@@ -4744,23 +4755,48 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // different campaigns come out of the same section library. Baseline
       // profile (no transformation supplied) = identity — zero change to
       // funnels built without art-direction inputs.
+      // GUARANTEED art direction: the model's explicit transformation (schema-
+      // required) wins; when absent/invalid we deterministically infer it from
+      // signals the system always has, so composition can never silently no-op.
+      const artTransformation =
+        ((args.emotionalTransformation as EmotionalTransformation | null) ?? null) ||
+        inferEmotionalTransformation({
+          archetype: effectiveArchetype,
+          objective: args.objective as string | null,
+          awareness: args.awareness as string | null,
+          temperature: args.trafficTemperature as string | null,
+          ctaStyle,
+          priced: args.priceCents !== null,
+        });
       const artProfile = deriveArtDirection({
-        transformation: (args.emotionalTransformation as EmotionalTransformation | null) ?? null,
+        transformation: artTransformation,
         energy: (args.campaignEnergy as CampaignEnergy | null) ?? null,
         humanity: (args.campaignHumanity as CampaignHumanity | null) ?? null,
-        // Safety net: if the model omitted the transformation, the resolved
-        // archetype still yields dimension defaults so distinct industries
-        // (professional/luxury/nonprofit/wellness) get art direction rather
-        // than silently falling to baseline.
         archetype: effectiveArchetype,
       });
       sectionsToSave = applyArtDirection(sectionsToSave, artProfile);
+
+      // CONSUME the profile's density (it must never be unused metadata): it
+      // overrides the archetype's spacing token, so an information-rich
+      // campaign gets tight direct-response rhythm even on an archetype whose
+      // default is airy (the "dead space" failure), and a minimal/luxury one
+      // keeps room to breathe.
+      const densityOverride =
+        artProfile.density === "rich" ? "high" : artProfile.density === "minimal" ? "low" : null;
+      const densityAdjustedStrategy =
+        designStrategy && densityOverride && designStrategy.visualDensity !== densityOverride
+          ? { ...designStrategy, visualDensity: densityOverride as typeof designStrategy.visualDensity }
+          : null;
 
       try {
         await updateFunnelServerSide({
           subAccountId,
           funnelId,
           patch: {
+            // Store the visual plan — composition must be explainable, never
+            // prompt-only metadata.
+            artDirection: artProfile,
+            ...(densityAdjustedStrategy ? { designStrategy: densityAdjustedStrategy } : {}),
             sections: sectionsToSave,
             ...(args.accentColor ? { accentColor: args.accentColor as string } : {}),
             ...(args.theme ? { theme: args.theme as "light" | "dark" } : {}),

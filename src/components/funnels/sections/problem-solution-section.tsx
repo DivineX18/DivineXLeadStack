@@ -1,6 +1,5 @@
 import { X, Check } from "lucide-react";
 import type { ProblemSolutionConfig } from "@/types/funnels";
-import { MediaPlaceholder } from "./media-placeholder";
 
 export function ProblemSolutionSection({
   config,
@@ -9,19 +8,9 @@ export function ProblemSolutionSection({
   config: ProblemSolutionConfig;
   accentColor: string;
 }) {
-  if (!config.problemText && !config.solutionText) {
-    return (
-      <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
-        <div className="mx-auto max-w-5xl">
-          <MediaPlaceholder
-            label="This section has no content yet — add it in the builder"
-            accentColor={accentColor}
-            className="min-h-32"
-          />
-        </div>
-      </section>
-    );
-  }
+  // No valid content -> render NOTHING on the customer-facing page (never
+  // an empty band or a builder message).
+  if (!config.problemText && !config.solutionText) return null;
   // Art-direction variant: "before_after" — the transformation VISUALIZED as
   // two strongly contrasting panels with a directional transition (muted
   // "before" state → accent-bright "after" state). Used by urgent campaigns
