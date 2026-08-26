@@ -208,7 +208,7 @@ try {
       JSON.stringify(gallery?.config),
     );
     check("5i2. Local lead_gen funnel also resolves to the centered sales-letter layout", hero?.config.layout === "centered");
-    check("5i3. The hero carries a VSL/video placeholder area under the headline (the Brunson video setup)", typeof hero?.config.mediaPlaceholderLabel === "string" && (hero.config.mediaPlaceholderLabel as string).length > 0);
+    check("5i3. URGENT phone-CTA hero drops placeholder-only media (asset-fallback: headline + CTA own the viewport, never an empty panel)", hero?.config.mediaType === "none" && !hero?.config.mediaPlaceholderLabel);
     check("5j. forced direct_response density/animation applied (high / moderate)", data.designStrategy?.visualDensity === "high" && data.designStrategy?.animationLevel === "moderate");
   }
 
