@@ -249,11 +249,69 @@ export function defaultSectionConfig(type: FunnelSectionType): FunnelSectionConf
  * stage_content, leaving every new-layout section blank — real live-model
  * testing caught this (2026-08-02).
  */
-/** Adaptive funnel DEPTH (Conversion Engine P0 — awareness/traffic drives
- *  composition, per Schwartz's awareness levels + the funnel-depth mandate).
+/** Adaptive funnel DEPTH (Conversion Engine P0 + Sales Argument Engine).
  *  "lean" strips the persuasion runway a high-intent visitor doesn't need;
- *  "standard" keeps the genre's full sequence (today's behavior). */
-export type FunnelDepth = "lean" | "standard";
+ *  "standard" keeps the genre's full sequence; "deep" ALTERS the persuasion
+ *  architecture for high-commitment/high-risk/complex decisions — adding
+ *  old-way/new-way and mechanism/authority stages, not just longer copy. */
+export type FunnelDepth = "lean" | "standard" | "deep";
+
+/**
+ * Multi-factor persuasion-depth classifier. NEVER price alone: depth emerges
+ * from commitment (objective), coldness (awareness/temperature), belief-work
+ * complexity (chain length), trust requirement (archetype), with price as one
+ * contributing stake among several. High intent always wins: a most-aware/hot
+ * visitor gets lean regardless of everything else.
+ */
+export function computePersuasionDepth(s: {
+  awareness?: string | null;
+  temperature?: string | null;
+  objective?: string | null;
+  priceCents?: number | null;
+  beliefChainLength?: number | null;
+  archetype?: string | null;
+}): FunnelDepth {
+  if (s.awareness === "most_aware" || s.temperature === "hot") return "lean";
+  let score = 0;
+  // High-commitment decision (apply/consult = a relationship, not a click).
+  if (s.objective === "application" || s.objective === "consultation") score += 2;
+  // Stakes: a $1,000+ ask raises perceived risk (contributes, never decides).
+  if ((s.priceCents ?? 0) >= 100_000) score += 1;
+  // Cold/early-awareness traffic needs real belief work.
+  if (s.awareness === "unaware" || s.awareness === "problem_aware" || s.temperature === "cold") score += 1;
+  // A long belief chain = a complex buying decision.
+  if ((s.beliefChainLength ?? 0) >= 5) score += 1;
+  // Trust-heavy categories (professional/enterprise/luxury) carry more risk.
+  if (s.archetype === "professional_enterprise" || s.archetype === "luxury_premium") score += 1;
+  return score >= 3 ? "deep" : "standard";
+}
+
+/** Stages DEEP adds per genre — old-way/new-way (comparison) + mechanism/
+ *  authority (story) where the genre lacks them. Architecture change, not
+ *  copy inflation; skipped where the section type already exists, and the
+ *  one-fold lead_magnet is never deepened. */
+const DEEP_EXTRA: Partial<Record<FunnelGenre, { afterId: string; stage: FrameworkStage }[]>> = {
+  lead_gen: [
+    { afterId: "belief_shift", stage: { id: "old_way_new_way", label: "Old Way / New Way", section: "comparison" } },
+    { afterId: "benefits", stage: { id: "mechanism_story", label: "Why This Works", section: "story" } },
+  ],
+  webinar: [
+    { afterId: "belief_shift", stage: { id: "old_way_new_way", label: "Old Way / New Way", section: "comparison" } },
+  ],
+  application: [
+    { afterId: "process", stage: { id: "old_way_new_way", label: "Old Way / New Way", section: "comparison" } },
+    { afterId: "who_not_for", stage: { id: "mechanism_story", label: "Why This Works", section: "story" } },
+  ],
+  vsl: [
+    { afterId: "problem_solution", stage: { id: "mechanism_story", label: "Why This Works", section: "story" } },
+  ],
+  tripwire: [
+    { afterId: "problem", stage: { id: "mechanism_story", label: "Why This Works", section: "story" } },
+  ],
+  challenge: [
+    { afterId: "problem", stage: { id: "mechanism_story", label: "Why This Works", section: "story" } },
+  ],
+};
 
 /** Sections a LEAN (high-intent) page keeps — hero, quick proof, the core
  *  offer/benefits, FAQ, and a CTA. Everything else is education/persuasion a
@@ -293,9 +351,22 @@ export function buildFrameworkSections(
   // Lean pages drop education/persuasion stages a high-intent visitor doesn't
   // need — but always keep the capture stage (so the page still converts) and
   // the core LEAN_KEEP stages. Standard keeps the genre's full sequence.
-  const framework = FUNNEL_FRAMEWORKS[genre].filter(
-    (stage) => depth === "standard" || stage.isCapture || LEAN_KEEP.has(stage.section),
+  // Deep INSERTS the genre's DEEP_EXTRA stages (old-way/new-way, mechanism)
+  // where their section type isn't already present.
+  let framework = FUNNEL_FRAMEWORKS[genre].filter(
+    (stage) => depth === "lean" ? stage.isCapture || LEAN_KEEP.has(stage.section) : true,
   );
+  if (depth === "deep") {
+    const present = new Set(framework.map((s) => s.section));
+    for (const extra of DEEP_EXTRA[genre] ?? []) {
+      if (present.has(extra.stage.section)) continue;
+      const at = framework.findIndex((s) => s.id === extra.afterId);
+      framework = at === -1
+        ? [...framework, extra.stage]
+        : [...framework.slice(0, at + 1), extra.stage, ...framework.slice(at + 1)];
+      present.add(extra.stage.section);
+    }
+  }
   return framework.map((stage, i) => {
     const requested = sectionOverrides?.[stage.section];
     const allowed = stageAllowedLayouts(stage);

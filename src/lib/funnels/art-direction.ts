@@ -253,6 +253,50 @@ export interface SalesArgumentPlanLike {
  *
  * Pure; returns new objects. Requires roles to be stamped first.
  */
+/** Would this section actually RENDER content? Mirrors the section
+ *  components' null-render rules — an empty/non-rendered section can never
+ *  own a required belief (belief-assignment semantics rule). */
+export function sectionHasRenderableContent(s: FunnelSection): boolean {
+  const c = s.config as unknown as Record<string, unknown>;
+  const len = (v: unknown) => (Array.isArray(v) ? v.length : 0);
+  switch (s.type) {
+    case "benefits_grid":
+    case "included":
+    case "testimonials":
+    case "stats":
+    case "faq":
+      return len(c.items) > 0;
+    case "problem_solution":
+      return !!(c.problemText || c.solutionText);
+    case "story":
+      return len(c.paragraphs) > 0;
+    case "agenda":
+      return len(c.days) > 0;
+    case "callout":
+      return !!c.text;
+    case "before_after":
+      return len(c.beforeItems) > 0 || len(c.afterItems) > 0;
+    case "comparison":
+      return len(c.rows) > 0 || len(c.items) > 0 || !!c.leftTitle || !!c.headline;
+    case "proof_strip":
+      return len(c.logos) > 0 || (c.variant !== undefined && c.variant !== "logos");
+    case "photo_gallery":
+      return len(c.images) > 0;
+    default:
+      return true; // hero / offer / cta_banner / guarantee etc. always render
+  }
+}
+
+/** Middle beliefs are assigned by PERSUASION-ROLE PRIORITY (the reframe
+ *  belongs to the belief shift, then mechanism, then proof, then promise) —
+ *  never by mere page order, and never to a section that won't render. */
+const CARRIER_ROLE_PRIORITY: Record<string, number> = {
+  belief_shift: 0,
+  mechanism: 1,
+  proof: 2,
+  promise: 3,
+};
+
 export function applySalesArgument(
   sections: FunnelSection[],
   plan: SalesArgumentPlanLike,
@@ -262,7 +306,6 @@ export function applySalesArgument(
   const first = chain[0];
   const last = chain[chain.length - 1];
   const middle = chain.slice(1, -1);
-  const CARRIERS = new Set(["belief_shift", "promise", "mechanism", "proof"]);
 
   // Benefits titles for the dedupe guard (and whether they came from bullets).
   const benefits = sections.find((s) => s.type === "benefits_grid");
@@ -270,19 +313,40 @@ export function applySalesArgument(
     ((benefits?.config as BenefitsGridConfig | undefined)?.items ?? []).map((it) => it.title.trim().toLowerCase()),
   );
 
-  let mi = 0;
-  return sections.map((s) => {
+  // Role-priority belief assignment across CONTENT-BEARING carriers only.
+  const carrierIdxs = sections
+    .map((s, idx) => ({ s, idx }))
+    .filter(({ s }) => s.argumentRole !== undefined && s.argumentRole in CARRIER_ROLE_PRIORITY && sectionHasRenderableContent(s));
+  carrierIdxs.sort(
+    (a, b) =>
+      CARRIER_ROLE_PRIORITY[a.s.argumentRole!] - CARRIER_ROLE_PRIORITY[b.s.argumentRole!] || a.idx - b.idx,
+  );
+  const beliefByIdx = new Map<number, string>();
+  carrierIdxs.forEach(({ idx }, i) => {
+    if (middle.length === 0) { beliefByIdx.set(idx, first); return; }
+    const isLast = i === carrierIdxs.length - 1;
+    // The last carrier ABSORBS any remaining middle beliefs (a benefits
+    // section with 3 items can legitimately establish 2 beliefs) so every
+    // required belief always has a responsible rendered section.
+    beliefByIdx.set(
+      idx,
+      isLast && middle.length > carrierIdxs.length
+        ? middle.slice(i).join(" + ")
+        : middle[Math.min(i, middle.length - 1)],
+    );
+  });
+
+  return sections.map((s, idx) => {
     let next = s;
     const role = s.argumentRole;
+    const renders = sectionHasRenderableContent(s);
 
-    // 1. Belief assignment.
-    if (role === "hook") next = { ...next, servesBelief: first };
-    else if (role && CARRIERS.has(role)) {
-      const belief = middle.length > 0 ? middle[Math.min(mi++, middle.length - 1)] : first;
-      next = { ...next, servesBelief: belief };
-    } else if (role === "offer" || role === "action" || role === "close") {
+    // 1. Belief assignment (only sections that will actually render).
+    if (role === "hook" && renders) next = { ...next, servesBelief: first };
+    else if (beliefByIdx.has(idx)) next = { ...next, servesBelief: beliefByIdx.get(idx)! };
+    else if ((role === "offer" || role === "action" || role === "close") && renders) {
       next = { ...next, servesBelief: last };
-    } else if (role === "objections" || role === "risk_reversal") {
+    } else if ((role === "objections" || role === "risk_reversal") && renders) {
       next = { ...next, servesBelief: middle[middle.length - 1] ?? last };
     }
 

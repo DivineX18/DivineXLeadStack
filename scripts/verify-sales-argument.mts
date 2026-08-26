@@ -172,6 +172,7 @@ function check(label: string, ok: boolean, detail?: string) {
 
   const composed = stampArgumentRoles(
     buildFrameworkSections("lead_gen").map((s, i) => {
+      if (s.type === "problem_solution") return { ...s, config: { ...s.config, problemHeadline: "The usual experience", problemText: "Voicemail, next week, surprise invoice.", solutionHeadline: "A different promise", solutionText: "One call, a tech today, price first." } };
       if (s.type === "benefits_grid") return { ...s, config: { ...s.config, items: [{ title: "Same-day dispatch" }, { title: "Upfront pricing" }, { title: "Fixed first visit" }] } };
       if (s.type === "offer") return { ...s, config: { ...s.config, bullets: ["Same-day dispatch", "A technician at your door today", "Your exact quote before any work"] } };
       if (s.type === "cta_banner") return { ...s, config: { ...s.config, headline: "Don't sweat another night", subtext: "" } };
@@ -180,10 +181,10 @@ function check(label: string, ok: boolean, detail?: string) {
   );
   const out = applySalesArgument(composed, plan);
 
-  const covered = new Set(out.map((s) => s.servesBelief).filter(Boolean));
-  check("5a. at least one section is RESPONSIBLE for belief B", covered.has(B), [...covered].join(" | "));
-  check("5b. at least one section is RESPONSIBLE for belief C", covered.has(C));
-  check("5c. at least one section is RESPONSIBLE for belief D", covered.has(D));
+  const serves = (b: string) => out.some((s) => (s.servesBelief ?? "").includes(b));
+  check("5a. at least one RENDERED section is RESPONSIBLE for belief B", serves(B), out.map((s) => `${s.type}:${s.servesBelief ?? "-"}`).join(" | "));
+  check("5b. at least one RENDERED section is RESPONSIBLE for belief C", serves(C));
+  check("5c. at least one RENDERED section is RESPONSIBLE for belief D", serves(D));
   const closers = out.filter((s) => s.argumentRole === "close" || s.argumentRole === "offer");
   check("5d. the CTA/close corresponds to ACTION", closers.length > 0 && closers.every((s) => s.servesBelief === ACTION));
   const offer = out.find((s) => s.type === "offer")!;
@@ -193,6 +194,8 @@ function check(label: string, ok: boolean, detail?: string) {
   const closeSubtext = (close.config as { subtext?: string }).subtext ?? "";
   check("5f. the close references the desired outcome + reason to act", closeSubtext.includes(plan.corePromise) && closeSubtext.includes(plan.closeReason), closeSubtext);
   check("5g. hook carries the ARRIVAL belief", out.find((s) => s.argumentRole === "hook")?.servesBelief === A);
+  check("5h. an EMPTY section (proof_strip with no logos) owns NO belief", !out.find((s) => s.type === "proof_strip")?.servesBelief);
+  check("5i. the belief SHIFT owns the first middle belief (role priority beats page order)", out.find((s) => s.argumentRole === "belief_shift")?.servesBelief === B);
 }
 
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);

@@ -27,7 +27,7 @@ for (const line of readFileSync(new URL("../.env.local", import.meta.url), "utf8
 
 const { getAdminDb, getAdminAuth } = await import("../src/lib/firebase/admin");
 const { AI_SUITE_CAPABILITIES } = await import("../src/lib/ai-suite/capabilities");
-const { FUNNEL_FRAMEWORKS, buildFrameworkSections, stageAllowedLayouts, funnelDepthForBuyer } = await import(
+const { FUNNEL_FRAMEWORKS, buildFrameworkSections, stageAllowedLayouts, funnelDepthForBuyer, computePersuasionDepth } = await import(
   "../src/lib/funnels/frameworks"
 );
 type AiSuiteActionContext = import("../src/lib/ai-suite/capabilities").AiSuiteActionContext;
@@ -404,6 +404,22 @@ try {
 
   // Standard is unchanged from the default (no regression to existing behavior).
   check("7i. explicit standard === default (no regression)", buildFrameworkSections("tripwire", undefined, "standard").length === buildFrameworkSections("tripwire").length);
+}
+
+// --- 8. DEEP persuasion depth (multi-factor, never price alone; architecture change) ---
+{
+  check("8a. high-commitment cold decision (consultation + problem_aware) -> deep", computePersuasionDepth({ objective: "consultation", awareness: "problem_aware" }) === "deep");
+  check("8b. price ALONE never makes deep ($5k, warm) -> standard", computePersuasionDepth({ priceCents: 500_000 }) === "standard");
+  check("8c. high intent always wins (most_aware consultation) -> lean", computePersuasionDepth({ objective: "consultation", awareness: "most_aware" }) === "lean");
+  check("8d. complex trust-heavy cold sale -> deep (chain 5 + professional + cold)", computePersuasionDepth({ beliefChainLength: 5, archetype: "professional_enterprise", temperature: "cold" }) === "deep");
+
+  const deep = buildFrameworkSections("lead_gen", undefined, "deep").map((s) => s.type);
+  const std = buildFrameworkSections("lead_gen").map((s) => s.type);
+  check("8e. deep lead_gen GAINS old-way/new-way (comparison) + mechanism (story)", deep.includes("comparison") && deep.includes("story"), deep.join(","));
+  check("8f. deep is an architecture change, not copy inflation (adds stages standard lacks)", deep.length > std.length && !std.includes("comparison"));
+  check("8g. old-way/new-way sits right after the belief shift", deep.indexOf("comparison") === deep.indexOf("problem_solution") + 1);
+  check("8h. deep never duplicates a section type", new Set(deep).size === deep.length);
+  check("8i. the one-fold lead_magnet is never deepened", buildFrameworkSections("lead_magnet", undefined, "deep").length === 1);
 }
 
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);

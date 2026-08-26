@@ -78,7 +78,7 @@ import { reviewFunnelCopy, type FunnelCopyReview } from "@/lib/conversion/funnel
 import type { BenefitsGridConfig, CtaBannerConfig, FunnelDoc, FunnelSection, FunnelSectionType, HeroConfig, PhotoGalleryConfig, TicketTiersConfig } from "@/types/funnels";
 import { imageryConfigured, searchSubjectImages } from "@/lib/funnels/imagery";
 import type { DesignPackId } from "@/lib/funnels/design-packs";
-import { FUNNEL_FRAMEWORKS, funnelDepthForBuyer } from "@/lib/funnels/frameworks";
+import { FUNNEL_FRAMEWORKS, computePersuasionDepth } from "@/lib/funnels/frameworks";
 import {
   EMOTIONAL_TRANSFORMATIONS,
   applyArtDirection,
@@ -90,7 +90,6 @@ import {
   type CampaignHumanity,
   type EmotionalTransformation,
 } from "@/lib/funnels/art-direction";
-import type { AwarenessLevel, TrafficTemperature } from "@/types/conversion";
 import {
   VISUAL_ARCHETYPE_IDS,
   VISUAL_ARCHETYPES,
@@ -4181,16 +4180,20 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         ...(variedPaletteId ? { paletteId: variedPaletteId } : {}),
         ctaStrategy: ((args.ctaStyle as string) || undefined) as CtaStrategyId | undefined,
       });
-      // Adaptive funnel depth (Conversion Engine P0): a most-aware reader or
-      // hot traffic gets a LEAN page straight to the CTA; priced sales genres
+      // Persuasion depth (Sales Argument Engine): multi-factor — commitment,
+      // coldness, belief-chain complexity, trust requirement, stakes — never
+      // price alone. lean = high-intent straight-to-CTA; deep = the argument
+      // architecture gains old-way/new-way + mechanism stages. Priced offers
       // are never leaned (asking for a card number earns the full page).
-      const funnelDepth =
-        args.priceCents !== null
-          ? "standard"
-          : funnelDepthForBuyer(
-              args.awareness as AwarenessLevel | null,
-              args.trafficTemperature as TrafficTemperature | null,
-            );
+      const rawDepth = computePersuasionDepth({
+        awareness: args.awareness as string | null,
+        temperature: args.trafficTemperature as string | null,
+        objective: args.objective as string | null,
+        priceCents: args.priceCents as number | null,
+        beliefChainLength: (args.salesArgument as { beliefChain?: string[] } | null)?.beliefChain?.length ?? null,
+        archetype: effectiveArchetype,
+      });
+      const funnelDepth = args.priceCents !== null && rawDepth === "lean" ? "standard" : rawDepth;
 
       const funnelId = await createFunnelServerSide({
         subAccountId,
