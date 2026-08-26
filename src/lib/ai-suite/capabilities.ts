@@ -4748,6 +4748,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         transformation: (args.emotionalTransformation as EmotionalTransformation | null) ?? null,
         energy: (args.campaignEnergy as CampaignEnergy | null) ?? null,
         humanity: (args.campaignHumanity as CampaignHumanity | null) ?? null,
+        // Safety net: if the model omitted the transformation, the resolved
+        // archetype still yields dimension defaults so distinct industries
+        // (professional/luxury/nonprofit/wellness) get art direction rather
+        // than silently falling to baseline.
+        archetype: effectiveArchetype,
       });
       sectionsToSave = applyArtDirection(sectionsToSave, artProfile);
 

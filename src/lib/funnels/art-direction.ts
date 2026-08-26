@@ -77,6 +77,21 @@ export interface ArtDirectionInputs {
   energy?: CampaignEnergy | null;
   density?: CampaignDensity | null;
   humanity?: CampaignHumanity | null;
+  /** Resolved visual archetype — the SAFETY NET when no transformation was
+   *  supplied: distinct industries still get dimension defaults (and thus art
+   *  direction) instead of silently falling to the do-nothing baseline. */
+  archetype?: string | null;
+}
+
+/** Dimension defaults per archetype, used ONLY when no transformation was
+ *  supplied. Coarser than a real transformation but always safe — e.g. a
+ *  professional/healthcare page composes calm-rational, never urgent. Absent
+ *  archetypes (incl. direct_response) stay baseline = unchanged. */
+const ARCHETYPE_FALLBACK: Record<string, { energy: CampaignEnergy; density: CampaignDensity; humanity: CampaignHumanity }> = {
+  professional_enterprise: { energy: "calm", density: "rich", humanity: "balanced" },
+  luxury_premium: { energy: "calm", density: "minimal", humanity: "people_led" },
+  nonprofit_mission: { energy: "balanced", density: "medium", humanity: "people_led" },
+  wellness: { energy: "calm", density: "medium", humanity: "people_led" },
 }
 
 /** The default character of each transformation — how that buyer state maps
@@ -98,11 +113,18 @@ const TRANSFORMATION_DEFAULTS: Record<
 };
 
 /** Derive the Campaign Art Direction Profile from model-supplied inputs.
- *  No transformation = the neutral baseline profile (which applyArtDirection
- *  treats as "change nothing"). */
+ *  Precedence: explicit dimension override > transformation default >
+ *  archetype fallback > neutral baseline (which applyArtDirection treats as
+ *  "change nothing"). */
 export function deriveArtDirection(inputs: ArtDirectionInputs): ArtDirectionProfile {
   const t = inputs.transformation ?? null;
-  const defaults = t ? TRANSFORMATION_DEFAULTS[t] : { energy: "balanced" as const, density: "medium" as const, humanity: "balanced" as const };
+  const defaults = t
+    ? TRANSFORMATION_DEFAULTS[t]
+    : ((inputs.archetype && ARCHETYPE_FALLBACK[inputs.archetype]) || {
+        energy: "balanced" as const,
+        density: "medium" as const,
+        humanity: "balanced" as const,
+      });
   return {
     transformation: t,
     energy: inputs.energy ?? defaults.energy,

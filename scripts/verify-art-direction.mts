@@ -114,5 +114,23 @@ const dentalOut = applyArtDirection(sampleSections(), deriveArtDirection({ trans
   check("6c. balanced (SaaS): strong close without the urgent dark band", cfg(saasBanners[saasBanners.length - 1]).variant === "full_bleed_close" && saas.every((s) => s.canvas !== "dark_immersive"));
 }
 
+// --- 7. Archetype fallback (safety net when the model omits the transformation) ---
+{
+  const prof = deriveArtDirection({ archetype: "professional_enterprise" });
+  check("7a. professional_enterprise fallback -> calm-rational (not baseline)", prof.energy === "calm" && !isBaselineProfile(prof));
+
+  const lux = deriveArtDirection({ archetype: "luxury_premium" });
+  check("7b. luxury_premium fallback -> calm / people_led", lux.energy === "calm" && lux.humanity === "people_led");
+
+  const dr = deriveArtDirection({ archetype: "direct_response" });
+  check("7c. direct_response with no transformation stays baseline (bold look unchanged)", isBaselineProfile(dr));
+
+  const profOut = applyArtDirection(sampleSections(), prof);
+  check("7d. fallback profile actually composes (professional gets the calm treatment, no dark bands)", profOut.some((s) => s.canvas || cfg(s).variant) && profOut.every((s) => s.canvas !== "dark_immersive"));
+
+  const explicit = deriveArtDirection({ transformation: "panic_to_relief", archetype: "professional_enterprise" });
+  check("7e. a real transformation always beats the archetype fallback", explicit.energy === "urgent");
+}
+
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);
 if (failures > 0) process.exit(1);
