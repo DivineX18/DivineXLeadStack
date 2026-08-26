@@ -92,6 +92,7 @@ export function BenefitsGridSection({
                       <MediaPlaceholder
                         label={item.title}
                         accentColor={accentColor}
+                        tone="soft"
                         className="aspect-[4/3] w-full"
                       />
                     )}

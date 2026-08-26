@@ -206,6 +206,17 @@ export function applyArtDirection(
     // immersive band mid-page, a full-bleed close. "Help is available NOW."
     if (profile.energy === "urgent") {
       switch (section.type) {
+        case "hero": {
+          // An urgent page never spends its prime viewport on an EMPTY media
+          // placeholder — with no real asset, the hero drops media entirely so
+          // the eye lands on the headline + CTA (asset-fallback rule: compose
+          // without the asset, don't design around it). Real media stays.
+          const cfg = section.config as { mediaUrl?: string; mediaType?: string; mediaPlaceholderLabel?: string };
+          if (!cfg.mediaUrl && cfg.mediaType !== "none") {
+            return { ...section, config: { ...section.config, mediaType: "none", mediaPlaceholderLabel: "" } };
+          }
+          return section;
+        }
         case "problem_solution":
           return {
             ...section,
@@ -239,12 +250,18 @@ export function applyArtDirection(
     // image-led, soft transitions, NO dark bands, editorial close.
     if (profile.energy === "calm" && profile.humanity === "people_led") {
       switch (section.type) {
-        case "benefits_grid":
+        case "benefits_grid": {
+          // Alternating rows only when the items are RICH enough to earn the
+          // layout (a description or a real image per item) — a list of bare
+          // titles reads sparse/unbalanced as a zigzag and stays a checklist.
+          const cfg = section.config as BenefitsGridConfig;
+          const rich = (cfg.items ?? []).some((it) => it.description || it.imageUrl);
           return {
             ...section,
             canvas: "warm_paper" as SectionCanvas,
-            config: { ...(section.config as BenefitsGridConfig), variant: "alternating_image" as const },
+            config: { ...cfg, variant: rich ? ("alternating_image" as const) : ("flowing_checklist" as const) },
           };
+        }
         case "problem_solution":
           return {
             ...section,

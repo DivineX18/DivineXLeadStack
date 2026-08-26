@@ -11,14 +11,21 @@ export function MediaPlaceholder({
   label,
   accentColor,
   shape = "rect",
+  tone = "dark",
   className,
 }: {
   label: string;
   accentColor: string;
   shape?: "rect" | "circle";
+  /** Emotional register of the panel. "dark" (default) = the cinematic
+   *  video-frame treatment (VSL/urgent pages). "soft" = a light, warm
+   *  accent-tinted panel for people-led/calm pages (dental, wellness,
+   *  luxury) where a near-black box would fight the page's register. */
+  tone?: "dark" | "soft";
   className?: string;
 }) {
   const isCircle = shape === "circle";
+  const soft = tone === "soft" && !isCircle;
   return (
     <div
       className={`group relative flex items-center justify-center overflow-hidden ${
@@ -27,10 +34,14 @@ export function MediaPlaceholder({
       style={{
         background: isCircle
           ? `radial-gradient(120% 120% at 30% 20%, ${accentColor}, ${accentColor}99 62%, ${accentColor}55)`
-          : `radial-gradient(120% 120% at 18% 8%, ${accentColor}38, transparent 55%), radial-gradient(120% 120% at 92% 94%, ${accentColor}26, transparent 55%), linear-gradient(135deg, #12151c, #0b0d12)`,
+          : soft
+            ? `radial-gradient(120% 120% at 20% 10%, ${accentColor}2b, transparent 60%), linear-gradient(135deg, ${accentColor}1a, ${accentColor}08)`
+            : `radial-gradient(120% 120% at 18% 8%, ${accentColor}38, transparent 55%), radial-gradient(120% 120% at 92% 94%, ${accentColor}26, transparent 55%), linear-gradient(135deg, #12151c, #0b0d12)`,
         boxShadow: isCircle
           ? "inset 0 1px 0 rgba(255,255,255,0.28)"
-          : "inset 0 1px 0 rgba(255,255,255,0.06)",
+          : soft
+            ? `inset 0 0 0 1px ${accentColor}2e`
+            : "inset 0 1px 0 rgba(255,255,255,0.06)",
         ...(isCircle ? {} : { borderRadius: "var(--flow-radius, 0.75rem)" }),
       }}
     >
@@ -40,8 +51,9 @@ export function MediaPlaceholder({
           aria-hidden
           className="pointer-events-none absolute inset-0"
           style={{
-            backgroundImage:
-              "repeating-linear-gradient(115deg, rgba(255,255,255,0.035) 0 2px, transparent 2px 22px)",
+            backgroundImage: soft
+              ? `repeating-linear-gradient(115deg, ${accentColor}0d 0 2px, transparent 2px 22px)`
+              : "repeating-linear-gradient(115deg, rgba(255,255,255,0.035) 0 2px, transparent 2px 22px)",
           }}
         />
       )}
@@ -64,7 +76,7 @@ export function MediaPlaceholder({
         {!isCircle && (
           <span
             className="text-[11px] font-semibold uppercase tracking-wide"
-            style={{ color: "rgba(255,255,255,0.72)" }}
+            style={{ color: soft ? `color-mix(in oklab, ${accentColor} 75%, black)` : "rgba(255,255,255,0.72)" }}
           >
             {label}
           </span>

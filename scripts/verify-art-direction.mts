@@ -32,7 +32,7 @@ function sampleSections(): FunnelSection[] {
   return [
     { id: "s1", type: "hero", config: { headline: "H", mediaType: "none" } },
     { id: "s2", type: "problem_solution", config: { problemHeadline: "P", problemText: "pt", solutionHeadline: "S", solutionText: "st" } },
-    { id: "s3", type: "benefits_grid", config: { headline: "B", items: [{ title: "one" }, { title: "two" }] } },
+    { id: "s3", type: "benefits_grid", config: { headline: "B", items: [{ title: "one", description: "d1" }, { title: "two", description: "d2" }] } },
     { id: "s4", type: "cta_banner", config: { headline: "Mid", ctaLabel: "Go", ctaHref: "" } },
     { id: "s5", type: "offer", config: { headline: "O", bullets: [], ctaLabel: "Get", formId: null } },
     { id: "s6", type: "faq", config: { items: [] } },
@@ -78,7 +78,18 @@ const hvacOut = applyArtDirection(sampleSections(), deriveArtDirection({ transfo
   check("3c. HVAC: the CLOSING banner is the full-bleed close", cfg(banners[banners.length - 1]).variant === "full_bleed_close");
   check("3d. HVAC: the MID banner is not (brand tint instead)", cfg(banners[0]).variant !== "full_bleed_close" && banners[0].canvas === "brand_tint");
   check("3e. HVAC: offer gets the brand-tint canvas", hvacOut.find((s) => s.type === "offer")!.canvas === "brand_tint");
-  check("3f. HVAC: hero untouched", !hvacOut.find((s) => s.type === "hero")!.canvas);
+  check("3f. HVAC: hero canvas untouched", !hvacOut.find((s) => s.type === "hero")!.canvas);
+
+  const heroWithPlaceholder = [
+    { id: "h1", type: "hero", config: { headline: "H", mediaType: "video", mediaPlaceholderLabel: "Add a video" } },
+  ] as unknown as FunnelSection[];
+  const strippedHero = applyArtDirection(heroWithPlaceholder, deriveArtDirection({ transformation: "panic_to_relief" }))[0]!;
+  check("3g. HVAC: urgent hero DROPS placeholder-only media (asset-fallback rule)", (cfg(strippedHero).mediaType as string) === "none");
+  const heroWithRealMedia = [
+    { id: "h2", type: "hero", config: { headline: "H", mediaType: "video", mediaUrl: "https://example.com/v" } },
+  ] as unknown as FunnelSection[];
+  const keptHero = applyArtDirection(heroWithRealMedia, deriveArtDirection({ transformation: "panic_to_relief" }))[0]!;
+  check("3h. HVAC: urgent hero KEEPS real media", (cfg(keptHero).mediaType as string) === "video");
 }
 
 // --- 4. The dental benchmark (fear_to_safety): calm, human composition ---
@@ -90,6 +101,11 @@ const dentalOut = applyArtDirection(sampleSections(), deriveArtDirection({ trans
   check("4a. dental: benefits become the people-led alternating_image rows", cfg(benefits).variant === "alternating_image");
   check("4b. dental: problem/solution stays the soft stacked narrative", cfg(ps).variant === "stacked" && ps.canvas === "brand_tint");
   check("4c. dental: closing banner stays the contained editorial banner", cfg(banners[banners.length - 1]).variant === "banner");
+  const bare = [
+    { id: "b1", type: "benefits_grid", config: { items: [{ title: "only-a-title" }] } },
+  ] as unknown as FunnelSection[];
+  const bareOut = applyArtDirection(bare, deriveArtDirection({ transformation: "fear_to_safety" }))[0]!;
+  check("4e. dental: title-only benefits stay a checklist (rows must EARN the zigzag)", cfg(bareOut).variant === "flowing_checklist");
   check("4d. dental: NO dark/high-contrast device anywhere (no urgency for an anxious buyer)", dentalOut.every((s) => s.canvas !== "dark_immersive" && s.canvas !== "high_contrast_cta" && cfg(s).variant !== "full_bleed_close"));
 }
 
