@@ -18,14 +18,16 @@ for (const line of readFileSync(new URL("../.env.local", import.meta.url), "utf8
 
 const { getAdminDb } = await import("../src/lib/firebase/admin");
 const { applyArtDirection, deriveArtDirection } = await import("../src/lib/funnels/art-direction");
-import type { FunnelSection } from "../src/types/funnels";
+const { imageryConfigured, searchSubjectImages } = await import("../src/lib/funnels/imagery");
+import type { FunnelSection, HeroConfig, BenefitsGridConfig } from "../src/types/funnels";
 
 const db = getAdminDb();
 const SUB = "x4NOJFn8bTyav7OeJc1v";
 
 const BENCH = [
-  { qaId: "qa-art-dental", match: "Lakeside", transformation: "fear_to_safety" as const },
-  { qaId: "qa-art-hvac", match: "Summit HVAC", transformation: "panic_to_relief" as const },
+  // imageryBrief mirrors what the model's media_subject produces at generation.
+  { qaId: "qa-art-dental", match: "Lakeside", transformation: "fear_to_safety" as const, imageryBrief: "calm modern dental office" },
+  { qaId: "qa-art-hvac", match: "Summit HVAC", transformation: "panic_to_relief" as const, imageryBrief: "air conditioning repair technician home" },
 ];
 
 if (process.argv.includes("--cleanup")) {
@@ -38,7 +40,7 @@ const snap = await db.collection("funnels").where("subAccountId", "==", SUB).get
 const all = snap.docs.map((d) => d.data()).sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
 
 for (const b of BENCH) {
-  const src = all.find((f) => typeof f.name === "string" && f.name.includes(b.match));
+  const src = all.find((f) => typeof f.name === "string" && f.name.includes(b.match) && !f.name.startsWith("[QA]"));
   if (!src) { console.error(`benchmark not found: ${b.match}`); continue; }
 
   let sections = (src.sections as FunnelSection[]).map((s) => ({ ...s, config: { ...s.config } }));
@@ -52,6 +54,29 @@ for (const b of BENCH) {
   );
 
   const profile = deriveArtDirection({ transformation: b.transformation });
+
+  // Mirror generation-time auto-imagery (hero + benefits rows, honesty-guarded).
+  if (imageryConfigured()) {
+    const photos = await searchSubjectImages(b.imageryBrief, 4);
+    let photoIdx = 0;
+    sections = sections.map((s) => {
+      if (s.type === "hero") {
+        const c = s.config as HeroConfig;
+        if (!c.mediaUrl && c.mediaType !== "none" && photoIdx < photos.length) {
+          const p = photos[photoIdx++];
+          return { ...s, config: { ...c, mediaType: "image" as const, mediaUrl: p.url, mediaIsStock: true, mediaPlaceholderLabel: "" } };
+        }
+        return s;
+      }
+      if (s.type === "benefits_grid" && profile.energy !== "urgent") {
+        const c = s.config as BenefitsGridConfig;
+        return { ...s, config: { ...c, items: c.items.map((it) => (!it.imageUrl && photoIdx < photos.length ? { ...it, imageUrl: photos[photoIdx++].url, imageIsStock: true } : it)) } };
+      }
+      return s;
+    });
+    console.log(`  imagery: ${photos.length} photos fetched for "${b.imageryBrief}"`);
+  }
+
   sections = applyArtDirection(sections, profile);
 
   const densityOverride = profile.density === "rich" ? "high" : profile.density === "minimal" ? "low" : null;
