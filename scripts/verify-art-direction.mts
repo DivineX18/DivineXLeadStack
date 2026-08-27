@@ -172,6 +172,7 @@ const dentalOut = applyArtDirection(sampleSections(), deriveArtDirection({ trans
 // --- 9. THE STORY-FOLD LAW: adjacent beats always differentiated ---
 {
   const { enforceFoldDifferentiation, sectionHasRenderableContent } = await import("../src/lib/funnels/art-direction");
+  const { buildFrameworkSections } = await import("../src/lib/funnels/frameworks");
   const contentful = (): FunnelSection[] => ([
     { id: "f1", type: "hero", config: { headline: "H", mediaType: "none" } },
     { id: "f2", type: "problem_solution", config: { problemText: "p", solutionText: "s" } },
