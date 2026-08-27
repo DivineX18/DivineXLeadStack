@@ -96,6 +96,7 @@ export function HeroSection({
   headlineGradient,
   ctaAnimationLevel,
   successRedirect,
+  published,
 }: {
   config: HeroConfig;
   accentColor: string;
@@ -105,7 +106,16 @@ export function HeroSection({
   headlineGradient?: [string, string];
   ctaAnimationLevel?: "none" | "minimal" | "moderate" | "expressive";
   successRedirect?: string;
+  /** True on the live published render. A placeholder-only media slot
+   *  (label but no real URL) renders in the builder/preview as an honest
+   *  "add your asset" frame — but on a LIVE page it's a dead dark block
+   *  that eats most of the first fold (Story-Fold Law violation) and reads
+   *  like unfinished scaffolding to a visitor. Published pages drop it. */
+  published?: boolean;
 }) {
+  if (published && !config.mediaUrl && config.mediaType !== "none") {
+    config = { ...config, mediaType: "none", mediaPlaceholderLabel: undefined };
+  }
   // A device-mockup/split/background/founder layout still renders (with an
   // honest labeled placeholder) when Zeno set mediaPlaceholderLabel but has
   // no real asset yet — but never for a plain funnel with neither signal,
@@ -348,7 +358,10 @@ export function HeroSection({
         {eyebrow}
         <h1
           className="text-balance font-extrabold tracking-tight"
-          style={{ fontSize: "clamp(2.25rem, 6vw, 4.25rem)", lineHeight: 1.08 }}
+          /* Bulleted (one-fold squeeze) heroes cap the display size a step
+             lower — the fold has to hold headline + sub + CTA + proof line
+             + bullets, and 4.25rem across three lines alone eats half of it. */
+          style={{ fontSize: config.bullets?.length ? "clamp(2rem, 4.5vw, 3.1rem)" : "clamp(2.25rem, 6vw, 4.25rem)", lineHeight: 1.08 }}
         >
           {headlineNode}
         </h1>

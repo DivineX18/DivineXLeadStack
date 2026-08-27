@@ -260,7 +260,18 @@ export function PublicFunnelView({
                   accentColor={funnel.accentColor}
                   theme={funnel.theme}
                   forms={forms}
-                  successRedirect={funnel.status === "published" ? `/lp/${funnel.id}/thanks` : undefined}
+                  successRedirect={
+                    funnel.status === "published"
+                      ? funnel.bridge?.nextFunnelId
+                        ? // Straight to the next offer — no extra click. The
+                          // offer page shows a confirmation bar (?welcome=1)
+                          // with the delivery note + download link, so the
+                          // visitor still sees their signup landed.
+                          `/lp/${funnel.bridge.nextFunnelId}?welcome=1&from=${funnel.id}`
+                        : `/lp/${funnel.id}/thanks`
+                      : undefined
+                  }
+                  published={funnel.status === "published"}
                   funnelId={funnel.id}
                   sectionId={section.id}
                   subAccountId={funnel.subAccountId}

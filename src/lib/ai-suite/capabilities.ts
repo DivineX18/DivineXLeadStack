@@ -247,10 +247,13 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
  * genuine content; an unterminated trailing fragment is stripped too.
  */
 function stripToolSyntaxDebris(text: string): string {
-  return text
-    .replace(/<\/?(?:an[a-z_]*|parameter|invoke|function[a-z_]*)\b[^>]*>/gi, "")
-    .replace(/<\/?(?:an[a-z_]*|parameter|invoke|function[a-z_]*)\b[^>]*$/i, "")
-    .trim();
+  // TRUNCATE at the first debris tag rather than excising tags inline:
+  // everything after leaked scaffolding belongs to a DIFFERENT parameter
+  // (live case: '…take home.</anheadline> <parameter name="eyebrow">AFTER
+  // YOUR GUIDE' — inline removal would weld "AFTER YOUR GUIDE" onto the
+  // subheadline; truncation keeps each field's own content only).
+  const i = text.search(/<\/?(?:an[a-z_]*|parameter|invoke|function[a-z_]*)\b/i);
+  return (i === -1 ? text : text.slice(0, i)).trim();
 }
 
 function str(raw: unknown, key: string): string {
