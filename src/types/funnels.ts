@@ -142,7 +142,10 @@ export interface HeroConfig {
 
 export interface ProofStripConfig {
   variant: "logos" | "rating";
-  rating?: { score: number; reviewCount: number; scale?: number };
+  /** REAL rating only (e.g. the business's actual Google rating) — never
+   *  fabricated. `href` links the strip to the live profile (Google Business,
+   *  etc.) so the proof is verifiable. */
+  rating?: { score: number; reviewCount: number; scale?: number; href?: string };
   logos?: { url: string; alt: string }[];
 }
 

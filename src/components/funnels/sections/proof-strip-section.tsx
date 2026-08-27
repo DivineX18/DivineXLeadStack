@@ -3,11 +3,14 @@ import type { ProofStripConfig } from "@/types/funnels";
 
 export function ProofStripSection({ config }: { config: ProofStripConfig }) {
   if (config.variant === "rating" && config.rating) {
-    const { score, reviewCount, scale = 5 } = config.rating;
+    const { score, reviewCount, scale = 5, href } = config.rating;
     if (!reviewCount) return null;
+    const Wrap = href ? "a" : "div";
     return (
       <section className="px-4 py-5">
-        <div className="mx-auto flex w-fit max-w-3xl items-center justify-center gap-2.5 rounded-full border bg-[var(--card-bg)] px-4 py-2 shadow-sm"
+        <Wrap
+          {...(href ? { href, target: "_blank", rel: "noopener noreferrer", title: "See our reviews" } : {})}
+          className="mx-auto flex w-fit max-w-3xl items-center justify-center gap-2.5 rounded-full border bg-[var(--card-bg)] px-4 py-2 shadow-sm"
           style={
             {
               "--card-bg": "color-mix(in oklab, currentColor 3%, transparent)",
@@ -31,7 +34,7 @@ export function ProofStripSection({ config }: { config: ProofStripConfig }) {
           <span className="text-sm opacity-50">
             — {reviewCount.toLocaleString()} ratings
           </span>
-        </div>
+        </Wrap>
       </section>
     );
   }

@@ -32,7 +32,7 @@ export function VideoSection({
         )}
         {config.embedUrl ? (
           <div
-            className="relative mx-auto aspect-video overflow-hidden rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.35)] ring-1 ring-black/5 dark:ring-white/10"
+            className="relative mx-auto aspect-video max-h-[55vh] overflow-hidden rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.35)] ring-1 ring-black/5 dark:ring-white/10"
             style={{ boxShadow: `0 20px 60px -15px ${accentColor}40` }}
           >
             <iframe

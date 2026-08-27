@@ -198,5 +198,24 @@ function check(label: string, ok: boolean, detail?: string) {
   check("5i. the belief SHIFT owns the first middle belief (role priority beats page order)", out.find((s) => s.argumentRole === "belief_shift")?.servesBelief === B);
 }
 
+// --- 6. Queue close-out: real-rating strip + low-ticket depth ---
+{
+  const base = { genre: "lead_gen", headline: "H", bullets: ["b1"], emotional_transformation: "frustration_to_control" };
+  const withRating = cap.validate!({ ...base, real_rating: { score: 4.7, count: 6287, url: "https://g.page/example" } });
+  check("6a. a real rating validates + parses (score/count/link)", withRating.ok && !!withRating.args.realRating && (withRating.args.realRating as { score: number }).score === 4.7);
+  const fake = cap.validate!({ ...base, real_rating: { score: 9.9, count: 0 } });
+  check("6b. invalid rating numbers parse to null (never rendered)", fake.ok && fake.args.realRating === null);
+  const none = cap.validate!({ ...base });
+  check("6c. absent rating parses to null", none.ok && none.args.realRating === null);
+
+  // Low-ticket depth variation: $29 composes LEAN, $500 composes standard.
+  const v29 = cap.validate!({ ...base, genre: "tripwire", price_cents: 2900 });
+  const v500 = cap.validate!({ ...base, genre: "tripwire", price_cents: 50000 });
+  check("6d. $29 and $500 both validate", v29.ok && v500.ok);
+  const lean29 = buildFrameworkSections("tripwire", undefined, "lean").length;
+  const std500 = buildFrameworkSections("tripwire").length;
+  check("6e. the $29 lean tripwire is materially SHORTER than the $500 standard one", lean29 < std500, `${lean29} < ${std500}`);
+}
+
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);
 if (failures > 0) process.exit(1);

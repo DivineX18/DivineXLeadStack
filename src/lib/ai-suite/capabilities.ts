@@ -3506,6 +3506,17 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           description:
             "Short trust-signal labels for a Trust Badges row, e.g. ['Secure checkout', 'Privacy protected']. Only include badges that are actually true of this funnel — e.g. only add a money-back-guarantee badge if guarantee_headline is also set. Safe generic ones like 'Secure checkout' and 'Privacy protected' are fine whenever there's a form or checkout. Omit if the genre has no Trust Badges section.",
         },
+        real_rating: {
+          type: "object",
+          description:
+            "The business's REAL public rating — ONLY when the user explicitly stated it (e.g. their actual Google rating). Renders as a linked star strip directly under the hero (verifiable social proof above the fold). NEVER estimate, invent, or round up; omit entirely when the user didn't provide real numbers.",
+          properties: {
+            score: { type: "number", description: "The real average rating, e.g. 4.7" },
+            count: { type: "integer", description: "The real review count, e.g. 6287" },
+            url: { type: "string", description: "Link to the live profile (Google Business etc.) when given." },
+          },
+          required: ["score", "count"],
+        },
         hero_trust_badges: {
           type: "array",
           items: { type: "string" },
@@ -4030,6 +4041,15 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           trafficTemperature: (["cold", "warm", "hot"] as readonly string[]).includes(str(raw, "traffic_temperature")) ? str(raw, "traffic_temperature") : null,
           objective: (["lead_generation", "appointment", "application", "free_trial", "purchase", "webinar_registration", "audit_request", "consultation", "event_registration", "donation"] as readonly string[]).includes(str(raw, "objective")) ? str(raw, "objective") : null,
           leadMagnetNeeded: typeof (raw as Record<string, unknown>)?.lead_magnet_needed === "boolean" ? ((raw as Record<string, unknown>).lead_magnet_needed as boolean) : null,
+          realRating: (() => {
+            const r = (raw as Record<string, unknown>).real_rating;
+            if (!r || typeof r !== "object" || Array.isArray(r)) return null;
+            const o = r as Record<string, unknown>;
+            const score = typeof o.score === "number" && o.score > 0 && o.score <= 5 ? Math.round(o.score * 10) / 10 : null;
+            const count = typeof o.count === "number" && o.count >= 1 ? Math.floor(o.count) : null;
+            const url = typeof o.url === "string" && /^https?:\/\//.test(o.url) ? o.url.slice(0, 500) : undefined;
+            return score && count ? { score, count, ...(url ? { url } : {}) } : null;
+          })(),
           // Sales Argument Plan — validated + capped; too thin to be a real
           // argument (no prospect, or a chain under 2 steps) = null (not stored).
           salesArgument: (() => {
@@ -4202,7 +4222,16 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         beliefChainLength: (args.salesArgument as { beliefChain?: string[] } | null)?.beliefChain?.length ?? null,
         archetype: effectiveArchetype,
       });
-      const funnelDepth = args.priceCents !== null && rawDepth === "lean" ? "standard" : rawDepth;
+      // Priced-tier depth variation: a low-ticket impulse offer (<$100)
+      // composes LEAN (short, punchy product page) unless the situation is
+      // genuinely deep; a $100+ ask always earns at least the full sequence.
+      const priceC = args.priceCents as number | null;
+      const funnelDepth =
+        priceC !== null && priceC > 0 && priceC < 10_000 && rawDepth !== "deep"
+          ? "lean"
+          : priceC !== null && rawDepth === "lean"
+            ? "standard"
+            : rawDepth;
       // Decision complexity — the model's judgement wins (it knows
       // stakeholders/implementation/procurement); the computed floor
       // guarantees a sane value from price/objective/archetype.
@@ -4919,6 +4948,25 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // adjacent sections share a background, so each story beat reads as its
       // own frame (register-appropriate: calm pages alternate soft surfaces).
       sectionsToSave = enforceFoldDifferentiation(sectionsToSave, artProfile);
+      // Above-the-fold VERIFIED social proof: when the user supplied their
+      // real rating, the strip renders directly under the hero (linked to the
+      // live profile when given). Reuses the existing proof_strip; inserts one
+      // when the genre has none. Never rendered without real numbers.
+      const realRating = args.realRating as { score: number; count: number; url?: string } | null;
+      if (realRating) {
+        const ratingConfig = {
+          variant: "rating" as const,
+          rating: { score: realRating.score, reviewCount: realRating.count, ...(realRating.url ? { href: realRating.url } : {}) },
+        };
+        const stripIdx = sectionsToSave.findIndex((x) => x.type === "proof_strip");
+        if (stripIdx !== -1) {
+          sectionsToSave = sectionsToSave.map((x, i) => (i === stripIdx ? { ...x, config: ratingConfig, argumentRole: "proof" } : x));
+        } else {
+          const heroIdx = sectionsToSave.findIndex((x) => x.type === "hero");
+          const strip = { id: `rating-${Date.now()}`, type: "proof_strip" as const, config: ratingConfig, argumentRole: "proof" };
+          sectionsToSave = [...sectionsToSave.slice(0, heroIdx + 1), strip, ...sectionsToSave.slice(heroIdx + 1)];
+        }
+      }
 
       // CONSUME the profile's density (it must never be unused metadata): it
       // overrides the archetype's spacing token, so an information-rich
