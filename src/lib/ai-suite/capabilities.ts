@@ -85,6 +85,7 @@ import {
   deriveArtDirection,
   applySalesArgument,
   inferEmotionalTransformation,
+  synthesizeSalesArgument,
   stampArgumentRoles,
   type CampaignEnergy,
   type CampaignHumanity,
@@ -4902,12 +4903,17 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // assigned to responsible sections (servesBelief), offer bullets that
       // duplicate benefits are removed, and the close is seeded from
       // corePromise + closeReason when left generic. Never decorative.
-      if (args.salesArgument) {
-        sectionsToSave = applySalesArgument(
-          sectionsToSave,
-          args.salesArgument as { beliefChain: string[]; corePromise: string; closeReason: string },
-        );
-      }
+      // FLOOR: a missing model plan is synthesized from the model's own copy
+      // (headline/bullets/CTA) so the argument — and servesBelief coverage —
+      // can never be absent. An explicit plan always wins.
+      const effectivePlan =
+        (args.salesArgument as { beliefChain: string[]; corePromise: string; closeReason: string } | null) ??
+        synthesizeSalesArgument({
+          headline: args.headline as string,
+          bullets: (args.bullets as string[]) ?? [],
+          ctaLabel: (args.ctaLabel as string) || undefined,
+        });
+      sectionsToSave = applySalesArgument(sectionsToSave, effectivePlan);
 
       // CONSUME the profile's density (it must never be unused metadata): it
       // overrides the archetype's spacing token, so an information-rich

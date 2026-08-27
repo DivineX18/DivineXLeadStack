@@ -287,6 +287,36 @@ export function sectionHasRenderableContent(s: FunnelSection): boolean {
   }
 }
 
+/**
+ * FLOOR for a missing model plan: synthesize a minimal Sales Argument from
+ * the model's OWN page copy (the headline is the hook claim; the bullets are
+ * the claims the reader must come to accept; the CTA is the action). Grounded
+ * entirely in copy the model already wrote — nothing invented. An explicit
+ * model-written sales_argument always wins; this guarantees the argument
+ * object (and servesBelief coverage) can never be absent.
+ */
+export function synthesizeSalesArgument(input: {
+  headline: string;
+  bullets: string[];
+  ctaLabel?: string;
+}): SalesArgumentPlanLike & { prospect: string; arrivalContext: string; currentBelief: string; oldWay: string; whyOldWayFails: string; mechanism: string; primaryObjection: string; riskReversal: string } {
+  const chain = [input.headline, ...input.bullets.slice(0, 4)].filter(Boolean);
+  chain.push(input.ctaLabel ? `Taking the next step (${input.ctaLabel}) is the natural conclusion` : "Taking the next step is the natural conclusion");
+  return {
+    prospect: "",
+    arrivalContext: "",
+    currentBelief: "",
+    beliefChain: chain,
+    oldWay: "",
+    whyOldWayFails: "",
+    mechanism: "",
+    corePromise: input.headline,
+    primaryObjection: "",
+    riskReversal: "",
+    closeReason: "",
+  };
+}
+
 /** Middle beliefs are assigned by PERSUASION-ROLE PRIORITY (the reframe
  *  belongs to the belief shift, then mechanism, then proof, then promise) —
  *  never by mere page order, and never to a section that won't render. */
