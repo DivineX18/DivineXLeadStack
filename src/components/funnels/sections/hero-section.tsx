@@ -366,8 +366,20 @@ export function HeroSection({
           />
         )}
 
-        {bulletsNode}
-        {cta}
+        {config.bullets && config.bullets.length > 0 ? (
+          // One-fold/squeeze order: the CTA stays in the FIRST frame (no
+          // scrolling to act on a short free-offer page); bullets support
+          // the decision underneath.
+          <>
+            {cta}
+            {bulletsNode}
+          </>
+        ) : (
+          <>
+            {bulletsNode}
+            {cta}
+          </>
+        )}
       </div>
     </section>
   );
