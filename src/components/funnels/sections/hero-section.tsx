@@ -152,7 +152,7 @@ export function HeroSection({
   );
 
   const cta = (config.ctaLabel || form) && (
-    <div className="mt-10">
+    <div className="mt-7">
       <CtaButton
         label={config.ctaLabel || "Get it now"}
         href={config.ctaHref}
@@ -336,7 +336,7 @@ export function HeroSection({
 
   return (
     <section
-      className="relative overflow-hidden px-4 pb-16 pt-20 sm:pt-28"
+      className="relative overflow-hidden px-4 pb-10 pt-10 sm:pt-16"
       style={{
         backgroundImage: `linear-gradient(180deg, ${accentColor}22 0%, ${accentColor}0a 45%, transparent 80%), radial-gradient(ellipse 70% 50% at 50% 0%, ${accentColor}30, transparent)`,
       }}
@@ -359,10 +359,13 @@ export function HeroSection({
         )}
 
         {config.mediaType !== "none" && (
+          // max-h keeps the whole first fold intact: with CSS aspect-ratio the
+          // box shrinks its width to honor the height cap, so headline + media
+          // + CTA all land in one viewport instead of forcing a scroll to act.
           <MediaBlock
             config={config}
             accentColor={accentColor}
-            className="mx-auto mt-10 aspect-video max-w-2xl"
+            className="mx-auto mt-6 aspect-video max-h-[38vh] max-w-2xl"
           />
         )}
 
