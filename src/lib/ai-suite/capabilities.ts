@@ -84,6 +84,7 @@ import {
   applyArtDirection,
   deriveArtDirection,
   applySalesArgument,
+  enforceFoldDifferentiation,
   inferEmotionalTransformation,
   synthesizeSalesArgument,
   stampArgumentRoles,
@@ -4914,6 +4915,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           ctaLabel: (args.ctaLabel as string) || undefined,
         });
       sectionsToSave = applySalesArgument(sectionsToSave, effectivePlan);
+      // STORY-FOLD LAW: every rendered beat gets a distinct surface — no two
+      // adjacent sections share a background, so each story beat reads as its
+      // own frame (register-appropriate: calm pages alternate soft surfaces).
+      sectionsToSave = enforceFoldDifferentiation(sectionsToSave, artProfile);
 
       // CONSUME the profile's density (it must never be unused metadata): it
       // overrides the archetype's spacing token, so an information-rich

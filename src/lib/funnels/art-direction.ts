@@ -408,6 +408,37 @@ export function applySalesArgument(
   });
 }
 
+/**
+ * THE STORY-FOLD LAW (user core principle): every section is a story beat, and
+ * adjacent beats must be CLEARLY DIFFERENTIATED — no two neighboring rendered
+ * sections may share the same surface. This post-pass assigns an explicit
+ * canvas to every rendered section that the register mapping left unassigned,
+ * cycling register-appropriate surfaces (calm/soft registers never receive a
+ * dark or high-contrast surface from the alternator; explicit register
+ * decisions like the urgent dark band are always preserved). Self-painting
+ * sections (the hero's own gradient, the full-bleed close) count as their own
+ * distinct surfaces. Null-rendered sections are skipped entirely so they never
+ * break the alternation chain.
+ */
+export function enforceFoldDifferentiation(
+  sections: FunnelSection[],
+  profile: ArtDirectionProfile,
+): FunnelSection[] {
+  const soft: SectionCanvas[] = ["warm_paper", "clean", "brand_tint"];
+  let prev: string | null = null; // previous rendered beat's surface signature
+  return sections.map((s) => {
+    if (!sectionHasRenderableContent(s)) return s;
+    // Self-painting beats: distinct by construction.
+    if (s.type === "hero") { prev = "hero:self"; return s; }
+    if ((s.config as { variant?: string }).variant === "full_bleed_close") { prev = "accent:self"; return s; }
+    if (s.canvas) { prev = s.canvas; return s; } // explicit register decision wins
+    // Assign the first soft surface that differs from the previous beat.
+    const next = soft.find((c) => c !== prev) ?? "clean";
+    prev = next;
+    return { ...s, canvas: next };
+  });
+}
+
 // ─── Profile → composition mapping ─────────────────────────────────────────
 
 /**

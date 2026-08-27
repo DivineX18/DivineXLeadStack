@@ -169,5 +169,40 @@ const dentalOut = applyArtDirection(sampleSections(), deriveArtDirection({ trans
   })());
 }
 
+// --- 9. THE STORY-FOLD LAW: adjacent beats always differentiated ---
+{
+  const { enforceFoldDifferentiation, sectionHasRenderableContent } = await import("../src/lib/funnels/art-direction");
+  const contentful = (): FunnelSection[] => ([
+    { id: "f1", type: "hero", config: { headline: "H", mediaType: "none" } },
+    { id: "f2", type: "problem_solution", config: { problemText: "p", solutionText: "s" } },
+    { id: "f3", type: "benefits_grid", config: { items: [{ title: "a" }] } },
+    { id: "f4", type: "offer", config: { headline: "O", bullets: ["x"], ctaLabel: "Go", formId: null } },
+    { id: "f5", type: "faq", config: { items: [{ question: "q", answer: "a" }] } },
+    { id: "f6", type: "cta_banner", config: { headline: "C", ctaLabel: "Go", ctaHref: "" } },
+  ] as unknown as FunnelSection[]);
+
+  // Calm register (dental-like): previously a continuous warm field — now every
+  // adjacent pair must differ, with NO dark/high-contrast surfaces introduced.
+  const calm = deriveArtDirection({ transformation: "fear_to_safety" });
+  const calmOut = enforceFoldDifferentiation(applyArtDirection(contentful(), calm), calm);
+  const surfaces = calmOut.filter((x) => sectionHasRenderableContent(x) && x.type !== "hero").map((x) => (x.config as { variant?: string }).variant === "full_bleed_close" ? "accent:self" : x.canvas ?? "UNASSIGNED");
+  let adjacentClash = false;
+  for (let i = 1; i < surfaces.length; i++) if (surfaces[i] === surfaces[i - 1]) adjacentClash = true;
+  check("9a. calm page: NO two adjacent beats share a surface", !adjacentClash, surfaces.join(" | "));
+  check("9b. calm page: every rendered beat has an explicit surface", !surfaces.includes("UNASSIGNED"));
+  check("9c. calm page: the alternator never introduces dark/high-contrast", calmOut.every((x) => x.canvas !== "dark_immersive" && x.canvas !== "high_contrast_cta"));
+
+  // Urgent register: explicit register decisions (dark band) preserved.
+  const urgent = deriveArtDirection({ transformation: "panic_to_relief" });
+  const urgentOut = enforceFoldDifferentiation(applyArtDirection(contentful(), urgent), urgent);
+  check("9d. urgent page: the dark urgency band survives the alternator", urgentOut.find((x) => x.type === "benefits_grid")?.canvas === "dark_immersive");
+
+  // CTA cadence floor: every multi-section genre carries >= 3 CTA-bearing beats.
+  const CTA_BEARING = new Set(["hero", "offer", "ticket_tiers", "cta_banner"]);
+  const genres = ["lead_gen", "webinar", "application", "tripwire", "challenge", "vsl"] as const;
+  const floorOk = genres.every((g) => buildFrameworkSections(g).filter((x) => CTA_BEARING.has(x.type)).length >= 3);
+  check("9e. CTA cadence floor: every multi-section genre has >= 3 action beats", floorOk);
+}
+
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);
 if (failures > 0) process.exit(1);
