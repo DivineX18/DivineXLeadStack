@@ -545,6 +545,15 @@ export interface FunnelDoc {
     density: "minimal" | "medium" | "rich";
     humanity: "product_led" | "balanced" | "people_led";
   };
+  /** Persuasion depth this funnel was composed at (lean/standard/deep) —
+   *  how much BELIEF CHANGE the page performs. Persisted for certification
+   *  traces + Zeno explainability. */
+  persuasionDepth?: "lean" | "standard" | "deep";
+  /** Decision complexity (low/moderate/high/enterprise) — how much
+   *  information/proof/risk-reduction SUPPORT the decision requires.
+   *  Orthogonal to persuasion depth: a most-aware enterprise buyer may be
+   *  lean + enterprise. */
+  decisionComplexity?: "low" | "moderate" | "high" | "enterprise";
   /** The Sales Argument Plan this funnel was built to EXECUTE — the belief
    *  work the page does, constructed BEFORE composition and stored so the
    *  argument is explainable (Zeno: "what must this prospect believe?") and

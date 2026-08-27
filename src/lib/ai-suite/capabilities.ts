@@ -78,7 +78,7 @@ import { reviewFunnelCopy, type FunnelCopyReview } from "@/lib/conversion/funnel
 import type { BenefitsGridConfig, CtaBannerConfig, FunnelDoc, FunnelSection, FunnelSectionType, HeroConfig, PhotoGalleryConfig, TicketTiersConfig } from "@/types/funnels";
 import { imageryConfigured, searchSubjectImages } from "@/lib/funnels/imagery";
 import type { DesignPackId } from "@/lib/funnels/design-packs";
-import { FUNNEL_FRAMEWORKS, computePersuasionDepth } from "@/lib/funnels/frameworks";
+import { FUNNEL_FRAMEWORKS, computeDecisionComplexity, computePersuasionDepth, type DecisionComplexity } from "@/lib/funnels/frameworks";
 import {
   EMOTIONAL_TRANSFORMATIONS,
   applyArtDirection,
@@ -3400,6 +3400,12 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           description:
             "Optional override of the transformation's default energy — only when the business genuinely deviates (e.g. a non-emergency HVAC maintenance plan is NOT urgent). Omit to use the transformation's own character.",
         },
+        decision_complexity: {
+          type: "string",
+          enum: ["low", "moderate", "high", "enterprise"],
+          description:
+            "How much INFORMATION, proof, risk reduction, and buying SUPPORT this decision requires — ORTHOGONAL to persuasion: a most-aware enterprise prospect may need almost no convincing but substantial decision support (implementation, process, evaluation criteria, governance-grade FAQ). Judge from: price/commitment, offer complexity, trust requirement, perceived risk, sales-cycle length, number of decision makers, implementation/procurement burden. low = free/simple asks (ebook, checklist, emergency call). moderate = typical service bookings. high = considered purchases ($2k+, applications, multi-week engagements) — the page gains What's-Included + Process/Rollout stages; fill stage_content 'included' (concrete deliverables/implementation detail) + process_steps (rollout) for them. enterprise = multi-stakeholder/procurement decisions — additionally gains a Comparison/Evaluation stage; fill a stage_content 'comparison' entry (honest evaluation criteria vs alternatives) and write FAQ items at implementation/security/procurement grade. Omit if unsure — a safe floor is computed from price/objective.",
+        },
         campaign_humanity: {
           type: "string",
           enum: ["product_led", "balanced", "people_led"],
@@ -4055,6 +4061,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           emotionalTransformation: (EMOTIONAL_TRANSFORMATIONS as readonly string[]).includes(str(raw, "emotional_transformation")) ? str(raw, "emotional_transformation") : null,
           campaignEnergy: (["calm", "balanced", "urgent"] as readonly string[]).includes(str(raw, "campaign_energy")) ? str(raw, "campaign_energy") : null,
           campaignHumanity: (["product_led", "balanced", "people_led"] as readonly string[]).includes(str(raw, "campaign_humanity")) ? str(raw, "campaign_humanity") : null,
+          decisionComplexity: (["low", "moderate", "high", "enterprise"] as readonly string[]).includes(str(raw, "decision_complexity")) ? str(raw, "decision_complexity") : null,
           confirmationEmailSubject: truncateAtWord(str(raw, "confirmation_email_subject"), 120),
           confirmationEmailBody: fixLiteralNewlines(str(raw, "confirmation_email_body")).slice(0, 2000),
           tag,
@@ -4194,6 +4201,16 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         archetype: effectiveArchetype,
       });
       const funnelDepth = args.priceCents !== null && rawDepth === "lean" ? "standard" : rawDepth;
+      // Decision complexity — the model's judgement wins (it knows
+      // stakeholders/implementation/procurement); the computed floor
+      // guarantees a sane value from price/objective/archetype.
+      const decisionComplexity: DecisionComplexity =
+        (args.decisionComplexity as DecisionComplexity | null) ??
+        computeDecisionComplexity({
+          objective: args.objective as string | null,
+          priceCents: args.priceCents as number | null,
+          archetype: effectiveArchetype,
+        });
 
       const funnelId = await createFunnelServerSide({
         subAccountId,
@@ -4202,6 +4219,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         genre,
         stageOverrides: layoutChoices as Record<string, FunnelSectionType>,
         depth: funnelDepth,
+        complexity: decisionComplexity,
         designPack,
         designStrategy,
       });
@@ -4911,6 +4929,8 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             // Store the visual plan + sales argument — composition AND
             // persuasion must be explainable, never prompt-only metadata.
             artDirection: artProfile,
+            persuasionDepth: funnelDepth,
+            decisionComplexity,
             ...(args.salesArgument ? { salesArgument: args.salesArgument as NonNullable<FunnelDoc["salesArgument"]> } : {}),
             ...(densityAdjustedStrategy ? { designStrategy: densityAdjustedStrategy } : {}),
             sections: sectionsToSave,

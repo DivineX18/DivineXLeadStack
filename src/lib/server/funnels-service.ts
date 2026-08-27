@@ -4,7 +4,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { getStripeForTenant } from "@/lib/stripe/tenant-server";
 import { materializeCheckoutPrice } from "@/lib/funnels/materialize-price";
-import { buildFrameworkSections, type FunnelDepth } from "@/lib/funnels/frameworks";
+import { buildFrameworkSections, type DecisionComplexity, type FunnelDepth } from "@/lib/funnels/frameworks";
 import { resolveDesignPack, type DesignPackId } from "@/lib/funnels/design-packs";
 import { resolveEffectiveDesignTokens, type DesignStrategy } from "@/lib/funnels/design-strategy";
 import type {
@@ -103,6 +103,10 @@ export async function createFunnelServerSide(opts: {
    *  stages a high-intent visitor doesn't need; "standard" (default) keeps the
    *  genre's full sequence. Ignored for chain steps. */
   depth?: FunnelDepth;
+  /** Decision complexity (Sales Argument Engine) — high/enterprise injects
+   *  decision-SUPPORT stages (what's included, process/rollout, evaluation)
+   *  at any persuasion depth. Default low = no injection. */
+  complexity?: DecisionComplexity;
   /** Landing Page Design System (RC 1.1) pack — when set, its
    *  defaultAccentColor/defaultTheme take priority over the genre's plain
    *  DEFAULT_ACCENT/DEFAULT_THEME (a design pack's whole point is a
@@ -147,7 +151,7 @@ export async function createFunnelServerSide(opts: {
           },
         ],
       }
-    : { sections: buildFrameworkSections(opts.genre, opts.stageOverrides, opts.depth) };
+    : { sections: buildFrameworkSections(opts.genre, opts.stageOverrides, opts.depth, opts.complexity) };
 
   const ref = db.collection("funnels").doc();
   const doc: Omit<FunnelDoc, "id"> = {
@@ -184,6 +188,8 @@ export interface FunnelPatch {
   artDirection?: FunnelDoc["artDirection"];
   /** Stored Sales Argument Plan (see FunnelDoc.salesArgument). */
   salesArgument?: FunnelDoc["salesArgument"];
+  persuasionDepth?: FunnelDoc["persuasionDepth"];
+  decisionComplexity?: FunnelDoc["decisionComplexity"];
   logoUrl?: string;
   sections?: FunnelSection[];
 }
@@ -353,6 +359,8 @@ export async function updateFunnelServerSide(opts: {
   if (patch.designStrategy !== undefined) write.designStrategy = patch.designStrategy;
   if (patch.artDirection !== undefined) write.artDirection = patch.artDirection;
   if (patch.salesArgument !== undefined) write.salesArgument = patch.salesArgument;
+  if (patch.persuasionDepth !== undefined) write.persuasionDepth = patch.persuasionDepth;
+  if (patch.decisionComplexity !== undefined) write.decisionComplexity = patch.decisionComplexity;
   if (patch.logoUrl !== undefined) write.logoUrl = patch.logoUrl;
   if (patch.sections !== undefined) {
     await assertNoChainCycle(opts.subAccountId, opts.funnelId, patch.sections);

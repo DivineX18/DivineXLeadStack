@@ -27,7 +27,7 @@ for (const line of readFileSync(new URL("../.env.local", import.meta.url), "utf8
 
 const { getAdminDb, getAdminAuth } = await import("../src/lib/firebase/admin");
 const { AI_SUITE_CAPABILITIES } = await import("../src/lib/ai-suite/capabilities");
-const { FUNNEL_FRAMEWORKS, buildFrameworkSections, stageAllowedLayouts, funnelDepthForBuyer, computePersuasionDepth } = await import(
+const { FUNNEL_FRAMEWORKS, buildFrameworkSections, stageAllowedLayouts, funnelDepthForBuyer, computePersuasionDepth, computeDecisionComplexity } = await import(
   "../src/lib/funnels/frameworks"
 );
 type AiSuiteActionContext = import("../src/lib/ai-suite/capabilities").AiSuiteActionContext;
@@ -420,6 +420,30 @@ try {
   check("8g. old-way/new-way sits right after the belief shift", deep.indexOf("comparison") === deep.indexOf("problem_solution") + 1);
   check("8h. deep never duplicates a section type", new Set(deep).size === deep.length);
   check("8i. the one-fold lead_magnet is never deepened", buildFrameworkSections("lead_magnet", undefined, "deep").length === 1);
+}
+
+// --- 9. PERSUASION DEPTH ≠ DECISION COMPLEXITY (orthogonal dimensions) ---
+{
+  check("9a. free/simple ask -> low complexity", computeDecisionComplexity({}) === "low");
+  check("9b. considered purchase ($2k+) -> high", computeDecisionComplexity({ priceCents: 250_000 }) === "high");
+  check("9c. $25k+ engagement -> enterprise", computeDecisionComplexity({ priceCents: 5_000_000 }) === "enterprise");
+  check("9d. application objective -> high even unpriced", computeDecisionComplexity({ objective: "application" }) === "high");
+
+  // THE distinction: a most-aware enterprise prospect = LEAN persuasion
+  // (no belief education) + ENTERPRISE decision support (heavy buying info).
+  const depth = computePersuasionDepth({ awareness: "most_aware", priceCents: 5_000_000 });
+  check("9e. most-aware enterprise buyer: persuasion stays LEAN", depth === "lean");
+  const leanEnterprise = buildFrameworkSections("lead_gen", undefined, "lean", "enterprise").map((s) => s.type);
+  check("9f. ...but the LEAN page still gains decision-SUPPORT stages (included + agenda + comparison)", leanEnterprise.includes("included") && leanEnterprise.includes("agenda") && leanEnterprise.includes("comparison"), leanEnterprise.join(","));
+  check("9g. ...while STILL skipping belief education (no problem_solution on lean)", !leanEnterprise.includes("problem_solution"));
+
+  const lowStd = buildFrameworkSections("lead_gen", undefined, "standard", "low").map((s) => s.type);
+  check("9h. low complexity injects nothing (standard sequence unchanged)", !lowStd.includes("included") && !lowStd.includes("comparison"));
+  const highStd = buildFrameworkSections("lead_gen", undefined, "standard", "high").map((s) => s.type);
+  check("9i. high adds support but NOT the enterprise evaluation stage", highStd.includes("included") && highStd.includes("agenda") && !highStd.includes("comparison"));
+  check("9j. support stages sit before the FAQ (support informs, FAQ cleans up)", highStd.indexOf("included") < highStd.indexOf("faq") && highStd.indexOf("agenda") < highStd.indexOf("faq"));
+  check("9k. one-fold lead_magnet is never complexified", buildFrameworkSections("lead_magnet", undefined, "standard", "enterprise").length === 1);
+  check("9l. no duplicate section types after injection (application already has included/agenda)", (() => { const a = buildFrameworkSections("application", undefined, "standard", "enterprise").map((s) => s.type); return new Set(a).size === a.length; })());
 }
 
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);

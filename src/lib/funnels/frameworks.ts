@@ -286,6 +286,43 @@ export function computePersuasionDepth(s: {
   return score >= 3 ? "deep" : "standard";
 }
 
+/**
+ * DECISION COMPLEXITY — the SECOND reasoning dimension, orthogonal to
+ * persuasion depth. Depth answers "how much BELIEF CHANGE is required?";
+ * complexity answers "how much information, proof, risk reduction, and buying
+ * SUPPORT does the decision require?" A most-aware enterprise buyer may need
+ * almost no persuasion (lean) yet substantial decision support (enterprise).
+ */
+export type DecisionComplexity = "low" | "moderate" | "high" | "enterprise";
+
+/** Deterministic FLOOR for decision complexity (the model's explicit
+ *  decision_complexity always wins — it knows stakeholders/implementation/
+ *  procurement context this fallback can't see). Derived from commitment,
+ *  stakes, and trust-heavy category signals — coarse but always safe. */
+export function computeDecisionComplexity(s: {
+  objective?: string | null;
+  priceCents?: number | null;
+  archetype?: string | null;
+}): DecisionComplexity {
+  const price = s.priceCents ?? 0;
+  if (price >= 2_500_000) return "enterprise"; // $25k+ engagements
+  if (price >= 200_000 || s.objective === "application" || s.objective === "consultation") return "high";
+  if (price > 0 || s.objective === "appointment" || s.archetype === "professional_enterprise") return "moderate";
+  return "low";
+}
+
+/** Decision-SUPPORT stages injected for high/enterprise complexity —
+ *  genre-agnostic (no per-industry hardcoding), skipped where the section
+ *  type already exists, inserted before the FAQ (support informs, FAQ cleans
+ *  up). Applied at EVERY persuasion depth including lean: low persuasion +
+ *  heavy decision support is a real buying situation. All are fillable via
+ *  existing params (stage_content included/comparison, process_steps). */
+const DECISION_SUPPORT_STAGES: { minComplexity: "high" | "enterprise"; stage: FrameworkStage }[] = [
+  { minComplexity: "high", stage: { id: "offer_detail", label: "What's Included", section: "included" } },
+  { minComplexity: "high", stage: { id: "process_rollout", label: "Process / Rollout", section: "agenda" } },
+  { minComplexity: "enterprise", stage: { id: "evaluation", label: "Comparison / Evaluation", section: "comparison" } },
+];
+
 /** Stages DEEP adds per genre — old-way/new-way (comparison) + mechanism/
  *  authority (story) where the genre lacks them. Architecture change, not
  *  copy inflation; skipped where the section type already exists, and the
@@ -347,6 +384,7 @@ export function buildFrameworkSections(
   genre: FunnelGenre,
   sectionOverrides?: Record<string, FunnelSectionType>,
   depth: FunnelDepth = "standard",
+  complexity: DecisionComplexity = "low",
 ): FunnelSection[] {
   // Lean pages drop education/persuasion stages a high-intent visitor doesn't
   // need — but always keep the capture stage (so the page still converts) and
@@ -365,6 +403,21 @@ export function buildFrameworkSections(
         ? [...framework, extra.stage]
         : [...framework.slice(0, at + 1), extra.stage, ...framework.slice(at + 1)];
       present.add(extra.stage.section);
+    }
+  }
+  // Decision-support injection (orthogonal to depth; never for the one-fold
+  // lead_magnet). Inserted before the FAQ, else before the closing banner.
+  if ((complexity === "high" || complexity === "enterprise") && genre !== "lead_magnet") {
+    const present = new Set(framework.map((s) => s.section));
+    for (const { minComplexity, stage } of DECISION_SUPPORT_STAGES) {
+      if (minComplexity === "enterprise" && complexity !== "enterprise") continue;
+      if (present.has(stage.section)) continue;
+      let at = framework.findIndex((s) => s.section === "faq");
+      if (at === -1) at = framework.map((s) => s.section).lastIndexOf("cta_banner");
+      framework = at === -1
+        ? [...framework, stage]
+        : [...framework.slice(0, at), stage, ...framework.slice(at)];
+      present.add(stage.section);
     }
   }
   return framework.map((stage, i) => {
