@@ -3641,6 +3641,15 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         },
         cta_secondary_label: { type: "string", description: "Only used with cta_style 'dual'." },
         cta_secondary_href: { type: "string", description: "Only used with cta_style 'dual'." },
+        bridge_next_funnel_id: {
+          type: "string",
+          description:
+            "MULTISTEP FUNNELS: the id of an ALREADY-CREATED funnel (returned as 'Funnel ID' by a previous create_funnel call) that THIS funnel's thank-you page should route new signups to — the magnet→offer chain link. When the user asks for a multistep funnel (lead magnet → offer → checkout → upsell), call create_funnel once per page, DOWNSTREAM FIRST (the offer/sales page), then the lead-magnet page with this set to the offer funnel's id. Omit for single-page funnels. NEVER pass a placeholder value here — if the downstream funnel doesn't exist yet, omit this field and create the downstream funnel first (or in the same parallel batch WITHOUT the link, then note the manual link for the user).",
+        },
+        bridge_next_cta: {
+          type: "string",
+          description: "Button label for the thank-you page's next-offer card (e.g. 'See the workshop'). Only used with bridge_next_funnel_id. Max 60 chars.",
+        },
         cta_phone_number: {
           type: "string",
           description: "Real phone number in E.164 format (e.g. '+15551234567'), only used with cta_style 'phone'. Never ask for one before building — omit cta_style/leave it as popup_form if you don't have a real number; only set cta_style to 'phone' when the user already gave you one.",
@@ -4104,6 +4113,8 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           ctaStyle,
           ctaSecondaryLabel: str(raw, "cta_secondary_label").slice(0, 40),
           ctaSecondaryHref: str(raw, "cta_secondary_href").slice(0, 500),
+          bridgeNextFunnelId: str(raw, "bridge_next_funnel_id").trim().slice(0, 40),
+          bridgeNextCta: str(raw, "bridge_next_cta").trim().slice(0, 60),
           ctaPhoneNumber,
           ctaBookingPageSlug,
           visualArchetype,
@@ -4980,6 +4991,24 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           ? { ...designStrategy, visualDensity: densityOverride as typeof designStrategy.visualDensity }
           : null;
 
+      // MULTISTEP: when the model chains this funnel into an already-created
+      // downstream step (magnet -> offer), verify the target actually exists
+      // in THIS sub-account before storing the link — a typo'd or foreign id
+      // would render a dead next-offer card on the live thank-you page.
+      let bridgeTarget: string | null = null;
+      if (typeof args.bridgeNextFunnelId === "string" && args.bridgeNextFunnelId) {
+        const target = await getFunnel(subAccountId, args.bridgeNextFunnelId);
+        if (!target) {
+          throw new CapabilityUserError(
+            `bridge_next_funnel_id "${args.bridgeNextFunnelId}" doesn't match a funnel in this workspace — use the exact Funnel ID returned by the earlier create_funnel call.`,
+          );
+        }
+        if (target.id === funnelId) {
+          throw new CapabilityUserError("bridge_next_funnel_id can't point at the funnel being created.");
+        }
+        bridgeTarget = target.id;
+      }
+
       try {
         await updateFunnelServerSide({
           subAccountId,
@@ -4995,6 +5024,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             sections: sectionsToSave,
             ...(args.accentColor ? { accentColor: args.accentColor as string } : {}),
             ...(args.theme ? { theme: args.theme as "light" | "dark" } : {}),
+            ...(bridgeTarget
+              ? {
+                  bridge: {
+                    nextFunnelId: bridgeTarget,
+                    ...(args.bridgeNextCta ? { nextCta: args.bridgeNextCta as string } : {}),
+                  },
+                }
+              : {}),
           },
         });
       } catch (err) {
@@ -5043,6 +5080,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         "",
         "ASSETS",
         `✓ Landing Page — "${displayName}"`,
+        `Funnel ID: ${funnelId}` +
+          (bridgeTarget
+            ? ` · thank-you page routes to funnel ${bridgeTarget}`
+            : " — pass as bridge_next_funnel_id when creating an UPSTREAM step of a multistep journey"),
       ];
       // Phase 2 — a concise, honest design rationale (never chain-of-thought,
       // never a score/grade) so the operator knows WHY this look was chosen

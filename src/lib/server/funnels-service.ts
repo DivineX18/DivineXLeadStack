@@ -189,6 +189,8 @@ export interface FunnelPatch {
   /** Stored Sales Argument Plan (see FunnelDoc.salesArgument). */
   salesArgument?: FunnelDoc["salesArgument"];
   persuasionDepth?: FunnelDoc["persuasionDepth"];
+  /** Thank-you/bridge page config (multistep journey) — see FunnelDoc.bridge. */
+  bridge?: FunnelDoc["bridge"];
   decisionComplexity?: FunnelDoc["decisionComplexity"];
   logoUrl?: string;
   sections?: FunnelSection[];
@@ -359,6 +361,7 @@ export async function updateFunnelServerSide(opts: {
   if (patch.designStrategy !== undefined) write.designStrategy = patch.designStrategy;
   if (patch.artDirection !== undefined) write.artDirection = patch.artDirection;
   if (patch.salesArgument !== undefined) write.salesArgument = patch.salesArgument;
+  if (patch.bridge !== undefined) write.bridge = patch.bridge;
   if (patch.persuasionDepth !== undefined) write.persuasionDepth = patch.persuasionDepth;
   if (patch.decisionComplexity !== undefined) write.decisionComplexity = patch.decisionComplexity;
   if (patch.logoUrl !== undefined) write.logoUrl = patch.logoUrl;

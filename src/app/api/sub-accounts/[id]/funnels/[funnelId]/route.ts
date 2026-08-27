@@ -146,6 +146,29 @@ export async function PATCH(
     if (strategy !== undefined) patch.designStrategy = strategy;
   }
   if (typeof body.logoUrl === "string") patch.logoUrl = body.logoUrl.trim().slice(0, 1000);
+  if (body.bridge !== undefined && typeof body.bridge === "object" && body.bridge !== null) {
+    // Thank-you/bridge page config (multistep journey). Undefined-valued keys
+    // are stripped so the Firestore write never sees them.
+    const b = body.bridge as Record<string, unknown>;
+    const str = (v: unknown, cap: number) =>
+      typeof v === "string" && v.trim() ? v.trim().slice(0, cap) : undefined;
+    const bridge: NonNullable<FunnelPatch["bridge"]> = {};
+    const headline = str(b.headline, 200);
+    const message = str(b.message, 600);
+    const nextCta = str(b.nextCta, 80);
+    const nextLabel = str(b.nextLabel, 80);
+    const nextHeadline = str(b.nextHeadline, 200);
+    if (headline) bridge.headline = headline;
+    if (message) bridge.message = message;
+    if (nextCta) bridge.nextCta = nextCta;
+    if (nextLabel) bridge.nextLabel = nextLabel;
+    if (nextHeadline) bridge.nextHeadline = nextHeadline;
+    bridge.nextFunnelId =
+      typeof b.nextFunnelId === "string" && /^[A-Za-z0-9_-]{10,40}$/.test(b.nextFunnelId)
+        ? b.nextFunnelId
+        : null;
+    patch.bridge = bridge;
+  }
   if (body.sections !== undefined) {
     const sections = sanitizeSections(body.sections);
     if (sections === null) {

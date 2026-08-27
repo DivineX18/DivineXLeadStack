@@ -178,6 +178,24 @@ export function FunnelBuilder({
   const [uploading, setUploading] = useState(false);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [leadMagnetName, setLeadMagnetName] = useState<string | null>(null);
+  // Thank-you/bridge page (multistep journey): what visitors see after
+  // signing up — copy + the optional next-offer link into another funnel.
+  const [bridgeHeadline, setBridgeHeadline] = useState("");
+  const [bridgeMessage, setBridgeMessage] = useState("");
+  const [bridgeNextFunnelId, setBridgeNextFunnelId] = useState("");
+  const [bridgeNextCta, setBridgeNextCta] = useState("");
+  const [allFunnels, setAllFunnels] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    // The next-offer dropdown: every other funnel in the workspace
+    // (chain steps included — an upsell page is a valid bridge target).
+    fetch(`/api/sub-accounts/${saId}/funnels?all=1`)
+      .then((r) => (r.ok ? r.json() : { funnels: [] }))
+      .then((d: { funnels?: { id: string; name: string }[] }) =>
+        setAllFunnels((d.funnels ?? []).filter((f) => f.id !== funnelId)),
+      )
+      .catch(() => {});
+  }, [saId, funnelId]);
 
   async function handleAssetUpload(file: File) {
     setUploading(true);
@@ -230,6 +248,10 @@ export function FunnelBuilder({
         setStatus(d.funnel.status);
         setTheme(d.funnel.theme);
         setLeadMagnetName(d.funnel.leadMagnetAsset?.filename ?? null);
+        setBridgeHeadline(d.funnel.bridge?.headline ?? "");
+        setBridgeMessage(d.funnel.bridge?.message ?? "");
+        setBridgeNextFunnelId(d.funnel.bridge?.nextFunnelId ?? "");
+        setBridgeNextCta(d.funnel.bridge?.nextCta ?? "");
         setAccentColor(d.funnel.accentColor);
         setDesignPack(d.funnel.designPack ?? "classic");
         const strategy = d.funnel.designStrategy;
@@ -306,6 +328,12 @@ export function FunnelBuilder({
           designPack,
           designStrategy: resolvedStrategy,
           logoUrl,
+          bridge: {
+            headline: bridgeHeadline || undefined,
+            message: bridgeMessage || undefined,
+            nextFunnelId: bridgeNextFunnelId || null,
+            nextCta: bridgeNextCta || undefined,
+          },
           sections,
         }),
       });
@@ -401,6 +429,43 @@ export function FunnelBuilder({
           )}
           {uploadedImageUrl && (
             <span className="text-xs text-muted-foreground">Image URL copied — paste into a Media URL field: <code className="text-[10px]">{uploadedImageUrl}</code></span>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-xl border bg-card p-4">
+        <p className="text-[13px] font-semibold">Thank-you page</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          What visitors see right after signing up — the lead-magnet download plus (optionally) your next offer. Blank fields use smart defaults.{" "}
+          <a href={`/lp/${funnelId}/thanks`} target="_blank" rel="noreferrer" className="underline">Preview</a>
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground">Headline</label>
+            <Input value={bridgeHeadline} onChange={(e) => setBridgeHeadline(e.target.value)} placeholder="You're in!" maxLength={200} />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground">Next offer (multistep)</label>
+            <select
+              value={bridgeNextFunnelId}
+              onChange={(e) => setBridgeNextFunnelId(e.target.value)}
+              className="mt-0.5 h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+            >
+              <option value="">None — just confirm + deliver</option>
+              {allFunnels.map((f) => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="text-xs font-semibold text-muted-foreground">Message</label>
+            <Input value={bridgeMessage} onChange={(e) => setBridgeMessage(e.target.value)} placeholder="Your download is ready below — we also emailed you a copy." maxLength={600} />
+          </div>
+          {bridgeNextFunnelId && (
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">Next-offer button label</label>
+              <Input value={bridgeNextCta} onChange={(e) => setBridgeNextCta(e.target.value)} placeholder="Take a look" maxLength={80} />
+            </div>
           )}
         </div>
       </div>

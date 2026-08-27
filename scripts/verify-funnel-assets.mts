@@ -40,5 +40,42 @@ check("4b. owner delete succeeds", (await deleteFunnelAsset(base.subAccountId, s
 check("4c. deleted asset unreadable", (await readFunnelAsset(stored.assetId)) === null);
 await deleteFunnelAsset(base.subAccountId, s2.assetId);
 
+
+// 5. Bridge round-trip (multistep journey): create two funnels, link A's
+//    thank-you page to B via updateFunnelServerSide, read the link back,
+//    verify the invalid-id sanitizer, then clean up.
+const { createFunnelServerSide, updateFunnelServerSide, getFunnel, deleteFunnelServerSide } = await import("../src/lib/server/funnels-service");
+const mk = () =>
+  createFunnelServerSide({
+    subAccountId: "qa-assets-sub", createdByUid: "qa",
+    name: "QA bridge", genre: "lead_magnet",
+  });
+const fa = await mk();
+const fb = await mk();
+await updateFunnelServerSide({
+  subAccountId: "qa-assets-sub", funnelId: fa,
+  patch: { bridge: { headline: "You're in", nextFunnelId: fb, nextCta: "See the offer" } },
+});
+const readBack = await getFunnel("qa-assets-sub", fa);
+check("5a. bridge nextFunnelId round-trips", readBack?.bridge?.nextFunnelId === fb);
+check("5b. bridge copy round-trips", readBack?.bridge?.headline === "You're in" && readBack?.bridge?.nextCta === "See the offer");
+await updateFunnelServerSide({ subAccountId: "qa-assets-sub", funnelId: fa, patch: { bridge: { nextFunnelId: null } } });
+const cleared = await getFunnel("qa-assets-sub", fa);
+check("5c. bridge unlink (null) persists", cleared?.bridge?.nextFunnelId === null);
+await deleteFunnelServerSide("qa-assets-sub", fa);
+await deleteFunnelServerSide("qa-assets-sub", fb);
+check("5d. cleanup", (await getFunnel("qa-assets-sub", fa)) === null);
+
+// 6. Wiring greps: the seams that connect the pieces (regression tripwires).
+const src = (f: string) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
+check("6a. PATCH route sanitizes bridge", src("src/app/api/sub-accounts/[id]/funnels/[funnelId]/route.ts").includes("patch.bridge = bridge"));
+check("6b. create_funnel exposes bridge_next_funnel_id", src("src/lib/ai-suite/capabilities.ts").includes("bridge_next_funnel_id"));
+check("6c. create_funnel verifies bridge target exists", src("src/lib/ai-suite/capabilities.ts").includes("doesn't match a funnel in this workspace"));
+check("6d. create_funnel summary exposes Funnel ID for chaining", src("src/lib/ai-suite/capabilities.ts").includes("Funnel ID: ${funnelId}"));
+check("6e. builder saves bridge", src("src/components/funnels/funnel-builder.tsx").includes("nextFunnelId: bridgeNextFunnelId || null"));
+check("6f. thanks page renders next-offer card", src("src/app/lp/[funnelId]/thanks/page.tsx").includes("bridge?.nextFunnelId"));
+check("6g. capture success bridges to /thanks", src("src/components/funnels/public-funnel-view.tsx").includes("/thanks"));
+check("6h. checkout success_url hands off to upsell", src("src/app/api/lp/[funnelId]/checkout/session/route.ts").includes("config.upsellFunnelId\n".trim()));
+
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);
 if (failures > 0) process.exit(1);
