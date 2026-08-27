@@ -112,6 +112,10 @@ const PUBLIC_PATHS = [
   // model as /api/forms/[id]/submit: funnelId + sectionId are the only
   // credential, rate-limited per IP inside the route.
   "/api/lp",
+  // Public funnel-asset delivery (images + lead-magnet PDFs) — the
+  // unguessable asset id is the capability token; the link is what a
+  // subscriber receives by email, so it must resolve without a session.
+  "/api/funnel-asset",
   // Custom-domain resolver — internal rewrite target for Funnels custom
   // domains (see customDomainRewrite() below); never linked to directly.
   "/cdomain",

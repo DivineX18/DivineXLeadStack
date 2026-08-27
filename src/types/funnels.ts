@@ -548,6 +548,11 @@ export interface FunnelDoc {
     density: "minimal" | "medium" | "rich";
     humanity: "product_led" | "balanced" | "people_led";
   };
+  /** The uploaded lead-magnet file (PDF) this funnel delivers after signup —
+   *  stored via the chunked funnelAssets store; `url` is the public serve
+   *  path (/api/funnel-asset/[id]) appended into the confirmation workflow
+   *  email at upload time. */
+  leadMagnetAsset?: { assetId: string; filename: string; url: string };
   /** Persuasion depth this funnel was composed at (lean/standard/deep) —
    *  how much BELIEF CHANGE the page performs. Persisted for certification
    *  traces + Zeno explainability. */
