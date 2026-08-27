@@ -418,5 +418,33 @@ function check(label: string, ok: boolean, detail?: string) {
   await auth.deleteUser(user.uid).catch(() => {});
 }
 
+
+// 3. Tool-syntax debris scrub (found live 2026-08-26: a malformed tool call
+//    leaked closing-tag + parameter scaffolding into a stored hero
+//    subheadline). Debris must be stripped from flat strings, array items,
+//    and nested objects — while legit copy survives intact.
+{
+  const TAG_A = ["<", "/an", "headline", ">"].join("");
+  const TAG_B = ["<", "parameter name=", "subheadline"].join("");
+  const TAG_C = ["<", "/parameter", ">"].join("");
+  const v = cap.validate!({
+    headline: `Start Your Pottery Journey${TAG_A}`,
+    subheadline: `Fired work you take home.${TAG_A} ${TAG_B}`,
+    bullets: [`Two 3-hour sessions${TAG_C}`, "Clay + firing included"],
+    genre: "lead_magnet",
+    emotional_transformation: "overwhelm_to_clarity",
+    sales_argument: { core_promise: `Real coaching${TAG_A}`, belief_chain: [`You can learn this${TAG_B}`] },
+  });
+  check("3a. debris validate passes", v.ok === true);
+  if (v.ok) {
+    const args = v.args as Record<string, unknown>;
+    const flat = JSON.stringify(args);
+    check("3b. no debris survives anywhere in normalized args", !flat.includes(TAG_A) && !flat.includes(TAG_B) && !flat.includes(TAG_C) && !flat.includes("<parameter") && !flat.includes("</an"));
+    check("3c. headline copy intact after scrub", args.headline === "Start Your Pottery Journey");
+    const bullets = args.bullets as string[];
+    check("3d. array items scrubbed, content intact", bullets[0] === "Two 3-hour sessions" && bullets[1] === "Clay + firing included");
+  }
+}
+
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);
 if (failures > 0) process.exit(1);

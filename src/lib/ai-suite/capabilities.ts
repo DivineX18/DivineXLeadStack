@@ -236,9 +236,40 @@ const SLUG_RE = /^[a-z0-9-]+$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * Strip tool-call syntax debris from a model-supplied string. Found live
+ * 2026-08-26 (multistep e2e smoke): a malformed tool call leaked literal
+ * scaffolding — "…take home.</anheadline> <parameter name=…" — into a
+ * funnel hero subheadline, which was then STORED and rendered verbatim on
+ * the live page. Marketing copy / names / labels never legitimately
+ * contain XML-ish tool-syntax tags, so removing these exact families
+ * (antml/an*-tags, <parameter…>, <invoke…>, <function…>) can't misfire on
+ * genuine content; an unterminated trailing fragment is stripped too.
+ */
+function stripToolSyntaxDebris(text: string): string {
+  return text
+    .replace(/<\/?(?:an[a-z_]*|parameter|invoke|function[a-z_]*)\b[^>]*>/gi, "")
+    .replace(/<\/?(?:an[a-z_]*|parameter|invoke|function[a-z_]*)\b[^>]*$/i, "")
+    .trim();
+}
+
 function str(raw: unknown, key: string): string {
   const v = (raw as Record<string, unknown>)?.[key];
-  return typeof v === "string" ? v.trim() : "";
+  return typeof v === "string" ? stripToolSyntaxDebris(v.trim()) : "";
+}
+
+/** Recursively apply stripToolSyntaxDebris to every string in a raw args
+ *  payload — covers array items (bullets sent as a real array) and nested
+ *  objects (stage_content, sales_argument) that never pass through str(). */
+function deepStripDebris<T>(value: T): T {
+  if (typeof value === "string") return stripToolSyntaxDebris(value) as unknown as T;
+  if (Array.isArray(value)) return value.map(deepStripDebris) as unknown as T;
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) out[k] = deepStripDebris(v);
+    return out as unknown as T;
+  }
+  return value;
 }
 
 /**
@@ -2871,7 +2902,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         includePrivacyPage: "include_privacy_page",
         includeTermsPage: "include_terms_page",
       };
-      const raw: Record<string, unknown> = { ...rawObj };
+      const raw: Record<string, unknown> = deepStripDebris({ ...rawObj });
       for (const [camel, snake] of Object.entries(camelToSnake)) {
         if (raw[snake] === undefined && camel in rawObj) {
           raw[snake] = rawObj[camel];
@@ -3780,7 +3811,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         mediaSubject: "media_subject",
         galleryLayout: "gallery_layout",
       };
-      const raw: Record<string, unknown> = { ...rawObj };
+      const raw: Record<string, unknown> = deepStripDebris({ ...rawObj });
       for (const [camel, snake] of Object.entries(camelToSnake)) {
         if (raw[snake] === undefined && camel in rawObj) {
           raw[snake] = rawObj[camel];
