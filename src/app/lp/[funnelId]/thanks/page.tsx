@@ -17,10 +17,13 @@ export const dynamic = "force-dynamic";
  */
 export default async function FunnelThanksPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ funnelId: string }>;
+  searchParams: Promise<{ paid?: string }>;
 }) {
   const { funnelId } = await params;
+  const paid = (await searchParams).paid === "1";
   const data = await loadFunnelForRender(funnelId);
   if (!data) notFound();
   const { funnel } = data;
@@ -29,12 +32,16 @@ export default async function FunnelThanksPage({
   const bridge = funnel.bridge;
   const magnet = funnel.leadMagnetAsset;
 
-  const headline = bridge?.headline || "You're in!";
-  const message =
-    bridge?.message ||
-    (magnet
-      ? "Your download is ready below — we've also sent a copy to your email so you can find it anytime."
-      : "Check your inbox — everything you need is on its way to your email.");
+  // paid=1 — the post-checkout order confirmation ("the thank you after the
+  // checkout page"): purchase-toned defaults, and no next-offer card (the
+  // upsell chain already ran inside the checkout flow itself).
+  const headline = paid ? "Order confirmed — you're in!" : bridge?.headline || "You're in!";
+  const message = paid
+    ? "Check your email for your receipt and everything you need to get started."
+    : bridge?.message ||
+      (magnet
+        ? "Your download is ready below — we've also sent a copy to your email so you can find it anytime."
+        : "Check your inbox — everything you need is on its way to your email.");
 
   return (
     <main
@@ -71,7 +78,7 @@ export default async function FunnelThanksPage({
         </a>
       )}
 
-      {bridge?.nextFunnelId && (
+      {!paid && bridge?.nextFunnelId && (
         <div className="mt-10 w-full max-w-md rounded-2xl border p-6" style={{ borderColor: `${accent}33`, background: `linear-gradient(180deg, ${accent}0f, transparent)` }}>
           <p className="text-sm font-bold uppercase tracking-widest" style={{ color: accent }}>
             {bridge.nextLabel || "One more thing"}

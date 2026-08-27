@@ -96,6 +96,7 @@ export function HeroSection({
   headlineGradient,
   ctaAnimationLevel,
   successRedirect,
+  captureSuccess,
   published,
 }: {
   config: HeroConfig;
@@ -106,6 +107,7 @@ export function HeroSection({
   headlineGradient?: [string, string];
   ctaAnimationLevel?: "none" | "minimal" | "moderate" | "expressive";
   successRedirect?: string;
+  captureSuccess?: { message: string; downloadUrl?: string; downloadName?: string };
   /** True on the live published render. A placeholder-only media slot
    *  (label but no real URL) renders in the builder/preview as an honest
    *  "add your asset" frame — but on a LIVE page it's a dead dark block
@@ -175,6 +177,7 @@ export function HeroSection({
         pageTheme={theme}
         animationLevel={ctaAnimationLevel}
               successRedirect={successRedirect}
+              captureSuccess={captureSuccess}
       />
       {trustNode}
     </div>

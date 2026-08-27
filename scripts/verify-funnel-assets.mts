@@ -76,6 +76,13 @@ check("6e. builder saves bridge", src("src/components/funnels/funnel-builder.tsx
 check("6f. thanks page renders next-offer card", src("src/app/lp/[funnelId]/thanks/page.tsx").includes("bridge?.nextFunnelId"));
 check("6g. capture success bridges to /thanks", src("src/components/funnels/public-funnel-view.tsx").includes("/thanks"));
 check("6h. checkout success_url hands off to upsell", src("src/app/api/lp/[funnelId]/checkout/session/route.ts").includes("config.upsellFunnelId\n".trim()));
+check("6i. capture success: straight-to-offer when bridge set", src("src/components/funnels/public-funnel-view.tsx").includes("welcome=1&from="));
+check("6j. capture success: same-page popup when no next offer", src("src/components/funnels/public-funnel-view.tsx").includes("captureSuccess=") && src("src/components/funnels/sections/cta-button.tsx").includes("if (captured && confirmationPanel) return confirmationPanel;"));
+check("6k. checkout (no upsell) lands on thanks?paid=1", src("src/app/api/lp/[funnelId]/checkout/session/route.ts").includes("/thanks?paid=1"));
+check("6l. upsell chain-end lands on thanks?paid=1", src("src/app/api/lp/[funnelId]/upsell/[sectionId]/charge/route.ts").includes("/thanks?paid=1") && src("src/components/funnels/sections/upsell-offer-section.tsx").includes("/thanks?paid=1"));
+check("6m. thanks page has paid order-confirmation variant", src("src/app/lp/[funnelId]/thanks/page.tsx").includes("Order confirmed"));
+check("6n. published pages drop placeholder-only hero media", src("src/components/funnels/sections/hero-section.tsx").includes('published && !config.mediaUrl && config.mediaType !== "none"'));
+check("6o. /lp welcome bar renders delivery + download", src("src/app/lp/[funnelId]/page.tsx").includes("Download it now"));
 
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);
 if (failures > 0) process.exit(1);

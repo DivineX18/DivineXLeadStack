@@ -271,6 +271,17 @@ export function PublicFunnelView({
                         : `/lp/${funnel.id}/thanks`
                       : undefined
                   }
+                  captureSuccess={
+                    funnel.status === "published" && !funnel.bridge?.nextFunnelId
+                      ? {
+                          message: funnel.leadMagnetAsset
+                            ? "Check your inbox — your download is on its way to your email. You can also grab it right here:"
+                            : "Check your inbox — everything you need is on its way to your email.",
+                          downloadUrl: funnel.leadMagnetAsset?.url,
+                          downloadName: funnel.leadMagnetAsset?.filename,
+                        }
+                      : undefined
+                  }
                   published={funnel.status === "published"}
                   funnelId={funnel.id}
                   sectionId={section.id}

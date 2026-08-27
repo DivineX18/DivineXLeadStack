@@ -59,7 +59,7 @@ export function UpsellOfferSection({
       } else {
         const nextUrl = config.declineFunnelId
           ? `/lp/${config.declineFunnelId}${checkoutSessionId ? `?session_id=${checkoutSessionId}` : ""}`
-          : `/lp/${funnelId}?done=1`;
+          : `/lp/${funnelId}/thanks?paid=1`;
         window.location.href = nextUrl;
       }
     } catch (err) {

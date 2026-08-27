@@ -33,6 +33,7 @@ export function CtaButton({
   className,
   inverted = false,
   successRedirect,
+  captureSuccess,
 }: {
   label: string;
   href?: string;
@@ -58,8 +59,14 @@ export function CtaButton({
    *  funnel's thank-you/bridge page (delivery + next offer) instead of just
    *  showing the inline confirmation. Undefined = today's behavior. */
   successRedirect?: string;
+  /** Free-download funnels (no next offer): after a successful capture,
+   *  show a same-page "You're in!" confirmation — message + optional
+   *  download link — instead of navigating anywhere. successRedirect wins
+   *  when both are set. */
+  captureSuccess?: { message: string; downloadUrl?: string; downloadName?: string };
 }) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [captured, setCaptured] = useState(false);
   const style = cta?.style ?? "inline";
   const hasPopupTarget = style === "popup_calendar" ? !!(cta?.bookingPageSlug && subAccountId) : !!form;
   const pulseClass = animationLevel === "moderate" || animationLevel === "expressive" ? " flow-cta-pulse" : "";
@@ -92,8 +99,38 @@ export function CtaButton({
       setTimeout(() => window.location.assign(successRedirect), 1100);
       return;
     }
+    if (captureSuccess) {
+      // Same-page confirmation: swap the modal body for the "You're in!"
+      // panel and leave it open (the visitor closes it themselves).
+      setCaptured(true);
+      return;
+    }
     setTimeout(closeModal, 2200);
   };
+
+  const confirmationPanel = captureSuccess && (
+    <div className="p-8 text-center">
+      <span
+        className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full text-white"
+        style={{ backgroundColor: accentColor }}
+      >
+        <Check className="h-7 w-7" />
+      </span>
+      <p className="text-xl font-extrabold tracking-tight">You&apos;re in!</p>
+      <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed opacity-75">{captureSuccess.message}</p>
+      {captureSuccess.downloadUrl && (
+        <a
+          href={captureSuccess.downloadUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-5 inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white shadow-lg"
+          style={{ backgroundColor: accentColor }}
+        >
+          Download {captureSuccess.downloadName || "now"}
+        </a>
+      )}
+    </div>
+  );
 
   const primaryButton = () => {
     if ((style === "popup_form" || style === "popup_calendar") && hasPopupTarget) {
@@ -118,13 +155,23 @@ export function CtaButton({
     // on click, which is exactly the "sends people back to the top of the
     // page" bug — a real link renders as a link, anything else renders as
     // an inert button that does nothing rather than something misleading.
-    if (form)
+    if (form) {
+      if (captured && confirmationPanel) {
+        return <div className="rounded-2xl border bg-white/60 shadow-sm dark:bg-white/5">{confirmationPanel}</div>;
+      }
       return (
         <PublicForm
           form={form}
-          onSuccess={successRedirect ? () => setTimeout(() => window.location.assign(successRedirect), 1100) : undefined}
+          onSuccess={
+            successRedirect
+              ? () => setTimeout(() => window.location.assign(successRedirect), 1100)
+              : captureSuccess
+                ? () => setCaptured(true)
+                : undefined
+          }
         />
       );
+    }
     if (href) {
       return (
         <a href={href} className={btnClass} style={buttonStyle}>
@@ -150,6 +197,7 @@ export function CtaButton({
   );
 
   const modalBody = () => {
+    if (captured && confirmationPanel) return confirmationPanel;
     if (style === "popup_calendar" && cta?.bookingPageSlug && subAccountId) {
       return (
         <div className="p-2">

@@ -91,7 +91,9 @@ export async function POST(
   const nextUrlFor = (targetFunnelId: string | null | undefined) =>
     targetFunnelId
       ? `/lp/${targetFunnelId}?session_id=${body.checkoutSessionId}`
-      : `/lp/${funnelId}?done=1`;
+      : // End of the chain — the order-confirmation thank-you page
+        // ("add the thank you after the checkout page").
+        `/lp/${funnelId}/thanks?paid=1`;
 
   try {
     // Idempotency key tied to (checkout session, upsell section) — a retry

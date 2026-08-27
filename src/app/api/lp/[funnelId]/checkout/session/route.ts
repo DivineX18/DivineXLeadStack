@@ -77,7 +77,7 @@ export async function POST(
   // charge reads. No upsell configured = today's return-to-page behavior.
   const successUrl = config.upsellFunnelId
     ? `${appUrl}/lp/${config.upsellFunnelId}?session_id={CHECKOUT_SESSION_ID}`
-    : `${appUrl}/lp/${funnelId}?paid=1&session_id={CHECKOUT_SESSION_ID}`;
+    : `${appUrl}/lp/${funnelId}/thanks?paid=1`;
   const cancelUrl = `${appUrl}/lp/${funnelId}`;
 
   const metadata = {
