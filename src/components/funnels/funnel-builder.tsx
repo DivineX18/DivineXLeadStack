@@ -172,6 +172,32 @@ export function FunnelBuilder({
   const [name, setName] = useState("");
   const [status, setStatus] = useState<"draft" | "published">("draft");
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  // Files & delivery (Multistep Journey): operator uploads — images for
+  // section media, and the lead-magnet PDF (auto-wired into the confirmation
+  // email + the /thanks bridge page by the upload route).
+  const [uploading, setUploading] = useState(false);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [leadMagnetName, setLeadMagnetName] = useState<string | null>(null);
+
+  async function handleAssetUpload(file: File) {
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/sub-accounts/${saId}/funnels/${funnelId}/assets`, { method: "POST", body: fd });
+      const json = (await res.json()) as { url?: string; kind?: string; error?: string };
+      if (!res.ok || !json.url) throw new Error(json.error ?? "Upload failed");
+      if (json.kind === "pdf") setLeadMagnetName(file.name);
+      else {
+        setUploadedImageUrl(json.url);
+        try { await navigator.clipboard.writeText(json.url); } catch { /* clipboard optional */ }
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
   const [accentColor, setAccentColor] = useState("#2563eb");
   const [designPack, setDesignPack] = useState<DesignPackId>("classic");
   // Flow Phase 2 — Design Intelligence. "" = no archetype (legacy
@@ -203,6 +229,7 @@ export function FunnelBuilder({
         setName(d.funnel.name);
         setStatus(d.funnel.status);
         setTheme(d.funnel.theme);
+        setLeadMagnetName(d.funnel.leadMagnetAsset?.filename ?? null);
         setAccentColor(d.funnel.accentColor);
         setDesignPack(d.funnel.designPack ?? "classic");
         const strategy = d.funnel.designStrategy;
@@ -345,6 +372,38 @@ export function FunnelBuilder({
         className="h-11 text-lg font-semibold"
         placeholder="Funnel name"
       />
+
+
+      <div className="rounded-xl border bg-card p-4">
+        <p className="text-[13px] font-semibold">Files &amp; delivery</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Upload an <b>image</b> (JPEG/PNG/WebP — its URL is copied to your clipboard to paste into any Media/Image field) or your <b>lead magnet PDF</b> — the PDF is delivered automatically in the confirmation email and on the thank-you page.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-black/[0.03] dark:hover:bg-white/[0.06]">
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              className="hidden"
+              disabled={uploading}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleAssetUpload(f);
+                e.target.value = "";
+              }}
+            />
+            {uploading ? "Uploading…" : "Upload image or PDF"}
+          </label>
+          {leadMagnetName && (
+            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              ✓ Lead magnet attached: {leadMagnetName} (delivered via email + thank-you page)
+            </span>
+          )}
+          {uploadedImageUrl && (
+            <span className="text-xs text-muted-foreground">Image URL copied — paste into a Media URL field: <code className="text-[10px]">{uploadedImageUrl}</code></span>
+          )}
+        </div>
+      </div>
 
       <div className="grid grid-cols-2 gap-3 rounded-xl border bg-card p-4">
         <div>

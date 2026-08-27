@@ -95,6 +95,7 @@ export function HeroSection({
   subAccountId,
   headlineGradient,
   ctaAnimationLevel,
+  successRedirect,
 }: {
   config: HeroConfig;
   accentColor: string;
@@ -103,6 +104,7 @@ export function HeroSection({
   subAccountId?: string;
   headlineGradient?: [string, string];
   ctaAnimationLevel?: "none" | "minimal" | "moderate" | "expressive";
+  successRedirect?: string;
 }) {
   // A device-mockup/split/background/founder layout still renders (with an
   // honest labeled placeholder) when Zeno set mediaPlaceholderLabel but has
@@ -162,6 +164,7 @@ export function HeroSection({
         subAccountId={subAccountId}
         pageTheme={theme}
         animationLevel={ctaAnimationLevel}
+              successRedirect={successRedirect}
       />
       {trustNode}
     </div>

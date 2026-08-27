@@ -8,6 +8,7 @@ export function CtaBannerSection({
   theme,
   subAccountId,
   ctaAnimationLevel,
+  successRedirect,
   forms,
 }: {
   config: CtaBannerConfig;
@@ -15,6 +16,7 @@ export function CtaBannerSection({
   theme?: "light" | "dark";
   subAccountId?: string;
   ctaAnimationLevel?: "none" | "minimal" | "moderate" | "expressive";
+  successRedirect?: string;
   forms?: Record<string, LeadForm>;
 }) {
   const form = config.formId && forms ? forms[config.formId] ?? null : null;
@@ -52,6 +54,7 @@ export function CtaBannerSection({
               subAccountId={subAccountId}
               pageTheme={theme}
               animationLevel={ctaAnimationLevel}
+              successRedirect={successRedirect}
               inverted
               className="inline-flex items-center justify-center gap-2 px-10 py-4 text-base font-bold shadow-[0_14px_40px_-10px_rgba(0,0,0,0.45)] transition-all duration-200 hover:-translate-y-0.5"
             />
@@ -91,6 +94,7 @@ export function CtaBannerSection({
             subAccountId={subAccountId}
             pageTheme={theme}
             animationLevel={ctaAnimationLevel}
+              successRedirect={successRedirect}
           />
         </div>
       </div>

@@ -32,6 +32,7 @@ export function CtaButton({
   animationLevel = "none",
   className,
   inverted = false,
+  successRedirect,
 }: {
   label: string;
   href?: string;
@@ -53,6 +54,10 @@ export function CtaButton({
    *  ON an accent/high-contrast field (e.g. the full_bleed_close banner),
    *  where an accent-on-accent button would disappear. */
   inverted?: boolean;
+  /** Multistep journey: after a successful form capture, navigate to the
+   *  funnel's thank-you/bridge page (delivery + next offer) instead of just
+   *  showing the inline confirmation. Undefined = today's behavior. */
+  successRedirect?: string;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
   const style = cta?.style ?? "inline";
@@ -81,7 +86,14 @@ export function CtaButton({
   // A visitor gets ~2.2s to read the "thanks" confirmation before the
   // modal dismisses itself — long enough to register, short enough not to
   // feel stuck. Cleared implicitly: the modal unmounts on close anyway.
-  const closeAfterSuccess = () => setTimeout(closeModal, 2200);
+  const closeAfterSuccess = () => {
+    if (successRedirect) {
+      // Give the visitor a beat to see the confirmation, then bridge.
+      setTimeout(() => window.location.assign(successRedirect), 1100);
+      return;
+    }
+    setTimeout(closeModal, 2200);
+  };
 
   const primaryButton = () => {
     if ((style === "popup_form" || style === "popup_calendar") && hasPopupTarget) {
@@ -106,7 +118,13 @@ export function CtaButton({
     // on click, which is exactly the "sends people back to the top of the
     // page" bug — a real link renders as a link, anything else renders as
     // an inert button that does nothing rather than something misleading.
-    if (form) return <PublicForm form={form} />;
+    if (form)
+      return (
+        <PublicForm
+          form={form}
+          onSuccess={successRedirect ? () => setTimeout(() => window.location.assign(successRedirect), 1100) : undefined}
+        />
+      );
     if (href) {
       return (
         <a href={href} className={btnClass} style={buttonStyle}>

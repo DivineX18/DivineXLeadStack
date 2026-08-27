@@ -71,7 +71,13 @@ export async function POST(
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
-  const successUrl = `${appUrl}/lp/${funnelId}?paid=1&session_id={CHECKOUT_SESSION_ID}`;
+  // Multistep handoff (closes the documented Funnel Checkout gap): when this
+  // checkout section names an upsell step, the buyer lands DIRECTLY on it
+  // after paying — session_id in the URL is what the upsell page's one-click
+  // charge reads. No upsell configured = today's return-to-page behavior.
+  const successUrl = config.upsellFunnelId
+    ? `${appUrl}/lp/${config.upsellFunnelId}?session_id={CHECKOUT_SESSION_ID}`
+    : `${appUrl}/lp/${funnelId}?paid=1&session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl = `${appUrl}/lp/${funnelId}`;
 
   const metadata = {

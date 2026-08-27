@@ -20,6 +20,7 @@ export function OfferSection({
   forms,
   subAccountId,
   ctaAnimationLevel,
+  successRedirect,
 }: {
   config: OfferConfig;
   accentColor: string;
@@ -27,6 +28,7 @@ export function OfferSection({
   forms: Record<string, LeadForm>;
   subAccountId?: string;
   ctaAnimationLevel?: "none" | "minimal" | "moderate" | "expressive";
+  successRedirect?: string;
 }) {
   const price = formatPrice(config.priceCents);
   const strikePrice = formatPrice(config.strikethroughPriceCents);
@@ -109,6 +111,7 @@ export function OfferSection({
             subAccountId={subAccountId}
             pageTheme={theme}
             animationLevel={ctaAnimationLevel}
+            successRedirect={successRedirect}
             className="block w-full rounded-xl px-6 py-4 text-center text-base font-bold text-white shadow-[0_8px_24px_-6px_var(--accent-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-6px_var(--accent-shadow)]"
           />
         </div>

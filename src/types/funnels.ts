@@ -548,6 +548,17 @@ export interface FunnelDoc {
     density: "minimal" | "medium" | "rich";
     humanity: "product_led" | "balanced" | "people_led";
   };
+  /** Thank-you/bridge step config (multistep journey): copy + the next
+   *  offer the bridge page routes to after signup. All optional — the
+   *  /lp/[id]/thanks page renders sensible defaults without it. */
+  bridge?: {
+    headline?: string;
+    message?: string;
+    nextFunnelId?: string | null;
+    nextLabel?: string;
+    nextHeadline?: string;
+    nextCta?: string;
+  };
   /** The uploaded lead-magnet file (PDF) this funnel delivers after signup —
    *  stored via the chunked funnelAssets store; `url` is the public serve
    *  path (/api/funnel-asset/[id]) appended into the confirmation workflow

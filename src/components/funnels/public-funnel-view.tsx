@@ -260,6 +260,7 @@ export function PublicFunnelView({
                   accentColor={funnel.accentColor}
                   theme={funnel.theme}
                   forms={forms}
+                  successRedirect={funnel.status === "published" ? `/lp/${funnel.id}/thanks` : undefined}
                   funnelId={funnel.id}
                   sectionId={section.id}
                   subAccountId={funnel.subAccountId}
