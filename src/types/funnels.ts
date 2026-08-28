@@ -147,6 +147,9 @@ export interface ProofStripConfig {
    *  etc.) so the proof is verifiable. */
   rating?: { score: number; reviewCount: number; scale?: number; href?: string };
   logos?: { url: string; alt: string }[];
+  /** Evidence-strip heading over the logos row — "Trusted by", "As featured
+   *  in", "Certifications & memberships". Defaults to "As seen in". */
+  heading?: string;
 }
 
 export interface OfferConfig {

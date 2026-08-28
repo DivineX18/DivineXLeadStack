@@ -1,111 +1,60 @@
 [
   {
-    "key": "3-ecom-skincare",
+    "key": "2-assessment",
     "toolCalls": [
       {
         "name": "create_funnel",
-        "ok": false,
-        "note": "ERROR: Expected double-quoted property name in JSON at position 5820 (line 2 column 1)"
-      },
-      {
-        "name": "create_funnel",
         "ok": true,
-        "note": "created BgWPNY4OECyei7AYWltm"
+        "note": "created yQi87uS643sUj8Cu2duu"
       }
     ],
     "error": null,
     "funnels": [
       {
-        "id": "BgWPNY4OECyei7AYWltm",
-        "url": "/lp/BgWPNY4OECyei7AYWltm",
-        "name": "The Starter Kit That Won't Burn Your Skin",
-        "genre": "tripwire",
-        "persuasionDepth": "lean",
-        "decisionComplexity": "moderate",
+        "id": "yQi87uS643sUj8Cu2duu",
+        "url": "/lp/yQi87uS643sUj8Cu2duu",
+        "name": "Find your growth bottleneck in 5 minutes",
+        "genre": "lead_magnet",
+        "persuasionDepth": "standard",
+        "decisionComplexity": "low",
         "artDirection": {
-          "transformation": "fear_to_safety",
+          "transformation": "confusion_to_clarity",
           "energy": "calm",
           "density": "medium",
-          "humanity": "people_led"
+          "humanity": "balanced"
         },
         "bridge": null,
         "salesArgument": {
           "beliefChain": [
-            "The common irritants (fragrance, essential oils, alcohol) are what hurt my skin most, not just 'harsh' vague ingredients.",
-            "This brand actually removed those three things—not as a marketing angle, but as the core design.",
-            "The formula is pH-balanced and calming-focused, which is measurably different from standard skincare.",
-            "A money-back guarantee means I can try it without risking another bad reaction.",
-            "$39 is low-risk enough to test, and the 7-day visible-results promise is concrete enough to trust."
+            "Most growth stalls point to ONE specific bottleneck, not everything at once.",
+            "The right diagnostic can name that bottleneck in minutes, not weeks of analysis.",
+            "Once they know the bottleneck, the next step is clear: a conversation with someone who specializes in fixing it.",
+            "A free self-assessment is the fastest way to move from paralysis to action."
           ],
-          "corePromise": "A starter kit that calms sensitive skin without irritation—or your money back in 7 days.",
-          "primaryObjection": "Even if it's truly gentler, will it actually work? Will it make any difference to my skin?"
+          "corePromise": "You'll know your exact growth bottleneck and which single lever to pull next.",
+          "primaryObjection": "Skepticism that a free tool could be thorough enough to actually help, or concern it's really just a sales trap."
         },
         "sections": [
           {
             "type": "hero",
             "canvas": null,
             "role": "hook",
-            "serves": "The common irritants (fragrance, essential oils, alcohol) are what hurt my skin most, not just 'harsh' vague ingredients.",
-            "headline": "The Starter Kit That Won't Burn Your Skin",
-            "cta": "Get the Starter Kit",
-            "priceCents": null
-          },
-          {
-            "type": "benefits_grid",
-            "canvas": "warm_paper",
-            "role": "promise",
-            "serves": "The formula is pH-balanced and calming-focused, which is measurably different from standard skincare. + A money-back guarantee means I can try it without risking another bad reaction.",
-            "headline": "What You'll Actually Experience",
-            "cta": null,
-            "priceCents": null
-          },
-          {
-            "type": "trust_badges",
-            "canvas": "clean",
-            "role": "proof",
-            "serves": "This brand actually removed those three things—not as a marketing angle, but as the core design.",
-            "headline": null,
-            "cta": null,
-            "priceCents": null
-          },
-          {
-            "type": "offer",
-            "canvas": "warm_paper",
-            "role": "offer",
-            "serves": "$39 is low-risk enough to test, and the 7-day visible-results promise is concrete enough to trust.",
-            "headline": "",
-            "cta": "Get the Starter Kit",
-            "priceCents": 3900
-          },
-          {
-            "type": "faq",
-            "canvas": "clean",
-            "role": "objections",
-            "serves": "A money-back guarantee means I can try it without risking another bad reaction.",
-            "headline": null,
-            "cta": null,
-            "priceCents": null
-          },
-          {
-            "type": "cta_banner",
-            "canvas": "brand_tint",
-            "role": "close",
-            "serves": "$39 is low-risk enough to test, and the 7-day visible-results promise is concrete enough to trust.",
-            "headline": "Your sensitive skin deserves a formula that won't betray it.",
-            "cta": "Get the Starter Kit",
+            "serves": "Most growth stalls point to ONE specific bottleneck, not everything at once.",
+            "headline": "Find your growth bottleneck in 5 minutes",
+            "cta": "Get Your Free Scorecard",
             "priceCents": null
           }
         ],
         "workflows": [
           {
-            "id": "DocHwBv6S5KWrgRbEAxn",
-            "name": "The Starter Kit That Won't Burn Your Skin — follow-up",
+            "id": "caiAD55NZpfvKvRvffVr",
+            "name": "Find your growth bottleneck in 5 minutes — follow-up",
             "trigger": {
               "type": "form.submitted",
               "filters": {
                 "all": []
               },
-              "formId": "XbYnyDCXyiRpjnVKsHFN"
+              "formId": "lGC4i5tjQj8fSKFumowe"
             },
             "nodes": [
               {
@@ -120,19 +69,19 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
-                "tag": "The Starter Kit That Won't Burn Your Ski"
+                "tag": "Growth Bottleneck Scorecard Downloaded"
               },
               {
                 "type": "send_email",
-                "subject": "Your Sensitive Skin Starter Kit is on the way 💚",
-                "bodyPreview": "Thanks for ordering. Your Starter Kit ships tomorrow and will arrive within 3-5 business days.\n\nUse the cleanser, toner, and moisturizer twice daily—morning and night. Most people see visible redness reduction by day 3 and measurable barrier improvement by day 7.\n\nIf your skin isn't noticeably calmer or you experience any irritation, just reply to this email and we'll refund your $39 in full. No q",
+                "subject": "Your Growth Bottleneck Scorecard is ready",
+                "bodyPreview": "Hi there,\n\nYour scorecard is attached. Open it, run through the quick self-assessment, and you'll have a clear picture of where your growth is actually stuck.\n\nOnce you know your bottleneck, the next step is usually a conversation about which lever moves the needle fastest for your business. If that sounds useful, reply to this email and we can find a time.\n\nLooking forward to seeing what you disc",
                 "seconds": null,
                 "tag": null
               },
               {
                 "type": "notify",
-                "subject": "New lead: The Starter Kit That Won't Burn Your Skin",
-                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just submitted \"The Starter Kit That Won't Burn Your Skin\" and was tagged \"The Starter Kit That Won't Burn Your Ski\". A follow-up task has been created.",
+                "subject": "New lead: Find your growth bottleneck in 5 minutes",
+                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just submitted \"Find your growth bottleneck in 5 minutes\" and was tagged \"Growth Bottleneck Scorecard Downloaded\". A follow-up task has been created.",
                 "seconds": null,
                 "tag": null
               },
@@ -162,18 +111,18 @@
       {
         "name": "create_funnel",
         "ok": true,
-        "note": "created rAaW6HoomV3A8Jx2aUpc"
+        "note": "created jzCWpvQdgFbPZbNklaFa"
       }
     ],
     "error": null,
     "funnels": [
       {
-        "id": "rAaW6HoomV3A8Jx2aUpc",
-        "url": "/lp/rAaW6HoomV3A8Jx2aUpc",
-        "name": "Your First Visit Here. You're in Control of the Pace.",
+        "id": "jzCWpvQdgFbPZbNklaFa",
+        "url": "/lp/jzCWpvQdgFbPZbNklaFa",
+        "name": "A first exam where you stay in control",
         "genre": "lead_gen",
         "persuasionDepth": "lean",
-        "decisionComplexity": "moderate",
+        "decisionComplexity": "low",
         "artDirection": {
           "transformation": "fear_to_safety",
           "energy": "calm",
@@ -183,23 +132,22 @@
         "bridge": null,
         "salesArgument": {
           "beliefChain": [
-            "I can admit I need to go to the dentist without being shamed.",
-            "This practice is actually different—they understand why I've been avoiding it and they've built their process around NOT making me feel trapped.",
-            "I can control what happens during my first visit—I can pause, ask, slow down, or stop.",
-            "If they're this careful about the experience, the clinical work is probably competent too.",
-            "Booking this appointment is a safe, low-risk first step—I'm not committing to anything painful or invasive today."
+            "Most dental visits put the dentist in control, not the patient",
+            "This practice is intentionally different—they've redesigned the visit around anxious patients",
+            "That means I can control the pace, know costs up front, and stop if I need to",
+            "That's enough reassurance to book a first visit"
           ],
-          "corePromise": "Your first exam here is designed for people who've been putting it off. You're never rushed, always explained-to, and always in control.",
-          "primaryObjection": "Even if they say they're different, they'll still treat me like every other dentist once I'm in the chair. Or I'll get there and discover something expensive or scary."
+          "corePromise": "A dental exam where you stay in charge—no judgment, no surprises, no panic",
+          "primaryObjection": "I'm still scared they'll move too fast or pressure me into something I'm not ready for"
         },
         "sections": [
           {
             "type": "hero",
             "canvas": null,
             "role": "hook",
-            "serves": "I can admit I need to go to the dentist without being shamed.",
-            "headline": "Your First Visit Here. You're in Control of the Pace.",
-            "cta": "Book Your First Exam",
+            "serves": "Most dental visits put the dentist in control, not the patient",
+            "headline": "A first exam where you stay in control",
+            "cta": "See Available Times",
             "priceCents": null
           },
           {
@@ -224,8 +172,8 @@
             "type": "benefits_grid",
             "canvas": "warm_paper",
             "role": "promise",
-            "serves": "This practice is actually different—they understand why I've been avoiding it and they've built their process around NOT making me feel trapped. + I can control what happens during my first visit—I can pause, ask, slow down, or stop. + If they're this careful about the experience, the clinical work is probably competent too.",
-            "headline": "What Your First Visit Actually Looks Like",
+            "serves": "This practice is intentionally different—they've redesigned the visit around anxious patients + That means I can control the pace, know costs up front, and stop if I need to",
+            "headline": "What your first visit includes",
             "cta": null,
             "priceCents": null
           },
@@ -233,16 +181,16 @@
             "type": "offer",
             "canvas": "clean",
             "role": "offer",
-            "serves": "Booking this appointment is a safe, low-risk first step—I'm not committing to anything painful or invasive today.",
+            "serves": "That's enough reassurance to book a first visit",
             "headline": "",
-            "cta": "Book Your First Exam",
+            "cta": "See Available Times",
             "priceCents": null
           },
           {
             "type": "faq",
             "canvas": "warm_paper",
             "role": "objections",
-            "serves": "If they're this careful about the experience, the clinical work is probably competent too.",
+            "serves": "That means I can control the pace, know costs up front, and stop if I need to",
             "headline": null,
             "cta": null,
             "priceCents": null
@@ -251,22 +199,22 @@
             "type": "cta_banner",
             "canvas": "brand_tint",
             "role": "close",
-            "serves": "Booking this appointment is a safe, low-risk first step—I'm not committing to anything painful or invasive today.",
-            "headline": "Ready to take that step? We'll make it easy.",
-            "cta": "Book Your First Exam",
+            "serves": "That's enough reassurance to book a first visit",
+            "headline": "Ready to take the first step on your terms",
+            "cta": "See Available Times",
             "priceCents": null
           }
         ],
         "workflows": [
           {
-            "id": "rgSdfMMRn70rur4F81IE",
-            "name": "Your First Visit Here. You're in Control of the Pace. — follow-up",
+            "id": "uItvDB4dLIobuHUvvRFq",
+            "name": "A first exam where you stay in control — follow-up",
             "trigger": {
               "type": "form.submitted",
               "filters": {
                 "all": []
               },
-              "formId": "Byy8J8J5L12SMKD07FR3"
+              "formId": "G3IlhfPI8kIZaNRdyTga"
             },
             "nodes": [
               {
@@ -281,19 +229,19 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
-                "tag": "Your First Visit Here. You're in Control"
+                "tag": "A first exam where you stay in control r"
               },
               {
                 "type": "send_email",
-                "subject": "You're in — Your First Visit Here. You're in Control of the Pace.",
+                "subject": "You're in — A first exam where you stay in control",
                 "bodyPreview": "Thanks for signing up! We've got your details and will be in touch shortly.\n\n{{unsubscribeLink}}",
                 "seconds": null,
                 "tag": null
               },
               {
                 "type": "notify",
-                "subject": "New lead: Your First Visit Here. You're in Control of the Pace.",
-                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just submitted \"Your First Visit Here. You're in Control of the Pace.\" and was tagged \"Your First Visit Here. You're in Control\". A follow-up task has been created.",
+                "subject": "New lead: A first exam where you stay in control",
+                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just submitted \"A first exam where you stay in control\" and was tagged \"A first exam where you stay in control r\". A follow-up task has been created.",
                 "seconds": null,
                 "tag": null
               },
@@ -318,58 +266,48 @@
     ]
   },
   {
-    "key": "10-nonprofit",
+    "key": "7-hvac",
     "toolCalls": [
       {
         "name": "create_funnel",
         "ok": true,
-        "note": "created KkkLs9ywSGIz5YtkqJ2T"
+        "note": "created 8jIJxuMYW2eLhpVdYt6h"
       }
     ],
     "error": null,
     "funnels": [
       {
-        "id": "KkkLs9ywSGIz5YtkqJ2T",
-        "url": "/lp/KkkLs9ywSGIz5YtkqJ2T",
-        "name": "Every Child Deserves Stories That Belong to Them",
+        "id": "8jIJxuMYW2eLhpVdYt6h",
+        "url": "/lp/8jIJxuMYW2eLhpVdYt6h",
+        "name": "AC Down in the Heat? Get a Real Answer in 60 Seconds",
         "genre": "lead_gen",
-        "persuasionDepth": "standard",
-        "decisionComplexity": "moderate",
+        "persuasionDepth": "lean",
+        "decisionComplexity": "low",
         "artDirection": {
-          "transformation": "concern_to_action",
-          "energy": "balanced",
-          "density": "medium",
+          "transformation": "panic_to_relief",
+          "energy": "urgent",
+          "density": "rich",
           "humanity": "people_led"
         },
         "bridge": null,
         "salesArgument": {
           "beliefChain": [
-            "Literacy gaps prevent children from accessing opportunity",
-            "This organization has specific, proven programs addressing that gap",
-            "A monthly commitment, however small, compounds into sustained impact",
-            "I can trust this organization with my recurring gift",
-            "Monthly giving is how I want to participate"
+            "A real person actually answers the phone right now (not a robot or voicemail).",
+            "Same-day appointments are genuinely available—we tell you YES or NO in one call, not 'maybe'.",
+            "We quote the full price before any work starts, so no surprise invoice.",
+            "Every hour the AC is off costs comfort and money; calling takes 60 seconds and solves it today."
           ],
-          "corePromise": "Your $25/month directly funds literacy experiences that transform how children see themselves and their futures",
-          "primaryObjection": "Is $25/month really enough to matter? Will I actually see the impact?"
+          "corePromise": "Get your AC back today—no runaround, no surprise costs, just a real person who knows if we can help you right now.",
+          "primaryObjection": "They'll overcharge me once I commit, or I'll be on hold forever and it won't be same-day anyway."
         },
         "sections": [
           {
             "type": "hero",
             "canvas": null,
             "role": "hook",
-            "serves": "Literacy gaps prevent children from accessing opportunity",
-            "headline": "Every Child Deserves Stories That Belong to Them",
-            "cta": "Start My Monthly Gift",
-            "priceCents": null
-          },
-          {
-            "type": "photo_gallery",
-            "canvas": null,
-            "role": "proof",
-            "serves": null,
-            "headline": null,
-            "cta": null,
+            "serves": "A real person actually answers the phone right now (not a robot or voicemail).",
+            "headline": "AC Down in the Heat? Get a Real Answer in 60 Seconds",
+            "cta": "Call Now for Same-Day Availability",
             "priceCents": null
           },
           {
@@ -382,20 +320,11 @@
             "priceCents": null
           },
           {
-            "type": "problem_solution",
-            "canvas": "warm_paper",
-            "role": "belief_shift",
-            "serves": "This organization has specific, proven programs addressing that gap",
-            "headline": "The Reading Gap Starts Early — But It Doesn't Have to Define Everything",
-            "cta": null,
-            "priceCents": null
-          },
-          {
             "type": "benefits_grid",
-            "canvas": "clean",
+            "canvas": "dark_immersive",
             "role": "promise",
-            "serves": "A monthly commitment, however small, compounds into sustained impact + I can trust this organization with my recurring gift",
-            "headline": "What Your Monthly Gift Funds",
+            "serves": "Same-day appointments are genuinely available—we tell you YES or NO in one call, not 'maybe'. + We quote the full price before any work starts, so no surprise invoice.",
+            "headline": "What Happens When You Call",
             "cta": null,
             "priceCents": null
           },
@@ -403,16 +332,16 @@
             "type": "offer",
             "canvas": "brand_tint",
             "role": "offer",
-            "serves": "Monthly giving is how I want to participate",
+            "serves": "Every hour the AC is off costs comfort and money; calling takes 60 seconds and solves it today.",
             "headline": "",
-            "cta": "Start My Monthly Gift",
+            "cta": "Call Now for Same-Day Availability",
             "priceCents": null
           },
           {
             "type": "faq",
-            "canvas": "warm_paper",
+            "canvas": null,
             "role": "objections",
-            "serves": "I can trust this organization with my recurring gift",
+            "serves": null,
             "headline": null,
             "cta": null,
             "priceCents": null
@@ -421,22 +350,135 @@
             "type": "cta_banner",
             "canvas": "clean",
             "role": "close",
-            "serves": "Monthly giving is how I want to participate",
-            "headline": "Ready to Be Part of This?",
-            "cta": "Start My Monthly Gift",
+            "serves": "Every hour the AC is off costs comfort and money; calling takes 60 seconds and solves it today.",
+            "headline": "Your AC Doesn't Get Better on Its Own",
+            "cta": "Call Now for Same-Day Availability",
+            "priceCents": null
+          }
+        ],
+        "workflows": []
+      }
+    ]
+  },
+  {
+    "key": "9-enterprise-saas",
+    "toolCalls": [
+      {
+        "name": "create_funnel",
+        "ok": true,
+        "note": "created 91lSAi5LMYhKRpzQZhBL"
+      }
+    ],
+    "error": null,
+    "funnels": [
+      {
+        "id": "91lSAi5LMYhKRpzQZhBL",
+        "url": "/lp/91lSAi5LMYhKRpzQZhBL",
+        "name": "Technical Evaluation Designed for Multi-Stakeholder Procurement",
+        "genre": "application",
+        "persuasionDepth": "lean",
+        "decisionComplexity": "enterprise",
+        "artDirection": {
+          "transformation": "uncertainty_to_confidence",
+          "energy": "calm",
+          "density": "rich",
+          "humanity": "balanced"
+        },
+        "bridge": null,
+        "salesArgument": {
+          "beliefChain": [
+            "This vendor treats evaluation seriously and understands multi-stakeholder governance.",
+            "They will show us integration depth, deployment options, and threat detection logic—not just a feature list.",
+            "The evaluation is designed for us to make a real decision, not to be sold.",
+            "We can start now and stay on track for Q4/Q1 procurement."
+          ],
+          "corePromise": "A technical evaluation that earns buy-in from security, IT, ops, and procurement—or confidence that this platform isn't the right fit.",
+          "primaryObjection": "We're already talking to three other vendors; why add another evaluation to our plate?"
+        },
+        "sections": [
+          {
+            "type": "hero",
+            "canvas": null,
+            "role": "hook",
+            "serves": "This vendor treats evaluation seriously and understands multi-stakeholder governance.",
+            "headline": "Technical Evaluation Designed for Multi-Stakeholder Procurement",
+            "cta": "Schedule Technical Evaluation",
+            "priceCents": null
+          },
+          {
+            "type": "photo_gallery",
+            "canvas": null,
+            "role": "proof",
+            "serves": null,
+            "headline": null,
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "benefits_grid",
+            "canvas": "warm_paper",
+            "role": "promise",
+            "serves": "The evaluation is designed for us to make a real decision, not to be sold.",
+            "headline": "What Your Evaluation Includes",
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "included",
+            "canvas": "clean",
+            "role": "offer",
+            "serves": "We can start now and stay on track for Q4/Q1 procurement.",
+            "headline": "Who This Evaluation Is For",
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "agenda",
+            "canvas": "warm_paper",
+            "role": "mechanism",
+            "serves": "The evaluation is designed for us to make a real decision, not to be sold.",
+            "headline": null,
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "comparison",
+            "canvas": "clean",
+            "role": "belief_shift",
+            "serves": "They will show us integration depth, deployment options, and threat detection logic—not just a feature list.",
+            "headline": "Technical Evaluation vs. The Typical Vendor Demo",
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "cta_banner",
+            "canvas": "brand_tint",
+            "role": "close",
+            "serves": "We can start now and stay on track for Q4/Q1 procurement.",
+            "headline": "Start Your Technical Evaluation",
+            "cta": "Schedule Technical Evaluation",
+            "priceCents": null
+          },
+          {
+            "type": "offer",
+            "canvas": "warm_paper",
+            "role": "offer",
+            "serves": "We can start now and stay on track for Q4/Q1 procurement.",
+            "headline": "",
+            "cta": "Schedule Technical Evaluation",
             "priceCents": null
           }
         ],
         "workflows": [
           {
-            "id": "K1T6xoKjJXfRG7xRhH4Q",
-            "name": "Every Child Deserves Stories That Belong to Them — follow-up",
+            "id": "1VMoIGq6OxqrFy9qR36Q",
+            "name": "Technical Evaluation Designed for Multi-Stakeholder Procurement — follow-up",
             "trigger": {
               "type": "form.submitted",
               "filters": {
                 "all": []
               },
-              "formId": "Pu9T0sOcuezBrdUCm07A"
+              "formId": "vFtusv6EQygmxmi1TQOK"
             },
             "nodes": [
               {
@@ -451,19 +493,19 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
-                "tag": "Monthly Literacy Donor Interest"
+                "tag": "Technical Evaluation Designed for Multi-"
               },
               {
                 "type": "send_email",
-                "subject": "Welcome to monthly literacy support",
-                "bodyPreview": "Thank you for joining us.\n\nYour monthly gift of $25 will fund tutoring, books, and mentorship for children who need it most. We'll send you next steps to set up your recurring donation — along with regular updates on the impact you're creating.\n\nWe're grateful you're in this with us.\n\nWith appreciation,\nThe [Organization Name] Team\n\n{{unsubscribeLink}}",
+                "subject": "You're in — Technical Evaluation Designed for Multi-Stakeholder Procurement",
+                "bodyPreview": "Thanks for signing up! We've got your details and will be in touch shortly.\n\n{{unsubscribeLink}}",
                 "seconds": null,
                 "tag": null
               },
               {
                 "type": "notify",
-                "subject": "New lead: Every Child Deserves Stories That Belong to Them",
-                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just submitted \"Every Child Deserves Stories That Belong to Them\" and was tagged \"Monthly Literacy Donor Interest\". A follow-up task has been created.",
+                "subject": "New lead: Technical Evaluation Designed for Multi-Stakeholder Procurement",
+                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just submitted \"Technical Evaluation Designed for Multi-Stakeholder Procurement\" and was tagged \"Technical Evaluation Designed for Multi-\". A follow-up task has been created.",
                 "seconds": null,
                 "tag": null
               },

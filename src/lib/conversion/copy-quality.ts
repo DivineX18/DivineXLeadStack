@@ -111,6 +111,12 @@ const FABRICATION = [
   { re: /\b(dermatologist|clinically|doctor|physician|fda)[- ](tested|approved|recommended|endorsed)\b/i, severity: "high" as const, note: "Clinical/professional endorsement — only include if genuinely supplied by the business." },
   // Invented capacity/scarcity mechanics (cohort caps, application windows).
   { re: /\b(only \d+ (?:spots|seats|places|openings)|\d+ (?:participants|spots|seats|clients) maximum|one application per (?:quarter|month|year)|limited (?:spots|seats|availability))\b/i, severity: "high" as const, note: "Capacity/scarcity claim — never invent caps or windows the business didn't state." },
+  // Invented response/arrival-time promises ("answer in 60 seconds",
+  // "on-site within 2 hours") — a service-speed commitment the business
+  // never stated. Caught live: a generated HVAC hero promised "a real
+  // answer in 60 seconds" when the supplied fact was only "a dispatcher
+  // answers during operating hours".
+  { re: /\b(?:answer|response|reply|arrive|arrival|on.?site|call(?:ed)?\s?back)\w*\b.{0,25}\b(?:in|within)\s+\d+\s*(?:seconds?|minutes?|hours?)\b|\b(?:in|within)\s+\d+\s*(?:seconds?|minutes?|hours?)\b.{0,25}\b(?:answer|response|arrival|on.?site)\b/i, severity: "high" as const, note: "Response/arrival-time promise — only state a speed commitment the business actually made." },
   // Invented impact ratios ("$25/month funds one child's program").
   { re: /\$\d+(?:\/(?:mo|month))?\s+(?:funds|provides|feeds|educates|sponsors|buys)\s+(?:one|a|an|\d+)\b/i, severity: "high" as const, note: "Impact-ratio claim — only use a real, supplied program figure." },
 ];
@@ -169,11 +175,12 @@ function isHeadlineField(field: string): boolean {
  *  legitimate copy; treated as high-severity so the review flag trips. */
 const TEMPLATE_PLACEHOLDER = /\[(?:[A-Z][A-Z0-9 _-]{0,14})\]/;
 
-/** Negative/objection words that must never appear in a HEADLINE — naming
- *  the fear you're dispelling plants it ("Without the Dread", "Isn't a
- *  Gimmick", "Not a Scam"). The pain belongs in problem-section BODY copy,
- *  voiced as the prospect's own words — never in the promise line. */
-const HEADLINE_NEGATIVES = /\b(dread|gimmick|scam|ripoff|rip-off|not a (?:scam|gimmick|trick)|isn't a (?:scam|gimmick|trick)|without the (?:fear|dread|pain|anxiety))\b/i;
+/** NEGATION FRAMES only — a headline introducing an objection merely to
+ *  deny it ("Isn't a Gimmick", "Not a Scam", "Without the Dread") plants
+ *  the doubt nobody raised. Deliberately narrow: honestly NAMING a real
+ *  prospect pain ("AC Dead in the Heat?", "for patients who feel anxious")
+ *  is legitimate direct response and must never flag. */
+const HEADLINE_NEGATIVES = /\b(?:isn't|is not|not) a (?:scam|gimmick|trick|sales pitch|hard sell)\b|\bwithout the (?:fear|dread|pressure)\b/i;
 
 /** Booking-verb openers — "Schedule Your Technical Evaluation", "Book Your
  *  First Visit". The imperative ask is the BUTTON's job; a headline that
@@ -190,11 +197,16 @@ function evaluateField(sectionType: string, field: string, text: string, issues:
 
   // Headline laws (hero headline + section headers only).
   if (isHeadlineField(field)) {
+    // ADVISORY (low severity), deliberately: an imperative headline is fine
+    // when the action itself carries the offer ("Get Your Free Roof
+    // Inspection Today"). The flag is a judgment prompt for the review pass,
+    // not a prohibition — the failure mode is spending the headline position
+    // on an action that carries little information.
     if (BOOKING_VERB_OPENER.test(text.trim())) {
-      issues.push({ kind: "weak_headline", severity: "medium", sectionType, field, excerpt: excerpt(text), note: "Headline opens with the booking action — that's the button's job. Lead with the offer/outcome itself." });
+      issues.push({ kind: "weak_headline", severity: "low", sectionType, field, excerpt: excerpt(text), note: "Headline opens with an action verb — check it still communicates a concrete offer/outcome, not just the ask. Fine if the action itself carries the value." });
     }
     if (HEADLINE_NEGATIVES.test(text)) {
-      issues.push({ kind: "weak_headline", severity: "medium", sectionType, field, excerpt: excerpt(text), note: "Headline names the fear/objection it's dispelling — state the positive promise instead; resolve the fear in body copy." });
+      issues.push({ kind: "weak_headline", severity: "low", sectionType, field, excerpt: excerpt(text), note: "Headline negates an objection the prospect may not have had — check the negative frame reflects a demonstrated belief and beats positive framing." });
     }
   }
 

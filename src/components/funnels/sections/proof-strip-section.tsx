@@ -43,7 +43,7 @@ export function ProofStripSection({ config }: { config: ProofStripConfig }) {
     return (
       <section className="px-4 py-8">
         <p className="mb-4 text-center text-xs font-semibold uppercase tracking-widest opacity-40">
-          As seen in
+          {config.heading || "As seen in"}
         </p>
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-x-12 gap-y-6 opacity-60 grayscale transition-opacity hover:opacity-80">
           {config.logos.map((logo, i) => (

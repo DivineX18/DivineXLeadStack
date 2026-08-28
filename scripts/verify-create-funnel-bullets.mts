@@ -476,6 +476,33 @@ function check(label: string, ok: boolean, detail?: string) {
   check("5d. negative-word headline flagged", weak("Why Same-Day Repair Isn't a Gimmick for Us"));
   check("5e. offer-led headline clean", !weak("A First Exam That Goes at Your Pace"));
   check("5f. [YEAR] placeholder trips fabricationRisk", hasFabricationRisk(mkHead("Serving Phoenix Since [YEAR]")));
+  // 5g+: principle refinements (user correction: guardrails, not blacklists)
+  check("5g. honest pain naming does NOT flag", !weak("AC Dead in the Heat? Same-Day Repair in Phoenix"));
+  const lowOnly = (h: string) => mkHead(h).issues.every((i) => i.kind !== "weak_headline" || i.severity === "low");
+  check("5h. imperative flags are ADVISORY (low severity)", lowOnly("Schedule Your Technical Evaluation"));
+  check("5i. response-time promise trips fabricationRisk", hasFabricationRisk(mkHead("Get a Real Answer in 60 Seconds")));
+  check("5j. negation frame still flagged", weak("Why This Isn't a Gimmick"));
+}
+
+// 6. Supplied-evidence validate round-trip: real https URLs only, capped, never invented.
+{
+  const v = cap.validate!({
+    headline: "A first exam where you stay in control",
+    bullets: "You set the pace, Stop anytime",
+    genre: "lead_gen",
+    emotional_transformation: "fear_to_safety",
+    supplied_evidence_logos: [
+      { image_url: "https://example.com/ada.png", label: "ADA member" },
+      { image_url: "http://insecure.com/x.png", label: "dropped (not https)" },
+      { image_url: "javascript:alert(1)", label: "dropped (scheme)" },
+    ],
+    supplied_evidence_heading: "Certifications & memberships",
+  });
+  check("6a. evidence validate passes", v.ok === true);
+  if (v.ok) {
+    const logos = (v.args as Record<string, unknown>).suppliedEvidenceLogos as { url: string }[];
+    check("6b. only real https URLs survive", logos?.length === 1 && logos[0].url === "https://example.com/ada.png");
+  }
 }
 
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);
