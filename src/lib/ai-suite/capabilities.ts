@@ -112,6 +112,7 @@ import {
   MessageTemplateValidationError,
 } from "@/lib/server/message-templates-service";
 import { updateWorkflowServerSide } from "@/lib/server/workflows-service";
+import { composeStrategyNodes, synthesizeAutomationPlan } from "@/lib/workflows/compose-strategy";
 import {
   FirecrawlError,
   firecrawlIsConfigured,
@@ -3359,7 +3360,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       "tripwire (sales-page style) = Hero → Problem/Solution → Opportunity (callout — why this matters now) → Features (benefits grid) → Trust badges (or real testimonials, if given) → Value Stack → Offer (priced) → Guarantee → FAQ (fill the value_stack param with the real deliverables + honest values + total + price)." +
       "lead_gen = Hero → Trust Logos → Benefits (grid) → Offer (capture form) → FAQ. " +
       "LENGTH — match page length to commitment level, not a fixed habit: lead_magnet is the one exception at a true single fold (above); every other genre's stage count already reflects what its ask requires, so use the full sequence rather than trimming it. A free download needs zero persuasion runway; a webinar/lead_gen registration (6/5 stages) needs a little context before someone hands over their email; a multi-day challenge or a qualify-before-you-can-apply application (6 stages each) needs to show the process and set expectations; a priced tripwire offer (8 stages, sales-page style) needs the most — problem, proof, guarantee, objection-handling — because asking for a card number is the highest-commitment ask on this list. For an especially high-ticket / SaaS-style offer within any priced genre, lean into writing MORE substantive copy per stage (richer stage_content, fuller story_paragraphs) rather than adding new sections — the framework's stage count is fixed per genre; depth of copy is where 'long-form' actually lives. " +
-      "Some stages have a fixed layout; a few (marked above with 'or') allow an alternate — use layout_choices ONLY to pick that alternate when the business/evidence genuinely calls for it (e.g. real testimonials exist), never as a default habit. Workflow: (1) pick the genre — lead_magnet (free book/PDF opt-in, one-fold), vsl (high-ticket video sales page), challenge (multi-day registration), application (qualify leads before a call), tripwire (low-ticket entry offer), webinar (single-session registration), lead_gen (generic interest capture); (2) write a specific, concrete headline — never a generic tagline; (3) bullets must name a specific outcome or mechanism, never a vague adjective ('transformative', 'game-changing', 'cutting-edge' are banned); (4) ONLY include faq_items if you have enough real detail to answer honestly — never invent generic filler Q&A or fabricated guarantees/stats; (5) price_cents only applies to genres with a priced offer (tripwire, vsl, challenge) — omit for a free lead magnet, and when a price IS set, skip the capture form (a paid offer needs checkout, not a lead form — the operator wires up Stripe checkout on that section afterward); (6) leave include_capture_form at its default (true) unless the user is clearly building a pure sales/checkout page with no opt-in step; (7) confirmation_email_body should read like a real, brief, human confirmation (what they'll get, what's next) — it can be genuinely short, but must never invent guarantees, stats, or promises the funnel copy itself didn't make; (8) ALWAYS write story_paragraphs whenever the genre's framework includes a Story/Founder-Story/Host stage. Two cases: if the user gave you a REAL testimonial (an actual customer's words, name, location, or result), use it close to verbatim as story_paragraphs with story_byline set to their real attribution (e.g. 'From: Jane Doe, Austin, TX') — don't rewrite their claim into something stronger than what they said. Otherwise (the common case — no testimonial offered), write 2-4 paragraphs of synthesized 'why this works' copy — the mechanism, the reasoning — from the headline/bullets you already wrote, with a generic byline like 'Why this works' (or 'Your host: ...' for a webinar), and NEVER invent a fictional customer name/location/quote to make it look like a testimonial; (9) guarantee_headline/guarantee_body — ONLY when the user told you a real guarantee they actually offer, never invented; (10) trust_badges — safe generic ones (e.g. 'Secure checkout', 'Privacy protected') are fine whenever there's a form or checkout, but only add a guarantee-related badge if guarantee_headline is also set; ALSO write hero_trust_badges (2-3 honest risk-reversal signals like 'No credit card required' / 'Free — no obligation' / 'Licensed & insured') for the check-marked row under the hero's above-the-fold CTA — every genre, never an invented rating or 'trusted by N'; (11) cta_banner_headline/cta_banner_subtext — every multi-section genre now carries a repeat CTA banner (mid-page or closing), so ALWAYS write these for any genre except the one-fold lead_magnet; restate the real offer, never introduce a new claim; (12) process_steps — write these whenever the genre's framework includes a process-timeline stage (most do); (13) stage_content — write one entry per remaining stage the genre's framework includes (video/benefits grid/problem-solution/before-after/included/comparison/callout), per that param's own field-mapping description; never include a testimonials entry unless the user gave you real quotes; (14) visual_archetype — ALWAYS pick one that matches this business's audience (see the DESIGN section above); omitting it skips Phase 2's design intelligence entirely and falls back to a plain, generic look, which defeats the point — only override its palette/typography/animation/CTA defaults when you have a genuine reason from what the user told you, not by default habit; (15) emotional_transformation — ALWAYS set it (see its param description): it drives the page's ART DIRECTION so an emergency-service page and an anxious-patient page come out structurally different, not the same layout recolored; (16) sales_argument — construct it FIRST and derive EVERY section's copy from it. The page is the visual execution of ONE argument (current belief → required beliefs → action), not a collection of components. The Belief Shift stage (the problem_solution entry in stage_content — every multi-section genre now has one, including lead_gen and webinar) is where the argument TURNS: its problem side voices the prospect's CURRENT belief and the conventional experience that creates the friction they recognize (from old_way/why_old_way_fails — e.g. 'call center, voicemail, a slot next week, an unknown price', or 'you're probably not avoiding the dentist because you don't care — you're avoiding the lecture, the embarrassment, the loss of control') — never a manufactured strawman; its solution side is the REFRAME (the new opportunity + mechanism: 'so we changed the first visit', 'built around a different promise: one call, a real person, a technician today, the price before the wrench turns'). The benefits then PROVE the reframed promise — each item should serve a step in belief_chain, never a generic feature list. The offer section makes the ACTION tangible and must NOT repeat the benefits items (offer bullets = what they concretely get + what happens next; benefits = why the promise is believable). The closing CTA banner is the CLOSE, not a 'Ready?' box: restate core_promise, resolve the last hesitation (primary_objection/risk_reversal), and give close_reason. Every genre's full stage sequence renders on the page regardless of which fields you fill — an unfilled stage shows placeholder/nothing, so fill every stage the genre actually has, not just headline/offer/faq. After creating, feel free to suggest one or two concrete improvements in your reply (e.g. a sharper headline angle, a stronger CTA placement, a trust element to add) — but only as a suggestion the user can act on, never as a score or grade.",
+      "Some stages have a fixed layout; a few (marked above with 'or') allow an alternate — use layout_choices ONLY to pick that alternate when the business/evidence genuinely calls for it (e.g. real testimonials exist), never as a default habit. Workflow: (1) pick the genre — lead_magnet (free book/PDF opt-in, one-fold), vsl (high-ticket video sales page), challenge (multi-day registration), application (qualify leads before a call), tripwire (low-ticket entry offer), webinar (single-session registration), lead_gen (generic interest capture); (2) write a specific, concrete headline — never a generic tagline; (3) bullets must name a specific outcome or mechanism, never a vague adjective ('transformative', 'game-changing', 'cutting-edge' are banned); (4) ONLY include faq_items if you have enough real detail to answer honestly — never invent generic filler Q&A or fabricated guarantees/stats; (5) price_cents only applies to genres with a priced offer (tripwire, vsl, challenge) — omit for a free lead magnet, and when a price IS set, skip the capture form (a paid offer needs checkout, not a lead form — the operator wires up Stripe checkout on that section afterward); (6) leave include_capture_form at its default (true) unless the user is clearly building a pure sales/checkout page with no opt-in step; (7) confirmation_email_body should read like a real, brief, human confirmation (what they'll get, what's next) — it can be genuinely short, but must never invent guarantees, stats, or promises the funnel copy itself didn't make; (8) ALWAYS write story_paragraphs whenever the genre's framework includes a Story/Founder-Story/Host stage. Two cases: if the user gave you a REAL testimonial (an actual customer's words, name, location, or result), use it close to verbatim as story_paragraphs with story_byline set to their real attribution (e.g. 'From: Jane Doe, Austin, TX') — don't rewrite their claim into something stronger than what they said. Otherwise (the common case — no testimonial offered), write 2-4 paragraphs of synthesized 'why this works' copy — the mechanism, the reasoning — from the headline/bullets you already wrote, with a generic byline like 'Why this works' (or 'Your host: ...' for a webinar), and NEVER invent a fictional customer name/location/quote to make it look like a testimonial; (9) guarantee_headline/guarantee_body — ONLY when the user told you a real guarantee they actually offer, never invented; (10) trust_badges — safe generic ones (e.g. 'Secure checkout', 'Privacy protected') are fine whenever there's a form or checkout, but only add a guarantee-related badge if guarantee_headline is also set; ALSO write hero_trust_badges (2-3 honest risk-reversal signals like 'No credit card required' / 'Free — no obligation' / 'Licensed & insured') for the check-marked row under the hero's above-the-fold CTA — every genre, never an invented rating or 'trusted by N'; (11) cta_banner_headline/cta_banner_subtext — every multi-section genre now carries a repeat CTA banner (mid-page or closing), so ALWAYS write these for any genre except the one-fold lead_magnet; restate the real offer, never introduce a new claim; (12) process_steps — write these whenever the genre's framework includes a process-timeline stage (most do); (13) stage_content — write one entry per remaining stage the genre's framework includes (video/benefits grid/problem-solution/before-after/included/comparison/callout), per that param's own field-mapping description; never include a testimonials entry unless the user gave you real quotes; (14) visual_archetype — ALWAYS pick one that matches this business's audience (see the DESIGN section above); omitting it skips Phase 2's design intelligence entirely and falls back to a plain, generic look, which defeats the point — only override its palette/typography/animation/CTA defaults when you have a genuine reason from what the user told you, not by default habit; (15) emotional_transformation — ALWAYS set it (see its param description): it drives the page's ART DIRECTION so an emergency-service page and an anxious-patient page come out structurally different, not the same layout recolored; (16) sales_argument — construct it FIRST and derive EVERY section's copy from it. The page is the visual execution of ONE argument (current belief → required beliefs → action), not a collection of components. The Belief Shift stage (the problem_solution entry in stage_content — every multi-section genre now has one, including lead_gen and webinar) is where the argument TURNS: its problem side voices the prospect's CURRENT belief and the conventional experience that creates the friction they recognize (from old_way/why_old_way_fails — e.g. 'call center, voicemail, a slot next week, an unknown price', or 'you're probably not avoiding the dentist because you don't care — you're avoiding the lecture, the embarrassment, the loss of control') — never a manufactured strawman; its solution side is the REFRAME (the new opportunity + mechanism: 'so we changed the first visit', 'built around a different promise: one call, a real person, a technician today, the price before the wrench turns'). The benefits then PROVE the reframed promise — each item should serve a step in belief_chain, never a generic feature list. The offer section makes the ACTION tangible and must NOT repeat the benefits items (offer bullets = what they concretely get + what happens next; benefits = why the promise is believable). The closing CTA banner is the CLOSE, not a 'Ready?' box: restate core_promise, resolve the last hesitation (primary_objection/risk_reversal), and give close_reason. Every genre's full stage sequence renders on the page regardless of which fields you fill — an unfilled stage shows placeholder/nothing, so fill every stage the genre actually has, not just headline/offer/faq. (17) automation_plan + automation_sequence — the AUTOMATION STRATEGY ENGINE: before writing follow-up, silently reason through the conversion LIFECYCLE (never shown to the user): what a submission MEANS, the states a lead moves through, the state that ENDS the journey (goal_state, with a goal_tag the operator applies — the sequence auto-exits the moment it's tagged), how long before a human takes over (handoff_days), and the cadence between touches. Then write automation_sequence: 1-4 nurture emails AFTER the instant confirmation, each CONTINUING the page's sales argument — advance the SAME belief chain from where the page left off, same mechanism, same promise, resolving the primary_objection over the arc; never generic 'checking in' filler. Timing matches intent: urgent/phone-first = NO nurture emails (omit the sequence) + handoff_days 0-1; free magnet = 2-3 touches over 3-7 days bridging toward the next step; application/high-ticket = 2-4 spaced touches over 1-3 weeks; enterprise = patient, evaluation-supporting touches. The same fabrication blacklist applies to email copy — and additionally NEVER invent named people (a beneficiary, customer, or staff member — 'Marcus's first progress report' with no real Marcus is a fabricated testimonial in email form), and never promise artifacts that don't exist ('your impact report', 'your personalized analysis') — emails may only reference the funnel's REAL deliverable and the beliefs its page argued. Never write fill-in-the-blank emails either — bracketed placeholders like '[Child intro: name, age]' ship as broken copy; if the business can't truthfully promise a specific (a matched student, a personal report), write the email WITHOUT that mechanic rather than templating it. After creating, feel free to suggest one or two concrete improvements in your reply (e.g. a sharper headline angle, a stronger CTA placement, a trust element to add) — but only as a suggestion the user can act on, never as a score or grade.",
     parameters: {
       type: "object",
       properties: {
@@ -3701,6 +3702,36 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         supplied_evidence_heading: {
           type: "string",
           description: "Heading over the evidence strip, matched to what the logos ARE: 'Trusted by', 'As featured in', 'Certifications & memberships'. Only with supplied_evidence_logos. Max 50 chars.",
+        },
+        automation_plan: {
+          type: "object",
+          properties: {
+            conversion_event: { type: "string", description: "What a form submission MEANS for this funnel ('requested the guide', 'applied for the program', 'asked for an emergency callback'). Max 100 chars." },
+            goal_state: { type: "string", description: "The state that ENDS the follow-up journey ('booked the consultation', 'made a purchase', 'replied to schedule'). Max 100 chars." },
+            goal_tag: { type: "string", description: "Short kebab-case tag whose presence EXITS the sequence (the operator applies it when the goal state is reached): 'booked', 'purchased', 'replied', 'enrolled'. Max 40 chars." },
+            handoff_days: { type: "number", description: "Days from signup until a human-handoff task is created for the operator. Urgent/high-intent: 0-1. Considered: 3-7. Enterprise: 7-14." },
+            cadence_rationale: { type: "string", description: "One sentence: why this timing fits this buyer's intent level. Max 200 chars." },
+          },
+          required: ["conversion_event", "goal_state", "goal_tag", "handoff_days"],
+          additionalProperties: false,
+          description:
+            "AUTOMATION STRATEGY — reason about the conversion LIFECYCLE before writing any follow-up: states, transitions, the goal that ends the journey, suppression, and human handoff. The composed workflow checks goal_tag before EVERY nurture touch and exits the moment it's applied — so converted leads are never nurtured. Fill honestly from the funnel's real intent: an emergency-service lead needs a fast handoff, not a nurture arc; an enterprise evaluation needs spaced touches over weeks.",
+        },
+        automation_sequence: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              delay_hours: { type: "number", description: "Hours AFTER SIGNUP this email sends (absolute, not relative to the previous step). 1-336." },
+              subject: { type: "string", description: "Email subject. Max 120 chars." },
+              body: { type: "string", description: "Full email body. MUST continue the page's sales argument — advance the SAME belief chain from where the page left off, reference the same mechanism and promise; never a generic 'just checking in'. {{contact.firstName}} merge tag available." },
+              purpose: { type: "string", description: "This step's JOB in the journey ('resolve the price objection', 'remove the risk of the first visit'). Max 100 chars." },
+            },
+            required: ["delay_hours", "subject", "body", "purpose"],
+            additionalProperties: false,
+          },
+          description:
+            "1-4 NURTURE emails sent AFTER the instant confirmation email (which confirmation_email_subject/body already covers — don't duplicate it here). Each is preceded by the goal_tag exit check. Match count + spacing to intent: urgent/high-intent gets 0-1 touch then fast human handoff; cold considered offers get 2-4 touches over 1-3 weeks. Omit entirely for phone-first emergency funnels where nurture emails would be tone-deaf.",
         },
         cta_phone_number: {
           type: "string",
@@ -4181,6 +4212,38 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             return items.length ? items : null;
           })(),
           suppliedEvidenceHeading: str(raw, "supplied_evidence_heading").trim().slice(0, 50),
+          automationPlan: (() => {
+            const v = (raw as Record<string, unknown>).automation_plan ?? (raw as Record<string, unknown>).automationPlan;
+            if (!v || typeof v !== "object" || Array.isArray(v)) return null;
+            const o = v as Record<string, unknown>;
+            const st = (k: string, cap: number) => (typeof o[k] === "string" ? (o[k] as string).trim().slice(0, cap) : "");
+            const goalTag = st("goal_tag", 40) || st("goalTag", 40);
+            const conversionEvent = st("conversion_event", 100) || st("conversionEvent", 100);
+            const goalState = st("goal_state", 100) || st("goalState", 100);
+            if (!goalTag || !conversionEvent || !goalState) return null;
+            const hd = Number(o.handoff_days ?? o.handoffDays);
+            return {
+              conversionEvent,
+              goalState,
+              goalTag: goalTag.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "converted",
+              handoffDays: Number.isFinite(hd) ? Math.min(30, Math.max(0, hd)) : 3,
+              cadenceRationale: st("cadence_rationale", 200) || st("cadenceRationale", 200),
+            };
+          })(),
+          automationSequence: (() => {
+            const v = (raw as Record<string, unknown>).automation_sequence ?? (raw as Record<string, unknown>).automationSequence;
+            if (!Array.isArray(v)) return [];
+            return v
+              .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
+              .map((x) => ({
+                delayHours: Math.min(336, Math.max(1, Number(x.delay_hours ?? x.delayHours) || 24)),
+                subject: typeof x.subject === "string" ? x.subject.trim().slice(0, 120) : "",
+                body: typeof x.body === "string" ? fixLiteralNewlines(x.body.trim()) : "",
+                purpose: typeof x.purpose === "string" ? x.purpose.trim().slice(0, 100) : "",
+              }))
+              .filter((x) => x.subject && x.body)
+              .slice(0, 4);
+          })(),
           ctaPhoneNumber,
           ctaBookingPageSlug,
           visualArchetype,
@@ -4908,45 +4971,34 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           name: `${displayName} — follow-up`,
           template: "blank",
         });
+        // AUTOMATION STRATEGY ENGINE (see lib/workflows/compose-strategy.ts):
+        // the model's lifecycle plan + nurture sequence compose into a real
+        // state machine — goal-tag exit checks before every touch, human
+        // handoff task when the goal isn't reached. A model that supplied no
+        // plan gets the synthesized floor (instant confirm + 1-day handoff,
+        // still goal-tag-guarded). Same engine, same builder editability as
+        // any hand-built workflow.
+        const autoPlan =
+          (args.automationPlan as import("@/lib/workflows/compose-strategy").AutomationStrategyPlan | null) ??
+          synthesizeAutomationPlan(displayName, tag);
+        const autoSequence = (args.automationSequence ?? []) as import("@/lib/workflows/compose-strategy").AutomationSequenceStep[];
+        const composed = composeStrategyNodes({
+          plan: autoPlan,
+          sequence: autoSequence,
+          displayName,
+          tag,
+          confirmationSubject: emailSubject,
+          confirmationBody: emailBody,
+          ownerNotifyBody: `{{contact.firstName}} ({{contact.email}}) just ${autoPlan.conversionEvent}. The follow-up sequence is running — apply the "${autoPlan.goalTag}" tag the moment they ${autoPlan.goalState}, and every remaining automated touch stops.`,
+        });
         await updateWorkflowServerSide({
           subAccountId,
           workflowId: createdWorkflowId,
           patch: {
             trigger: { type: "form.submitted", filters: { all: [] }, formId: createdFormId },
-            nodes: {
-              n1: {
-                id: "n1",
-                type: "create_deal",
-                config: { title: displayName, value: 0, currency: "usd", stageId: "new", priority: "medium" },
-                next: "n2",
-              },
-              n2: { id: "n2", type: "add_tag", config: { tag }, next: "n3" },
-              n3: {
-                id: "n3",
-                type: "send_email",
-                config: { subject: emailSubject, body: emailBody },
-                next: "n4",
-              },
-              n4: {
-                id: "n4",
-                type: "notify",
-                config: {
-                  recipient: "owner",
-                  to: "",
-                  subject: `New lead: ${displayName}`,
-                  body: `{{contact.firstName}} ({{contact.email}}) just submitted "${displayName}" and was tagged "${tag}". A follow-up task has been created.`,
-                },
-                next: "n5",
-              },
-              n5: { id: "n5", type: "wait", config: { seconds: 86_400 }, next: "n6" },
-              n6: {
-                id: "n6",
-                type: "create_task",
-                config: { title: `Follow up with {{contact.firstName}} — ${displayName}`, dueInDays: 0 },
-                next: null,
-              },
-            },
-            startNodeId: "n1",
+            nodes: composed.nodes,
+            startNodeId: composed.startNodeId,
+            strategyPlan: autoPlan,
           },
         });
       }
@@ -5173,6 +5225,36 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           // (persisted to funnelCopyReviews, mirroring the design score).
           // Best-effort, same swallow as the design score.
           copyReview = await reviewFunnelCopy(scoredFunnel);
+          // The AUTOMATION emails get the same scan — the e2e caught a
+          // fabricated named beneficiary ("Marcus") + a fictional "Impact
+          // Report" artifact in generated nurture copy that the page-only
+          // review never saw. Email bodies are folded in as pseudo-sections
+          // so fabrication there trips the exact same operator warning.
+          const emailCopy = [
+            { subject: args.confirmationEmailSubject as string, body: args.confirmationEmailBody as string },
+            ...((args.automationSequence ?? []) as { subject: string; body: string }[]),
+          ].filter((e) => e.subject || e.body);
+          if (emailCopy.length > 0) {
+            const { evaluateFunnelCopy } = await import("@/lib/conversion/copy-quality");
+            const emailReport = evaluateFunnelCopy(
+              emailCopy.map((e, i) => ({
+                id: `email-${i}`,
+                type: "story",
+                config: { byline: "", paragraphs: [e.body ?? ""], headline: e.subject ?? "" },
+              })) as never,
+            );
+            const emailFabrication = emailReport.issues.filter((i) => i.kind === "possible_fabrication");
+            if (emailFabrication.length > 0 && copyReview) {
+              copyReview = {
+                ...copyReview,
+                fabricationRisk: copyReview.fabricationRisk || emailFabrication.some((i) => i.severity === "high"),
+                issues: [
+                  ...copyReview.issues,
+                  ...emailFabrication.map((i) => ({ ...i, sectionType: "follow-up email" })),
+                ],
+              } as typeof copyReview;
+            }
+          }
         }
       } catch {
         // Swallowed — the operator can always trigger a manual re-score

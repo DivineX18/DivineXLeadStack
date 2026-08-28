@@ -382,6 +382,7 @@ export interface WorkflowPatch {
   trigger?: WorkflowTrigger;
   nodes?: Record<string, WorkflowNode>;
   startNodeId?: string | null;
+  strategyPlan?: WorkflowDoc["strategyPlan"];
 }
 
 export async function updateWorkflowServerSide(opts: {
@@ -403,6 +404,7 @@ export async function updateWorkflowServerSide(opts: {
   if (patch.trigger !== undefined) write.trigger = patch.trigger;
   if (patch.nodes !== undefined) write.nodes = patch.nodes;
   if (patch.startNodeId !== undefined) write.startNodeId = patch.startNodeId;
+  if (patch.strategyPlan !== undefined) write.strategyPlan = patch.strategyPlan;
   await ref.update(write);
   return true;
 }

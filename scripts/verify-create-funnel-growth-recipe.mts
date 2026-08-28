@@ -126,9 +126,12 @@ try {
   check("7a. n1 is create_deal, stage=new, next=n2", nodes.n1?.type === "create_deal" && nodes.n1?.config?.stageId === "new" && nodes.n1?.next === "n2");
   check("7b. n2 is add_tag with the requested tag, next=n3", nodes.n2?.type === "add_tag" && nodes.n2?.config?.tag === "Website Assessment Requested" && nodes.n2?.next === "n3");
   check("7c. n3 is send_email (confirmation), next=n4", nodes.n3?.type === "send_email" && !!nodes.n3?.config?.subject && nodes.n3?.next === "n4");
-  check("7d. n4 is notify (internal), next=n5", nodes.n4?.type === "notify" && nodes.n4?.config?.recipient === "owner" && nodes.n4?.next === "n5");
-  check("7e. n5 is wait 1 day, next=n6", nodes.n5?.type === "wait" && nodes.n5?.config?.seconds === 86_400 && nodes.n5?.next === "n6");
-  check("7f. n6 is create_task, chain ends (next=null)", nodes.n6?.type === "create_task" && nodes.n6?.next === null);
+  // Automation Strategy Engine graph (compose-strategy.ts): notify → wh
+  // (handoff wait) → ch (goal-tag exit check) → task. The old fixed n5/n6
+  // spine was retired when workflows became lifecycle-composed.
+  check("7d. n4 is notify (internal), next=wh", nodes.n4?.type === "notify" && nodes.n4?.config?.recipient === "owner" && nodes.n4?.next === "wh");
+  check("7e. wh is the handoff wait (1 day synthesized), next=ch", nodes.wh?.type === "wait" && nodes.wh?.config?.seconds === 86_400 && nodes.wh?.next === "ch");
+  check("7f. ch goal-gates the task; task ends the chain", nodes.ch?.type === "if_else" && nodes.ch?.branches?.whenTrue === "goal" && nodes.ch?.branches?.whenFalse === "task" && nodes.task?.type === "create_task" && nodes.task?.next === null);
 
   // --- Drive the REAL engine through the Firestore-only nodes (n1, n2, n6) ---
   const contactRes = await createContactServerSide({
@@ -187,9 +190,9 @@ try {
   check("9. runStep(n2) tags the contact via the real add_tag executor", (contactAfterTag.data()?.tags ?? []).includes("Website Assessment Requested"));
 
   await resetRunning();
-  await runStep(runRef.id, "n6");
+  await runStep(runRef.id, "task");
   const tasksSnap = await db.collection("tasks").where("contactId", "==", contactId).get();
-  check("10a. runStep(n6) creates a real follow-up Task via the real engine executor", tasksSnap.size === 1, `count=${tasksSnap.size}`);
+  check("10a. runStep(task) creates a real follow-up Task via the real engine executor", tasksSnap.size === 1, `count=${tasksSnap.size}`);
   const task = tasksSnap.docs[0]?.data();
   check("10b. Task title resolves the {{contact.firstName}} merge tag", (task?.title as string)?.includes("Jamie"), task?.title);
 
@@ -199,7 +202,7 @@ try {
     "11. Run history records all three real executions with ok-shaped results",
     history.some((h) => h.nodeId === "n1" && h.result.startsWith("deal_created:")) &&
       history.some((h) => h.nodeId === "n2" && h.result.startsWith("tag+:")) &&
-      history.some((h) => h.nodeId === "n6" && h.result === "task_created"),
+      history.some((h) => h.nodeId === "task" && h.result === "task_created"),
     JSON.stringify(history),
   );
 

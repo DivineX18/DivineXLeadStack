@@ -1,63 +1,133 @@
 [
   {
-    "key": "2-assessment",
+    "key": "10-nonprofit",
     "toolCalls": [
       {
         "name": "create_funnel",
         "ok": true,
-        "note": "created RYx2dUNYhyLn0siUHu0E"
+        "note": "created RscFRipekXKjaglyl1RP"
       }
     ],
     "error": null,
     "funnels": [
       {
-        "id": "RYx2dUNYhyLn0siUHu0E",
-        "url": "/lp/RYx2dUNYhyLn0siUHu0E",
-        "name": "Growth Bottleneck Scorecard",
-        "genre": "lead_magnet",
+        "id": "RscFRipekXKjaglyl1RP",
+        "url": "/lp/RscFRipekXKjaglyl1RP",
+        "name": "$25 a month transforms a child's reading future",
+        "genre": "lead_gen",
         "persuasionDepth": "standard",
         "decisionComplexity": "low",
         "artDirection": {
-          "transformation": "confusion_to_clarity",
-          "energy": "calm",
+          "transformation": "concern_to_action",
+          "energy": "balanced",
           "density": "medium",
-          "humanity": "balanced"
+          "humanity": "people_led"
         },
         "bridge": null,
         "salesArgument": {
           "beliefChain": [
-            "My growth has stalled and I'm uncertain why.",
-            "The fix is probably obvious — more traffic, more content, or better sales skills.",
-            "Actually, I can see which of the five layers (traffic/conversion/sales/ops/retention) is my real constraint with a diagnostic.",
-            "Once I know which layer is broken, I can prioritize the fix instead of guessing.",
-            "A strategy call with someone who understands this framework is worth having."
+            "Child literacy is a real crisis and my help matters",
+            "$25/month is enough to fund measurable tutoring for one real child",
+            "This organization shows me exactly where my money goes",
+            "I can commit to a monthly gift and walk away if circumstances change",
+            "Monthly updates prove my gift is working"
           ],
-          "corePromise": "Identify your real growth constraint in 5 minutes, so you fix the right layer first.",
-          "primaryObjection": "Is this just a lead-gen trap? Will I be pressured into a call or upsell?"
+          "corePromise": "Your monthly gift funds tutoring that transforms one child's reading — and you see the progress every month",
+          "primaryObjection": "Is $25 really enough? Will it actually reach a child or disappear in overhead?"
         },
         "sections": [
           {
             "type": "hero",
             "canvas": null,
             "role": "hook",
-            "serves": "My growth has stalled and I'm uncertain why.",
-            "headline": "Find Your Real Growth Constraint in 5 Minutes",
-            "cta": "Get Your Scorecard",
+            "serves": "Child literacy is a real crisis and my help matters",
+            "headline": "$25 a month transforms a child's reading future",
+            "cta": "Start my $25/month gift",
+            "priceCents": null
+          },
+          {
+            "type": "photo_gallery",
+            "canvas": null,
+            "role": "proof",
+            "serves": null,
+            "headline": null,
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "proof_strip",
+            "canvas": null,
+            "role": "proof",
+            "serves": null,
+            "headline": null,
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "problem_solution",
+            "canvas": "warm_paper",
+            "role": "belief_shift",
+            "serves": "$25/month is enough to fund measurable tutoring for one real child",
+            "headline": "Most children who struggle with reading never catch up",
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "benefits_grid",
+            "canvas": "clean",
+            "role": "promise",
+            "serves": "This organization shows me exactly where my money goes + I can commit to a monthly gift and walk away if circumstances change",
+            "headline": "What your $25/month gift does",
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "offer",
+            "canvas": "brand_tint",
+            "role": "offer",
+            "serves": "Monthly updates prove my gift is working",
+            "headline": "",
+            "cta": "Start my $25/month gift",
+            "priceCents": null
+          },
+          {
+            "type": "faq",
+            "canvas": "warm_paper",
+            "role": "objections",
+            "serves": "I can commit to a monthly gift and walk away if circumstances change",
+            "headline": null,
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "cta_banner",
+            "canvas": "clean",
+            "role": "close",
+            "serves": "Monthly updates prove my gift is working",
+            "headline": "Fund one child's literacy transformation",
+            "cta": "Start my $25/month gift",
             "priceCents": null
           }
         ],
         "workflows": [
           {
-            "id": "90i5rbcrEiaoRox97onf",
-            "name": "Growth Bottleneck Scorecard — follow-up",
+            "id": "WALk1To3poBTo1vpgkhv",
+            "name": "$25 a month transforms a child's reading future — follow-up",
             "trigger": {
               "type": "form.submitted",
               "filters": {
                 "all": []
               },
-              "formId": "iSSFAUCY3wyS2ruD6JOl"
+              "formId": "jwmStBswBRqDSrYj94Pt"
             },
             "nodes": [
+              {
+                "type": "goal",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": null,
+                "tag": null
+              },
               {
                 "type": "create_deal",
                 "subject": null,
@@ -70,19 +140,19 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
-                "tag": "Growth Scorecard Downloaded"
+                "tag": "$25 a month transforms a child's reading"
               },
               {
                 "type": "send_email",
-                "subject": "Your Growth Bottleneck Scorecard Results (+ What to Fix First)",
-                "bodyPreview": "Your scorecard is ready.\n\nOpen it now to see which of the five layers (traffic, conversion, sales, operations, or retention) is your actual constraint — and what to prioritize first.\n\nOnce you know your constraint, you'll see clear next steps. If you'd like to talk through the diagnosis and map out a 90-day plan, I'm available for a free 30-minute strategy call — just reply to this email or book a",
+                "subject": "Your monthly gift is live — here's what happens next",
+                "bodyPreview": "Thank you for setting up your $25/month literacy gift, {{contact.firstName}}.\n\nYour recurring donation is now live. You'll be charged on the same date each month, and you can adjust or cancel anytime from your account settings — no penalty, no questions.\n\nWithin 5 business days, we'll send you details about the child your gift is supporting: their name (if parents consented to sharing), their curr",
                 "seconds": null,
                 "tag": null
               },
               {
                 "type": "notify",
-                "subject": "New lead: Growth Bottleneck Scorecard",
-                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just submitted \"Growth Bottleneck Scorecard\" and was tagged \"Growth Scorecard Downloaded\". A follow-up task has been created.",
+                "subject": "New lead: $25 a month transforms a child's reading future",
+                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just Set up recurring $25/month literacy gift. The follow-up sequence is running — apply the \"donor-active\" tag the moment they Recurring donation active (auto-charged monthly), and every remaining automated touch stops.",
                 "seconds": null,
                 "tag": null
               },
@@ -90,7 +160,56 @@
                 "type": "wait",
                 "subject": null,
                 "bodyPreview": null,
-                "seconds": 86400,
+                "seconds": 259200,
+                "tag": null
+              },
+              {
+                "type": "if_else",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": null,
+                "tag": null
+              },
+              {
+                "type": "send_email",
+                "subject": "Meet {{contact.firstName}}'s first tutoring student — and see the reading gains",
+                "bodyPreview": "{{contact.firstName}},\n\nYour first literacy student is here. We wanted you to meet them before tutoring officially starts.\n\n[Child intro: name, age, current reading level, one sentence about their story]\n\nTheir tutor, [Tutor Name], has been trained in [specific method] and has [X years] of experience with children at this reading level. This is what we'll focus on over the next 12 weeks:\n\n— Phonem",
+                "seconds": null,
+                "tag": null
+              },
+              {
+                "type": "wait",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": 950400,
+                "tag": null
+              },
+              {
+                "type": "if_else",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": null,
+                "tag": null
+              },
+              {
+                "type": "send_email",
+                "subject": "First progress report: How [Child] is reading differently already",
+                "bodyPreview": "{{contact.firstName}},\n\n[Child]'s tutoring is 4 weeks in. Here's what's shifted:\n\n[Specific reading metrics: fluency increase, comprehension observation, confidence note from tutor]\n\nTutor notes: \"[Real quote from tutor about the child's progress or breakthrough]\"\n\nThis is exactly the kind of early momentum we want to see. Your $25/month is funding the consistency and one-on-one support that makes",
+                "seconds": null,
+                "tag": null
+              },
+              {
+                "type": "wait",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": 3600,
+                "tag": null
+              },
+              {
+                "type": "if_else",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": null,
                 "tag": null
               },
               {

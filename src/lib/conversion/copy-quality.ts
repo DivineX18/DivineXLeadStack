@@ -173,7 +173,7 @@ function isHeadlineField(field: string): boolean {
 /** Unreplaced template placeholders — "Serving Phoenix Since [YEAR]" shipped
  *  live in the 10-customer stress test. A bracketed ALL-CAPS token is never
  *  legitimate copy; treated as high-severity so the review flag trips. */
-const TEMPLATE_PLACEHOLDER = /\[(?:[A-Z][A-Z0-9 _-]{0,14})\]/;
+const TEMPLATE_PLACEHOLDER = /\[[^\]\n]{2,80}\]/;
 
 /** NEGATION FRAMES only — a headline introducing an objection merely to
  *  deny it ("Isn't a Gimmick", "Not a Scam", "Without the Dread") plants
@@ -192,7 +192,7 @@ function evaluateField(sectionType: string, field: string, text: string, issues:
 
   // Unreplaced template placeholder — always a shipping bug.
   if (TEMPLATE_PLACEHOLDER.test(text)) {
-    issues.push({ kind: "possible_fabrication", severity: "high", sectionType, field, excerpt: excerpt(text), note: "Unreplaced template placeholder (e.g. [YEAR]) — fill in the real fact or delete the claim." });
+    issues.push({ kind: "possible_fabrication", severity: "high", sectionType, field, excerpt: excerpt(text), note: "Template placeholder / fill-in-the-blank (e.g. [YEAR], [Child intro: …]) — replace with real content or delete before publishing." });
   }
 
   // Headline laws (hero headline + section headers only).

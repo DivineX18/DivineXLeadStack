@@ -94,6 +94,17 @@ export interface WorkflowDoc {
   /** Entry node id. Null = empty workflow (won't enroll). */
   startNodeId: string | null;
   nodes: Record<string, WorkflowNode>;
+  /** Automation Strategy Plan (Zeno-generated workflows) — the lifecycle
+   *  reasoning this graph was composed from. See
+   *  lib/workflows/compose-strategy.ts. Absent on hand-built workflows. */
+  strategyPlan?: {
+    conversionEvent: string;
+    goalState: string;
+    goalTag: string;
+    handoffDays: number;
+    cadenceRationale: string;
+    synthesized?: boolean;
+  };
   stats: { enrolled: number; completed: number };
   createdAt: Timestamp | FieldValue | null;
   updatedAt: Timestamp | FieldValue | null;
