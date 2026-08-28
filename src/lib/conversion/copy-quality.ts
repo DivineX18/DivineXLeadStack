@@ -98,8 +98,20 @@ const FABRICATION = [
   { re: /\b\d{1,3}(\.\d+)?\s?%/, severity: "medium" as const, note: "Percentage/statistic claim — verify it's a real, sourced number, not fabricated." },
   // Unverified authority/proof phrases.
   { re: /\b(as seen (on|in)|featured (on|in)|trusted by|voted (the )?(#?1|best|number one))\b/i, severity: "medium" as const, note: "Unverified proof/authority claim — only include if genuinely true and supplied." },
-  // Guarantee claims in prose (real guarantees belong in a guarantee section with terms).
-  { re: /\b(100%\s?guarantee|guaranteed results|money[- ]back guarantee)\b/i, severity: "medium" as const, note: "Guarantee claim — only state a guarantee the business actually offers, with terms." },
+  // Guarantee/refund claims — elevated to HIGH after the 10-customer stress
+  // test shipped an invented "7-day money-back guarantee" on a page whose
+  // brief explicitly supplied none. A fabricated refund promise is a legal
+  // commitment the business never made; it must trip the review flag.
+  { re: /\b(100%\s?guarantee|guaranteed results|money[- ]back guarantee|full refund|we(?:'ll| will)? refund)\b/i, severity: "high" as const, note: "Guarantee/refund claim — only state a guarantee the business actually offers, with terms." },
+  // Legal/organizational status — tax-deductibility, charity registration,
+  // licensure. Invented org status is a compliance violation, not weak copy.
+  { re: /\b(tax[- ]deductible|501\s?\(?c\)?\s?\(?3\)?|registered (?:charity|nonprofit)|licensed (?:and|&) insured)\b/i, severity: "high" as const, note: "Legal/organizational status claim — only include if the business actually stated it." },
+  // Clinical/professional endorsement claims.
+  { re: /\b(dermatologist|clinically|doctor|physician|fda)[- ](tested|approved|recommended|endorsed)\b/i, severity: "high" as const, note: "Clinical/professional endorsement — only include if genuinely supplied by the business." },
+  // Invented capacity/scarcity mechanics (cohort caps, application windows).
+  { re: /\b(only \d+ (?:spots|seats|places|openings)|\d+ (?:participants|spots|seats|clients) maximum|one application per (?:quarter|month|year)|limited (?:spots|seats|availability))\b/i, severity: "high" as const, note: "Capacity/scarcity claim — never invent caps or windows the business didn't state." },
+  // Invented impact ratios ("$25/month funds one child's program").
+  { re: /\$\d+(?:\/(?:mo|month))?\s+(?:funds|provides|feeds|educates|sponsors|buys)\s+(?:one|a|an|\d+)\b/i, severity: "high" as const, note: "Impact-ratio claim — only use a real, supplied program figure." },
 ];
 
 /** Config keys that never hold marketing copy — skipped during extraction. */

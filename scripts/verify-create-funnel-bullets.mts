@@ -446,5 +446,26 @@ function check(label: string, ok: boolean, detail?: string) {
   }
 }
 
+
+// 4. Fabrication classes proven dangerous by the 10-customer stress test must
+//    rate severity HIGH so hasFabricationRisk() trips the operator warning.
+{
+  const { evaluateFunnelCopy, hasFabricationRisk } = await import("../src/lib/conversion/copy-quality");
+  const mk = (text: string) =>
+    evaluateFunnelCopy([{ id: "s1", type: "hero", config: { headline: "H", subheadline: text } }] as never);
+  const cases: [string, string][] = [
+    ["money-back guarantee", "Try it with our 7-day money-back guarantee."],
+    ["refund promise", "If your skin doesn't respond, we will refund you."],
+    ["tax status", "Your gift is 100% tax deductible."],
+    ["clinical endorsement", "Every formula is dermatologist-tested."],
+    ["scarcity cap", "Cohort-only: 8 participants maximum."],
+    ["impact ratio", "$25/month funds one child's reading program."],
+  ];
+  for (const [label, text] of cases) {
+    check(`4-${label} trips fabricationRisk`, hasFabricationRisk(mk(text)));
+  }
+  check("4-clean copy does NOT trip", !hasFabricationRisk(mk("A gentle cleanser for reactive skin, with a full ingredient list on every box.")));
+}
+
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);
 if (failures > 0) process.exit(1);

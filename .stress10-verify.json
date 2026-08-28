@@ -1,0 +1,490 @@
+[
+  {
+    "key": "3-ecom-skincare",
+    "toolCalls": [
+      {
+        "name": "create_funnel",
+        "ok": false,
+        "note": "ERROR: Expected double-quoted property name in JSON at position 5820 (line 2 column 1)"
+      },
+      {
+        "name": "create_funnel",
+        "ok": true,
+        "note": "created BgWPNY4OECyei7AYWltm"
+      }
+    ],
+    "error": null,
+    "funnels": [
+      {
+        "id": "BgWPNY4OECyei7AYWltm",
+        "url": "/lp/BgWPNY4OECyei7AYWltm",
+        "name": "The Starter Kit That Won't Burn Your Skin",
+        "genre": "tripwire",
+        "persuasionDepth": "lean",
+        "decisionComplexity": "moderate",
+        "artDirection": {
+          "transformation": "fear_to_safety",
+          "energy": "calm",
+          "density": "medium",
+          "humanity": "people_led"
+        },
+        "bridge": null,
+        "salesArgument": {
+          "beliefChain": [
+            "The common irritants (fragrance, essential oils, alcohol) are what hurt my skin most, not just 'harsh' vague ingredients.",
+            "This brand actually removed those three things—not as a marketing angle, but as the core design.",
+            "The formula is pH-balanced and calming-focused, which is measurably different from standard skincare.",
+            "A money-back guarantee means I can try it without risking another bad reaction.",
+            "$39 is low-risk enough to test, and the 7-day visible-results promise is concrete enough to trust."
+          ],
+          "corePromise": "A starter kit that calms sensitive skin without irritation—or your money back in 7 days.",
+          "primaryObjection": "Even if it's truly gentler, will it actually work? Will it make any difference to my skin?"
+        },
+        "sections": [
+          {
+            "type": "hero",
+            "canvas": null,
+            "role": "hook",
+            "serves": "The common irritants (fragrance, essential oils, alcohol) are what hurt my skin most, not just 'harsh' vague ingredients.",
+            "headline": "The Starter Kit That Won't Burn Your Skin",
+            "cta": "Get the Starter Kit",
+            "priceCents": null
+          },
+          {
+            "type": "benefits_grid",
+            "canvas": "warm_paper",
+            "role": "promise",
+            "serves": "The formula is pH-balanced and calming-focused, which is measurably different from standard skincare. + A money-back guarantee means I can try it without risking another bad reaction.",
+            "headline": "What You'll Actually Experience",
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "trust_badges",
+            "canvas": "clean",
+            "role": "proof",
+            "serves": "This brand actually removed those three things—not as a marketing angle, but as the core design.",
+            "headline": null,
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "offer",
+            "canvas": "warm_paper",
+            "role": "offer",
+            "serves": "$39 is low-risk enough to test, and the 7-day visible-results promise is concrete enough to trust.",
+            "headline": "",
+            "cta": "Get the Starter Kit",
+            "priceCents": 3900
+          },
+          {
+            "type": "faq",
+            "canvas": "clean",
+            "role": "objections",
+            "serves": "A money-back guarantee means I can try it without risking another bad reaction.",
+            "headline": null,
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "cta_banner",
+            "canvas": "brand_tint",
+            "role": "close",
+            "serves": "$39 is low-risk enough to test, and the 7-day visible-results promise is concrete enough to trust.",
+            "headline": "Your sensitive skin deserves a formula that won't betray it.",
+            "cta": "Get the Starter Kit",
+            "priceCents": null
+          }
+        ],
+        "workflows": [
+          {
+            "id": "DocHwBv6S5KWrgRbEAxn",
+            "name": "The Starter Kit That Won't Burn Your Skin — follow-up",
+            "trigger": {
+              "type": "form.submitted",
+              "filters": {
+                "all": []
+              },
+              "formId": "XbYnyDCXyiRpjnVKsHFN"
+            },
+            "nodes": [
+              {
+                "type": "create_deal",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": null,
+                "tag": null
+              },
+              {
+                "type": "add_tag",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": null,
+                "tag": "The Starter Kit That Won't Burn Your Ski"
+              },
+              {
+                "type": "send_email",
+                "subject": "Your Sensitive Skin Starter Kit is on the way 💚",
+                "bodyPreview": "Thanks for ordering. Your Starter Kit ships tomorrow and will arrive within 3-5 business days.\n\nUse the cleanser, toner, and moisturizer twice daily—morning and night. Most people see visible redness reduction by day 3 and measurable barrier improvement by day 7.\n\nIf your skin isn't noticeably calmer or you experience any irritation, just reply to this email and we'll refund your $39 in full. No q",
+                "seconds": null,
+                "tag": null
+              },
+              {
+                "type": "notify",
+                "subject": "New lead: The Starter Kit That Won't Burn Your Skin",
+                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just submitted \"The Starter Kit That Won't Burn Your Skin\" and was tagged \"The Starter Kit That Won't Burn Your Ski\". A follow-up task has been created.",
+                "seconds": null,
+                "tag": null
+              },
+              {
+                "type": "wait",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": 86400,
+                "tag": null
+              },
+              {
+                "type": "create_task",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": null,
+                "tag": null
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "6-dentist",
+    "toolCalls": [
+      {
+        "name": "create_funnel",
+        "ok": true,
+        "note": "created rAaW6HoomV3A8Jx2aUpc"
+      }
+    ],
+    "error": null,
+    "funnels": [
+      {
+        "id": "rAaW6HoomV3A8Jx2aUpc",
+        "url": "/lp/rAaW6HoomV3A8Jx2aUpc",
+        "name": "Your First Visit Here. You're in Control of the Pace.",
+        "genre": "lead_gen",
+        "persuasionDepth": "lean",
+        "decisionComplexity": "moderate",
+        "artDirection": {
+          "transformation": "fear_to_safety",
+          "energy": "calm",
+          "density": "medium",
+          "humanity": "people_led"
+        },
+        "bridge": null,
+        "salesArgument": {
+          "beliefChain": [
+            "I can admit I need to go to the dentist without being shamed.",
+            "This practice is actually different—they understand why I've been avoiding it and they've built their process around NOT making me feel trapped.",
+            "I can control what happens during my first visit—I can pause, ask, slow down, or stop.",
+            "If they're this careful about the experience, the clinical work is probably competent too.",
+            "Booking this appointment is a safe, low-risk first step—I'm not committing to anything painful or invasive today."
+          ],
+          "corePromise": "Your first exam here is designed for people who've been putting it off. You're never rushed, always explained-to, and always in control.",
+          "primaryObjection": "Even if they say they're different, they'll still treat me like every other dentist once I'm in the chair. Or I'll get there and discover something expensive or scary."
+        },
+        "sections": [
+          {
+            "type": "hero",
+            "canvas": null,
+            "role": "hook",
+            "serves": "I can admit I need to go to the dentist without being shamed.",
+            "headline": "Your First Visit Here. You're in Control of the Pace.",
+            "cta": "Book Your First Exam",
+            "priceCents": null
+          },
+          {
+            "type": "photo_gallery",
+            "canvas": null,
+            "role": "proof",
+            "serves": null,
+            "headline": null,
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "proof_strip",
+            "canvas": null,
+            "role": "proof",
+            "serves": null,
+            "headline": null,
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "benefits_grid",
+            "canvas": "warm_paper",
+            "role": "promise",
+            "serves": "This practice is actually different—they understand why I've been avoiding it and they've built their process around NOT making me feel trapped. + I can control what happens during my first visit—I can pause, ask, slow down, or stop. + If they're this careful about the experience, the clinical work is probably competent too.",
+            "headline": "What Your First Visit Actually Looks Like",
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "offer",
+            "canvas": "clean",
+            "role": "offer",
+            "serves": "Booking this appointment is a safe, low-risk first step—I'm not committing to anything painful or invasive today.",
+            "headline": "",
+            "cta": "Book Your First Exam",
+            "priceCents": null
+          },
+          {
+            "type": "faq",
+            "canvas": "warm_paper",
+            "role": "objections",
+            "serves": "If they're this careful about the experience, the clinical work is probably competent too.",
+            "headline": null,
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "cta_banner",
+            "canvas": "brand_tint",
+            "role": "close",
+            "serves": "Booking this appointment is a safe, low-risk first step—I'm not committing to anything painful or invasive today.",
+            "headline": "Ready to take that step? We'll make it easy.",
+            "cta": "Book Your First Exam",
+            "priceCents": null
+          }
+        ],
+        "workflows": [
+          {
+            "id": "rgSdfMMRn70rur4F81IE",
+            "name": "Your First Visit Here. You're in Control of the Pace. — follow-up",
+            "trigger": {
+              "type": "form.submitted",
+              "filters": {
+                "all": []
+              },
+              "formId": "Byy8J8J5L12SMKD07FR3"
+            },
+            "nodes": [
+              {
+                "type": "create_deal",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": null,
+                "tag": null
+              },
+              {
+                "type": "add_tag",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": null,
+                "tag": "Your First Visit Here. You're in Control"
+              },
+              {
+                "type": "send_email",
+                "subject": "You're in — Your First Visit Here. You're in Control of the Pace.",
+                "bodyPreview": "Thanks for signing up! We've got your details and will be in touch shortly.\n\n{{unsubscribeLink}}",
+                "seconds": null,
+                "tag": null
+              },
+              {
+                "type": "notify",
+                "subject": "New lead: Your First Visit Here. You're in Control of the Pace.",
+                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just submitted \"Your First Visit Here. You're in Control of the Pace.\" and was tagged \"Your First Visit Here. You're in Control\". A follow-up task has been created.",
+                "seconds": null,
+                "tag": null
+              },
+              {
+                "type": "wait",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": 86400,
+                "tag": null
+              },
+              {
+                "type": "create_task",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": null,
+                "tag": null
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "10-nonprofit",
+    "toolCalls": [
+      {
+        "name": "create_funnel",
+        "ok": true,
+        "note": "created KkkLs9ywSGIz5YtkqJ2T"
+      }
+    ],
+    "error": null,
+    "funnels": [
+      {
+        "id": "KkkLs9ywSGIz5YtkqJ2T",
+        "url": "/lp/KkkLs9ywSGIz5YtkqJ2T",
+        "name": "Every Child Deserves Stories That Belong to Them",
+        "genre": "lead_gen",
+        "persuasionDepth": "standard",
+        "decisionComplexity": "moderate",
+        "artDirection": {
+          "transformation": "concern_to_action",
+          "energy": "balanced",
+          "density": "medium",
+          "humanity": "people_led"
+        },
+        "bridge": null,
+        "salesArgument": {
+          "beliefChain": [
+            "Literacy gaps prevent children from accessing opportunity",
+            "This organization has specific, proven programs addressing that gap",
+            "A monthly commitment, however small, compounds into sustained impact",
+            "I can trust this organization with my recurring gift",
+            "Monthly giving is how I want to participate"
+          ],
+          "corePromise": "Your $25/month directly funds literacy experiences that transform how children see themselves and their futures",
+          "primaryObjection": "Is $25/month really enough to matter? Will I actually see the impact?"
+        },
+        "sections": [
+          {
+            "type": "hero",
+            "canvas": null,
+            "role": "hook",
+            "serves": "Literacy gaps prevent children from accessing opportunity",
+            "headline": "Every Child Deserves Stories That Belong to Them",
+            "cta": "Start My Monthly Gift",
+            "priceCents": null
+          },
+          {
+            "type": "photo_gallery",
+            "canvas": null,
+            "role": "proof",
+            "serves": null,
+            "headline": null,
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "proof_strip",
+            "canvas": null,
+            "role": "proof",
+            "serves": null,
+            "headline": null,
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "problem_solution",
+            "canvas": "warm_paper",
+            "role": "belief_shift",
+            "serves": "This organization has specific, proven programs addressing that gap",
+            "headline": "The Reading Gap Starts Early — But It Doesn't Have to Define Everything",
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "benefits_grid",
+            "canvas": "clean",
+            "role": "promise",
+            "serves": "A monthly commitment, however small, compounds into sustained impact + I can trust this organization with my recurring gift",
+            "headline": "What Your Monthly Gift Funds",
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "offer",
+            "canvas": "brand_tint",
+            "role": "offer",
+            "serves": "Monthly giving is how I want to participate",
+            "headline": "",
+            "cta": "Start My Monthly Gift",
+            "priceCents": null
+          },
+          {
+            "type": "faq",
+            "canvas": "warm_paper",
+            "role": "objections",
+            "serves": "I can trust this organization with my recurring gift",
+            "headline": null,
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "cta_banner",
+            "canvas": "clean",
+            "role": "close",
+            "serves": "Monthly giving is how I want to participate",
+            "headline": "Ready to Be Part of This?",
+            "cta": "Start My Monthly Gift",
+            "priceCents": null
+          }
+        ],
+        "workflows": [
+          {
+            "id": "K1T6xoKjJXfRG7xRhH4Q",
+            "name": "Every Child Deserves Stories That Belong to Them — follow-up",
+            "trigger": {
+              "type": "form.submitted",
+              "filters": {
+                "all": []
+              },
+              "formId": "Pu9T0sOcuezBrdUCm07A"
+            },
+            "nodes": [
+              {
+                "type": "create_deal",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": null,
+                "tag": null
+              },
+              {
+                "type": "add_tag",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": null,
+                "tag": "Monthly Literacy Donor Interest"
+              },
+              {
+                "type": "send_email",
+                "subject": "Welcome to monthly literacy support",
+                "bodyPreview": "Thank you for joining us.\n\nYour monthly gift of $25 will fund tutoring, books, and mentorship for children who need it most. We'll send you next steps to set up your recurring donation — along with regular updates on the impact you're creating.\n\nWe're grateful you're in this with us.\n\nWith appreciation,\nThe [Organization Name] Team\n\n{{unsubscribeLink}}",
+                "seconds": null,
+                "tag": null
+              },
+              {
+                "type": "notify",
+                "subject": "New lead: Every Child Deserves Stories That Belong to Them",
+                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just submitted \"Every Child Deserves Stories That Belong to Them\" and was tagged \"Monthly Literacy Donor Interest\". A follow-up task has been created.",
+                "seconds": null,
+                "tag": null
+              },
+              {
+                "type": "wait",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": 86400,
+                "tag": null
+              },
+              {
+                "type": "create_task",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": null,
+                "tag": null
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
