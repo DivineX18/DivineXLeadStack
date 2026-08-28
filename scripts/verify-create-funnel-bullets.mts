@@ -499,6 +499,11 @@ function check(label: string, ok: boolean, detail?: string) {
     supplied_evidence_heading: "Certifications & memberships",
   });
   check("6a. evidence validate passes", v.ok === true);
+  const vPhone = cap.validate!({
+    headline: "Emergency AC Repair", bullets: "Fast,Honest", genre: "lead_gen",
+    emotional_transformation: "panic_to_relief", cta_style: "phone", cta_phone_number: "+16025551234",
+  });
+  check("6c. fictional 555 phone number rejected (treated as absent)", vPhone.ok === true && !(vPhone.args as Record<string, unknown>).ctaPhoneNumber);
   if (v.ok) {
     const logos = (v.args as Record<string, unknown>).suppliedEvidenceLogos as { url: string }[];
     check("6b. only real https URLs survive", logos?.length === 1 && logos[0].url === "https://example.com/ada.png");

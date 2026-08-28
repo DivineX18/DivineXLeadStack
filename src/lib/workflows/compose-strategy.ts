@@ -88,7 +88,8 @@ export function synthesizeAutomationPlan(displayName: string, tag: string): Auto
   return {
     conversionEvent: `submitted "${displayName}"`,
     goalState: "the operator has made contact",
-    goalTag: `${tag}`.slice(0, 30) + "-converted",
+    goalTag:
+      `${tag}`.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30).replace(/-+$/, "") + "-converted",
     handoffDays: 1,
     cadenceRationale: "Default: confirm instantly, hand to a human within a day.",
     synthesized: true,
@@ -114,7 +115,7 @@ export function composeStrategyNodes(input: ComposeStrategyInput): {
   // Instant spine: deal + tag + confirmation + owner notify.
   nodes.n1 = { id: "n1", type: "create_deal", config: { title: displayName, value: 0, currency: "usd", stageId: "new", priority: "medium" }, next: "n2" };
   nodes.n2 = { id: "n2", type: "add_tag", config: { tag }, next: "n3" };
-  nodes.n3 = { id: "n3", type: "send_email", config: { subject: input.confirmationSubject, body: withUnsubscribe(input.confirmationBody) }, next: "n4" };
+  nodes.n3 = { id: "n3", type: "send_email", config: { subject: input.confirmationSubject, body: withUnsubscribe(input.confirmationBody), commType: "transactional", purpose: "instant confirmation" }, next: "n4" };
   nodes.n4 = { id: "n4", type: "notify", config: { recipient: "owner", to: "", subject: `New lead: ${displayName}`, body: input.ownerNotifyBody }, next: null };
 
   // Nurture steps: wait → goal-tag exit check → email. Delays are absolute

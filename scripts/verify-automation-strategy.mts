@@ -130,6 +130,14 @@ check("7a. steps sorted by delay; both waits positive",
     Object.values(noTime.nodes).filter((n) => n.type === "send_email").length === 4);
 }
 
+// 11. Certification-catch regressions
+{
+  const syn2 = synthesizeAutomationPlan("The Starter Kit That Doesn't Betray Skin", "The Starter Kit That Doesn't Betray Skin requested");
+  check("11a. synthesized goal tag is a clean slug", /^[a-z0-9-]+$/.test(syn2.goalTag));
+  const conf = composeStrategyNodes({ plan, sequence: [], displayName: "X", tag: "x", confirmationSubject: "s", confirmationBody: "b", ownerNotifyBody: "o" });
+  check("11b. confirmation email classified transactional", (conf.nodes.n3.config as { commType?: string }).commType === "transactional");
+}
+
 // 8. NATIVE CONVERSION DETECTION — the event-stream consumer applies (and
 //    removes) canonical lifecycle tags against real Firestore, with the
 //    tenancy guard and the intent-vs-verified boundary enforced.

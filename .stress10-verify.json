@@ -1,57 +1,48 @@
 [
   {
-    "key": "10-nonprofit",
+    "key": "7-hvac",
     "toolCalls": [
       {
         "name": "create_funnel",
         "ok": true,
-        "note": "created RscFRipekXKjaglyl1RP"
+        "note": "created rdb8PyWIBcYGA1tbH0jD"
       }
     ],
     "error": null,
     "funnels": [
       {
-        "id": "RscFRipekXKjaglyl1RP",
-        "url": "/lp/RscFRipekXKjaglyl1RP",
-        "name": "$25 a month transforms a child's reading future",
+        "id": "rdb8PyWIBcYGA1tbH0jD",
+        "url": "/lp/rdb8PyWIBcYGA1tbH0jD",
+        "name": "Same-Day AC Repair — Phoenix Emergency Service",
         "genre": "lead_gen",
-        "persuasionDepth": "standard",
-        "decisionComplexity": "low",
+        "persuasionDepth": "lean",
+        "decisionComplexity": "moderate",
         "artDirection": {
-          "transformation": "concern_to_action",
-          "energy": "balanced",
-          "density": "medium",
+          "transformation": "panic_to_relief",
+          "energy": "urgent",
+          "density": "rich",
           "humanity": "people_led"
         },
         "bridge": null,
         "salesArgument": {
           "beliefChain": [
-            "Child literacy is a real crisis and my help matters",
-            "$25/month is enough to fund measurable tutoring for one real child",
-            "This organization shows me exactly where my money goes",
-            "I can commit to a monthly gift and walk away if circumstances change",
-            "Monthly updates prove my gift is working"
+            "A real person answers when I call — not a machine.",
+            "Same-day appointments exist and might be available RIGHT NOW.",
+            "They tell me the price BEFORE they touch anything.",
+            "I can request online too if I can't call.",
+            "This company knows Phoenix heat and has done this thousands of times."
           ],
-          "corePromise": "Your monthly gift funds tutoring that transforms one child's reading — and you see the progress every month",
-          "primaryObjection": "Is $25 really enough? Will it actually reach a child or disappear in overhead?"
+          "corePromise": "Same-day AC repair, honest pricing locked in before we start, a real person when you call.",
+          "primaryObjection": "Will I actually get someone today, or is this just a marketing promise?"
         },
         "sections": [
           {
             "type": "hero",
             "canvas": null,
             "role": "hook",
-            "serves": "Child literacy is a real crisis and my help matters",
-            "headline": "$25 a month transforms a child's reading future",
-            "cta": "Start my $25/month gift",
-            "priceCents": null
-          },
-          {
-            "type": "photo_gallery",
-            "canvas": null,
-            "role": "proof",
-            "serves": null,
-            "headline": null,
-            "cta": null,
+            "serves": "A real person answers when I call — not a machine.",
+            "headline": "Same-Day AC Repair — Phoenix Emergency Service",
+            "cta": "Call Now for Same-Day Service",
             "priceCents": null
           },
           {
@@ -64,20 +55,11 @@
             "priceCents": null
           },
           {
-            "type": "problem_solution",
-            "canvas": "warm_paper",
-            "role": "belief_shift",
-            "serves": "$25/month is enough to fund measurable tutoring for one real child",
-            "headline": "Most children who struggle with reading never catch up",
-            "cta": null,
-            "priceCents": null
-          },
-          {
             "type": "benefits_grid",
-            "canvas": "clean",
+            "canvas": "dark_immersive",
             "role": "promise",
-            "serves": "This organization shows me exactly where my money goes + I can commit to a monthly gift and walk away if circumstances change",
-            "headline": "What your $25/month gift does",
+            "serves": "Same-day appointments exist and might be available RIGHT NOW. + They tell me the price BEFORE they touch anything. + I can request online too if I can't call.",
+            "headline": "What Happens When You Call or Request Service",
             "cta": null,
             "priceCents": null
           },
@@ -85,16 +67,16 @@
             "type": "offer",
             "canvas": "brand_tint",
             "role": "offer",
-            "serves": "Monthly updates prove my gift is working",
+            "serves": "This company knows Phoenix heat and has done this thousands of times.",
             "headline": "",
-            "cta": "Start my $25/month gift",
+            "cta": "Call Now for Same-Day Service",
             "priceCents": null
           },
           {
             "type": "faq",
             "canvas": "warm_paper",
             "role": "objections",
-            "serves": "I can commit to a monthly gift and walk away if circumstances change",
+            "serves": "I can request online too if I can't call.",
             "headline": null,
             "cta": null,
             "priceCents": null
@@ -103,22 +85,22 @@
             "type": "cta_banner",
             "canvas": "clean",
             "role": "close",
-            "serves": "Monthly updates prove my gift is working",
-            "headline": "Fund one child's literacy transformation",
-            "cta": "Start my $25/month gift",
+            "serves": "This company knows Phoenix heat and has done this thousands of times.",
+            "headline": "AC Not Cooling? Call or Request Service Right Now.",
+            "cta": "Call Now for Same-Day Service",
             "priceCents": null
           }
         ],
         "workflows": [
           {
-            "id": "WALk1To3poBTo1vpgkhv",
-            "name": "$25 a month transforms a child's reading future — follow-up",
+            "id": "UOdqrvbMqFhsCEb97TqD",
+            "name": "Same-Day AC Repair — Phoenix Emergency Service — follow-up",
             "trigger": {
               "type": "form.submitted",
               "filters": {
                 "all": []
               },
-              "formId": "jwmStBswBRqDSrYj94Pt"
+              "formId": "aKqILJH7lVppq1hTXVQz"
             },
             "nodes": [
               {
@@ -140,19 +122,19 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
-                "tag": "$25 a month transforms a child's reading"
+                "tag": "Same-Day AC Repair — Phoenix Emergency S"
               },
               {
                 "type": "send_email",
-                "subject": "Your monthly gift is live — here's what happens next",
-                "bodyPreview": "Thank you for setting up your $25/month literacy gift, {{contact.firstName}}.\n\nYour recurring donation is now live. You'll be charged on the same date each month, and you can adjust or cancel anytime from your account settings — no penalty, no questions.\n\nWithin 5 business days, we'll send you details about the child your gift is supporting: their name (if parents consented to sharing), their curr",
+                "subject": "We Got Your Service Request — Here's What's Next",
+                "bodyPreview": "Thanks for reaching out. Your AC emergency service request is in our system.\n\nIf you submitted online, our dispatcher will call you within the next 30 minutes to confirm your same-day availability or book your next available slot. You don't need to do anything else — just keep your phone handy.\n\nIf you called already, your appointment is set. Technician is on the way or confirmed for the time we d",
                 "seconds": null,
                 "tag": null
               },
               {
                 "type": "notify",
-                "subject": "New lead: $25 a month transforms a child's reading future",
-                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just Set up recurring $25/month literacy gift. The follow-up sequence is running — apply the \"donor-active\" tag the moment they Recurring donation active (auto-charged monthly), and every remaining automated touch stops.",
+                "subject": "New lead: Same-Day AC Repair — Phoenix Emergency Service",
+                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just requested same-day AC repair service. The follow-up sequence is running — apply the \"booked\" tag the moment they booked appointment or scheduled for next available, and every remaining automated touch stops.",
                 "seconds": null,
                 "tag": null
               },
@@ -160,7 +142,7 @@
                 "type": "wait",
                 "subject": null,
                 "bodyPreview": null,
-                "seconds": 259200,
+                "seconds": 7200,
                 "tag": null
               },
               {
@@ -172,29 +154,8 @@
               },
               {
                 "type": "send_email",
-                "subject": "Meet {{contact.firstName}}'s first tutoring student — and see the reading gains",
-                "bodyPreview": "{{contact.firstName}},\n\nYour first literacy student is here. We wanted you to meet them before tutoring officially starts.\n\n[Child intro: name, age, current reading level, one sentence about their story]\n\nTheir tutor, [Tutor Name], has been trained in [specific method] and has [X years] of experience with children at this reading level. This is what we'll focus on over the next 12 weeks:\n\n— Phonem",
-                "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "wait",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": 950400,
-                "tag": null
-              },
-              {
-                "type": "if_else",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "send_email",
-                "subject": "First progress report: How [Child] is reading differently already",
-                "bodyPreview": "{{contact.firstName}},\n\n[Child]'s tutoring is 4 weeks in. Here's what's shifted:\n\n[Specific reading metrics: fluency increase, comprehension observation, confidence note from tutor]\n\nTutor notes: \"[Real quote from tutor about the child's progress or breakthrough]\"\n\nThis is exactly the kind of early momentum we want to see. Your $25/month is funding the consistency and one-on-one support that makes",
+                "subject": "Your AC repair appointment — confirm you're home",
+                "bodyPreview": "Hey, we haven't connected by phone yet on your same-day request. Our dispatcher is ready to book you the moment we have a slot.\n\nClick here to confirm your phone number so we can reach you immediately when a technician is available.\n\nIf you've already booked by phone, you can ignore this — you're all set.\n\n{{unsubscribeLink}}",
                 "seconds": null,
                 "tag": null
               },
