@@ -29,7 +29,13 @@ export type ConditionOp =
   | "not_set"
   | "has_tag"
   | "in_stage"
-  | "source_is";
+  | "source_is"
+  // Lifecycle State Engine (additive — tags/stage ops untouched). Value
+  // format: "domain:state" (is/not) or "domain:stateA,stateB" (in); the
+  // contact's LATEST lifecycle record in that domain is the authority.
+  | "lifecycle_state_is"
+  | "lifecycle_state_in"
+  | "lifecycle_state_not";
 
 export interface Condition {
   /** Contact field path (e.g. "email", "company", "customFields.x"). */
@@ -175,13 +181,31 @@ export interface WaitConfig {
 export interface WaitUntilConfig {
   /** "funnel_event" anchors to funnels/{funnelId}.eventStartAt (one shared
    *  time — a webinar); "contact_event" anchors to the CONTACT's next
-   *  upcoming calendar event (their own appointment). */
-  anchorKind: "funnel_event" | "contact_event";
+   *  upcoming calendar event (their own appointment); "business_event"
+   *  anchors to a named field on a business entity (v1: quote.sentAt). */
+  anchorKind: "funnel_event" | "contact_event" | "business_event";
   /** Required for funnel_event. */
   funnelId?: string;
+  /** business_event: which entity + doc field carries the anchor time. */
+  entityType?: "quote";
+  entityId?: string;
+  /** Field to anchor on. contact_event: "startAt" (default) | "endAt" —
+   *  "2h after the appointment ends" is endAt +120. business_event:
+   *  e.g. "sentAt". funnel_event always reads eventStartAt. */
+  anchorField?: string;
   /** Minutes relative to the anchor. Negative = before (-1440 = 24h
    *  before), positive = after (+120 = 2h after). */
   offsetMinutes: number;
+  /** Roll the computed target FORWARD past weekends ("next business day
+   *  after quote.sentAt" = offsetMinutes +1440 + businessDaysOnly), never
+   *  a dumb +24h that lands on Saturday. */
+  businessDaysOnly?: boolean;
+  /** LIFECYCLE ELIGIBILITY: the anchored action only fires while the
+   *  entity's CURRENT lifecycle state is one of these. A cancelled
+   *  appointment must never receive a "see you tomorrow" reminder just
+   *  because an old node is pending — ineligible routes whenFalse
+   *  (skip/recovery), same as a missing anchor. */
+  eligibility?: { domain: "appointment" | "webinar" | "lead"; states: string[] };
 }
 
 export interface IfElseConfig {

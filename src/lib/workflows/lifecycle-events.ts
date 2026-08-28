@@ -114,4 +114,45 @@ export async function applyLifecycleStateForEvent(input: {
   } catch {
     // Fire-and-forget — lifecycle tagging must never break the emitting write.
   }
+  // WEBINAR REGISTRATION (Lifecycle State Engine): a form submission on a
+  // webinar-genre funnel IS the real registration event — seed the
+  // per-registrant lifecycle record. "scheduled" when the funnel carries a
+  // real event time; bare "registered" otherwise. Attendance is NEVER
+  // inferred — attended/missed require explicit evidence via the
+  // transition route; an unresolved webinar stays scheduled.
+  try {
+    if (input.type === "form.submitted") {
+      const contactId = resolveContactId(input.payload);
+      const formId =
+        (input.payload as { submission?: { form_id?: string }; form?: { id?: string } } | null)?.submission?.form_id ??
+        (input.payload as { form?: { id?: string } } | null)?.form?.id ??
+        null;
+      if (contactId && formId) {
+        const db = getAdminDb();
+        const funnels = await db
+          .collection("funnels")
+          .where("subAccountId", "==", input.subAccountId)
+          .where("genre", "==", "webinar")
+          .get();
+        const webinar = funnels.docs.find((d) =>
+          ((d.data().sections ?? []) as { config?: { formId?: string } }[]).some((s2) => s2.config?.formId === formId),
+        );
+        if (webinar) {
+          const { transitionLifecycleState } = await import("@/lib/lifecycle/engine");
+          const agencyId = (webinar.data().agencyId as string) ?? "";
+          await transitionLifecycleState({
+            subAccountId: input.subAccountId,
+            agencyId,
+            domain: "webinar",
+            entityId: webinar.id,
+            contactId,
+            to: webinar.data().eventStartAt ? "scheduled" : "registered",
+            reason: "webinar.registered",
+          }).catch(() => {});
+        }
+      }
+    }
+  } catch {
+    // Same fire-and-forget contract.
+  }
 }

@@ -78,6 +78,9 @@ export const CONDITION_OPS: { value: ConditionOp; label: string }[] = [
   { value: "has_tag", label: "has tag" },
   { value: "in_stage", label: "is in stage" },
   { value: "source_is", label: "source is" },
+  { value: "lifecycle_state_is", label: "lifecycle state is (domain:state)" },
+  { value: "lifecycle_state_in", label: "lifecycle state in (domain:a,b)" },
+  { value: "lifecycle_state_not", label: "lifecycle state is not (domain:state)" },
 ];
 
 export function defaultConfig(type: WorkflowNodeType): Record<string, unknown> {

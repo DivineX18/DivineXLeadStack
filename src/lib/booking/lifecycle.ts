@@ -48,6 +48,13 @@ export async function recordBookingActivity(
   } = {},
 ): Promise<void> {
   if (!event.contactId) return;
+  // LIFECYCLE STATE ENGINE hook — recordBookingActivity is the ONE
+  // chokepoint every booking route calls for every lifecycle event
+  // (emitBookingWebhook only sees the subset with webhook types), so the
+  // canonical appointment transition records here. Tenancy comes from the
+  // contact doc. Fire-and-forget: never breaks the booking write; an
+  // illegal transition (stray event on a terminal appointment) logs.
+  void recordAppointmentTransition(event.id, event.contactId, type);
   try {
     const content = defaultContent(event.title || "Meeting", type, opts.extra);
     await getAdminDb()
@@ -295,4 +302,42 @@ export function timestampToDate(
   const maybe = ts as { toDate?: () => Date };
   if (typeof maybe.toDate === "function") return maybe.toDate();
   return null;
+}
+
+/** BookingLifecycleEvent → appointment lifecycle transition. A reschedule
+ *  is a REAL transition: rescheduled → booked (the route already updated
+ *  startAt in place, which live-recalculates every pending wait_until). */
+const BOOKING_STATE_MAP: Record<BookingLifecycleEvent, string | null> = {
+  booking_page_booked: "booked",
+  booking_payment_received: "confirmed",
+  booking_cancelled: "cancelled",
+  booking_rescheduled: "rescheduled",
+  booking_no_show: "no_show",
+  booking_completed: "completed",
+};
+
+async function recordAppointmentTransition(
+  eventId: string,
+  contactId: string,
+  type: BookingLifecycleEvent,
+): Promise<void> {
+  try {
+    const to = BOOKING_STATE_MAP[type];
+    if (!to) return;
+    const contact = await getAdminDb().doc(`contacts/${contactId}`).get();
+    if (!contact.exists) return;
+    const subAccountId = contact.data()!.subAccountId as string;
+    const agencyId = (contact.data()!.agencyId as string) ?? "";
+    if (!subAccountId) return;
+    const { transitionLifecycleState } = await import("@/lib/lifecycle/engine");
+    const base = { subAccountId, agencyId, domain: "appointment" as const, entityId: eventId, contactId, reason: type, sourceEventId: eventId };
+    await transitionLifecycleState({ ...base, to });
+    // rescheduled is a pass-through transition: immediately re-enters
+    // booked with the (already-updated) new event time.
+    if (to === "rescheduled") {
+      await transitionLifecycleState({ ...base, to: "booked", reason: `${type}:rebooked` });
+    }
+  } catch (err) {
+    console.warn(`[booking/lifecycle] state transition skipped (${type})`, err);
+  }
 }

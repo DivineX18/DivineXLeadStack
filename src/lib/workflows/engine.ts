@@ -288,7 +288,31 @@ const execWait: NodeExecutor = async (ctx) => {
 
 const execIfElse: NodeExecutor = async (ctx) => {
   const cfg = ctx.node.config as unknown as IfElseConfig;
-  const pass = evalConditionGroup(cfg.conditions, ctx.contact);
+  const all = cfg.conditions?.all ?? [];
+  const lifecycleOps = all.filter((c) => String(c.op).startsWith("lifecycle_state_"));
+  const syncGroup = { all: all.filter((c) => !String(c.op).startsWith("lifecycle_state_")) };
+  let pass = evalConditionGroup(syncGroup, ctx.contact);
+  // Lifecycle State Engine ops (async — canonical state read, never tags).
+  // Value format "domain:state[,state…]". Null state: is/in fail, not passes.
+  for (const c of lifecycleOps) {
+    if (!pass) break;
+    const [domain, statesRaw] = String(c.value ?? "").split(":");
+    const states = (statesRaw ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+    if (!["appointment", "webinar", "lead"].includes(domain) || states.length === 0) {
+      pass = false;
+      break;
+    }
+    const { getLatestLifecycleStateForContact } = await import("@/lib/lifecycle/engine");
+    const latest = await getLatestLifecycleStateForContact({
+      subAccountId: ctx.subAccountId,
+      domain: domain as import("@/lib/lifecycle/engine").LifecycleDomain,
+      contactId: ctx.contact.id,
+    });
+    const state = latest?.state ?? null;
+    if (c.op === "lifecycle_state_is") pass = state === states[0];
+    else if (c.op === "lifecycle_state_in") pass = state !== null && states.includes(state);
+    else pass = state === null || !states.includes(state);
+  }
   return { result: { kind: "branch", value: pass }, log: `branch:${pass}` };
 };
 
@@ -524,21 +548,37 @@ const execWaitUntil: NodeExecutor = async (ctx) => {
   const offsetSec = Math.round((cfg.offsetMinutes ?? 0) * 60);
   const db = getAdminDb();
 
+  // ── Resolve the LIVE anchor (re-read on every wake — reschedules move
+  //    the target automatically; a vanished anchor routes whenFalse). ──
   let anchorMs: number | null = null;
+  /** The anchored entity for the eligibility read (appointment = the
+   *  contact's event doc; webinar/lead = per eligibility.domain). */
+  let anchoredEventStatus: string | null = null;
+  let anchoredEventId: string | null = null;
+
+  const tsToMs = (raw: unknown): number | null => {
+    if (typeof raw === "string" && raw) return Date.parse(raw) || null;
+    if (raw && typeof raw === "object" && "toMillis" in (raw as object)) {
+      return (raw as { toMillis: () => number }).toMillis();
+    }
+    return null;
+  };
+
   if (cfg.anchorKind === "funnel_event") {
     if (cfg.funnelId) {
       const f = await db.doc(`funnels/${cfg.funnelId}`).get();
-      const raw = f.exists ? (f.data()!.eventStartAt as unknown) : null;
-      if (typeof raw === "string" && raw) anchorMs = Date.parse(raw) || null;
-      else if (raw && typeof raw === "object" && "toMillis" in (raw as object)) {
-        anchorMs = (raw as { toMillis: () => number }).toMillis();
+      anchorMs = f.exists ? tsToMs(f.data()!.eventStartAt) : null;
+    }
+  } else if (cfg.anchorKind === "business_event") {
+    if (cfg.entityType === "quote" && cfg.entityId && cfg.anchorField) {
+      const q = await db.doc(`quotes/${cfg.entityId}`).get();
+      if (q.exists && q.data()!.subAccountId === ctx.subAccountId) {
+        anchorMs = tsToMs(q.data()![cfg.anchorField]);
       }
     }
   } else {
-    // The contact's own next appointment: soonest upcoming calendar event
-    // (small lookback so a "+2h after" anchor still resolves just after
-    // the event started). Re-queried LIVE on every wake — a reschedule
-    // moves the target automatically.
+    // contact_event: the contact's soonest relevant calendar event (small
+    // lookback so "+after" offsets still resolve just past the start).
     const snap = await db
       .collection("events")
       .where("subAccountId", "==", ctx.subAccountId)
@@ -548,17 +588,67 @@ const execWaitUntil: NodeExecutor = async (ctx) => {
       .limit(1)
       .get();
     if (!snap.empty) {
-      const st = snap.docs[0].data().startAt as { toMillis?: () => number } | null;
-      anchorMs = st?.toMillis ? st.toMillis() : null;
+      const d = snap.docs[0].data();
+      anchoredEventId = snap.docs[0].id;
+      anchoredEventStatus = (d.status as string | undefined) ?? "scheduled";
+      anchorMs = tsToMs(cfg.anchorField === "endAt" ? d.endAt : d.startAt);
     }
   }
 
   if (anchorMs === null) {
-    // Anchor missing/cancelled — never fire a reminder for something that
-    // no longer exists; the whenFalse branch is the skip/recovery path.
     return { result: { kind: "branch", value: false }, log: "anchor:missing" };
   }
-  const targetMs = anchorMs + offsetSec * 1000;
+
+  // ── LIFECYCLE ELIGIBILITY (re-read on every wake, and REQUIRED before
+  //    the final fire): the anchored action only proceeds while the
+  //    entity's current state permits it. State wins over pending nodes —
+  //    a cancelled appointment never gets a "see you tomorrow". ──
+  if (cfg.eligibility?.states?.length) {
+    let state: string | null = null;
+    if (cfg.eligibility.domain === "appointment" && anchoredEventStatus !== null) {
+      // The anchored event doc IS the appointment authority.
+      state =
+        anchoredEventStatus === "scheduled" || anchoredEventStatus === "awaiting_payment"
+          ? "booked"
+          : anchoredEventStatus;
+    } else {
+      const { getLifecycleState, getLatestLifecycleStateForContact } = await import("@/lib/lifecycle/engine");
+      if (cfg.anchorKind === "funnel_event" && cfg.funnelId) {
+        state = await getLifecycleState({
+          subAccountId: ctx.subAccountId,
+          domain: cfg.eligibility.domain,
+          entityId: cfg.funnelId,
+          contactId: ctx.contact.id,
+        });
+      } else {
+        const latest = await getLatestLifecycleStateForContact({
+          subAccountId: ctx.subAccountId,
+          domain: cfg.eligibility.domain,
+          contactId: ctx.contact.id,
+        });
+        state = latest?.state ?? null;
+        if (cfg.eligibility.domain === "appointment" && anchoredEventId && latest?.entityId !== anchoredEventId) {
+          // Different appointment than the record — trust the live doc.
+          state = state ?? null;
+        }
+      }
+    }
+    // A null state on a funnel_event anchor means the contact never
+    // entered this journey (or the record predates the engine) — treat as
+    // eligible rather than silently suppressing legacy sends.
+    if (state !== null && !cfg.eligibility.states.includes(state)) {
+      return { result: { kind: "branch", value: false }, log: `state:ineligible:${state}` };
+    }
+  }
+
+  let targetMs = anchorMs + offsetSec * 1000;
+  if (cfg.businessDaysOnly) {
+    // Roll forward past Sat/Sun, preserving time-of-day — "next business
+    // day", never a dumb +24h that lands on a weekend.
+    const d = new Date(targetMs);
+    while (d.getUTCDay() === 6 || d.getUTCDay() === 0) d.setUTCDate(d.getUTCDate() + 1);
+    targetMs = d.getTime();
+  }
   const remaining = Math.ceil((targetMs - Date.now()) / 1000);
   if (remaining <= 0) {
     return { result: { kind: "branch", value: true }, log: "anchor:reached" };

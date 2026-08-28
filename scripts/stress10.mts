@@ -41,6 +41,13 @@ if (process.argv.includes("--cleanup")) {
   process.exit(0);
 }
 
+// The webinar scenario supplies a REAL explicit future timestamp (the test
+// owns it — create_funnel must never invent one): 14 days out, 14:00 CT.
+const WEBINAR_AT = new Date(Date.now() + 14 * 86_400_000);
+WEBINAR_AT.setUTCHours(19, 0, 0, 0); // 14:00 America/Chicago (CDT)
+const WEBINAR_AT_ISO = WEBINAR_AT.toISOString();
+const WEBINAR_AT_HUMAN = WEBINAR_AT.toUTCString().replace(":00 GMT", " UTC");
+
 const SCENARIOS: { key: string; brief: string }[] = [
   {
     key: "1-lead-magnet",
@@ -60,7 +67,7 @@ const SCENARIOS: { key: string; brief: string }[] = [
   {
     key: "4-webinar",
     brief:
-      "I'm a tax strategist who works with established small businesses. I want a registration funnel for my free live webinar: '5 Tax Mistakes Costing 6-Figure Businesses Money'. Traffic is cold LinkedIn and Meta ads. My audience is business owners who suspect they might be overpaying on taxes but are rightly skeptical of aggressive tax-savings promises. After the webinar I offer a consultation.",
+      `I'm a tax strategist who works with established small businesses. I want a registration funnel for my free live webinar: '5 Tax Mistakes Costing 6-Figure Businesses Money'. It's happening live on ${WEBINAR_AT_HUMAN} (${WEBINAR_AT_ISO}). Traffic is cold LinkedIn and Meta ads. My audience is business owners who suspect they might be overpaying on taxes but are rightly skeptical of aggressive tax-savings promises. After the webinar I offer a consultation. Please set up the registration reminders around the live time.`,
   },
   {
     key: "5-coaching",
@@ -250,15 +257,21 @@ for (const r of results) {
           cta: (s.config?.ctaLabel as string) ?? null,
           priceCents: (s.config?.priceCents as number) ?? null,
         })),
+        eventStartAt: d.eventStartAt ?? null,
         workflows: workflows.map((w) => ({
           id: w.id,
           name: w.name,
+          strategyPlan: w.strategyPlan ?? null,
           trigger: w.trigger,
           nodes: Object.values((w.nodes ?? {}) as Record<string, { type: string; config?: Record<string, unknown> }>).map((n) => ({
             type: n.type,
             subject: n.config?.subject ?? null,
             bodyPreview: typeof n.config?.body === "string" ? (n.config.body as string).slice(0, 400) : null,
             seconds: n.config?.seconds ?? null,
+            offsetMinutes: n.config?.offsetMinutes ?? null,
+            anchorKind: n.config?.anchorKind ?? null,
+            eligibility: n.config?.eligibility ?? null,
+            commType: n.config?.commType ?? null,
             tag: n.config?.tag ?? null,
           })),
         })),

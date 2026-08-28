@@ -73,7 +73,35 @@ export interface ComposeStrategyInput {
   /** True when the funnel carries an eventStartAt. Anchored steps without
    *  it degrade to absolute delays (delayHours) so nothing silently drops. */
   hasEventTime?: boolean;
+  /** Lifecycle domain of the funnel's journey (webinar funnels =>
+   *  "webinar") — anchored steps get state-eligibility windows so a
+   *  reminder only fires while the state still permits it. */
+  lifecycleDomain?: "webinar" | "appointment";
 }
+
+/** Which lifecycle states each communication type is VALID in (state wins
+ *  over comm_type — the spec's law). Pre-event kinds die outside the live
+ *  states; recovery requires evidence of the interrupted state; post-event
+ *  kinds tolerate unresolved (no attendance evidence ≠ fabricated
+ *  attendance — copy rules forbid assuming either way). */
+const COMM_ELIGIBILITY: Record<string, Record<string, string[]>> = {
+  webinar: {
+    reminder: ["registered", "scheduled"],
+    operational: ["registered", "scheduled"],
+    recovery: ["missed"],
+    nurture: ["registered", "scheduled", "attended", "not_converted"],
+    sales_followup: ["attended", "missed", "scheduled", "not_converted"],
+    stewardship: ["converted"],
+  },
+  appointment: {
+    reminder: ["booked", "confirmed"],
+    operational: ["booked", "confirmed"],
+    recovery: ["cancelled", "no_show"],
+    nurture: ["booked", "confirmed"],
+    sales_followup: ["completed"],
+    stewardship: ["completed"],
+  },
+};
 
 const HOUR = 3600;
 const DAY = 86_400;
@@ -160,10 +188,18 @@ export function composeStrategyNodes(input: ComposeStrategyInput): {
     const cId = `ca${i + 1}`;
     const eId = `ea${i + 1}`;
     nodes[prevId] = { ...nodes[prevId], next: wuId };
+    const eligStates = input.lifecycleDomain
+      ? COMM_ELIGIBILITY[input.lifecycleDomain]?.[step.commType ?? "reminder"]
+      : undefined;
     nodes[wuId] = {
       id: wuId,
       type: "wait_until",
-      config: { anchorKind: "funnel_event", funnelId: input.funnelId, offsetMinutes: Math.round((step.anchorOffsetHours ?? 0) * 60) },
+      config: {
+        anchorKind: "funnel_event",
+        funnelId: input.funnelId,
+        offsetMinutes: Math.round((step.anchorOffsetHours ?? 0) * 60),
+        ...(eligStates ? { eligibility: { domain: input.lifecycleDomain, states: eligStates } } : {}),
+      },
       branches: { whenTrue: cId, whenFalse: null },
       next: null,
     };
