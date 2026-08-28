@@ -46,6 +46,10 @@ export interface AutomationSequenceStep {
   body: string;
   /** The step's job in the journey ("resolve the price objection"). */
   purpose: string;
+  /** Communication taxonomy — what kind of message this IS (transactional /
+   *  operational / reminder / nurture / recovery / sales_followup /
+   *  stewardship / reactivation). Not every automated message is nurture. */
+  commType?: string;
 }
 
 export interface ComposeStrategyInput {
@@ -124,7 +128,7 @@ export function composeStrategyNodes(input: ComposeStrategyInput): {
       branches: { whenTrue: "goal", whenFalse: eId },
       next: null,
     };
-    nodes[eId] = { id: eId, type: "send_email", config: { subject: step.subject, body: withUnsubscribe(step.body) }, next: null };
+    nodes[eId] = { id: eId, type: "send_email", config: { subject: step.subject, body: withUnsubscribe(step.body), commType: step.commType ?? "nurture", purpose: step.purpose }, next: null };
     prevId = eId;
   });
 

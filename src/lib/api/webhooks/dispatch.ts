@@ -7,6 +7,7 @@ import {
 } from "@/lib/firestore/webhook-events";
 import { findMatchingSubscriptions } from "@/lib/firestore/webhook-subscriptions";
 import { dispatchPushForWebhookEvent } from "@/lib/push/events";
+import { applyLifecycleStateForEvent } from "@/lib/workflows/lifecycle-events";
 import type { WebhookEventType } from "@/types/webhooks";
 
 /**
@@ -62,6 +63,11 @@ export async function emitWebhookEvent(
     // its own errors. Test-mode events never notify a phone.
     if (input.mode === "live") {
       void dispatchPushForWebhookEvent(input);
+      // Native conversion detection (Automation Strategy Engine): state-
+      // proving events auto-apply canonical lifecycle tags to the contact,
+      // so composed workflows' goal-tag exits fire without operator action.
+      // Same self-guarded fire-and-forget contract as push.
+      void applyLifecycleStateForEvent(input);
     }
 
     const subscriptions = await findMatchingSubscriptions(

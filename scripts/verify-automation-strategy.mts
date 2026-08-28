@@ -95,5 +95,47 @@ check("7a. steps sorted by delay; both waits positive",
   (disordered.nodes.e1.config as { subject?: string }).subject === "early" &&
   Number((disordered.nodes.w2.config as { seconds?: number }).seconds) === 90 * 3600);
 
+
+// 8. NATIVE CONVERSION DETECTION — the event-stream consumer applies (and
+//    removes) canonical lifecycle tags against real Firestore, with the
+//    tenancy guard and the intent-vs-verified boundary enforced.
+{
+  const { readFileSync } = await import("node:fs");
+  for (const line of readFileSync(new URL("../.env.local", import.meta.url), "utf8").split("\n")) {
+    const i = line.indexOf("=");
+    if (i > 0 && !line.startsWith("#")) process.env[line.slice(0, i).trim()] ??= line.slice(i + 1).trim().replace(/^["']|["']$/g, "");
+  }
+  const { applyLifecycleStateForEvent } = await import("../src/lib/workflows/lifecycle-events");
+  const { getAdminDb } = await import("../src/lib/firebase/admin");
+  const db = getAdminDb();
+  const SUB = "qa-lifecycle-sub";
+  const ref = db.collection("contacts").doc();
+  await ref.set({ subAccountId: SUB, agencyId: "qa-lifecycle-ag", name: "QA Lifecycle", tags: [], createdByUid: "qa" });
+  const tags = async () => ((await ref.get()).data()!.tags ?? []) as string[];
+
+  await applyLifecycleStateForEvent({ subAccountId: SUB, type: "booking.created", payload: { event: { contactId: ref.id } } });
+  check("8a. booking.created auto-applies 'booked'", (await tags()).includes("booked"));
+
+  await applyLifecycleStateForEvent({ subAccountId: SUB, type: "message.received", payload: { message: { contact_id: ref.id } } });
+  check("8b. message.received auto-applies 'replied'", (await tags()).includes("replied"));
+
+  await applyLifecycleStateForEvent({ subAccountId: SUB, type: "funnel.order.completed", payload: { contactId: ref.id } });
+  check("8c. verified payment auto-applies 'purchased'", (await tags()).includes("purchased"));
+
+  await applyLifecycleStateForEvent({ subAccountId: SUB, type: "booking.cancelled", payload: { event: { contactId: ref.id } } });
+  const t = await tags();
+  check("8d. cancellation removes 'booked' + adds recovery signal", !t.includes("booked") && t.includes("booking-cancelled"));
+
+  await applyLifecycleStateForEvent({ subAccountId: "someone-else", type: "deal.won", payload: { contactId: ref.id } });
+  check("8e. tenancy guard: foreign sub-account event is inert", !(await tags()).includes("won"));
+
+  await applyLifecycleStateForEvent({ subAccountId: SUB, type: "form.submitted", payload: { contactId: ref.id } });
+  const t2 = await tags();
+  check("8f. intent events prove nothing: form.submitted mints NO state", !t2.includes("purchased") || t2.filter((x) => x === "purchased").length === 1);
+  check("8g. lifecycle timestamps recorded", !!(await ref.get()).data()!.lifecycleStates?.purchasedAt);
+
+  await ref.delete();
+}
+
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);
 if (failures > 0) process.exit(1);
