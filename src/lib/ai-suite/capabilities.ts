@@ -3678,7 +3678,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         bridge_next_funnel_id: {
           type: "string",
           description:
-            "MULTISTEP FUNNELS: the id of an ALREADY-CREATED funnel (returned as 'Funnel ID' by a previous create_funnel call) that THIS funnel's thank-you page should route new signups to — the magnet→offer chain link. When the user asks for a multistep funnel (lead magnet → offer → checkout → upsell), call create_funnel once per page, DOWNSTREAM FIRST (the offer/sales page), then the lead-magnet page with this set to the offer funnel's id. Omit for single-page funnels. NEVER pass a placeholder value here — if the downstream funnel doesn't exist yet, omit this field and create the downstream funnel first (or in the same parallel batch WITHOUT the link, then note the manual link for the user).",
+            "MULTISTEP FUNNELS: the id of an ALREADY-CREATED funnel (returned as 'Funnel ID' by a previous create_funnel call) that THIS funnel's thank-you page should route new signups to — the magnet→offer chain link. When the user asks for a multistep funnel (lead magnet → offer → checkout → upsell), call create_funnel once per page, DOWNSTREAM FIRST (the offer/sales page), then the lead-magnet page with this set to the offer funnel's id. Omit for single-page funnels. NEVER pass a placeholder value here, and NEVER create both steps of a chain in one parallel batch (the link needs the real id, and a re-create makes a duplicate page). Sequence STRICTLY: (1) one create_funnel call for the DOWNSTREAM offer alone and nothing else; (2) read the 'Funnel ID' from its result; (3) one more create_funnel call for the upstream lead-magnet page with this field set to that id. To link two funnels that BOTH already exist, call link_funnel_steps instead — never re-create a page just to add the link.",
         },
         bridge_next_cta: {
           type: "string",
@@ -5186,6 +5186,72 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       return {
         resultText: summaryLines.join("\n"),
         ref: { kind: "funnel", id: funnelId },
+      };
+    },
+  },
+  {
+    name: "link_funnel_steps",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Link one funnel's post-signup step to another funnel (multistep journey)",
+    description:
+      "Link two EXISTING funnels into a multistep journey: after someone signs up on `funnel_id`, they're sent straight to `next_funnel_id` (the next offer) with a delivery/confirmation bar. Use when the user asks to connect/chain existing pages ('send people from my checklist page to the workshop offer'), to change where a funnel routes after signup, or to fix a chain built out of order. Pass next_funnel_id: null to UNLINK (signups then get the same-page confirmation instead). Both funnels must already exist — use check_funnel_status to find ids.",
+    parameters: {
+      type: "object",
+      properties: {
+        funnel_id: { type: "string", description: "The upstream funnel (the page people sign up on) — its post-signup destination is what changes." },
+        next_funnel_id: { type: ["string", "null"], description: "The funnel to send new signups to (the next offer), or null to unlink." },
+        next_cta: { type: "string", description: "Optional button label for the next-offer card on the fallback thank-you page. Max 60 chars." },
+      },
+      required: ["funnel_id", "next_funnel_id"],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const funnelId = str(raw, "funnel_id").trim();
+      const nextRaw = (raw as Record<string, unknown>).next_funnel_id ?? (raw as Record<string, unknown>).nextFunnelId;
+      const nextFunnelId = typeof nextRaw === "string" ? nextRaw.trim() : null;
+      if (!/^[A-Za-z0-9_-]{10,40}$/.test(funnelId)) {
+        return { ok: false, error: "funnel_id must be a real funnel id (see check_funnel_status)" };
+      }
+      if (nextFunnelId !== null && !/^[A-Za-z0-9_-]{10,40}$/.test(nextFunnelId)) {
+        return { ok: false, error: "next_funnel_id must be a real funnel id or null" };
+      }
+      if (nextFunnelId === funnelId) {
+        return { ok: false, error: "a funnel can't route to itself" };
+      }
+      return { ok: true, args: { funnelId, nextFunnelId, nextCta: str(raw, "next_cta").trim().slice(0, 60) } };
+    },
+    summarize: (args) =>
+      args.nextFunnelId
+        ? `Route signups from funnel ${args.funnelId} straight to funnel ${args.nextFunnelId}.`
+        : `Unlink funnel ${args.funnelId}'s next-offer step (signups get the same-page confirmation).`,
+    execute: async (ctx, args) => {
+      const subAccountId = ctx.subAccountId!;
+      const source = await getFunnel(subAccountId, args.funnelId as string);
+      if (!source) throw new CapabilityUserError(`Funnel "${args.funnelId}" doesn't exist in this workspace.`);
+      const nextId = args.nextFunnelId as string | null;
+      let targetName: string | null = null;
+      if (nextId) {
+        const target = await getFunnel(subAccountId, nextId);
+        if (!target) throw new CapabilityUserError(`Funnel "${nextId}" doesn't exist in this workspace.`);
+        targetName = target.name;
+      }
+      await updateFunnelServerSide({
+        subAccountId,
+        funnelId: source.id,
+        patch: {
+          bridge: {
+            ...(source.bridge ?? {}),
+            nextFunnelId: nextId,
+            ...(args.nextCta ? { nextCta: args.nextCta as string } : {}),
+          },
+        },
+      });
+      return {
+        resultText: nextId
+          ? `Linked: signups on "${source.name}" now go straight to "${targetName}" (/lp/${nextId}) with the delivery bar.`
+          : `Unlinked: signups on "${source.name}" now get the same-page confirmation.`,
+        ref: { kind: "funnel", id: source.id },
       };
     },
   },
