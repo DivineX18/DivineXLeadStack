@@ -235,10 +235,12 @@ export function PublicFunnelView({
             "--flow-radius": RADIUS_TO_PX[tokens.borderRadiusStyle] ?? "0.75rem",
           } as React.CSSProperties
         }
-        // A single-section (one-fold) page centers its content vertically —
-        // top-anchoring a short page leaves a dead half-viewport of bare
-        // background under the CTA (user QA, 10-customer stress test).
-        className={`flow-funnel-root ${FONT_VARS} min-h-screen${funnel.sections.length === 1 ? " flex flex-col justify-center" : ""}${hasFixedBottomCta ? " pb-24" : ""}`}
+        // A single-section (one-fold) page STRETCHES its section to fill the
+        // viewport (flex-col + the child wrapper grows). Centering a fixed-
+        // height block instead exposed bare page background above the hero's
+        // own painted background (user QA: dead white band at the top) —
+        // the section fills edge to edge and centers its own content.
+        className={`flow-funnel-root ${FONT_VARS} min-h-screen${funnel.sections.length === 1 ? " flex flex-col [&>div]:flex-1 [&>div]:flex [&>div]:flex-col [&>div]:justify-center" : ""}${hasFixedBottomCta ? " pb-24" : ""}`}
       >
         {funnel.logoUrl && (
           <div className="flex justify-center px-4 pt-8">
