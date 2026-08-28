@@ -83,6 +83,11 @@ function resolveContactId(payload: unknown): string | null {
  * fire-and-forget: swallows its own errors, no-ops on unmapped events or
  * unresolvable/foreign contacts.
  */
+/** Control-flow sentinel: skip the tag section without aborting the whole
+ *  consumer (an early `return` here silently disabled webinar registration
+ *  seeding — caught by the certification chain probe). */
+const SKIP = Symbol("skip");
+
 export async function applyLifecycleStateForEvent(input: {
   subAccountId: string;
   type: WebhookEventType;
@@ -90,9 +95,9 @@ export async function applyLifecycleStateForEvent(input: {
 }): Promise<void> {
   try {
     const mapping = EVENT_STATE_MAP[input.type];
-    if (!mapping) return;
+    if (!mapping) throw SKIP; // fall through to the webinar section below
     const contactId = resolveContactId(input.payload);
-    if (!contactId) return;
+    if (!contactId) throw SKIP;
 
     const ref = getAdminDb().doc(`contacts/${contactId}`);
     const snap = await ref.get();
@@ -111,8 +116,10 @@ export async function applyLifecycleStateForEvent(input: {
     if (mapping.remove) {
       await ref.update({ tags: FieldValue.arrayRemove(mapping.remove) });
     }
-  } catch {
-    // Fire-and-forget — lifecycle tagging must never break the emitting write.
+  } catch (e) {
+    // Fire-and-forget — lifecycle tagging must never break the emitting
+    // write. (SKIP is control flow, not an error.)
+    if (e !== SKIP) { /* swallowed */ }
   }
   // WEBINAR REGISTRATION (Lifecycle State Engine): a form submission on a
   // webinar-genre funnel IS the real registration event — seed the

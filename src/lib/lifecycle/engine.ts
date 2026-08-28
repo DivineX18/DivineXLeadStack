@@ -183,6 +183,19 @@ export async function transitionLifecycleState(input: {
       updatedAt: FieldValue.serverTimestamp(),
     });
     return { ok: true as const, state: input.to, changed: true };
+  }).then(async (result) => {
+    // TAG PROJECTION: tags are a PROJECTION of lifecycle state (never the
+    // truth) — but composed workflows' goal-tag exits and operator search
+    // read tags, so a state change projects its state name onto the
+    // contact's tags (fire-and-forget, idempotent arrayUnion). This is how
+    // "attended"/"completed" goal tags fire without manual tagging.
+    if (result.changed) {
+      await getAdminDb()
+        .doc(`contacts/${input.contactId}`)
+        .update({ tags: FieldValue.arrayUnion(input.to), updatedAt: FieldValue.serverTimestamp() })
+        .catch(() => {});
+    }
+    return result;
   });
 }
 

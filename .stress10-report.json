@@ -5,57 +5,65 @@
       {
         "name": "create_funnel",
         "ok": true,
-        "note": "created JTBKinzh0iqREUJHkGKj"
+        "note": "created MUWNMXIxvJhFjWnWvjqw"
       }
     ],
     "error": null,
     "funnels": [
       {
-        "id": "JTBKinzh0iqREUJHkGKj",
-        "url": "/lp/JTBKinzh0iqREUJHkGKj",
-        "name": "See Where Your Money Actually Goes (in 7 days)",
+        "id": "MUWNMXIxvJhFjWnWvjqw",
+        "url": "/lp/MUWNMXIxvJhFjWnWvjqw",
+        "name": "7-Day Spending Reset Lead Magnet",
         "genre": "lead_magnet",
         "persuasionDepth": "standard",
         "decisionComplexity": "low",
         "artDirection": {
-          "transformation": "confusion_to_clarity",
-          "energy": "calm",
+          "transformation": "frustration_to_control",
+          "energy": "balanced",
           "density": "medium",
-          "humanity": "balanced"
+          "humanity": "product_led"
         },
         "bridge": null,
         "salesArgument": {
           "beliefChain": [
-            "I actually don't know where most of my money goes each month",
-            "This isn't because I'm bad with money — most people have this blind spot",
-            "Tracking doesn't mean restricting; it just means seeing",
-            "A simple 7-day reset can show me exactly where the leaks are",
-            "Once I see it, I can fix it"
+            "Most people don't know where their money actually goes because they've never tracked it.",
+            "If I knew exactly where my money was disappearing, I could spot the leaks.",
+            "The leaks are usually small recurring charges and impulse purchases, not big expenses.",
+            "A simple spending audit is the fastest way to see the real picture.",
+            "Once I see it, I can reset my baseline and take control of my cash flow."
           ],
-          "corePromise": "Discover where your money actually goes in 7 days, without shame or complicated spreadsheets.",
-          "primaryObjection": "'Will this just tell me I'm bad with money?' or 'I don't have time for another budget app.'"
+          "corePromise": "In 7 days, you'll know exactly where your money is going and have a clear baseline to build from.",
+          "primaryObjection": "I don't have time for another financial project, and I'm skeptical that a PDF guide will actually change anything."
         },
         "sections": [
           {
             "type": "hero",
             "canvas": null,
             "role": "hook",
-            "serves": "I actually don't know where most of my money goes each month",
-            "headline": "See Where Your Money Actually Goes (in 7 days)",
-            "cta": "Get the Free Guide",
+            "serves": "Most people don't know where their money actually goes because they've never tracked it.",
+            "headline": "Stop Money From Disappearing Every Month",
+            "cta": "Get the PDF Free",
             "priceCents": null
           }
         ],
+        "eventStartAt": null,
         "workflows": [
           {
-            "id": "MOiVDckx1I4PdTdvm5zV",
-            "name": "See Where Your Money Actually Goes (in 7 days) — follow-up",
+            "id": "a3BPQyX54kkFUZLbl1Vl",
+            "name": "7-Day Spending Reset Lead Magnet — follow-up",
+            "strategyPlan": {
+              "conversionEvent": "downloaded the 7-Day Spending Reset guide",
+              "goalState": "engaged with email nurture sequence",
+              "goalTag": "purchased",
+              "handoffDays": 7,
+              "cadenceRationale": "Cold audience needs 3–5 nurture touches over 7 days to build trust and move toward a paid offer or follow-up product."
+            },
             "trigger": {
               "type": "form.submitted",
               "filters": {
                 "all": []
               },
-              "formId": "YaZQ0MBzx85ppz7wYmJY"
+              "formId": "U6cFHzUWoSNTkHriHlGH"
             },
             "nodes": [
               {
@@ -63,6 +71,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -70,6 +82,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -77,20 +93,65 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
-                "tag": "Spending Reset Download"
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": "Downloaded 7-Day Spending Reset"
               },
               {
                 "type": "send_email",
-                "subject": "Your 7-Day Spending Reset guide is ready (+ what's next)",
-                "bodyPreview": "Your PDF is attached and ready to download.\n\nStart anytime this week — the goal is simple: track where your money goes for 7 days, no judgment. Most people spot their biggest leak by Day 3. By Day 7, you'll have real clarity on where to focus.\n\nOver the next few days, I'm sending you one follow-up email with a quick question about what you discover — it'll help me know what to focus on next for yo",
+                "subject": "Your 7-Day Spending Reset guide is ready (+ what's inside)",
+                "bodyPreview": "Your guide is attached — download it and start Day 1 today.\n\nHere's what you'll do: Each day tracks a different category (subscriptions, groceries, impulse purchases, etc.). You'll fill out simple worksheets, and by Day 7 you'll have a complete picture of where your money actually goes.\n\nMost people find 3–7 spending leaks they didn't know existed. Some of them are costing $100+ per month.\n\nStart ",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "transactional",
                 "tag": null
               },
               {
                 "type": "notify",
-                "subject": "New lead: See Where Your Money Actually Goes (in 7 days)",
-                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just Downloaded the 7-Day Spending Reset guide. The follow-up sequence is running — apply the \"engaged\" tag the moment they Opened an email and clicked through to next offer (challenge or strategy content), and every remaining automated touch stops.",
+                "subject": "New lead: 7-Day Spending Reset Lead Magnet",
+                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just downloaded the 7-Day Spending Reset guide. The follow-up sequence is running — apply the \"purchased\" tag the moment they engaged with email nurture sequence, and every remaining automated touch stops.",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": null
+              },
+              {
+                "type": "wait",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": 86400,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": null
+              },
+              {
+                "type": "if_else",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": null
+              },
+              {
+                "type": "send_email",
+                "subject": "Most people find 3–7 money leaks in the first 3 days (here's what they find)",
+                "bodyPreview": "Yesterday you started the 7-Day Spending Reset.\n\nBy now you've probably spotted at least one subscription you forgot about, or a category where you're spending way more than you realized.\n\nThis is exactly what the guide is designed for — the leaks aren't usually big purchases, they're the small recurring ones. Netflix, that gym membership, the food delivery habit. They add up fast.\n\nHow far into t",
+                "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "nurture",
                 "tag": null
               },
               {
@@ -98,6 +159,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": 172800,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -105,20 +170,32 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
                 "type": "send_email",
-                "subject": "Did you find your biggest money leak yet?",
-                "bodyPreview": "By now you're a few days into the Spending Reset.\n\nI'm curious: have you spotted where most of your money is going? Usually it's one of three categories — and most people are shocked when they see it clearly for the first time.\n\nHit reply and tell me what you found. (I actually read these — it helps me know what struggles to focus on next.)\n\n{{unsubscribeLink}}",
+                "subject": "By Day 4, you should have a clear picture (here's the next step after the reset)",
+                "bodyPreview": "You're almost through the 7-day audit.\n\nOnce you finish, you'll have three numbers that matter:\n\n1. Your total monthly spending (the real number)\n2. The leaks (money you didn't know was leaving)\n3. Your actual baseline (what you need vs. what you're spending)\n\nMost people are surprised it's not as bad as they thought — they just didn't have clarity.\n\nOnce you finish the reset, reply to this email ",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "nurture",
                 "tag": null
               },
               {
                 "type": "wait",
                 "subject": null,
                 "bodyPreview": null,
-                "seconds": 259200,
+                "seconds": 345600,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -126,20 +203,32 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
                 "type": "send_email",
-                "subject": "The ONE number that changes everything",
-                "bodyPreview": "After the 7-day reset, most people realize their spending isn't the problem — *visibility* is.\n\nOnce you know where your money goes, you stop feeling helpless about it.\n\nNext: I'm hosting a free live breakdown where I'll show you exactly what number to watch (it's not what most people think), and how three small shifts turn that number into extra money by next month — without feeling deprived.\n\nDe",
+                "subject": "You've finished the reset — here's what 10,000+ people do next",
+                "bodyPreview": "The 7-day audit is complete.\n\nNow that you know where your money is going, most people move to the second phase: actually keeping it.\n\nThis is where people usually get stuck — they know the problem but don't have a system to prevent the leaks from happening again.\n\nNext week I'm releasing a more detailed framework for the people who finished the reset and want to go deeper. It's called the 'Spendi",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "sales_followup",
                 "tag": null
               },
               {
                 "type": "wait",
                 "subject": null,
                 "bodyPreview": null,
-                "seconds": 172800,
+                "seconds": 3600,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -147,6 +236,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -154,6 +247,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               }
             ]
@@ -168,15 +265,15 @@
       {
         "name": "create_funnel",
         "ok": true,
-        "note": "created pOAAJW5JnHsDF1XFYKYP"
+        "note": "created RDC5BtDjLxnZr8QjAlXy"
       }
     ],
     "error": null,
     "funnels": [
       {
-        "id": "pOAAJW5JnHsDF1XFYKYP",
-        "url": "/lp/pOAAJW5JnHsDF1XFYKYP",
-        "name": "Growth Bottleneck Scorecard",
+        "id": "RDC5BtDjLxnZr8QjAlXy",
+        "url": "/lp/RDC5BtDjLxnZr8QjAlXy",
+        "name": "Find Your Growth Bottleneck in 5 Minutes",
         "genre": "lead_magnet",
         "persuasionDepth": "standard",
         "decisionComplexity": "low",
@@ -189,36 +286,44 @@
         "bridge": null,
         "salesArgument": {
           "beliefChain": [
-            "Growth stalls have identifiable root causes—not random bad luck",
-            "Most businesses trying to fix growth waste time optimizing the wrong constraint",
-            "A 5-minute diagnostic can actually tell me which constraint is real",
-            "Once I know my #1 bottleneck, the fix becomes obvious",
-            "A strategy call with someone who uses this framework is the logical next step"
+            "Most growth stalls aren't random — they follow predictable patterns rooted in one of five specific constraints.",
+            "These constraints (traffic, conversion, sales, operations, retention) are measurable and rankable.",
+            "A scorecard that assesses all five at once reveals which one is ACTUALLY the bottleneck.",
+            "Once I know my bottleneck, I can fix it directly instead of guessing or throwing money at the wrong lever.",
+            "Taking the assessment costs nothing and takes 5 minutes — the upside is clarity, the downside is none."
           ],
-          "corePromise": "Identify your #1 growth bottleneck in under 5 minutes, get a one-page action plan, and know exactly what to fix first",
-          "primaryObjection": "This is just another lead-gen quiz—generic advice I could figure out myself, or worse, a disguise for a sales call"
+          "corePromise": "In 5 minutes, you'll know exactly which growth constraint is costing you the most revenue and what to do about it.",
+          "primaryObjection": "This feels like a lead gen tactic that'll end with a hard sales pitch I'm not ready for."
         },
         "sections": [
           {
             "type": "hero",
             "canvas": null,
             "role": "hook",
-            "serves": "Growth stalls have identifiable root causes—not random bad luck",
-            "headline": "Discover Which Growth Constraint Is Actually Blocking You",
-            "cta": "Get My Scorecard",
+            "serves": "Most growth stalls aren't random — they follow predictable patterns rooted in one of five specific constraints.",
+            "headline": "Find Your Growth Bottleneck in 5 Minutes",
+            "cta": "Get My Scorecard (Free)",
             "priceCents": null
           }
         ],
+        "eventStartAt": null,
         "workflows": [
           {
-            "id": "104qGQDFBzC6reC9HKiP",
-            "name": "Growth Bottleneck Scorecard — follow-up",
+            "id": "SeCBZJOEdelt4LNR08W3",
+            "name": "Find Your Growth Bottleneck in 5 Minutes — follow-up",
+            "strategyPlan": {
+              "conversionEvent": "downloaded and submitted the Growth Bottleneck Scorecard",
+              "goalState": "booked a strategy call",
+              "goalTag": "booked",
+              "handoffDays": 3,
+              "cadenceRationale": "Problem-aware prospects need 2-3 spaced touches over 2-3 days to move from 'I have clarity' to 'I want to talk about this.' Day 1 is confirmation + results delivery; Day 2 is reframe on their bottlene"
+            },
             "trigger": {
               "type": "form.submitted",
               "filters": {
                 "all": []
               },
-              "formId": "tkWRphDV6bIytjRUYiJw"
+              "formId": "QbxCCcY3JFmtuhnKCD0w"
             },
             "nodes": [
               {
@@ -226,6 +331,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -233,6 +342,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -240,20 +353,32 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
-                "tag": "Scorecard Downloaded"
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": "Scorecard_Completed"
               },
               {
                 "type": "send_email",
-                "subject": "Your Growth Bottleneck Scorecard Results",
-                "bodyPreview": "Your scorecard is attached — open it to see which of the 5 growth constraints is actually blocking you.\n\nYou'll get a clear score on Traffic, Conversion, Sales, Operations, and Retention — plus a one-page action plan for your #1 bottleneck.\n\nIf you'd like to talk through what the results mean for your specific business, just reply to this email or let me know. No pressure — but I'm here if it's us",
+                "subject": "Your Growth Bottleneck Scorecard is ready",
+                "bodyPreview": "Your scorecard is attached. Open it and you'll immediately see which of the five constraints is costing you the most revenue right now.\n\nThe results page also includes a specific next-step recommendation based on your bottleneck — whether that's fixing traffic, improving conversion, strengthening sales, streamlining operations, or improving retention.\n\nNo sales pitch. Just clarity.\n\nIf you'd like ",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "transactional",
                 "tag": null
               },
               {
                 "type": "notify",
-                "subject": "New lead: Growth Bottleneck Scorecard",
-                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just downloaded the Growth Bottleneck Scorecard. The follow-up sequence is running — apply the \"booked\" tag the moment they booked a strategy call to discuss results, and every remaining automated touch stops.",
+                "subject": "New lead: Find Your Growth Bottleneck in 5 Minutes",
+                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just downloaded and submitted the Growth Bottleneck Scorecard. The follow-up sequence is running — apply the \"booked\" tag the moment they booked a strategy call, and every remaining automated touch stops.",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -261,6 +386,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": 86400,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -268,20 +397,32 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
                 "type": "send_email",
-                "subject": "One thing most businesses get wrong about their growth problem",
-                "bodyPreview": "When growth stalls, most teams immediately assume it's a traffic problem—so they hire an agency or start running ads.\n\nBut if your actual bottleneck is conversion, sales process, operations, or retention, more traffic just amplifies the real problem. You're throwing money at the wrong lever.\n\nThat's why the scorecard asks you to score across all 5 layers. Once you know which one is genuinely holdi",
+                "subject": "Here's what your bottleneck means (and why it's actually good news)",
+                "bodyPreview": "When you filled out the scorecard, you got a diagnosis. But a diagnosis is only useful if you know what to do with it.\n\nHere's the thing: most businesses optimize the WRONG constraint. They'll spend months on traffic when their real problem is conversion. Or they'll try to improve retention when their sales process is leaky.\n\nYour bottleneck ranking from the scorecard shows you where to focus FIRS",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "sales_followup",
                 "tag": null
               },
               {
                 "type": "wait",
                 "subject": null,
                 "bodyPreview": null,
-                "seconds": 172800,
+                "seconds": 86400,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -289,20 +430,32 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
                 "type": "send_email",
-                "subject": "Here's what your #1 bottleneck usually means",
-                "bodyPreview": "If your scorecard showed Traffic as your bottleneck, it usually means you've got good conversion and sales — you just need more volume.\n\nIf it was Conversion, Sales, Operations, or Retention, the path forward is different — and honestly, more profitable to fix first.\n\nI've worked with dozens of businesses where fixing the real constraint (not the assumed one) doubled their growth rate in 90 days.\n",
+                "subject": "The most common next step after taking the scorecard",
+                "bodyPreview": "Most people who take the Growth Bottleneck Scorecard discover one surprising thing: the problem they THOUGHT they had isn't actually their bottleneck.\n\nThey came thinking it was a traffic problem. The scorecard shows it's actually a conversion problem. Or they blamed \"not enough sales effort\" when the real issue is operations and delivery.\n\nThat realization alone is valuable. But acting on it is w",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "sales_followup",
                 "tag": null
               },
               {
                 "type": "wait",
                 "subject": null,
                 "bodyPreview": null,
-                "seconds": 3600,
+                "seconds": 86400,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -310,6 +463,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -317,6 +474,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               }
             ]
@@ -330,21 +491,16 @@
     "toolCalls": [
       {
         "name": "create_funnel",
-        "ok": false,
-        "note": "validate: at least one bullet point is required"
-      },
-      {
-        "name": "create_funnel",
         "ok": true,
-        "note": "created 9eJvz1IejS7E4GeSGNc1"
+        "note": "created suKyXznh4SXT9fn51JgZ"
       }
     ],
     "error": null,
     "funnels": [
       {
-        "id": "9eJvz1IejS7E4GeSGNc1",
-        "url": "/lp/9eJvz1IejS7E4GeSGNc1",
-        "name": "The Starter Kit That Doesn't Betray Sensitive Skin",
+        "id": "suKyXznh4SXT9fn51JgZ",
+        "url": "/lp/suKyXznh4SXT9fn51JgZ",
+        "name": "Skincare That Doesn't Irritate Sensitive Skin",
         "genre": "tripwire",
         "persuasionDepth": "lean",
         "decisionComplexity": "low",
@@ -357,21 +513,22 @@
         "bridge": null,
         "salesArgument": {
           "beliefChain": [
-            "This company actually tests on sensitive skin, not just claims it.",
-            "The formula is simple enough that nothing irritating hides in it.",
-            "If it DOES irritate my skin, they'll give my money back without friction.",
-            "The risk is reversed—I'm not risking $39, they are."
+            "Most skincare marketed as 'sensitive' still contains known irritants — that's why people keep getting reactions.",
+            "This product is formulated by removing the seven ingredients dermatologists say cause 80% of sensitive-skin reactions.",
+            "Real people with reactive skin tested it and didn't experience irritation — proving the formulation works.",
+            "The 60-day money-back guarantee means I have zero financial risk if it doesn't work for me.",
+            "At $39, trying this is less risky than another round of irritation + dermatologist visit."
           ],
-          "corePromise": "A starter kit that won't irritate your sensitive skin—or your money back.",
-          "primaryObjection": "This will probably irritate me too, or it'll be weak and pointless."
+          "corePromise": "Skincare that calms and protects sensitive skin without the irritants that have burned you before.",
+          "primaryObjection": "Even if this doesn't have obvious irritants, my skin might still react — or it won't work at all."
         },
         "sections": [
           {
             "type": "hero",
             "canvas": null,
             "role": "hook",
-            "serves": "This company actually tests on sensitive skin, not just claims it.",
-            "headline": "The Starter Kit That Doesn't Betray Sensitive Skin",
+            "serves": "Most skincare marketed as 'sensitive' still contains known irritants — that's why people keep getting reactions.",
+            "headline": "Skincare That Doesn't Irritate Sensitive Skin",
             "cta": "Get the Starter Kit — $39",
             "priceCents": null
           },
@@ -379,8 +536,8 @@
             "type": "benefits_grid",
             "canvas": "warm_paper",
             "role": "promise",
-            "serves": "If it DOES irritate my skin, they'll give my money back without friction.",
-            "headline": "What's Inside the Starter Kit",
+            "serves": "Real people with reactive skin tested it and didn't experience irritation — proving the formulation works. + The 60-day money-back guarantee means I have zero financial risk if it doesn't work for me.",
+            "headline": "What You Actually Get",
             "cta": null,
             "priceCents": null
           },
@@ -388,7 +545,7 @@
             "type": "trust_badges",
             "canvas": "clean",
             "role": "proof",
-            "serves": "The formula is simple enough that nothing irritating hides in it.",
+            "serves": "This product is formulated by removing the seven ingredients dermatologists say cause 80% of sensitive-skin reactions.",
             "headline": null,
             "cta": null,
             "priceCents": null
@@ -397,7 +554,7 @@
             "type": "offer",
             "canvas": "warm_paper",
             "role": "offer",
-            "serves": "The risk is reversed—I'm not risking $39, they are.",
+            "serves": "At $39, trying this is less risky than another round of irritation + dermatologist visit.",
             "headline": "",
             "cta": "Get the Starter Kit — $39",
             "priceCents": 3900
@@ -406,7 +563,7 @@
             "type": "faq",
             "canvas": "clean",
             "role": "objections",
-            "serves": "If it DOES irritate my skin, they'll give my money back without friction.",
+            "serves": "The 60-day money-back guarantee means I have zero financial risk if it doesn't work for me.",
             "headline": null,
             "cta": null,
             "priceCents": null
@@ -415,22 +572,30 @@
             "type": "cta_banner",
             "canvas": "brand_tint",
             "role": "close",
-            "serves": "The risk is reversed—I'm not risking $39, they are.",
-            "headline": "Ready to Stop Taking Skincare Chances",
+            "serves": "At $39, trying this is less risky than another round of irritation + dermatologist visit.",
+            "headline": "Ready to Stop Reacting to Every Product?",
             "cta": "Get the Starter Kit — $39",
             "priceCents": null
           }
         ],
+        "eventStartAt": null,
         "workflows": [
           {
-            "id": "HXZmJskY57VWyS0doVmH",
-            "name": "The Starter Kit That Doesn't Betray Sensitive Skin — follow-up",
+            "id": "3TPNHNoqgqSIluHC09Js",
+            "name": "Skincare That Doesn't Irritate Sensitive Skin — follow-up",
+            "strategyPlan": {
+              "conversionEvent": "purchased the $39 Sensitive Skin Starter Kit",
+              "goalState": "customer receives kit and confirms satisfaction or initiates return",
+              "goalTag": "purchased",
+              "handoffDays": 0,
+              "cadenceRationale": "Tripwire purchase is transactional; confirmation + shipment emails handle the journey. No nurture needed post-purchase."
+            },
             "trigger": {
               "type": "form.submitted",
               "filters": {
                 "all": []
               },
-              "formId": "EPU9SjhZRxEfsvGmUBAi"
+              "formId": "ZxMigpGJhua3jHWWXebE"
             },
             "nodes": [
               {
@@ -438,6 +603,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -445,6 +614,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -452,27 +625,43 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
-                "tag": "The Starter Kit That Doesn't Betray Sens"
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": "Skincare That Doesn't Irritate Sensitive"
               },
               {
                 "type": "send_email",
-                "subject": "You're in — The Starter Kit That Doesn't Betray Sensitive Skin",
-                "bodyPreview": "Thanks for signing up! We've got your details and will be in touch shortly.\n\n{{unsubscribeLink}}",
+                "subject": "Your Sensitive Skin Starter Kit is on the way",
+                "bodyPreview": "Thank you for ordering.\n\nYour order is confirmed and will ship within 24 hours. You'll receive a tracking number via email as soon as it ships.\n\nStart looking for calming results in 7–14 days. If your skin reacts or you don't see improvement by day 14, just reply to this email or contact us at [support contact] for a full refund — no questions asked.\n\nWelcome to skincare that actually works for se",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "transactional",
                 "tag": null
               },
               {
                 "type": "notify",
-                "subject": "New lead: The Starter Kit That Doesn't Betray Sensitive Skin",
-                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just submitted \"The Starter Kit That Doesn't Betray Sensitive Skin\". The follow-up sequence is running — apply the \"The Starter Kit That Doesn't B-converted\" tag the moment they the operator has made contact, and every remaining automated touch stops.",
+                "subject": "New lead: Skincare That Doesn't Irritate Sensitive Skin",
+                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just purchased the $39 Sensitive Skin Starter Kit. The follow-up sequence is running — apply the \"purchased\" tag the moment they customer receives kit and confirms satisfaction or initiates return, and every remaining automated touch stops.",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
                 "type": "wait",
                 "subject": null,
                 "bodyPreview": null,
-                "seconds": 86400,
+                "seconds": 3600,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -480,6 +669,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -487,6 +680,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               }
             ]
@@ -501,41 +698,42 @@
       {
         "name": "create_funnel",
         "ok": true,
-        "note": "created RduJwrDjtWpNMo9ogNNu"
+        "note": "created TpH0zsZpkshGFl7nLzoj"
       }
     ],
     "error": null,
     "funnels": [
       {
-        "id": "RduJwrDjtWpNMo9ogNNu",
-        "url": "/lp/RduJwrDjtWpNMo9ogNNu",
-        "name": "5 Tax Mistakes Costing 6-Figure Businesses Money",
+        "id": "TpH0zsZpkshGFl7nLzoj",
+        "url": "/lp/TpH0zsZpkshGFl7nLzoj",
+        "name": "Tax Mistakes Webinar — 5 Sep 2026",
         "genre": "webinar",
-        "persuasionDepth": "standard",
-        "decisionComplexity": "low",
+        "persuasionDepth": "deep",
+        "decisionComplexity": "moderate",
         "artDirection": {
-          "transformation": "confusion_to_clarity",
-          "energy": "calm",
-          "density": "medium",
-          "humanity": "balanced"
+          "transformation": "uncertainty_to_confidence",
+          "energy": "balanced",
+          "density": "rich",
+          "humanity": "people_led"
         },
         "bridge": null,
         "salesArgument": {
           "beliefChain": [
-            "There ARE specific, legitimate deductions and structures 6-figure businesses commonly miss — not because they're incompetent, but because tax law is complex.",
-            "The difference between a bulletproof deduction and an audit-bait strategy is knowable and teachable.",
-            "Seeing the mistakes + the framework in a live format (with Q&A) builds confidence that this is real education, not a pitch.",
-            "A consultation with a strategist who understands these mistakes is worth exploring."
+            "Tax planning isn't generic—it's highly specific to business structure and income patterns.",
+            "Most CPAs are compliance-focused, not strategy-focused; they file what you give them.",
+            "5 specific, common deduction mistakes are costing businesses thousands each.",
+            "I can evaluate my own situation if I see real examples and understand the mechanism.",
+            "A free, education-first webinar from someone who's studied this is worth 60 minutes of my time."
           ],
-          "corePromise": "Leave the webinar knowing exactly which deductions you're leaving on the table and which aggressive strategies to avoid — with a simple audit framework you can use immediately.",
-          "primaryObjection": "This is another sales funnel disguised as education. I'll watch and then get pressured into buying something I don't need."
+          "corePromise": "See exactly which 5 mistakes might be costing YOUR business money, with enough specifics to either fix it yourself or ask your CPA the right questions.",
+          "primaryObjection": "This is a lead-gen disguise—I'll spend an hour and get pitched a $5K tax service I don't need."
         },
         "sections": [
           {
             "type": "hero",
             "canvas": null,
             "role": "hook",
-            "serves": "There ARE specific, legitimate deductions and structures 6-figure businesses commonly miss — not because they're incompetent, but because tax law is complex.",
+            "serves": "Tax planning isn't generic—it's highly specific to business structure and income patterns.",
             "headline": "5 Tax Mistakes Costing 6-Figure Businesses Money",
             "cta": "Register for the live webinar",
             "priceCents": null
@@ -551,18 +749,27 @@
           },
           {
             "type": "problem_solution",
-            "canvas": "clean",
+            "canvas": "warm_paper",
             "role": "belief_shift",
-            "serves": "The difference between a bulletproof deduction and an audit-bait strategy is knowable and teachable.",
-            "headline": "Why Most 6-Figure Owners Leave Money on the Table",
+            "serves": "Most CPAs are compliance-focused, not strategy-focused; they file what you give them.",
+            "headline": "Why this matters right now",
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "comparison",
+            "canvas": null,
+            "role": "belief_shift",
+            "serves": null,
+            "headline": null,
             "cta": null,
             "priceCents": null
           },
           {
             "type": "agenda",
-            "canvas": null,
+            "canvas": "clean",
             "role": "mechanism",
-            "serves": null,
+            "serves": "5 specific, common deduction mistakes are costing businesses thousands each.",
             "headline": null,
             "cta": null,
             "priceCents": null
@@ -571,17 +778,17 @@
             "type": "benefits_grid",
             "canvas": "warm_paper",
             "role": "promise",
-            "serves": "Seeing the mistakes + the framework in a live format (with Q&A) builds confidence that this is real education, not a pitch.",
-            "headline": "What You'll Walk Away With",
+            "serves": "I can evaluate my own situation if I see real examples and understand the mechanism.",
+            "headline": "What you'll walk away with",
             "cta": null,
             "priceCents": null
           },
           {
             "type": "cta_banner",
-            "canvas": "brand_tint",
+            "canvas": "clean",
             "role": "close",
-            "serves": "A consultation with a strategist who understands these mistakes is worth exploring.",
-            "headline": "Ready to stop leaving money on the table?",
+            "serves": "A free, education-first webinar from someone who's studied this is worth 60 minutes of my time.",
+            "headline": "Register for the live webinar — Friday, Sept 11 at 7 PM UTC",
             "cta": "Register for the live webinar",
             "priceCents": null
           },
@@ -589,40 +796,48 @@
             "type": "story",
             "canvas": "warm_paper",
             "role": "mechanism",
-            "serves": "Seeing the mistakes + the framework in a live format (with Q&A) builds confidence that this is real education, not a pitch.",
+            "serves": "I can evaluate my own situation if I see real examples and understand the mechanism.",
             "headline": null,
             "cta": null,
             "priceCents": null
           },
           {
             "type": "faq",
-            "canvas": "clean",
+            "canvas": null,
             "role": "objections",
-            "serves": "Seeing the mistakes + the framework in a live format (with Q&A) builds confidence that this is real education, not a pitch.",
+            "serves": null,
             "headline": null,
             "cta": null,
             "priceCents": null
           },
           {
             "type": "offer",
-            "canvas": "warm_paper",
+            "canvas": "brand_tint",
             "role": "offer",
-            "serves": "A consultation with a strategist who understands these mistakes is worth exploring.",
+            "serves": "A free, education-first webinar from someone who's studied this is worth 60 minutes of my time.",
             "headline": "",
             "cta": "Register for the live webinar",
             "priceCents": null
           }
         ],
+        "eventStartAt": "2026-09-11T19:00:00.000Z",
         "workflows": [
           {
-            "id": "K5PtFFSyOiJGRlxnTHKv",
-            "name": "5 Tax Mistakes Costing 6-Figure Businesses Money — follow-up",
+            "id": "LMECNxKlVMVCdfvQvnEh",
+            "name": "Tax Mistakes Webinar — 5 Sep 2026 — follow-up",
+            "strategyPlan": {
+              "conversionEvent": "registered for the tax-mistakes webinar",
+              "goalState": "attended the webinar or booked a post-webinar consultation",
+              "goalTag": "attended",
+              "handoffDays": 1,
+              "cadenceRationale": "Cold audience needs three touches: confirmation, pre-event reminder, and post-event follow-up. Event-anchored reminders align with live time to maximize attendance."
+            },
             "trigger": {
               "type": "form.submitted",
               "filters": {
                 "all": []
               },
-              "formId": "tXbt3BvnCUnTLnA1BVai"
+              "formId": "CkXRQ7m2CiZUXAcWTMve"
             },
             "nodes": [
               {
@@ -630,6 +845,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -637,6 +856,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -644,20 +867,32 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
-                "tag": "webinar_registration_tax_mistakes"
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": "tax_webinar_registered_sep2026"
               },
               {
                 "type": "send_email",
-                "subject": "You're registered — here's what to expect",
-                "bodyPreview": "Thanks for registering for \"5 Tax Mistakes Costing 6-Figure Businesses Money.\"\n\nHere's what's coming: You'll get a calendar reminder 24 hours before the live session. The webinar is interactive — come with questions about your own situation if you have them. We'll cover the five mistakes, the framework to evaluate risk, and do a full Q&A at the end.\n\nYou'll get the slides and a replay link after t",
+                "subject": "Registered: 5 Tax Mistakes Webinar — Friday, Sept 11 at 7 PM UTC",
+                "bodyPreview": "Hi {{contact.firstName}},\n\nYou're all set for Friday's live webinar.\n\nWebinar details:\nDate: Friday, September 11, 2026\nTime: 7 PM UTC\nTopic: 5 Tax Mistakes Costing 6-Figure Businesses Money\n\nYour calendar invite is on the way. We'll send the webinar link one more time 30 minutes before we start.\n\nBring your last year's tax return and your current business structure (LLC, S-Corp, etc.) if you want",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "transactional",
                 "tag": null
               },
               {
                 "type": "notify",
-                "subject": "New lead: 5 Tax Mistakes Costing 6-Figure Businesses Money",
-                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just registered for the webinar. The follow-up sequence is running — apply the \"booked\" tag the moment they attended the webinar or accepted a consultation offer, and every remaining automated touch stops.",
+                "subject": "New lead: Tax Mistakes Webinar — 5 Sep 2026",
+                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just registered for the tax-mistakes webinar. The follow-up sequence is running — apply the \"attended\" tag the moment they attended the webinar or booked a post-webinar consultation, and every remaining automated touch stops.",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -665,6 +900,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": 86400,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -672,20 +911,38 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
                 "type": "send_email",
-                "subject": "Your webinar is tomorrow — quick prep",
-                "bodyPreview": "The webinar starts tomorrow at [TIME].\n\nOne quick note: if you have a specific tax situation or question, jot it down before the session. We'll have a full 15 minutes of Q&A at the end, and having your question ready means you'll get the most out of it.\n\nSee you tomorrow.\n\n{{unsubscribeLink}}",
+                "subject": "Your calendar invite for Friday's tax webinar + how to prepare",
+                "bodyPreview": "Hi {{contact.firstName}},\n\nYour spot is confirmed for Friday, September 11 at 7 PM UTC.\n\nHere's what to have handy when you join:\n• Last year's tax return (just to follow along with the examples)\n• Your current business structure (LLC, S-Corp, sole prop, C-Corp)\n• Any questions about your own deductions\n\nWe'll walk through 5 specific tax mistakes and one real case study with exact numbers. 60 minu",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "transactional",
                 "tag": null
               },
               {
-                "type": "wait",
+                "type": "wait_until",
                 "subject": null,
                 "bodyPreview": null,
-                "seconds": 172800,
+                "seconds": null,
+                "offsetMinutes": -1440,
+                "anchorKind": "funnel_event",
+                "eligibility": {
+                  "domain": "webinar",
+                  "states": [
+                    "registered",
+                    "scheduled"
+                  ]
+                },
+                "commType": null,
                 "tag": null
               },
               {
@@ -693,20 +950,40 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
                 "type": "send_email",
-                "subject": "Here's your audit-proofing checklist (and what's next)",
-                "bodyPreview": "Thanks for attending the webinar. Attached is the checklist we covered — use it before you file this year.\n\nIf the framework made sense and you want to explore whether you're actually leaving money on the table, I offer a free 30-minute tax-strategy consultation. No obligation. It's just a chance to see if there's real opportunity in your specific situation.\n\nIf you want to schedule that, reply to",
+                "subject": "Tomorrow at 7 PM: the webinar (and what you'll actually learn)",
+                "bodyPreview": "{{contact.firstName}},\n\nJust a heads-up: tomorrow at 7 PM UTC, we're diving into 5 tax mistakes that cost 6-figure businesses real money.\n\nHere's what makes this different from the generic tax advice you've probably seen:\n\n→ We show specific mistakes with case-study numbers (you'll see an actual $47K refund recovery)\n→ You'll learn why your business structure matters more than your income\n→ We add",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "reminder",
                 "tag": null
               },
               {
-                "type": "wait",
+                "type": "wait_until",
                 "subject": null,
                 "bodyPreview": null,
-                "seconds": 345600,
+                "seconds": null,
+                "offsetMinutes": 120,
+                "anchorKind": "funnel_event",
+                "eligibility": {
+                  "domain": "webinar",
+                  "states": [
+                    "attended",
+                    "missed",
+                    "scheduled",
+                    "not_converted"
+                  ]
+                },
+                "commType": null,
                 "tag": null
               },
               {
@@ -714,13 +991,21 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
                 "type": "send_email",
-                "subject": "One more thing about those five mistakes",
-                "bodyPreview": "A few people have messaged asking about one of the mistakes we covered — specifically the one about research-and-development credits.\n\nTurns out there's a nuance I should clarify: even if you don't think of yourself as doing 'research,' most software and product iteration qualifies. A lot of 6-figure businesses miss this because they don't know to look for it.\n\nIf you want me to audit your specifi",
+                "subject": "What to do next (if anything)",
+                "bodyPreview": "{{contact.firstName}},\n\nThanks for joining tonight. I hope the 5 mistakes and the case study sparked some clarity about your own situation.\n\nHere's the deal: most people leave with one of two takeaways:\n\n1. \"I spotted a gap in my current setup. I want to talk through the specifics before I do anything.\"\n→ If that's you, book a free 20-minute consultation. We'll walk through your structure and see ",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "sales_followup",
                 "tag": null
               },
               {
@@ -728,6 +1013,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": 3600,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -735,6 +1024,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -742,6 +1035,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               }
             ]
@@ -761,52 +1058,52 @@
       {
         "name": "create_funnel",
         "ok": true,
-        "note": "created KED2PshGtke7An5SK41L"
+        "note": "created JlzFcE1DISQaLWBlz3Cg"
       }
     ],
     "error": null,
     "funnels": [
       {
-        "id": "KED2PshGtke7An5SK41L",
-        "url": "/lp/KED2PshGtke7An5SK41L",
-        "name": "Leadership Acceleration for Managers Stuck on the Climb",
+        "id": "JlzFcE1DISQaLWBlz3Cg",
+        "url": "/lp/JlzFcE1DISQaLWBlz3Cg",
+        "name": "Stuck at director level? Break through in 12 weeks.",
         "genre": "application",
-        "persuasionDepth": "standard",
+        "persuasionDepth": "deep",
         "decisionComplexity": "high",
         "artDirection": {
-          "transformation": "frustration_to_control",
-          "energy": "balanced",
-          "density": "medium",
-          "humanity": "product_led"
+          "transformation": "stagnation_to_clarity",
+          "energy": "calm",
+          "density": "rich",
+          "humanity": "balanced"
         },
         "bridge": null,
         "salesArgument": {
           "beliefChain": [
-            "My stuckness is structural (visibility, credibility, clarity of next role), not a personal capability problem",
-            "The gap isn't what I know — it's how I'm perceived and the systems I haven't built",
-            "A program designed specifically for mid-career operators (not generalists) operates differently than generic coaching",
-            "Real transformation requires accountability and peer-level support, not passive advice",
-            "Talking to someone who qualifies me first signals confidence and reduces risk"
+            "This coach gets the exact frustration of being stuck at director level — it's a specific, recognizable problem, not generic 'growth'",
+            "The 12-week structure and named constraint-finding process suggests real methodology, not hope and optimism",
+            "An application requirement means the coach is selective — that selectivity proves confidence and signals this isn't a cash grab",
+            "The discovery call is a two-way fit check, which means I'm not being sold; I'm being evaluated, which I can trust",
+            "This program is designed for my specific situation, not a batch-and-blast curriculum"
           ],
-          "corePromise": "A structured 12-week program that moves you from professionally stuck to positioned for the next level — with peer accountability and clarity on exactly what's blocking you.",
-          "primaryObjection": "Will this work for MY situation specifically, or is it another generic program? And is $4,500 worth it if I'm not sure it'll move the needle?"
+          "corePromise": "Clarity on what's actually blocking your next move, a structured 12-week program to break through it, and accountability to make the change stick",
+          "primaryObjection": "Will this actually work for my situation, or is it generic coaching? And is $4,500 worth it if I don't know if I'll get results?"
         },
         "sections": [
           {
             "type": "hero",
             "canvas": null,
             "role": "hook",
-            "serves": "My stuckness is structural (visibility, credibility, clarity of next role), not a personal capability problem",
-            "headline": "Leadership Acceleration for Managers Stuck on the Climb",
-            "cta": "Apply for a Fit Assessment",
+            "serves": "This coach gets the exact frustration of being stuck at director level — it's a specific, recognizable problem, not generic 'growth'",
+            "headline": "Stuck at director level? Break through in 12 weeks.",
+            "cta": "Apply for discovery call",
             "priceCents": null
           },
           {
             "type": "benefits_grid",
             "canvas": "warm_paper",
             "role": "promise",
-            "serves": "A program designed specifically for mid-career operators (not generalists) operates differently than generic coaching + Real transformation requires accountability and peer-level support, not passive advice",
-            "headline": "What You'll Build in 12 Weeks",
+            "serves": "The discovery call is a two-way fit check, which means I'm not being sold; I'm being evaluated, which I can trust",
+            "headline": "What you'll clarify in the discovery call",
             "cta": null,
             "priceCents": null
           },
@@ -814,25 +1111,43 @@
             "type": "included",
             "canvas": "clean",
             "role": "offer",
-            "serves": "Talking to someone who qualifies me first signals confidence and reduces risk",
-            "headline": "Here's What's Included",
+            "serves": "This program is designed for my specific situation, not a batch-and-blast curriculum",
+            "headline": "Who this IS for",
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "story",
+            "canvas": "warm_paper",
+            "role": "mechanism",
+            "serves": "The 12-week structure and named constraint-finding process suggests real methodology, not hope and optimism",
+            "headline": null,
             "cta": null,
             "priceCents": null
           },
           {
             "type": "cta_banner",
-            "canvas": "clean",
+            "canvas": "brand_tint",
             "role": "close",
-            "serves": "Talking to someone who qualifies me first signals confidence and reduces risk",
-            "headline": "Ready to move past the plateau?",
-            "cta": "Apply for a Fit Assessment",
+            "serves": "This program is designed for my specific situation, not a batch-and-blast curriculum",
+            "headline": "Ready to stop spinning and start moving?",
+            "cta": "Apply for discovery call",
             "priceCents": null
           },
           {
             "type": "agenda",
             "canvas": "warm_paper",
             "role": "mechanism",
-            "serves": "The gap isn't what I know — it's how I'm perceived and the systems I haven't built",
+            "serves": "An application requirement means the coach is selective — that selectivity proves confidence and signals this isn't a cash grab",
+            "headline": null,
+            "cta": null,
+            "priceCents": null
+          },
+          {
+            "type": "comparison",
+            "canvas": null,
+            "role": "belief_shift",
+            "serves": null,
             "headline": null,
             "cta": null,
             "priceCents": null
@@ -848,24 +1163,32 @@
           },
           {
             "type": "offer",
-            "canvas": "brand_tint",
+            "canvas": "clean",
             "role": "offer",
-            "serves": "Talking to someone who qualifies me first signals confidence and reduces risk",
+            "serves": "This program is designed for my specific situation, not a batch-and-blast curriculum",
             "headline": "",
-            "cta": "Apply for a Fit Assessment",
+            "cta": "Apply for discovery call",
             "priceCents": null
           }
         ],
+        "eventStartAt": null,
         "workflows": [
           {
-            "id": "mxYIw6jZt2sNKxbsSbPb",
-            "name": "Leadership Acceleration for Managers Stuck on the Climb — follow-up",
+            "id": "eSMmjBOrqO9mY36wUswq",
+            "name": "Stuck at director level? Break through in 12 weeks. — follow-up",
+            "strategyPlan": {
+              "conversionEvent": "applied for discovery call",
+              "goalState": "booked discovery call or declined",
+              "goalTag": "booked",
+              "handoffDays": 0,
+              "cadenceRationale": "High-ticket application. Manual review and outreach within 2 business days. No nurture sequence — handoff is immediate to prevent cold abandonment."
+            },
             "trigger": {
               "type": "form.submitted",
               "filters": {
                 "all": []
               },
-              "formId": "4Jx5LQTUoeCHwY1TNczO"
+              "formId": "Woh0DG2NeSCtIrYWKOUx"
             },
             "nodes": [
               {
@@ -873,6 +1196,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -880,6 +1207,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -887,27 +1218,43 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
-                "tag": "Leadership Program Application"
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": "leadership_program_applicant"
               },
               {
                 "type": "send_email",
-                "subject": "Your fit assessment call is confirmed",
-                "bodyPreview": "Thanks for applying to the Leadership Acceleration program. We received your application and are reviewing it now.\n\nIf there's a genuine fit, we'll reach out within 24–48 hours to schedule your 20-minute fit assessment call. This is a mutual evaluation — we want to understand your specific situation, and you'll get a clear sense of how the program actually works.\n\nIf this isn't the right fit, we'l",
+                "subject": "Application received — here's what's next",
+                "bodyPreview": "Thanks for applying. I've got your submission, and I'll review it in detail.\n\nI review applications within 2 business days. If this looks like a mutual fit, I'll send you a calendar link for a 30-minute discovery call — no pressure, just real diagnosis.\n\nIf it's not aligned right now, I'll let you know that too, honestly.\n\nCheck your email in the next 48 hours.\n\nTalk soon.\n\n{{unsubscribeLink}}",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "transactional",
                 "tag": null
               },
               {
                 "type": "notify",
-                "subject": "New lead: Leadership Acceleration for Managers Stuck on the Climb",
-                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just applied for the leadership program. The follow-up sequence is running — apply the \"booked\" tag the moment they booked a fit assessment call or declined after fit discussion, and every remaining automated touch stops.",
+                "subject": "New lead: Stuck at director level? Break through in 12 weeks.",
+                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just applied for discovery call. The follow-up sequence is running — apply the \"booked\" tag the moment they booked discovery call or declined, and every remaining automated touch stops.",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
                 "type": "wait",
                 "subject": null,
                 "bodyPreview": null,
-                "seconds": 7200,
+                "seconds": 3600,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -915,27 +1262,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "send_email",
-                "subject": "One thing we need to know about your application",
-                "bodyPreview": "Your application came through, and we're reading it now.\n\nBefore we schedule a fit call, we want to make sure we understand your actual situation. Reply to this email with one thing: What's the ONE thing that if you solved it in the next 90 days, would move your career forward most?\n\nThis helps us know if there's genuine fit. Reply here.\n\n{{unsubscribeLink}}",
-                "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "wait",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": 79200,
-                "tag": null
-              },
-              {
-                "type": "if_else",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -943,6 +1273,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               }
             ]
@@ -956,21 +1290,16 @@
     "toolCalls": [
       {
         "name": "create_funnel",
-        "ok": false,
-        "note": "validate: a headline (max 80 characters) is required"
-      },
-      {
-        "name": "create_funnel",
         "ok": true,
-        "note": "created iocSofNEQA19kARVj9Nr"
+        "note": "created i8YaXC6kjEbMAwLvtS93"
       }
     ],
     "error": null,
     "funnels": [
       {
-        "id": "iocSofNEQA19kARVj9Nr",
-        "url": "/lp/iocSofNEQA19kARVj9Nr",
-        "name": "Your Dental Anxiety Is Valid — You Deserve a Different Kind of Dentist",
+        "id": "i8YaXC6kjEbMAwLvtS93",
+        "url": "/lp/i8YaXC6kjEbMAwLvtS93",
+        "name": "New Patient Anxious Patient Booking",
         "genre": "lead_gen",
         "persuasionDepth": "lean",
         "decisionComplexity": "low",
@@ -983,22 +1312,22 @@
         "bridge": null,
         "salesArgument": {
           "beliefChain": [
-            "My anxiety about dentists is valid — and I deserve care from someone who gets it.",
-            "Control and communication during my visit will make the difference between this working and me avoiding again.",
-            "This practice intentionally designs their visits around anxious patients, not despite them.",
-            "I can trust them with this first visit because they've explicitly committed to my pace and comfort.",
-            "Booking a visit with them is the next logical step."
+            "My fear is legitimate — not something to hide or push through.",
+            "This practice was built specifically for patients like me, not as an afterthought.",
+            "I get to stay in control of pace, communication, and what happens during the visit.",
+            "Transparency on price and process removes the anxiety of surprises.",
+            "Booking a first visit is a low-stakes, low-commitment step — assessment only, no judgment."
           ],
-          "corePromise": "Your first visit will be comfortable, judgment-free, and on your terms — designed so you feel safe enough to return.",
-          "primaryObjection": "Even if they're nice, won't it still hurt? Or won't they judge me once they see my teeth?"
+          "corePromise": "Your first visit will be calm, transparent, and entirely at your pace — no judgment, no surprises, no rushing.",
+          "primaryObjection": "Even with a 'good' dentist, they'll still find something wrong with my teeth and make me feel embarrassed. Or I'll get in the chair and panic."
         },
         "sections": [
           {
             "type": "hero",
             "canvas": null,
             "role": "hook",
-            "serves": "My anxiety about dentists is valid — and I deserve care from someone who gets it.",
-            "headline": "Your Dental Anxiety Is Valid — You Deserve a Different Kind of Dentist",
+            "serves": "My fear is legitimate — not something to hide or push through.",
+            "headline": "Your first visit, at your pace — no judgment, no surprises",
             "cta": "Book Your First Visit",
             "priceCents": null
           },
@@ -1015,8 +1344,8 @@
             "type": "benefits_grid",
             "canvas": "warm_paper",
             "role": "promise",
-            "serves": "Control and communication during my visit will make the difference between this working and me avoiding again. + This practice intentionally designs their visits around anxious patients, not despite them. + I can trust them with this first visit because they've explicitly committed to my pace and comfort.",
-            "headline": "What Your First Visit Actually Looks Like",
+            "serves": "This practice was built specifically for patients like me, not as an afterthought. + I get to stay in control of pace, communication, and what happens during the visit. + Transparency on price and process removes the anxiety of surprises.",
+            "headline": "What your first visit actually looks like",
             "cta": null,
             "priceCents": null
           },
@@ -1024,7 +1353,7 @@
             "type": "offer",
             "canvas": "clean",
             "role": "offer",
-            "serves": "Booking a visit with them is the next logical step.",
+            "serves": "Booking a first visit is a low-stakes, low-commitment step — assessment only, no judgment.",
             "headline": "",
             "cta": "Book Your First Visit",
             "priceCents": null
@@ -1042,22 +1371,30 @@
             "type": "cta_banner",
             "canvas": "brand_tint",
             "role": "close",
-            "serves": "Booking a visit with them is the next logical step.",
-            "headline": "Ready to Experience Dentistry When You're in Control",
+            "serves": "Booking a first visit is a low-stakes, low-commitment step — assessment only, no judgment.",
+            "headline": "Ready to take back control of your dental health",
             "cta": "Book Your First Visit",
             "priceCents": null
           }
         ],
+        "eventStartAt": null,
         "workflows": [
           {
-            "id": "Wh1fWG3u5ySiYG7euuXo",
-            "name": "Your Dental Anxiety Is Valid — You Deserve a Different Kind of Dentist — follow-up",
+            "id": "du8QoSM6OdiNePsrapqr",
+            "name": "New Patient Anxious Patient Booking — follow-up",
+            "strategyPlan": {
+              "conversionEvent": "booked an appointment",
+              "goalState": "attended the appointment",
+              "goalTag": "booked",
+              "handoffDays": 0,
+              "cadenceRationale": "High-intent local search. Handoff immediate — appointment on the calendar is the conversion. No nurture needed; focus on confirming + showing up."
+            },
             "trigger": {
               "type": "form.submitted",
               "filters": {
                 "all": []
               },
-              "formId": "j2CI7CVFLCa7OMe28N8z"
+              "formId": "AbzIaXCWtCma5GdBtf6a"
             },
             "nodes": [
               {
@@ -1065,6 +1402,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -1072,6 +1413,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -1079,20 +1424,32 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
-                "tag": "Your Dental Anxiety Is Valid — You Deser"
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": "New Patient Anxious Patient Booking requ"
               },
               {
                 "type": "send_email",
-                "subject": "Your appointment is reserved — here's what to expect",
-                "bodyPreview": "Thank you for booking. We're genuinely glad you're here.\n\nYour appointment is confirmed. When you arrive, we'll start with a conversation about your history, your fears, and what you're hoping for — no procedures, no surprises. You'll be in complete control of the pace.\n\nIf you have any anxiety-specific questions before your visit, please call or reply to this email. We're here to help you feel as",
+                "subject": "Your appointment is booked — here's what to expect",
+                "bodyPreview": "Thanks for booking. We're genuinely glad you took this step.\n\nYour appointment is confirmed for [DATE] at [TIME]. When you arrive, just let us know if you're feeling nervous — we handle that all day, and there's nothing to feel embarrassed about.\n\nBefore your visit, a few things that might help: eat something light, bring your insurance card (or we can work without it), and if there's anything spe",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "transactional",
                 "tag": null
               },
               {
                 "type": "notify",
-                "subject": "New lead: Your Dental Anxiety Is Valid — You Deserve a Different Kind of Dentist",
-                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just booked a first appointment. The follow-up sequence is running — apply the \"booked\" tag the moment they appointment attended or rescheduled, and every remaining automated touch stops.",
+                "subject": "New lead: New Patient Anxious Patient Booking",
+                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just booked an appointment. The follow-up sequence is running — apply the \"booked\" tag the moment they attended the appointment, and every remaining automated touch stops.",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -1100,6 +1457,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": 3600,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -1107,6 +1468,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -1114,6 +1479,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               }
             ]
@@ -1124,99 +1493,9 @@
   },
   {
     "key": "7-hvac",
-    "toolCalls": [
-      {
-        "name": "create_funnel",
-        "ok": true,
-        "note": "created 2cGZjKlt2l6hSUgEdQKW"
-      }
-    ],
+    "toolCalls": [],
     "error": null,
-    "funnels": [
-      {
-        "id": "2cGZjKlt2l6hSUgEdQKW",
-        "url": "/lp/2cGZjKlt2l6hSUgEdQKW",
-        "name": "AC Down? Real Person Answers Now — Same-Day Tech If We Have Capacity",
-        "genre": "lead_gen",
-        "persuasionDepth": "lean",
-        "decisionComplexity": "moderate",
-        "artDirection": {
-          "transformation": "panic_to_relief",
-          "energy": "urgent",
-          "density": "rich",
-          "humanity": "people_led"
-        },
-        "bridge": null,
-        "salesArgument": {
-          "beliefChain": [
-            "A real human should answer emergency calls — not a voicemail system.",
-            "If they have capacity, same-day is actually possible for an emergency.",
-            "Pricing upfront (before work) means I won't get blindsided.",
-            "A licensed, established company is less likely to rip me off than a one-person operation.",
-            "Calling now is the fastest way to get relief."
-          ],
-          "corePromise": "One call gets you a real person, same-day repair if available, and pricing before any wrench turns.",
-          "primaryObjection": "'I called three companies last summer and got voicemail, waited 4 hours, and paid $1,800 for a $400 job.'"
-        },
-        "sections": [
-          {
-            "type": "hero",
-            "canvas": null,
-            "role": "hook",
-            "serves": "A real human should answer emergency calls — not a voicemail system.",
-            "headline": "AC Down? Real Person Answers Now — Same-Day Tech If We Have Capacity",
-            "cta": "Call Now — Real Person Answers",
-            "priceCents": null
-          },
-          {
-            "type": "proof_strip",
-            "canvas": null,
-            "role": "proof",
-            "serves": null,
-            "headline": null,
-            "cta": null,
-            "priceCents": null
-          },
-          {
-            "type": "benefits_grid",
-            "canvas": "dark_immersive",
-            "role": "promise",
-            "serves": "If they have capacity, same-day is actually possible for an emergency. + Pricing upfront (before work) means I won't get blindsided. + A licensed, established company is less likely to rip me off than a one-person operation.",
-            "headline": "What Happens When You Call",
-            "cta": null,
-            "priceCents": null
-          },
-          {
-            "type": "offer",
-            "canvas": "brand_tint",
-            "role": "offer",
-            "serves": "Calling now is the fastest way to get relief.",
-            "headline": "",
-            "cta": "Call Now — Real Person Answers",
-            "priceCents": null
-          },
-          {
-            "type": "faq",
-            "canvas": "warm_paper",
-            "role": "objections",
-            "serves": "A licensed, established company is less likely to rip me off than a one-person operation.",
-            "headline": null,
-            "cta": null,
-            "priceCents": null
-          },
-          {
-            "type": "cta_banner",
-            "canvas": "clean",
-            "role": "close",
-            "serves": "Calling now is the fastest way to get relief.",
-            "headline": "AC Not Cooling? Call Now for Same-Day Availability",
-            "cta": "Call Now — Real Person Answers",
-            "priceCents": null
-          }
-        ],
-        "workflows": []
-      }
-    ]
+    "funnels": []
   },
   {
     "key": "8-b2b-warehouse",
@@ -1224,44 +1503,44 @@
       {
         "name": "create_funnel",
         "ok": true,
-        "note": "created VEJwkeUXS8EUnHcmTzSy"
+        "note": "created shFouwanYqNka9PblHPx"
       }
     ],
     "error": null,
     "funnels": [
       {
-        "id": "VEJwkeUXS8EUnHcmTzSy",
-        "url": "/lp/VEJwkeUXS8EUnHcmTzSy",
-        "name": "Warehouse Automation Discovery Engagement",
+        "id": "shFouwanYqNka9PblHPx",
+        "url": "/lp/shFouwanYqNka9PblHPx",
+        "name": "See Your Automation Opportunity Without the Implementation Risk",
         "genre": "application",
         "persuasionDepth": "deep",
         "decisionComplexity": "enterprise",
         "artDirection": {
           "transformation": "uncertainty_to_confidence",
-          "energy": "balanced",
+          "energy": "calm",
           "density": "rich",
           "humanity": "balanced"
         },
         "bridge": null,
         "salesArgument": {
           "beliefChain": [
-            "A structured discovery process is more valuable than a sales pitch — it gives us answers, not promises",
-            "A credible integrator surfaces risks UPFRONT, not hidden during execution",
-            "We can get a concrete implementation roadmap and ROI projection before any commitment",
-            "A diagnostic assessment that identifies system fit, timeline, and risks is worth the time investment",
-            "This integrator will be transparent about constraints, so we trust them during the actual project"
+            "This integrator understands my operational constraints (throughput, labor, implementation risk, keeping operations running).",
+            "A site assessment is a smart first step — it's non-binding and gives me a clear picture before I commit.",
+            "They've done this before and have a repeatable process to minimize disruption.",
+            "The assessment is free and puts the onus on them to prove they understand my situation.",
+            "I should schedule this assessment to get concrete answers before my team makes a final decision."
           ],
-          "corePromise": "Get a concrete implementation roadmap and honest risk assessment before you commit to any automation integrator.",
-          "primaryObjection": "Why should I spend time on a discovery call if I don't even know you yet / What makes you different from other integrators?"
+          "corePromise": "A free site assessment that identifies your biggest automation opportunity, quantifies the labor/throughput impact, and shows you exactly how to implement it safely without derailing operations.",
+          "primaryObjection": "This is a big decision with a lot of moving parts and stakeholders. Will implementation actually disrupt my operation? How do I know you can pull this off?"
         },
         "sections": [
           {
             "type": "hero",
             "canvas": null,
             "role": "hook",
-            "serves": "A structured discovery process is more valuable than a sales pitch — it gives us answers, not promises",
-            "headline": "Know Your Implementation Roadmap Before You Commit",
-            "cta": "Request Your Discovery Assessment",
+            "serves": "This integrator understands my operational constraints (throughput, labor, implementation risk, keeping operations running).",
+            "headline": "See Your Automation Opportunity Without the Implementation Risk",
+            "cta": "Schedule Your Free Assessment",
             "priceCents": null
           },
           {
@@ -1277,8 +1556,8 @@
             "type": "benefits_grid",
             "canvas": "warm_paper",
             "role": "promise",
-            "serves": "A diagnostic assessment that identifies system fit, timeline, and risks is worth the time investment",
-            "headline": "What Each Stakeholder Gets from the Assessment",
+            "serves": "The assessment is free and puts the onus on them to prove they understand my situation.",
+            "headline": "What You'll Discover in the Assessment",
             "cta": null,
             "priceCents": null
           },
@@ -1286,8 +1565,8 @@
             "type": "included",
             "canvas": "clean",
             "role": "offer",
-            "serves": "This integrator will be transparent about constraints, so we trust them during the actual project",
-            "headline": "What You Get from Your Discovery Assessment",
+            "serves": "I should schedule this assessment to get concrete answers before my team makes a final decision.",
+            "headline": "The Assessment Includes",
             "cta": null,
             "priceCents": null
           },
@@ -1295,40 +1574,31 @@
             "type": "story",
             "canvas": "warm_paper",
             "role": "mechanism",
-            "serves": "We can get a concrete implementation roadmap and ROI projection before any commitment",
+            "serves": "They've done this before and have a repeatable process to minimize disruption.",
             "headline": null,
             "cta": null,
             "priceCents": null
           },
           {
             "type": "cta_banner",
-            "canvas": "clean",
+            "canvas": "brand_tint",
             "role": "close",
-            "serves": "This integrator will be transparent about constraints, so we trust them during the actual project",
-            "headline": "Ready to See Your Actual Implementation Roadmap",
-            "cta": "Request Your Discovery Assessment",
+            "serves": "I should schedule this assessment to get concrete answers before my team makes a final decision.",
+            "headline": "Ready to move from uncertainty to confidence?",
+            "cta": "Schedule Your Free Assessment",
             "priceCents": null
           },
           {
             "type": "agenda",
             "canvas": "warm_paper",
             "role": "mechanism",
-            "serves": "A diagnostic assessment that identifies system fit, timeline, and risks is worth the time investment",
+            "serves": "The assessment is free and puts the onus on them to prove they understand my situation.",
             "headline": null,
             "cta": null,
             "priceCents": null
           },
           {
             "type": "comparison",
-            "canvas": "clean",
-            "role": "belief_shift",
-            "serves": "A credible integrator surfaces risks UPFRONT, not hidden during execution",
-            "headline": "How This Assessment Differs from a Sales Call",
-            "cta": null,
-            "priceCents": null
-          },
-          {
-            "type": "before_after",
             "canvas": null,
             "role": "belief_shift",
             "serves": null,
@@ -1337,25 +1607,42 @@
             "priceCents": null
           },
           {
+            "type": "before_after",
+            "canvas": "clean",
+            "role": "belief_shift",
+            "serves": "A site assessment is a smart first step — it's non-binding and gives me a clear picture before I commit.",
+            "headline": null,
+            "cta": null,
+            "priceCents": null
+          },
+          {
             "type": "offer",
-            "canvas": "brand_tint",
+            "canvas": "warm_paper",
             "role": "offer",
-            "serves": "This integrator will be transparent about constraints, so we trust them during the actual project",
+            "serves": "I should schedule this assessment to get concrete answers before my team makes a final decision.",
             "headline": "",
-            "cta": "Request Your Discovery Assessment",
+            "cta": "Schedule Your Free Assessment",
             "priceCents": null
           }
         ],
+        "eventStartAt": null,
         "workflows": [
           {
-            "id": "ztzRdeDJUQKClLxTBvN5",
-            "name": "Warehouse Automation Discovery Engagement — follow-up",
+            "id": "PN6FqOnSUTDTZXjtFoPf",
+            "name": "See Your Automation Opportunity Without the Implementation Risk — follow-up",
+            "strategyPlan": {
+              "conversionEvent": "requested a site assessment",
+              "goalState": "scheduled and confirmed the assessment",
+              "goalTag": "booked",
+              "handoffDays": 1,
+              "cadenceRationale": "Enterprise B2B: one nurture touch over 48 hours to reinforce value if they don't immediately confirm, then fast human handoff for scheduling coordination."
+            },
             "trigger": {
               "type": "form.submitted",
               "filters": {
                 "all": []
               },
-              "formId": "RZslhhClIuzaSmX9t3KG"
+              "formId": "UQBrEPcDYG2RdcKEpLPe"
             },
             "nodes": [
               {
@@ -1363,6 +1650,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -1370,6 +1661,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -1377,20 +1672,98 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
-                "tag": "Warehouse Automation Discovery Engagemen"
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": "warehouse_automation_assessment_requeste"
               },
               {
                 "type": "send_email",
-                "subject": "Your warehouse automation discovery assessment is being scheduled",
-                "bodyPreview": "Thanks for requesting the discovery assessment. Here's what happens next:\n\nOur team will reach out within 24 hours to schedule your initial call. Block about 60 minutes with whoever on your team handles operations, finance, or implementation decisions — the more stakeholders involved in the call, the better the roadmap.\n\nYou'll walk through your current systems, operational constraints, automation",
+                "subject": "Your site assessment is booked — here's what's next",
+                "bodyPreview": "Thanks for scheduling your site assessment. We're excited to dig into your operation and identify your highest-impact automation opportunity.\n\nHere's what to expect: After your intake call with our team, we'll coordinate the on-site or virtual walkthrough (4–6 hours depending on your operation size). We'll walk your current process end-to-end, map bottlenecks, and collect data on throughput and la",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "transactional",
                 "tag": null
               },
               {
                 "type": "notify",
-                "subject": "New lead: Warehouse Automation Discovery Engagement",
-                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just requested warehouse automation discovery assessment. The follow-up sequence is running — apply the \"booked\" tag the moment they booked the discovery call, and every remaining automated touch stops.",
+                "subject": "New lead: See Your Automation Opportunity Without the Implementation Risk",
+                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just requested a site assessment. The follow-up sequence is running — apply the \"booked\" tag the moment they scheduled and confirmed the assessment, and every remaining automated touch stops.",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": null
+              },
+              {
+                "type": "wait",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": 86400,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": null
+              },
+              {
+                "type": "if_else",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": null
+              },
+              {
+                "type": "send_email",
+                "subject": "Your assessment scope + what we'll dig into",
+                "bodyPreview": "Hey,\n\nThanks for requesting the assessment. Before our intake call, I wanted to give you a preview of what we'll focus on.\n\nWe typically zero in on three things:\n\n1. Your highest-impact automation opportunity — which process automation delivers the biggest labor and throughput win first for YOUR operation (not a generic recommendation).\n\n2. Real implementation cost — not just software, but integra",
+                "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "sales_followup",
+                "tag": null
+              },
+              {
+                "type": "wait",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": 86400,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": null
+              },
+              {
+                "type": "if_else",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": null
+              },
+              {
+                "type": "send_email",
+                "subject": "Quick thought on operations automation (from someone like you)",
+                "bodyPreview": "One more thing before we jump on the call:\n\nWe've worked with operations leaders who had two very different starting points — some knew exactly which process they wanted to automate, and others were wide open to recommendations. The ones who moved fastest were the ones who came in with ONE specific constraint or pain point they wanted to solve first (e.g., \"our sort accuracy is tanking and we can'",
+                "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "sales_followup",
                 "tag": null
               },
               {
@@ -1398,6 +1771,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": 3600,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -1405,69 +1782,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "send_email",
-                "subject": "Your warehouse automation discovery roadmap is next",
-                "bodyPreview": "Thanks for requesting the discovery assessment.\n\nHere's what happens next: We'll schedule an initial call (60 minutes) with you and whoever on your team handles operations, finance, or implementation decisions. The call is structured — we're mapping your current systems, constraints, and automation goals so we understand YOUR operation before proposing anything.\n\nYou'll get a 40-page roadmap with:",
-                "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "wait",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": 169200,
-                "tag": null
-              },
-              {
-                "type": "if_else",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "send_email",
-                "subject": "What we uncover in a discovery assessment",
-                "bodyPreview": "One thing we've learned from 100+ warehouse automation projects: the difference between implementations that hit timeline and those that slip by 3–6 months usually comes down to one thing — how well the plan mapped integration points upfront.\n\nDuring discovery, we surface the constraints that catch most integrators off-guard:\n- Legacy system incompatibilities that require bridging or phasing\n- Dat",
-                "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "wait",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": 259200,
-                "tag": null
-              },
-              {
-                "type": "if_else",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "send_email",
-                "subject": "Questions before your discovery call?",
-                "bodyPreview": "We're scheduling your initial discovery call and wanted to make sure you have what you need.\n\nA few things that help us make the most of that first hour:\n- Who from your team should be on the call? (ops, finance, IT, project management — ideally more than one person)\n- What's your biggest constraint right now? (throughput, labor efficiency, system integration, something else?)\n- When are you hopin",
-                "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "wait",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": 3600,
-                "tag": null
-              },
-              {
-                "type": "if_else",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -1475,6 +1793,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               }
             ]
@@ -1489,44 +1811,44 @@
       {
         "name": "create_funnel",
         "ok": true,
-        "note": "created EdTPAfwrYaRaX7SPws6F"
+        "note": "created HIsPy6iTij1kANrcfAvK"
       }
     ],
     "error": null,
     "funnels": [
       {
-        "id": "EdTPAfwrYaRaX7SPws6F",
-        "url": "/lp/EdTPAfwrYaRaX7SPws6F",
-        "name": "Book Your Technical Security Evaluation",
+        "id": "HIsPy6iTij1kANrcfAvK",
+        "url": "/lp/HIsPy6iTij1kANrcfAvK",
+        "name": "Enterprise Cybersecurity — Technical Evaluation",
         "genre": "application",
         "persuasionDepth": "lean",
         "decisionComplexity": "enterprise",
         "artDirection": {
-          "transformation": "confusion_to_clarity",
+          "transformation": "uncertainty_to_confidence",
           "energy": "calm",
-          "density": "medium",
+          "density": "rich",
           "humanity": "balanced"
         },
         "bridge": null,
         "salesArgument": {
           "beliefChain": [
-            "Most vendor demos are generic and don't map to our specific environment, leaving us guessing about real fit.",
-            "We need a structured evaluation that lets security, ops, AND procurement understand impact simultaneously.",
-            "A real technical assessment—not a sales call—proves the vendor understands our actual threat model and tool ecosystem.",
-            "If the vendor can model ROI and integration costs upfront, we can move faster and avoid post-purchase surprises.",
-            "A vendor that structures evaluation this way is likely to be a strong implementation partner post-sale."
+            "Enterprise security buys are won on technical fit + compliance + ROI, not on features.",
+            "A structured evaluation (not a sales demo) surfaces whether a vendor truly matches my risk model and governance requirements.",
+            "If a vendor is willing to do a technical assessment first—no pitch—they're confident in their fit and worth taking seriously.",
+            "Getting a tailored ROI projection and gap analysis before a sales conversation saves weeks of back-and-forth.",
+            "Requesting an evaluation (not a demo) is the fastest path to a real procurement decision."
           ],
-          "corePromise": "See exactly how this platform performs against your current stack and threat model in 45 minutes—and walk away with ROI clarity and procurement alignment.",
-          "primaryObjection": "Evaluation takes too long, or the demo doesn't address our specific integration requirements and we end up in a 6-week POC negotiation."
+          "corePromise": "Get a tailored security gap analysis and ROI projection in 30 minutes—clear enough to move to procurement or move on to the next vendor—without a high-pressure sales process.",
+          "primaryObjection": "This might be a disguised sales call, and I'll waste time in discovery only to be pushed into a demo and a lengthy sales cycle."
         },
         "sections": [
           {
             "type": "hero",
             "canvas": null,
             "role": "hook",
-            "serves": "Most vendor demos are generic and don't map to our specific environment, leaving us guessing about real fit.",
-            "headline": "Book Your Technical Security Evaluation",
-            "cta": "Book Your Evaluation",
+            "serves": "Enterprise security buys are won on technical fit + compliance + ROI, not on features.",
+            "headline": "Request Your Technical Security Evaluation",
+            "cta": "Request Evaluation",
             "priceCents": null
           },
           {
@@ -1542,7 +1864,7 @@
             "type": "benefits_grid",
             "canvas": "warm_paper",
             "role": "promise",
-            "serves": "If the vendor can model ROI and integration costs upfront, we can move faster and avoid post-purchase surprises.",
+            "serves": "Getting a tailored ROI projection and gap analysis before a sales conversation saves weeks of back-and-forth.",
             "headline": "What the Evaluation Covers",
             "cta": null,
             "priceCents": null
@@ -1551,8 +1873,8 @@
             "type": "included",
             "canvas": "clean",
             "role": "offer",
-            "serves": "A vendor that structures evaluation this way is likely to be a strong implementation partner post-sale.",
-            "headline": "You'll Walk Away With",
+            "serves": "Requesting an evaluation (not a demo) is the fastest path to a real procurement decision.",
+            "headline": "Who This Evaluation Is For",
             "cta": null,
             "priceCents": null
           },
@@ -1560,7 +1882,7 @@
             "type": "agenda",
             "canvas": "warm_paper",
             "role": "mechanism",
-            "serves": "A real technical assessment—not a sales call—proves the vendor understands our actual threat model and tool ecosystem.",
+            "serves": "If a vendor is willing to do a technical assessment first—no pitch—they're confident in their fit and worth taking seriously.",
             "headline": null,
             "cta": null,
             "priceCents": null
@@ -1569,8 +1891,8 @@
             "type": "comparison",
             "canvas": "clean",
             "role": "belief_shift",
-            "serves": "We need a structured evaluation that lets security, ops, AND procurement understand impact simultaneously.",
-            "headline": "How This Evaluation Differs from Typical Vendor Demos",
+            "serves": "A structured evaluation (not a sales demo) surfaces whether a vendor truly matches my risk model and governance requirements.",
+            "headline": "How This Evaluation Works vs. Traditional Demos",
             "cta": null,
             "priceCents": null
           },
@@ -1578,31 +1900,39 @@
             "type": "cta_banner",
             "canvas": "brand_tint",
             "role": "close",
-            "serves": "A vendor that structures evaluation this way is likely to be a strong implementation partner post-sale.",
-            "headline": "Ready to Evaluate on Your Terms?",
-            "cta": "Book Your Evaluation",
+            "serves": "Requesting an evaluation (not a demo) is the fastest path to a real procurement decision.",
+            "headline": "Ready to see if we're the right fit?",
+            "cta": "Request Evaluation",
             "priceCents": null
           },
           {
             "type": "offer",
             "canvas": "warm_paper",
             "role": "offer",
-            "serves": "A vendor that structures evaluation this way is likely to be a strong implementation partner post-sale.",
+            "serves": "Requesting an evaluation (not a demo) is the fastest path to a real procurement decision.",
             "headline": "",
-            "cta": "Book Your Evaluation",
+            "cta": "Request Evaluation",
             "priceCents": null
           }
         ],
+        "eventStartAt": null,
         "workflows": [
           {
-            "id": "MO4xcPTYdOn9OQGQnpDi",
-            "name": "Book Your Technical Security Evaluation — follow-up",
+            "id": "NropCcZufRhFFuxg0wpa",
+            "name": "Enterprise Cybersecurity — Technical Evaluation — follow-up",
+            "strategyPlan": {
+              "conversionEvent": "requested a technical security evaluation",
+              "goalState": "evaluation scheduled and completed OR deal won",
+              "goalTag": "booked",
+              "handoffDays": 1,
+              "cadenceRationale": "Hot, high-intent buyer. Handoff to sales team within 24 hours. No nurture emails—direct human conversation is the close."
+            },
             "trigger": {
               "type": "form.submitted",
               "filters": {
                 "all": []
               },
-              "formId": "ElArBTiGPLXSEK2tL7Ub"
+              "formId": "11G8OeI1c6BxmGjUWmdH"
             },
             "nodes": [
               {
@@ -1610,6 +1940,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -1617,6 +1951,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -1624,27 +1962,43 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
-                "tag": "Book Your Technical Security Evaluation "
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": "Enterprise Security Evaluation Requested"
               },
               {
                 "type": "send_email",
-                "subject": "Your Security Evaluation is Confirmed — Pre-Evaluation Questionnaire Inside",
-                "bodyPreview": "Thanks for booking your technical security evaluation.\n\nYour session is confirmed for [date/time]. A senior architect will lead, alongside a technical consultant with 10+ years of enterprise security infrastructure experience.\n\nTo make the evaluation maximally useful for your team, we've attached a brief pre-evaluation questionnaire (10–15 minutes). It helps us tailor the threat scenario, integrat",
+                "subject": "Your evaluation request is confirmed",
+                "bodyPreview": "Thank you for requesting a technical evaluation.\n\nOur security team will reach out within 24 hours to schedule your 30-minute initial assessment call. We'll need 15 minutes to understand your threat model and compliance requirements, then we'll move to the technical evaluation phase.\n\nCome prepared with: your primary compliance requirements (SOC 2, ISO 27001, NIST, etc.), a brief overview of your ",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "transactional",
                 "tag": null
               },
               {
                 "type": "notify",
-                "subject": "New lead: Book Your Technical Security Evaluation",
-                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just booked a technical security evaluation. The follow-up sequence is running — apply the \"booked\" tag the moment they completed the evaluation call and received technical debrief, and every remaining automated touch stops.",
+                "subject": "New lead: Enterprise Cybersecurity — Technical Evaluation",
+                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just requested a technical security evaluation. The follow-up sequence is running — apply the \"booked\" tag the moment they evaluation scheduled and completed OR deal won, and every remaining automated touch stops.",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
                 "type": "wait",
                 "subject": null,
                 "bodyPreview": null,
-                "seconds": 3600,
+                "seconds": 86400,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -1652,6 +2006,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -1659,6 +2017,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               }
             ]
@@ -1673,18 +2035,18 @@
       {
         "name": "create_funnel",
         "ok": true,
-        "note": "created EBMgBlCuRgcozaVtRgCG"
+        "note": "created o1nrXole1KuNGEfydlgs"
       }
     ],
     "error": null,
     "funnels": [
       {
-        "id": "EBMgBlCuRgcozaVtRgCG",
-        "url": "/lp/EBMgBlCuRgcozaVtRgCG",
-        "name": "Children's Literacy Recurring Donation Funnel",
+        "id": "o1nrXole1KuNGEfydlgs",
+        "url": "/lp/o1nrXole1KuNGEfydlgs",
+        "name": "Children's Literacy Monthly Giving",
         "genre": "lead_gen",
         "persuasionDepth": "standard",
-        "decisionComplexity": "low",
+        "decisionComplexity": "moderate",
         "artDirection": {
           "transformation": "concern_to_action",
           "energy": "balanced",
@@ -1694,23 +2056,23 @@
         "bridge": null,
         "salesArgument": {
           "beliefChain": [
-            "A child's reading foundation is set by age 8 — early intervention changes everything.",
-            "One-on-one mentorship + structured practice works — we have the proof.",
-            "At just $25/month, their gift is the difference between a child reading at grade level or falling years behind.",
-            "Monthly giving is easy to start, easy to change, and creates stable funding for children who need consistency.",
-            "This organization is trustworthy, real, and their money will be spent exactly as promised."
+            "The literacy crisis in under-resourced schools is real and preventable",
+            "This nonprofit has a proven model that works—literacy tutoring + books at the right time saves outcomes",
+            "Monthly recurring gifts are how nonprofits build stable programs, not one-off campaigns",
+            "Giving is frictionless and transparent—I know exactly where my money goes",
+            "Becoming a monthly supporter means joining a movement, not just writing a check"
           ],
-          "corePromise": "For $25/month, you're directly funding one child's year-long path to reading success.",
-          "primaryObjection": "'Will my small donation actually matter, or will it just get lost in overhead?'"
+          "corePromise": "Your $25/month funds sustained literacy instruction that measurably improves reading outcomes for a child who needs it most",
+          "primaryObjection": "Will my donation actually reach a child, or disappear into nonprofit overhead?"
         },
         "sections": [
           {
             "type": "hero",
             "canvas": null,
             "role": "hook",
-            "serves": "A child's reading foundation is set by age 8 — early intervention changes everything.",
-            "headline": "Every month, you're giving a child the keys to their future",
-            "cta": "Start My Monthly Gift",
+            "serves": "The literacy crisis in under-resourced schools is real and preventable",
+            "headline": "Your $25 a Month Teaches a Child to Read",
+            "cta": "Set Up My Monthly Gift",
             "priceCents": null
           },
           {
@@ -1735,8 +2097,8 @@
             "type": "problem_solution",
             "canvas": "warm_paper",
             "role": "belief_shift",
-            "serves": "One-on-one mentorship + structured practice works — we have the proof.",
-            "headline": "1 in 3 children start elementary school unable to read at grade level",
+            "serves": "This nonprofit has a proven model that works—literacy tutoring + books at the right time saves outcomes",
+            "headline": "23% of U.S. children still can't read proficiently by third grade",
             "cta": null,
             "priceCents": null
           },
@@ -1744,8 +2106,8 @@
             "type": "benefits_grid",
             "canvas": "clean",
             "role": "promise",
-            "serves": "At just $25/month, their gift is the difference between a child reading at grade level or falling years behind. + Monthly giving is easy to start, easy to change, and creates stable funding for children who need consistency.",
-            "headline": "What your monthly gift makes possible",
+            "serves": "Monthly recurring gifts are how nonprofits build stable programs, not one-off campaigns + Giving is frictionless and transparent—I know exactly where my money goes",
+            "headline": "What Your Monthly Gift Funds",
             "cta": null,
             "priceCents": null
           },
@@ -1753,16 +2115,16 @@
             "type": "offer",
             "canvas": "brand_tint",
             "role": "offer",
-            "serves": "This organization is trustworthy, real, and their money will be spent exactly as promised.",
+            "serves": "Becoming a monthly supporter means joining a movement, not just writing a check",
             "headline": "",
-            "cta": "Start My Monthly Gift",
+            "cta": "Set Up My Monthly Gift",
             "priceCents": null
           },
           {
             "type": "faq",
-            "canvas": "warm_paper",
+            "canvas": null,
             "role": "objections",
-            "serves": "Monthly giving is easy to start, easy to change, and creates stable funding for children who need consistency.",
+            "serves": null,
             "headline": null,
             "cta": null,
             "priceCents": null
@@ -1771,22 +2133,30 @@
             "type": "cta_banner",
             "canvas": "clean",
             "role": "close",
-            "serves": "This organization is trustworthy, real, and their money will be spent exactly as promised.",
-            "headline": "Your $25/month starts a child on the path to reading success",
-            "cta": "Start My Monthly Gift",
+            "serves": "Becoming a monthly supporter means joining a movement, not just writing a check",
+            "headline": "Be Part of the 2,000+ Monthly Supporters Building Literacy",
+            "cta": "Set Up My Monthly Gift",
             "priceCents": null
           }
         ],
+        "eventStartAt": null,
         "workflows": [
           {
-            "id": "WG9BrwH4aJeKf8ExfljX",
-            "name": "Children's Literacy Recurring Donation Funnel — follow-up",
+            "id": "LhQOESvcodc0vkQlC0Py",
+            "name": "Children's Literacy Monthly Giving — follow-up",
+            "strategyPlan": {
+              "conversionEvent": "expressed interest in monthly giving",
+              "goalState": "monthly recurring donation activated",
+              "goalTag": "purchased",
+              "handoffDays": 2,
+              "cadenceRationale": "Emotional decision + payment friction → needs 2–3 touches clarifying impact + removing setup barriers before handoff"
+            },
             "trigger": {
               "type": "form.submitted",
               "filters": {
                 "all": []
               },
-              "formId": "O2ZyrVKSElua2h03kWdj"
+              "formId": "i765lms2WbKVM7KwZs46"
             },
             "nodes": [
               {
@@ -1794,6 +2164,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -1801,6 +2175,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -1808,20 +2186,98 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
-                "tag": "Recurring Donor $25/mo"
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": "Monthly Donor Prospect"
               },
               {
                 "type": "send_email",
-                "subject": "Welcome — your first $25/month gift is set up",
-                "bodyPreview": "Thank you for starting your monthly gift.\n\nYour recurring donation of $25/month is confirmed and will process on the same date each month. We're matching a child with a mentor this week who will benefit directly from your support.\n\nStarting next week, you'll receive monthly impact updates showing your child's reading progress, milestones, and the work our mentors are doing. Check your inbox for yo",
+                "subject": "Welcome to our literacy movement—here's what happens next",
+                "bodyPreview": "Thank you for deciding to support children's literacy. We're honored you're joining our monthly community.\n\nOver the next few days, you'll hear from us with details about how to set up your first $25 gift and choose the payment method that works best for you. We'll also help you connect with a child's literacy journey—you'll start seeing progress updates and stories once your first gift processes.",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "transactional",
                 "tag": null
               },
               {
                 "type": "notify",
-                "subject": "New lead: Children's Literacy Recurring Donation Funnel",
-                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just started a recurring $25/month donation. The follow-up sequence is running — apply the \"donor-active\" tag the moment they donor continues monthly gifts for 3+ months (establishes commitment), and every remaining automated touch stops.",
+                "subject": "New lead: Children's Literacy Monthly Giving",
+                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just expressed interest in monthly giving. The follow-up sequence is running — apply the \"purchased\" tag the moment they monthly recurring donation activated, and every remaining automated touch stops.",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": null
+              },
+              {
+                "type": "wait",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": 7200,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": null
+              },
+              {
+                "type": "if_else",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": null
+              },
+              {
+                "type": "send_email",
+                "subject": "See the child behind your $25 gift",
+                "bodyPreview": "Hi {{contact.firstName}},\n\nWhen you commit $25/month to literacy tutoring, you're not giving to a general fund. You're funding one child's reading journey.\n\nWe paired your profile with a child who's starting our eight-week intensive program this month. Over the next weeks, you'll get real updates: which books they're reading, the words they struggled with last week that they nailed this week, whet",
+                "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "nurture",
+                "tag": null
+              },
+              {
+                "type": "wait",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": 165600,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": null
+              },
+              {
+                "type": "if_else",
+                "subject": null,
+                "bodyPreview": null,
+                "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": null
+              },
+              {
+                "type": "send_email",
+                "subject": "Your setup is waiting (2 minutes to activate)",
+                "bodyPreview": "Hi {{contact.firstName}},\n\nJust a quick reminder: your monthly gift activation link is still waiting for you. It takes about 90 seconds to set up, and once you do, your first $25 gift processes and we start the child's tutoring program.\n\nNo credit card charge until you confirm. Cancel anytime.\n\nComplete your setup: [CONFIRMATION PAGE LINK]\n\nThanks for caring enough to follow through.\n\n{{unsubscrib",
+                "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "reminder",
                 "tag": null
               },
               {
@@ -1829,6 +2285,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": 259200,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -1836,34 +2296,21 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
                 "type": "send_email",
-                "subject": "Meet the child your gift is supporting",
-                "bodyPreview": "Hi {{contact.firstName}},\n\nThis is Maya. She's 7, in second grade, and three weeks ago she couldn't read a full sentence without frustration stopping her.\n\nYour $25/month gift paired her with Marcus, a volunteer mentor who meets with her twice a week. Last week, Maya read a whole book to Marcus — by herself, out loud, without stopping. Marcus said she smiled the whole way through.\n\nMaya's mentor i",
+                "subject": "One child is waiting for their tutor",
+                "bodyPreview": "Hi {{contact.firstName}},\n\nWe know life gets busy. But I wanted to remind you: there's a child right now who's about to start an intensive eight-week literacy program. Your monthly gift is what makes that possible.\n\nWe're holding a spot for you in the next cohort. If you've thought of a reason you might not be able to give, just reply to this email. We're here to help.\n\nOtherwise, here's your setu",
                 "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "wait",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": 950400,
-                "tag": null
-              },
-              {
-                "type": "if_else",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "send_email",
-                "subject": "One month in: here's what your $25/month built",
-                "bodyPreview": "Your first full month of monthly giving is complete.\n\nHere's what that $25 accomplished this month:\n\n• Maya and 23 other children got matched with trained mentors\n• 47 one-on-one reading sessions happened\n• 8 children moved up a full reading level\n• 31 books were read aloud — many for the first time\n\nMaya's still smiling. Her mom told us she's asking to read more at home now. That's the momentum t",
-                "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "recovery",
                 "tag": null
               },
               {
@@ -1871,6 +2318,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": 3600,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -1878,6 +2329,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -1885,6 +2340,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               }
             ]

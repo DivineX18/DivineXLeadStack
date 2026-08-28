@@ -504,6 +504,18 @@ function check(label: string, ok: boolean, detail?: string) {
     emotional_transformation: "panic_to_relief", cta_style: "phone", cta_phone_number: "+16025551234",
   });
   check("6c. fictional 555 phone number rejected (treated as absent)", vPhone.ok === true && !(vPhone.args as Record<string, unknown>).ctaPhoneNumber);
+  const vDash = cap.validate!({
+    headline: "Fast—honest repair", subheadline: "It takes 10–14 weeks — usually less.",
+    bullets: "One,Two", genre: "lead_gen", emotional_transformation: "panic_to_relief",
+    story_paragraphs: ["S1. ".repeat(200), "P2", "P3", "P4"],
+  });
+  check("6d. em dashes stripped from all copy (house style, in code)", vDash.ok === true && !JSON.stringify(vDash.args).includes("—"));
+  if (vDash.ok) {
+    const aa = vDash.args as Record<string, unknown>;
+    check("6e. en-dash numeric range preserved", String(aa.subheadline).includes("10–14"));
+    const sp = aa.storyParagraphs as string[];
+    check("6f. story capped: 3 paragraphs, sentence-boundary trim", sp.length === 3 && sp[0].length <= 420 && sp[0].endsWith("."));
+  }
   if (v.ok) {
     const logos = (v.args as Record<string, unknown>).suppliedEvidenceLogos as { url: string }[];
     check("6b. only real https URLs survive", logos?.length === 1 && logos[0].url === "https://example.com/ada.png");

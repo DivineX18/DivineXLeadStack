@@ -180,6 +180,28 @@ const wu2c = composed.nodes.wu2.config as { eligibility?: { states: string[] } }
 check("6a. reminder step eligibility = registered/scheduled", JSON.stringify(wu1c.eligibility?.states) === JSON.stringify(["registered", "scheduled"]));
 check("6b. recovery step eligibility = missed only", JSON.stringify(wu2c.eligibility?.states) === JSON.stringify(["missed"]));
 
+// ── 7. Event-stream seeding (the early-return bug the chain probe caught)
+//      + tag projection (states project onto tags; tags stay projections) ──
+{
+  const { applyLifecycleStateForEvent } = await import("../src/lib/workflows/lifecycle-events");
+  const webFun = db.collection("funnels").doc();
+  cleanup.push(() => webFun.delete());
+  await webFun.set({ subAccountId: SUB, agencyId: AG, name: "QA Web Seed", status: "draft", genre: "webinar",
+    eventStartAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+    sections: [{ id: "s1", type: "hero", config: { formId: "form-seed-1" } }], createdByUid: "qa" });
+  const regC = db.collection("contacts").doc();
+  cleanup.push(() => regC.delete());
+  await regC.set({ subAccountId: SUB, agencyId: AG, name: "QA Reg", tags: [], createdByUid: "qa" });
+  cleanup.push(() => db.doc(`lifecycleStates/${lifecycleDocId("webinar", webFun.id, regC.id)}`).delete());
+  await applyLifecycleStateForEvent({ subAccountId: SUB, type: "form.submitted",
+    payload: { submission: { form_id: "form-seed-1", contact_id: regC.id } } });
+  const seeded = await db.doc(`lifecycleStates/${lifecycleDocId("webinar", webFun.id, regC.id)}`).get();
+  check("7a. registration event seeds webinar lifecycle (no early-return regression)", seeded.exists && seeded.data()!.state === "scheduled");
+  check("7b. state projects onto contact tags (projection, not truth)", (((await regC.get()).data()!.tags ?? []) as string[]).includes("scheduled"));
+  await transitionLifecycleState({ subAccountId: SUB, agencyId: AG, domain: "webinar", entityId: webFun.id, contactId: regC.id, to: "attended", reason: "operator:test" });
+  check("7c. attended transition projects the goal-taggable state", (((await regC.get()).data()!.tags ?? []) as string[]).includes("attended"));
+}
+
 for (const fn of cleanup) await fn().catch(() => {});
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);
 process.exit(failures > 0 ? 1 : 0);

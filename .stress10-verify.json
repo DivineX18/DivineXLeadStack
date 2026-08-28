@@ -5,18 +5,18 @@
       {
         "name": "create_funnel",
         "ok": true,
-        "note": "created rdb8PyWIBcYGA1tbH0jD"
+        "note": "created jzb5vN5Ta4b8XpVm5Esi"
       }
     ],
     "error": null,
     "funnels": [
       {
-        "id": "rdb8PyWIBcYGA1tbH0jD",
-        "url": "/lp/rdb8PyWIBcYGA1tbH0jD",
-        "name": "Same-Day AC Repair — Phoenix Emergency Service",
+        "id": "jzb5vN5Ta4b8XpVm5Esi",
+        "url": "/lp/jzb5vN5Ta4b8XpVm5Esi",
+        "name": "Same-Day AC Repair — Book a Technician in Minutes",
         "genre": "lead_gen",
         "persuasionDepth": "lean",
-        "decisionComplexity": "moderate",
+        "decisionComplexity": "low",
         "artDirection": {
           "transformation": "panic_to_relief",
           "energy": "urgent",
@@ -26,23 +26,24 @@
         "bridge": null,
         "salesArgument": {
           "beliefChain": [
-            "A real person answers when I call — not a machine.",
-            "Same-day appointments exist and might be available RIGHT NOW.",
-            "They tell me the price BEFORE they touch anything.",
-            "I can request online too if I can't call.",
-            "This company knows Phoenix heat and has done this thousands of times."
+            "When AC goes down in Phoenix heat, every hour matters.",
+            "A real human who answers now beats a voicemail and callback loop.",
+            "Knowing you can get a same-day appointment if slots exist removes wait anxiety.",
+            "Hearing the price BEFORE work starts means no financial shock.",
+            "Trusting the company to show up equipped and finish the job right the first time ends the crisis.",
+            "Picking up the phone and booking right now is the fastest path to cool air."
           ],
-          "corePromise": "Same-day AC repair, honest pricing locked in before we start, a real person when you call.",
-          "primaryObjection": "Will I actually get someone today, or is this just a marketing promise?"
+          "corePromise": "Same-day AC repair with a real person, upfront pricing, and technician equipped to fix most units on first visit.",
+          "primaryObjection": "Will they actually have a same-day slot, or am I waiting anyway? And what if it's super expensive?"
         },
         "sections": [
           {
             "type": "hero",
             "canvas": null,
             "role": "hook",
-            "serves": "A real person answers when I call — not a machine.",
-            "headline": "Same-Day AC Repair — Phoenix Emergency Service",
-            "cta": "Call Now for Same-Day Service",
+            "serves": "When AC goes down in Phoenix heat, every hour matters.",
+            "headline": "Same-Day AC Repair — Book a Technician in Minutes",
+            "cta": "Call Now for Same-Day Repair",
             "priceCents": null
           },
           {
@@ -58,8 +59,8 @@
             "type": "benefits_grid",
             "canvas": "dark_immersive",
             "role": "promise",
-            "serves": "Same-day appointments exist and might be available RIGHT NOW. + They tell me the price BEFORE they touch anything. + I can request online too if I can't call.",
-            "headline": "What Happens When You Call or Request Service",
+            "serves": "A real human who answers now beats a voicemail and callback loop. + Knowing you can get a same-day appointment if slots exist removes wait anxiety. + Hearing the price BEFORE work starts means no financial shock. + Trusting the company to show up equipped and finish the job right the first time ends the crisis.",
+            "headline": "Why We're Different in an Emergency",
             "cta": null,
             "priceCents": null
           },
@@ -67,16 +68,16 @@
             "type": "offer",
             "canvas": "brand_tint",
             "role": "offer",
-            "serves": "This company knows Phoenix heat and has done this thousands of times.",
+            "serves": "Picking up the phone and booking right now is the fastest path to cool air.",
             "headline": "",
-            "cta": "Call Now for Same-Day Service",
+            "cta": "Call Now for Same-Day Repair",
             "priceCents": null
           },
           {
             "type": "faq",
             "canvas": "warm_paper",
             "role": "objections",
-            "serves": "I can request online too if I can't call.",
+            "serves": "Trusting the company to show up equipped and finish the job right the first time ends the crisis.",
             "headline": null,
             "cta": null,
             "priceCents": null
@@ -85,22 +86,31 @@
             "type": "cta_banner",
             "canvas": "clean",
             "role": "close",
-            "serves": "This company knows Phoenix heat and has done this thousands of times.",
-            "headline": "AC Not Cooling? Call or Request Service Right Now.",
-            "cta": "Call Now for Same-Day Service",
+            "serves": "Picking up the phone and booking right now is the fastest path to cool air.",
+            "headline": "AC Down? Get a Real Technician on the Phone in Minutes",
+            "cta": "Call Now for Same-Day Repair",
             "priceCents": null
           }
         ],
+        "eventStartAt": null,
         "workflows": [
           {
-            "id": "UOdqrvbMqFhsCEb97TqD",
-            "name": "Same-Day AC Repair — Phoenix Emergency Service — follow-up",
+            "id": "2PpUuvv89vjEDpprkpJw",
+            "name": "Same-Day AC Repair — Book a Technician in Minutes — follow-up",
+            "strategyPlan": {
+              "conversionEvent": "submitted \"Same-Day AC Repair — Book a Technician in Minutes\"",
+              "goalState": "the operator has made contact",
+              "goalTag": "emergency-ac-repair-request-converted",
+              "handoffDays": 1,
+              "cadenceRationale": "Default: confirm instantly, hand to a human within a day.",
+              "synthesized": true
+            },
             "trigger": {
               "type": "form.submitted",
               "filters": {
                 "all": []
               },
-              "formId": "aKqILJH7lVppq1hTXVQz"
+              "formId": "d7fQbISumYu8yRRsoZwk"
             },
             "nodes": [
               {
@@ -108,6 +118,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -115,6 +129,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -122,27 +140,43 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
-                "tag": "Same-Day AC Repair — Phoenix Emergency S"
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
+                "tag": "Emergency AC Repair Request"
               },
               {
                 "type": "send_email",
-                "subject": "We Got Your Service Request — Here's What's Next",
-                "bodyPreview": "Thanks for reaching out. Your AC emergency service request is in our system.\n\nIf you submitted online, our dispatcher will call you within the next 30 minutes to confirm your same-day availability or book your next available slot. You don't need to do anything else — just keep your phone handy.\n\nIf you called already, your appointment is set. Technician is on the way or confirmed for the time we d",
+                "subject": "You're in — Same-Day AC Repair — Book a Technician in Minutes",
+                "bodyPreview": "Thanks for signing up! We've got your details and will be in touch shortly.\n\n{{unsubscribeLink}}",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": "transactional",
                 "tag": null
               },
               {
                 "type": "notify",
-                "subject": "New lead: Same-Day AC Repair — Phoenix Emergency Service",
-                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just requested same-day AC repair service. The follow-up sequence is running — apply the \"booked\" tag the moment they booked appointment or scheduled for next available, and every remaining automated touch stops.",
+                "subject": "New lead: Same-Day AC Repair — Book a Technician in Minutes",
+                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just submitted \"Same-Day AC Repair — Book a Technician in Minutes\". The follow-up sequence is running — apply the \"emergency-ac-repair-request-converted\" tag the moment they the operator has made contact, and every remaining automated touch stops.",
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
                 "type": "wait",
                 "subject": null,
                 "bodyPreview": null,
-                "seconds": 7200,
+                "seconds": 86400,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -150,27 +184,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "send_email",
-                "subject": "Your AC repair appointment — confirm you're home",
-                "bodyPreview": "Hey, we haven't connected by phone yet on your same-day request. Our dispatcher is ready to book you the moment we have a slot.\n\nClick here to confirm your phone number so we can reach you immediately when a technician is available.\n\nIf you've already booked by phone, you can ignore this — you're all set.\n\n{{unsubscribeLink}}",
-                "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "wait",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": 3600,
-                "tag": null
-              },
-              {
-                "type": "if_else",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               },
               {
@@ -178,6 +195,10 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
+                "offsetMinutes": null,
+                "anchorKind": null,
+                "eligibility": null,
+                "commType": null,
                 "tag": null
               }
             ]
