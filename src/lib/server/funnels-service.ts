@@ -191,6 +191,8 @@ export interface FunnelPatch {
   persuasionDepth?: FunnelDoc["persuasionDepth"];
   /** Thank-you/bridge page config (multistep journey) — see FunnelDoc.bridge. */
   bridge?: FunnelDoc["bridge"];
+  /** Webinar/event start time (ISO) — anchors wait_until reminders. */
+  eventStartAt?: string | null;
   decisionComplexity?: FunnelDoc["decisionComplexity"];
   logoUrl?: string;
   sections?: FunnelSection[];
@@ -362,6 +364,7 @@ export async function updateFunnelServerSide(opts: {
   if (patch.artDirection !== undefined) write.artDirection = patch.artDirection;
   if (patch.salesArgument !== undefined) write.salesArgument = patch.salesArgument;
   if (patch.bridge !== undefined) write.bridge = patch.bridge;
+  if (patch.eventStartAt !== undefined) write.eventStartAt = patch.eventStartAt;
   if (patch.persuasionDepth !== undefined) write.persuasionDepth = patch.persuasionDepth;
   if (patch.decisionComplexity !== undefined) write.decisionComplexity = patch.decisionComplexity;
   if (patch.logoUrl !== undefined) write.logoUrl = patch.logoUrl;

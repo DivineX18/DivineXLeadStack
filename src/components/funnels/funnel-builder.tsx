@@ -184,6 +184,7 @@ export function FunnelBuilder({
   const [bridgeMessage, setBridgeMessage] = useState("");
   const [bridgeNextFunnelId, setBridgeNextFunnelId] = useState("");
   const [bridgeNextCta, setBridgeNextCta] = useState("");
+  const [eventStartAt, setEventStartAt] = useState("");
   const [allFunnels, setAllFunnels] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
@@ -252,6 +253,7 @@ export function FunnelBuilder({
         setBridgeMessage(d.funnel.bridge?.message ?? "");
         setBridgeNextFunnelId(d.funnel.bridge?.nextFunnelId ?? "");
         setBridgeNextCta(d.funnel.bridge?.nextCta ?? "");
+        setEventStartAt(d.funnel.eventStartAt ? new Date(d.funnel.eventStartAt).toISOString().slice(0, 16) : "");
         setAccentColor(d.funnel.accentColor);
         setDesignPack(d.funnel.designPack ?? "classic");
         const strategy = d.funnel.designStrategy;
@@ -328,6 +330,7 @@ export function FunnelBuilder({
           designPack,
           designStrategy: resolvedStrategy,
           logoUrl,
+          eventStartAt: eventStartAt ? new Date(eventStartAt).toISOString() : null,
           bridge: {
             headline: bridgeHeadline || undefined,
             message: bridgeMessage || undefined,
@@ -467,6 +470,11 @@ export function FunnelBuilder({
               <Input value={bridgeNextCta} onChange={(e) => setBridgeNextCta(e.target.value)} placeholder="Take a look" maxLength={80} />
             </div>
           )}
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground">Event date &amp; time (webinars/events)</label>
+            <Input type="datetime-local" value={eventStartAt} onChange={(e) => setEventStartAt(e.target.value)} />
+            <p className="mt-1 text-[11px] text-muted-foreground">Anchors automated reminders (&quot;24h before&quot;). Changing it reschedules every pending reminder automatically.</p>
+          </div>
         </div>
       </div>
 

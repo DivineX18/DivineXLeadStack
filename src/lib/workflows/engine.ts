@@ -54,6 +54,10 @@ const STEP_PATH = "/api/workflows/step";
 export type StepResult =
   | { kind: "next" }
   | { kind: "wait"; seconds: number }
+  /** Re-schedule THIS node after `seconds` — the self-correcting wait:
+   *  each wake re-executes the same node, which re-reads its live anchor
+   *  (event time / cancellation) and decides again. */
+  | { kind: "wait_self"; seconds: number }
   | { kind: "branch"; value: boolean }
   | { kind: "end" };
 
@@ -511,7 +515,62 @@ const execPassThrough: NodeExecutor = async () => ({
   log: "unsupported_passthrough",
 });
 
+/** Max sleep between anchor re-checks. A reschedule/cancel is noticed
+ *  within this window even mid-wait; short final waits land precisely. */
+const WAIT_UNTIL_RECHECK_CAP = 6 * 3600;
+
+const execWaitUntil: NodeExecutor = async (ctx) => {
+  const cfg = ctx.node.config as unknown as import("@/types/workflows").WaitUntilConfig;
+  const offsetSec = Math.round((cfg.offsetMinutes ?? 0) * 60);
+  const db = getAdminDb();
+
+  let anchorMs: number | null = null;
+  if (cfg.anchorKind === "funnel_event") {
+    if (cfg.funnelId) {
+      const f = await db.doc(`funnels/${cfg.funnelId}`).get();
+      const raw = f.exists ? (f.data()!.eventStartAt as unknown) : null;
+      if (typeof raw === "string" && raw) anchorMs = Date.parse(raw) || null;
+      else if (raw && typeof raw === "object" && "toMillis" in (raw as object)) {
+        anchorMs = (raw as { toMillis: () => number }).toMillis();
+      }
+    }
+  } else {
+    // The contact's own next appointment: soonest upcoming calendar event
+    // (small lookback so a "+2h after" anchor still resolves just after
+    // the event started). Re-queried LIVE on every wake — a reschedule
+    // moves the target automatically.
+    const snap = await db
+      .collection("events")
+      .where("subAccountId", "==", ctx.subAccountId)
+      .where("contactId", "==", ctx.contact.id)
+      .where("startAt", ">=", new Date(Date.now() - 12 * 3600 * 1000))
+      .orderBy("startAt", "asc")
+      .limit(1)
+      .get();
+    if (!snap.empty) {
+      const st = snap.docs[0].data().startAt as { toMillis?: () => number } | null;
+      anchorMs = st?.toMillis ? st.toMillis() : null;
+    }
+  }
+
+  if (anchorMs === null) {
+    // Anchor missing/cancelled — never fire a reminder for something that
+    // no longer exists; the whenFalse branch is the skip/recovery path.
+    return { result: { kind: "branch", value: false }, log: "anchor:missing" };
+  }
+  const targetMs = anchorMs + offsetSec * 1000;
+  const remaining = Math.ceil((targetMs - Date.now()) / 1000);
+  if (remaining <= 0) {
+    return { result: { kind: "branch", value: true }, log: "anchor:reached" };
+  }
+  return {
+    result: { kind: "wait_self", seconds: Math.min(remaining, WAIT_UNTIL_RECHECK_CAP) },
+    log: `anchor:wait:${remaining}s`,
+  };
+};
+
 const REGISTRY: Partial<Record<WorkflowNodeType, NodeExecutor>> = {
+  wait_until: execWaitUntil,
   send_email: execSendEmail,
   send_sms: execSendSms,
   whatsapp_template: execWhatsappTemplate,
@@ -767,6 +826,9 @@ export async function runStep(runId: string, nodeId: string): Promise<void> {
     target = (result.value ? b?.whenTrue : b?.whenFalse) ?? null;
   } else if (result.kind === "wait") {
     target = node.next ?? null;
+    delay = result.seconds;
+  } else if (result.kind === "wait_self") {
+    target = node.id;
     delay = result.seconds;
   } else {
     target = node.next ?? null;

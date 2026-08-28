@@ -50,6 +50,13 @@ export interface AutomationSequenceStep {
    *  operational / reminder / nurture / recovery / sales_followup /
    *  stewardship / reactivation). Not every automated message is nurture. */
   commType?: string;
+  /** EVENT-ANCHORED timing: hours relative to the funnel's eventStartAt
+   *  (negative = before: -24 = T-24h reminder; positive = after: +2 =
+   *  post-event follow-up). When set (and the funnel has an event time),
+   *  the step is wired through a self-correcting wait_until node instead
+   *  of an absolute wait — a rescheduled event moves the send
+   *  automatically, and a cancelled event skips it. */
+  anchorOffsetHours?: number | null;
 }
 
 export interface ComposeStrategyInput {
@@ -60,6 +67,12 @@ export interface ComposeStrategyInput {
   confirmationSubject: string;
   confirmationBody: string;
   ownerNotifyBody: string;
+  /** The funnel this automation belongs to — wait_until(funnel_event)
+   *  anchors re-read funnels/{funnelId}.eventStartAt live. */
+  funnelId?: string;
+  /** True when the funnel carries an eventStartAt. Anchored steps without
+   *  it degrade to absolute delays (delayHours) so nothing silently drops. */
+  hasEventTime?: boolean;
 }
 
 const HOUR = 3600;
@@ -107,8 +120,12 @@ export function composeStrategyNodes(input: ComposeStrategyInput): {
   // Nurture steps: wait → goal-tag exit check → email. Delays are absolute
   // from signup; converted to increments and floored at 1h so a mis-ordered
   // plan still runs forward.
-  const steps = [...input.sequence]
-    .filter((s) => s.subject.trim() && s.body.trim())
+  const usable = [...input.sequence].filter((s) => s.subject.trim() && s.body.trim()).slice(0, 6);
+  const anchored = input.hasEventTime && input.funnelId
+    ? usable.filter((s) => typeof s.anchorOffsetHours === "number").sort((a, b) => (a.anchorOffsetHours ?? 0) - (b.anchorOffsetHours ?? 0))
+    : [];
+  const steps = usable
+    .filter((s) => !anchored.includes(s))
     .sort((a, b) => a.delayHours - b.delayHours)
     .slice(0, 4);
   let elapsed = 0;
@@ -130,6 +147,40 @@ export function composeStrategyNodes(input: ComposeStrategyInput): {
     };
     nodes[eId] = { id: eId, type: "send_email", config: { subject: step.subject, body: withUnsubscribe(step.body), commType: step.commType ?? "nurture", purpose: step.purpose }, next: null };
     prevId = eId;
+  });
+
+  // EVENT-ANCHORED segment (webinar/appointment reminders + post-event
+  // follow-ups): each step rides a wait_until(funnel_event) that re-reads
+  // the funnel's eventStartAt on every wake — reschedules recalculate,
+  // cancellation (whenFalse) skips the send. Goal-tag gating still applies
+  // between the anchor firing and the email.
+  anchored.forEach((step, i) => {
+    const wuId = `wu${i + 1}`;
+    const cId = `ca${i + 1}`;
+    const eId = `ea${i + 1}`;
+    nodes[prevId] = { ...nodes[prevId], next: wuId };
+    nodes[wuId] = {
+      id: wuId,
+      type: "wait_until",
+      config: { anchorKind: "funnel_event", funnelId: input.funnelId, offsetMinutes: Math.round((step.anchorOffsetHours ?? 0) * 60) },
+      branches: { whenTrue: cId, whenFalse: null },
+      next: null,
+    };
+    nodes[cId] = {
+      id: cId,
+      type: "if_else",
+      config: { conditions: goalCheck },
+      branches: { whenTrue: "goal", whenFalse: eId },
+      next: null,
+    };
+    nodes[eId] = { id: eId, type: "send_email", config: { subject: step.subject, body: withUnsubscribe(step.body), commType: step.commType ?? "reminder", purpose: step.purpose }, next: null };
+    prevId = eId;
+  });
+  // Cancellation skip-chain: a missing/cancelled anchor jumps past its own
+  // email to the NEXT anchored step (or the handoff), never dead-ends.
+  anchored.forEach((_, i) => {
+    const nextTarget = i + 1 < anchored.length ? `wu${i + 2}` : "wh";
+    nodes[`wu${i + 1}`] = { ...nodes[`wu${i + 1}`], branches: { ...nodes[`wu${i + 1}`].branches!, whenFalse: nextTarget } };
   });
 
   // Human handoff: wait out the remainder, re-check the goal tag, then leave

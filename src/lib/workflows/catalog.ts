@@ -22,6 +22,7 @@ export const NODE_LABELS: Record<WorkflowNodeType, string> = {
   send_sms: "Send SMS",
   whatsapp_template: "Send WhatsApp",
   wait: "Wait",
+  wait_until: "Wait until event time",
   if_else: "If / else",
   goal: "End workflow",
   add_tag: "Add tag",
@@ -55,6 +56,7 @@ export const ADDABLE_TYPES: WorkflowNodeType[] = [
   "send_sms",
   "whatsapp_template",
   "wait",
+  "wait_until",
   "add_tag",
   "remove_tag",
   "move_stage",
@@ -88,6 +90,8 @@ export function defaultConfig(type: WorkflowNodeType): Record<string, unknown> {
       return { templateId: "", manualValues: {} };
     case "wait":
       return { seconds: 86_400 };
+    case "wait_until":
+      return { anchorKind: "contact_event", offsetMinutes: -1440 };
     case "if_else":
       return { conditions: { all: [] } };
     case "add_tag":

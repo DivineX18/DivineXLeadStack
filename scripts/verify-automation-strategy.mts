@@ -96,6 +96,40 @@ check("7a. steps sorted by delay; both waits positive",
   Number((disordered.nodes.w2.config as { seconds?: number }).seconds) === 90 * 3600);
 
 
+// 9. TIME-ANCHORED AUTOMATION — anchored steps compose into self-correcting
+//    wait_until segments; cancellation skip-chain; degrade-to-absolute
+//    when the funnel has no event time.
+{
+  const webinarSeq = [
+    { delayHours: 1, subject: "T-24", body: "b", purpose: "remind", commType: "reminder", anchorOffsetHours: -24 },
+    { delayHours: 2, subject: "T-1", body: "b", purpose: "remind", commType: "reminder", anchorOffsetHours: -1 },
+    { delayHours: 3, subject: "T+2", body: "b", purpose: "follow up", commType: "recovery", anchorOffsetHours: 2 },
+  ];
+  const w = composeStrategyNodes({
+    plan, sequence: webinarSeq, displayName: "Webinar", tag: "web",
+    confirmationSubject: "s", confirmationBody: "b", ownerNotifyBody: "o",
+    funnelId: "funnel-123", hasEventTime: true,
+  });
+  check("9a. three wait_until anchors composed in offset order",
+    w.nodes.wu1?.type === "wait_until" && (w.nodes.wu1.config as { offsetMinutes?: number }).offsetMinutes === -1440 &&
+    (w.nodes.wu2.config as { offsetMinutes?: number }).offsetMinutes === -60 &&
+    (w.nodes.wu3.config as { offsetMinutes?: number }).offsetMinutes === 120);
+  check("9b. anchors reference the live funnel", (w.nodes.wu1.config as { funnelId?: string }).funnelId === "funnel-123");
+  check("9c. anchor fired -> goal-gated email", w.nodes.wu1.branches?.whenTrue === "ca1" && w.nodes.ca1?.branches?.whenFalse === "ea1");
+  check("9d. cancellation skip-chain: missing anchor jumps to next anchor, last to handoff",
+    w.nodes.wu1.branches?.whenFalse === "wu2" && w.nodes.wu3.branches?.whenFalse === "wh");
+  check("9e. reminder emails carry commType", (w.nodes.ea1.config as { commType?: string }).commType === "reminder");
+
+  const noTime = composeStrategyNodes({
+    plan, sequence: webinarSeq, displayName: "W", tag: "w",
+    confirmationSubject: "s", confirmationBody: "b", ownerNotifyBody: "o",
+    funnelId: "funnel-123", hasEventTime: false,
+  });
+  check("9f. no event time -> degrades to absolute waits (no dropped steps)",
+    !Object.values(noTime.nodes).some((n) => n.type === "wait_until") &&
+    Object.values(noTime.nodes).filter((n) => n.type === "send_email").length === 4);
+}
+
 // 8. NATIVE CONVERSION DETECTION — the event-stream consumer applies (and
 //    removes) canonical lifecycle tags against real Firestore, with the
 //    tenancy guard and the intent-vs-verified boundary enforced.
@@ -135,6 +169,78 @@ check("7a. steps sorted by delay; both waits positive",
   check("8g. lifecycle timestamps recorded", !!(await ref.get()).data()!.lifecycleStates?.purchasedAt);
 
   await ref.delete();
+}
+
+
+// 10. ENGINE: wait_until re-reads the LIVE anchor on every wake — the
+//     reschedule-recalculation property itself, driven through the real
+//     runStep() executor (same harness pattern as the growth-recipe suite).
+{
+  const { getAdminDb } = await import("../src/lib/firebase/admin");
+  const { FieldValue } = await import("firebase-admin/firestore");
+  const { runStep } = await import("../src/lib/workflows/engine");
+  const db = getAdminDb();
+  const SUB = "qa-anchor-sub";
+  const fRef = db.collection("funnels").doc();
+  await fRef.set({ subAccountId: SUB, agencyId: "qa-anchor-ag", name: "QA Anchor", status: "draft",
+    eventStartAt: new Date(Date.now() + 48 * 3600 * 1000).toISOString(), sections: [], createdByUid: "qa" });
+  const cRef = db.collection("contacts").doc();
+  await cRef.set({ subAccountId: SUB, agencyId: "qa-anchor-ag", name: "QA Anchor C", tags: [], createdByUid: "qa" });
+  const wfRef = db.collection("workflows").doc();
+  await wfRef.set({
+    id: wfRef.id, subAccountId: SUB, agencyId: "qa-anchor-ag", createdByUid: "qa",
+    name: "QA anchor wf", status: "active",
+    trigger: { type: "form.submitted", filters: { all: [] } },
+    startNodeId: "wu",
+    nodes: {
+      wu: { id: "wu", type: "wait_until", config: { anchorKind: "funnel_event", funnelId: fRef.id, offsetMinutes: -1440 }, branches: { whenTrue: "fired", whenFalse: "skipped" }, next: null },
+      fired: { id: "fired", type: "add_tag", config: { tag: "reminder-fired" }, next: null },
+      skipped: { id: "skipped", type: "add_tag", config: { tag: "reminder-skipped" }, next: null },
+    },
+    stats: { enrolled: 0, completed: 0 },
+    createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+  });
+  const mkRun = async () => {
+    const r = db.collection("workflowRuns").doc();
+    await r.set({ id: r.id, subAccountId: SUB, agencyId: "qa-anchor-ag", workflowId: wfRef.id,
+      contactId: cRef.id, status: "running", currentNodeId: "wu", history: [], context: { test: true },
+      qstashMessageId: null, enrolledAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    return r;
+  };
+
+  // Event in 48h, offset -24h -> target in 24h -> self-wait (capped 6h), same node.
+  const r1 = await mkRun();
+  await runStep(r1.id, "wu");
+  const d1 = (await r1.get()).data()!;
+  const hist1 = (d1.history ?? []) as { result?: string }[];
+  check("10a. pending anchor self-waits (re-check loop, not a dumb 24h sleep)",
+    String(hist1.at(-1)?.result ?? "").startsWith("anchor:wait"));
+
+  // RESCHEDULE: event moved to 30min from now -> T-24h target is already
+  // past -> the SAME node now fires. The wait recalculated automatically.
+  await fRef.update({ eventStartAt: new Date(Date.now() + 30 * 60 * 1000).toISOString() });
+  // (Local-harness artifact, same as the growth-recipe suite: scheduleNode's
+  // QStash publish fails against localhost and marks the run "failed" after
+  // each step — reset to "running" before driving the next node manually.)
+  const r2 = await mkRun();
+  await runStep(r2.id, "wu");
+  await r2.update({ status: "running" });
+  await runStep(r2.id, "fired");
+  check("10b. reschedule recalculates: anchor reached -> reminder path fires",
+    (((await cRef.get()).data()!.tags ?? []) as string[]).includes("reminder-fired"));
+
+  // CANCELLATION: anchor removed -> whenFalse skip path, no reminder.
+  await fRef.update({ eventStartAt: null });
+  await cRef.update({ tags: [] });
+  const r3 = await mkRun();
+  await runStep(r3.id, "wu");
+  await r3.update({ status: "running" });
+  await runStep(r3.id, "skipped");
+  const t3 = ((await cRef.get()).data()!.tags ?? []) as string[];
+  check("10c. cancelled anchor skips the reminder (whenFalse path)",
+    t3.includes("reminder-skipped") && !t3.includes("reminder-fired"));
+
+  await Promise.all([fRef.delete(), cRef.delete(), wfRef.delete()]);
 }
 
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);

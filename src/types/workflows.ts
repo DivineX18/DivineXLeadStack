@@ -57,6 +57,7 @@ export interface WorkflowTrigger {
 /* --------------------------------- Nodes ------------------------------- */
 
 export type WorkflowNodeType =
+  | "wait_until"
   | "send_email"
   | "send_sms"
   | "whatsapp_template"
@@ -165,6 +166,24 @@ export interface WhatsappTemplateConfig {
 export interface WaitConfig {
   seconds: number;
 }
+/** Event-anchored, self-correcting wait ("24h before the appointment",
+ *  "1h before the webinar", "2h after it ends") — NOT a dumb duration. On
+ *  every wake the executor re-reads the LIVE anchor, so a rescheduled
+ *  appointment or an edited webinar date recalculates automatically; a
+ *  cancelled/missing anchor routes down the whenFalse branch instead of
+ *  firing a reminder for something that no longer exists. */
+export interface WaitUntilConfig {
+  /** "funnel_event" anchors to funnels/{funnelId}.eventStartAt (one shared
+   *  time — a webinar); "contact_event" anchors to the CONTACT's next
+   *  upcoming calendar event (their own appointment). */
+  anchorKind: "funnel_event" | "contact_event";
+  /** Required for funnel_event. */
+  funnelId?: string;
+  /** Minutes relative to the anchor. Negative = before (-1440 = 24h
+   *  before), positive = after (+120 = 2h after). */
+  offsetMinutes: number;
+}
+
 export interface IfElseConfig {
   conditions: ConditionGroup;
 }

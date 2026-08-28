@@ -169,6 +169,11 @@ export async function PATCH(
         : null;
     patch.bridge = bridge;
   }
+  if ("eventStartAt" in body) {
+    const v = body.eventStartAt;
+    patch.eventStartAt =
+      typeof v === "string" && !Number.isNaN(Date.parse(v)) ? new Date(v).toISOString() : null;
+  }
   if (body.sections !== undefined) {
     const sections = sanitizeSections(body.sections);
     if (sections === null) {

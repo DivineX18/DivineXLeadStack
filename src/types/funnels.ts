@@ -562,6 +562,11 @@ export interface FunnelDoc {
     nextHeadline?: string;
     nextCta?: string;
   };
+  /** For webinar/event funnels: the event's start datetime (ISO 8601 with
+   *  timezone). Anchors wait_until reminder nodes — editing this in the
+   *  builder RESCHEDULES every pending reminder automatically (the engine
+   *  re-reads it live on each wake). */
+  eventStartAt?: string | null;
   /** The uploaded lead-magnet file (PDF) this funnel delivers after signup —
    *  stored via the chunked funnelAssets store; `url` is the public serve
    *  path (/api/funnel-asset/[id]) appended into the confirmation workflow
