@@ -124,6 +124,21 @@ check("6o. /lp welcome bar renders delivery + download", src("src/app/lp/[funnel
     AUTHENTICITY_MODELS.enterprise_software.find((x) => x.kind === "deliverable_preview")?.fabricability === "synthesizable");
 }
 
+// 10. EVIDENCE COMPOSITION — the final trust laws
+{
+  const src = (f: string) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
+  const bg = src("src/components/funnels/sections/benefits-grid-section.tsx");
+  check("10a. no-pseudo-media law: published rows without images recompose to editorial text", bg.includes("published && !item.imageUrl") && bg.includes("realImageCount === 0"));
+  check("10b. builder preview keeps labeled placeholders (operator guidance)", bg.includes("MediaPlaceholder"));
+  const caps = src("src/lib/ai-suite/capabilities.ts");
+  check("10c. creator-led compact hero (info/coaching portrait -> founder_image avatar)", caps.includes('layout: "founder_image"'));
+  check("10d. product-led decision point (product image routed to the offer)", caps.includes("productImageUrl ? s2 : { ...s2, config: { ...c2, productImageUrl: heroImg } }"));
+  check("10e. evidence-priority + trust-question reasoning in generation rules", caps.includes("EVIDENCE PRIORITY") && caps.includes("PRIMARY TRUST QUESTION"));
+  const { TRUST_QUESTIONS } = await import("../src/lib/funnels/authenticity");
+  check("10f. every category carries its trust question (manifest header)", Object.values(TRUST_QUESTIONS).every((q) => q.length > 20));
+  check("10g. manifest leads with the trust question", caps.includes("the page must answer"));
+}
+
 // 7. Ascend Intelligence bridge (read side): synced frameworks reach the
 //    generation-context loader with real content and full card shape.
 {

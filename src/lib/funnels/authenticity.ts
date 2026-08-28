@@ -55,6 +55,19 @@ export interface EvidenceAsset {
   note: string;
 }
 
+/** The PRIMARY TRUST QUESTION each category's page must answer — heads the
+ *  asset manifest so operators see WHY the assets matter. */
+export const TRUST_QUESTIONS: Record<AuthenticityCategory, string> = {
+  local_service_health: "Can I trust these people with my body, and will I feel safe here?",
+  local_service_trade: "Will these people actually show up, solve it, and treat me fairly?",
+  physical_product: "Is this product real, right for me, and worth paying for?",
+  b2b_services: "Are these people credible enough to trust with an important business decision?",
+  enterprise_software: "Is this vendor credible enough to enter our evaluation/procurement process?",
+  info_product: "Is this person worth listening to?",
+  coaching: "Can this specific person actually get me the outcome?",
+  nonprofit: "Is this organization legitimate, and will my support actually matter?",
+};
+
 export const AUTHENTICITY_MODELS: Record<AuthenticityCategory, EvidenceAsset[]> = {
   local_service_health: [
     { kind: "team_photo", label: "Photo of the doctor/team", value: "high", fabricability: "never", note: "Patients book people, not pages — a real face answers 'who will I meet.'" },

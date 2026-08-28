@@ -24,6 +24,7 @@ const ICONS: Record<BenefitIconType, typeof Check> = {
 
 export function BenefitsGridSection({
   config,
+  published,
   accentColor,
   iconPalette,
   iconStyle,
@@ -38,6 +39,7 @@ export function BenefitsGridSection({
    *  "filled" = solid accent bg + white icon (agency/bold). "outline" = no
    *  bg, colored icon only (luxury/professional, minimal icon usage). */
   iconStyle?: "outline" | "duotone" | "filled";
+  published?: boolean;
 }) {
   // A section without valid content renders NOTHING on the customer-facing
   // page — never an empty band or a builder message (art-direction mandate).
@@ -47,7 +49,19 @@ export function BenefitsGridSection({
   // a checklist). Items render their real imageUrl when set; otherwise the
   // designed placeholder panel labeled with the item's subject, so the page
   // looks finished while telling the operator exactly what photo belongs there.
-  if (config.variant === "alternating_image") {
+  // EVIDENCE COMPOSITION LAW: absence of evidence changes the COMPOSITION —
+  // it never renders a visual stand-in for missing media. On the published
+  // page, rows without a real image become full-width editorial text rows
+  // (numbered, typography-led); if NO row has a real image the whole
+  // section recomposes to the flowing-checklist letter layout. The builder
+  // preview keeps the labeled placeholder panels (operator guidance).
+  const realImageCount = config.items.filter((it) => !!it.imageUrl).length;
+  const effectiveVariant =
+    config.variant === "alternating_image" && published && realImageCount === 0
+      ? undefined
+      : config.variant;
+
+  if (effectiveVariant === "alternating_image") {
     return (
       <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
         <div className="mx-auto max-w-4xl">
@@ -64,6 +78,23 @@ export function BenefitsGridSection({
               const Icon = ICONS[item.iconType ?? "check"];
               const badgeColor = iconPalette && iconPalette.length > 0 ? iconPalette[i % iconPalette.length] : accentColor;
               const flip = i % 2 === 1;
+              if (published && !item.imageUrl) {
+                // Editorial text row: the content carries itself.
+                return (
+                  <div key={i} className="mx-auto flex w-full max-w-2xl items-start gap-4">
+                    <span
+                      className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-extrabold text-white"
+                      style={{ backgroundColor: badgeColor }}
+                    >
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="text-xl font-bold tracking-tight">{item.title}</h3>
+                      {item.description && <p className="mt-1.5 leading-relaxed opacity-80">{item.description}</p>}
+                    </div>
+                  </div>
+                );
+              }
               return (
                 <div key={i} className="grid items-center gap-5 sm:grid-cols-2 sm:gap-10">
                   <div className={flip ? "sm:order-2" : ""}>
