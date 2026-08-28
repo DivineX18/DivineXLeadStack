@@ -170,6 +170,8 @@ export function defaultSectionConfig(type: FunnelSectionType): FunnelSectionConf
   switch (type) {
     case "hero":
       return { headline: "Write your headline here", subheadline: "", mediaType: "none" };
+    case "business_footer":
+      return { businessName: "" };
     case "proof_strip":
       return { variant: "logos", logos: [] };
     case "offer":

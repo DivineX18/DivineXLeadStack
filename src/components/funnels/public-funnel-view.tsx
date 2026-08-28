@@ -1,5 +1,6 @@
 "use client";
 
+import { BusinessFooterSection, TopIdentityStrip } from "@/components/funnels/sections/business-footer-section";
 import { Archivo, Fraunces, Inter } from "next/font/google";
 import type { ComponentType } from "react";
 import type { FunnelDoc, FunnelSectionType } from "@/types/funnels";
@@ -47,6 +48,7 @@ import { resolveEffectiveDesignTokens } from "@/lib/funnels/design-strategy";
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SECTION_COMPONENTS: Record<FunnelSectionType, ComponentType<any>> = {
+  business_footer: BusinessFooterSection,
   hero: HeroSection,
   proof_strip: ProofStripSection,
   offer: OfferSection,
@@ -248,6 +250,17 @@ export function PublicFunnelView({
             <img src={funnel.logoUrl} alt="" className="h-8 w-auto object-contain sm:h-10" />
           </div>
         )}
+        {(() => {
+          // Business Reality Engine: slim identity strip above the hero,
+          // sourced from the business_footer section's verified data.
+          const footerSec = funnel.sections.find((x) => x.type === "business_footer");
+          return footerSec ? (
+            <TopIdentityStrip
+              config={footerSec.config as never}
+              accentColor={funnel.accentColor}
+            />
+          ) : null;
+        })()}
         {funnel.sections.map((section, i) => {
           const Component = SECTION_COMPONENTS[section.type];
           if (!Component) return null;

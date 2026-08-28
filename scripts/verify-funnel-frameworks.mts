@@ -296,8 +296,13 @@ try {
     createdFunnelIds.push(result.ref!.id);
     const snap = await db.doc(`funnels/${result.ref!.id}`).get();
     const sections = snap.data()?.sections as { type: string; config: Record<string, unknown> }[];
-    check("5c. lead_magnet funnel has exactly one section (the hero)", sections.length === 1 && sections[0]?.type === "hero");
-    const hero = sections[0];
+    // Business Reality Engine: every generated page now ends with the
+    // auto-appended identity footer (real workspace data). The one-fold
+    // contract is about PERSUASION sections — hero only — plus identity.
+    const persuasion = sections.filter((x) => x.type !== "business_footer");
+    check("5c. lead_magnet funnel has exactly one persuasion section (hero) + identity footer",
+      persuasion.length === 1 && persuasion[0]?.type === "hero");
+    const hero = persuasion[0];
     check("5d. hero carries the bullets directly (no separate benefits section to hold them)", (hero?.config.bullets as string[])?.length === 2);
     check("5e. hero's CTA defaults to a popup form", (hero?.config.cta as { style?: string } | undefined)?.style === "popup_form");
     check("5f. hero is wired to a real capture form (formId set)", typeof hero?.config.formId === "string" && (hero?.config.formId as string).length > 0);

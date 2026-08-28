@@ -257,6 +257,10 @@ export interface SalesArgumentPlanLike {
  *  components' null-render rules — an empty/non-rendered section can never
  *  own a required belief (belief-assignment semantics rule). */
 export function sectionHasRenderableContent(s: FunnelSection): boolean {
+  if (s.type === "business_footer") {
+    const c = s.config as unknown as Record<string, unknown>;
+    return !!(c.businessName || c.email || c.phone || c.address);
+  }
   const c = s.config as unknown as Record<string, unknown>;
   const len = (v: unknown) => (Array.isArray(v) ? v.length : 0);
   switch (s.type) {

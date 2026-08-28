@@ -75,8 +75,9 @@ import {
 } from "@/lib/server/funnels-service";
 import { scoreFunnelDesign } from "@/lib/design-intelligence/scoring";
 import { reviewFunnelCopy, type FunnelCopyReview } from "@/lib/conversion/funnel-copy-review";
-import type { BenefitsGridConfig, CtaBannerConfig, FunnelDoc, FunnelSection, FunnelSectionType, HeroConfig, PhotoGalleryConfig, TicketTiersConfig } from "@/types/funnels";
+import type { IncludedConfig, BenefitsGridConfig, CtaBannerConfig, FunnelDoc, FunnelSection, FunnelSectionType, HeroConfig, PhotoGalleryConfig, TicketTiersConfig } from "@/types/funnels";
 import { imageryConfigured, searchSubjectImages } from "@/lib/funnels/imagery";
+import { inferAuthenticityCategory, stockAllowedFor, assetManifest } from "@/lib/funnels/authenticity";
 import type { DesignPackId } from "@/lib/funnels/design-packs";
 import { FUNNEL_FRAMEWORKS, computeDecisionComplexity, computePersuasionDepth, type DecisionComplexity } from "@/lib/funnels/frameworks";
 import {
@@ -3711,6 +3712,12 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           description:
             "VERIFIABLE EVIDENCE ONLY — logo/badge images (customer logos, partner/association logos, certifications, press) the user EXPLICITLY provided as real image URLs in this conversation. Renders as a grayscale evidence strip under the hero. NEVER invent, guess, or placeholder these — no supplied evidence means OMIT this entirely and the page simply shows none. The operator can also add logos later in the builder (Trust logos section + the Files & delivery image upload).",
         },
+        authenticity_category: {
+          type: "string",
+          enum: ["local_service_health", "local_service_trade", "physical_product", "b2b_services", "enterprise_software", "info_product", "coaching", "nonprofit"],
+          description:
+            "BUSINESS AUTHENTICITY category — which real-world evidence model applies to this business (drives which assets the page requests and where stock imagery is honest vs counterfeit). Pick the closest: a dental practice is local_service_health; skincare ecom is physical_product; a warehouse integrator is b2b_services; a cybersecurity platform is enterprise_software; a PDF guide is info_product. Inferred from genre/archetype when omitted.",
+        },
         supplied_evidence_heading: {
           type: "string",
           description: "Heading over the evidence strip, matched to what the logos ARE: 'Trusted by', 'As featured in', 'Certifications & memberships'. Only with supplied_evidence_logos. Max 50 chars.",
@@ -4257,6 +4264,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             return items.length ? items : null;
           })(),
           suppliedEvidenceHeading: str(raw, "supplied_evidence_heading").trim().slice(0, 50),
+          authenticityCategory: str(raw, "authenticity_category").trim(),
           automationPlan: (() => {
             const v = (raw as Record<string, unknown>).automation_plan ?? (raw as Record<string, unknown>).automationPlan;
             if (!v || typeof v !== "object" || Array.isArray(v)) return null;
@@ -5096,9 +5104,36 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // team/proof contexts. Runs BEFORE applyArtDirection so an urgent hero
       // with a real photo composes as the immersive full-bleed treatment
       // instead of dropping media. Best-effort: any failure changes nothing.
+      // BUSINESS REALITY ENGINE (slice A): resolve the authenticity category
+      // once — it gates imagery-as-evidence below and drives the asset
+      // manifest in the reply. Model override wins; genre+archetype floor.
+      const authenticityCategory = ((): import("@/lib/funnels/authenticity").AuthenticityCategory => {
+        const explicit = args.authenticityCategory as string | undefined;
+        const valid = ["local_service_health", "local_service_trade", "physical_product", "b2b_services", "enterprise_software", "info_product", "coaching", "nonprofit"];
+        if (explicit && valid.includes(explicit)) return explicit as never;
+        return inferAuthenticityCategory({ genre, archetype: (args.visualArchetype as string) || effectiveArchetype });
+      })();
+
       try {
         const imageryBrief = mediaSubject || heroMediaBrief || "";
-        if (imageryBrief && imageryConfigured()) {
+        // Slice C — IMAGERY AS EVIDENCE: ambient stock only where the
+        // category says ambience IS honest evidence. Product-led categories
+        // (physical_product, enterprise_software) need the PRODUCT — stock
+        // "products" would be counterfeit evidence, so those pages compose
+        // without hero/benefit stock and the manifest requests the real
+        // asset instead.
+        const ambientStockOk =
+          stockAllowedFor(authenticityCategory, "office_photo") ||
+          stockAllowedFor(authenticityCategory, "job_photo") ||
+          stockAllowedFor(authenticityCategory, "facility_photo") ||
+          stockAllowedFor(authenticityCategory, "texture_photo");
+        const categoryBlocksAmbient =
+          authenticityCategory === "physical_product" ||
+          authenticityCategory === "enterprise_software" ||
+          authenticityCategory === "nonprofit" ||
+          authenticityCategory === "info_product" ||
+          authenticityCategory === "coaching";
+        if (imageryBrief && imageryConfigured() && ambientStockOk && !categoryBlocksAmbient) {
           const photos = await searchSubjectImages(imageryBrief, 4);
           if (photos.length > 0) {
             let photoIdx = 0;
@@ -5135,6 +5170,19 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         // Imagery is always best-effort — never blocks funnel creation.
       }
 
+      // BUSINESS REALITY ENGINE (slice E) — visual semantics: composition
+      // follows what the content IS, not just the emotional register.
+      // Deliverable-led categories present "what's included" as a framed
+      // example-preview document (the real contents, visibly an example);
+      // product-led offers surface the real product image prominently the
+      // moment one exists (OfferConfig.productImageUrl renders large).
+      if (authenticityCategory === "enterprise_software" || authenticityCategory === "b2b_services") {
+        sectionsToSave = sectionsToSave.map((s2) =>
+          s2.type === "included"
+            ? { ...s2, config: { ...(s2.config as IncludedConfig), variant: "deliverable_preview" as const } }
+            : s2,
+        );
+      }
       sectionsToSave = applyArtDirection(sectionsToSave, artProfile);
       // Sales Argument Engine: every section carries its persuasion JOB
       // (hook / belief_shift / promise / mechanism / proof / offer /
@@ -5156,6 +5204,35 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           ctaLabel: (args.ctaLabel as string) || undefined,
         });
       sectionsToSave = applySalesArgument(sectionsToSave, effectivePlan);
+      // BUSINESS REALITY ENGINE (slice B) — the identity layer. Every page
+      // ends grounded in the real organization: business name (agent
+      // profile > workspace name), contact email/phone (accountContact),
+      // the funnel's logo. Resolved from VERIFIED workspace data only;
+      // fields that don't exist stay absent (real-or-absent contract).
+      // Appended after the close so the argument ends, then the business
+      // signs it. Skipped only if the model/chain already added one.
+      if (!sectionsToSave.some((x) => x.type === "business_footer")) {
+        try {
+          const { resolveWorkspaceIdentity } = await import("@/lib/funnels/identity");
+          const identity = await resolveWorkspaceIdentity(subAccountId);
+          if (args.logoUrl && typeof args.logoUrl === "string") identity.logoUrl = args.logoUrl as string;
+          if (identity.businessName || identity.email || identity.phone) {
+            sectionsToSave = [
+              ...sectionsToSave,
+              {
+                id: `identity-${Date.now()}`,
+                type: "business_footer" as const,
+                config: identity as Record<string, unknown>,
+                argumentRole: "identity",
+                canvas: "clean" as const,
+              } as (typeof sectionsToSave)[number],
+            ];
+          }
+        } catch {
+          // Identity is additive — a resolve failure never blocks the page.
+        }
+      }
+
       // STORY-FOLD LAW: every rendered beat gets a distinct surface — no two
       // adjacent sections share a background, so each story beat reads as its
       // own frame (register-appropriate: calm pages alternate soft surfaces).
@@ -5396,6 +5473,24 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         summaryLines.push(
           `Copy check: ${copyReview.score}/100 · ${copyReview.issues.length} item(s) flagged for a quick review (e.g. generic phrasing, vague CTA). Open the funnel to tighten them.`,
         );
+      }
+
+      // BUSINESS REALITY ENGINE (slice D): tell the operator exactly which
+      // real assets would most transform this page's credibility — the
+      // system asks for evidence instead of faking it. Upload path: the
+      // builder's Files & delivery card (images get a paste-ready URL).
+      {
+        const manifest = assetManifest(authenticityCategory, 4);
+        if (manifest.length > 0) {
+          summaryLines.push(
+            "",
+            "AUTHENTICITY — assets that would most strengthen this page",
+            ...manifest.map(
+              (m2, i2) => `${i2 + 1}. ${m2.label} — ${m2.note}`,
+            ),
+            "Upload via the builder's Files & delivery card; images give you a URL to paste into any media field. The page publishes cleanly without them and upgrades the moment they exist.",
+          );
+        }
       }
 
       summaryLines.push(

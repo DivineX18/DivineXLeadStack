@@ -43,6 +43,7 @@ export type FunnelSectionType =
   | "stats"
   | "callout"
   | "team"
+  | "business_footer"
   | "image_text"
   | "photo_gallery";
 
@@ -177,6 +178,27 @@ export interface StoryConfig {
   photoPlaceholderLabel?: string;
   /** Builder-only shooting brief — see HeroConfig.mediaPlaceholderBrief. */
   photoPlaceholderBrief?: string;
+}
+
+/** BUSINESS IDENTITY (Business Reality Engine, slice B) — the section that
+ *  grounds the page in a real organization. Every field is VERIFIED
+ *  workspace/customer data (agent-profile business name, accountContact,
+ *  the funnel's logo, operator-typed credentials) — never invented. The
+ *  renderer shows only the fields that exist, so an empty deployment gets
+ *  a minimal-but-real footer rather than fabricated depth. Also feeds the
+ *  slim top identity strip above the hero. */
+export interface BusinessFooterConfig {
+  businessName?: string;
+  logoUrl?: string;
+  tagline?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  /** Real credentials/registrations the operator supplied ("ADA member",
+   *  "Licensed & insured — TX #12345"). Never model-invented. */
+  credentials?: string[];
+  /** Render the slim identity strip above the hero too. Default true. */
+  showTopBar?: boolean;
 }
 
 export interface FaqConfig {
@@ -364,6 +386,12 @@ export interface BeforeAfterConfig {
 export interface IncludedConfig {
   headline?: string;
   items: { title: string; description?: string }[];
+  /** Content-shape variant (Business Reality Engine, slice E).
+   *  "deliverable_preview" renders the REAL items inside framed document
+   *  chrome labeled "Example preview" — presentation of verified facts
+   *  (the actual methodology/contents), visibly an example, never dressed
+   *  as historical customer evidence. Default: the checklist layout. */
+  variant?: "deliverable_preview";
 }
 
 /** The Grand-Slam / ClickFunnels value stack: the operator's REAL deliverables,
@@ -479,6 +507,7 @@ export type FunnelSectionConfig =
   | CalloutConfig
   | TeamConfig
   | ImageTextConfig
+  | BusinessFooterConfig
   | PhotoGalleryConfig;
 
 /** Per-section background "canvas" — the art-direction layer's assignable

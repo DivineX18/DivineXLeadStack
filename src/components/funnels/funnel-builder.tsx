@@ -17,6 +17,7 @@ import { FunnelDomainsSection } from "@/components/funnels/funnel-domains-sectio
 import { FunnelDesignFeedback } from "@/components/funnels/funnel-design-feedback";
 import type { LeadForm } from "@/types/forms";
 import type {
+  BusinessFooterConfig,
   AgendaConfig,
   BeforeAfterConfig,
   BenefitsGridConfig,
@@ -69,6 +70,7 @@ const GENRE_LABELS: Record<FunnelGenre, string> = {
 };
 
 const SECTION_LABELS: Record<FunnelSectionType, string> = {
+  business_footer: "Business identity / footer",
   hero: "Hero",
   proof_strip: "Trust logos / rating",
   offer: "Offer",
@@ -143,6 +145,7 @@ const SECTION_DEFAULTS: Record<FunnelSectionType, () => FunnelSection["config"]>
   team: () => ({ members: [] }) satisfies TeamConfig,
   image_text: () => ({ blocks: [] }) satisfies ImageTextConfig,
   photo_gallery: () => ({ images: [], layout: "grid" }) satisfies PhotoGalleryConfig,
+  business_footer: () => ({ businessName: "", email: "", phone: "" }) satisfies BusinessFooterConfig,
 };
 
 // Deliberately does NOT trim each line. These textareas are controlled —

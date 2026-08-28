@@ -85,6 +85,45 @@ check("6n. published pages drop placeholder-only hero media", src("src/component
 check("6o. /lp welcome bar renders delivery + download", src("src/app/lp/[funnelId]/page.tsx").includes("Download it now"));
 
 
+// 8. BUSINESS REALITY ENGINE slice B — identity layer
+{
+  const db2 = (await import("../src/lib/firebase/admin")).getAdminDb();
+  const SUB_ID = "qa-identity-sub";
+  await db2.doc(`subAccounts/${SUB_ID}`).set({ id: SUB_ID, name: "QA Identity Co", agencyId: "qa-id-ag",
+    accountContact: { name: "Ops", email: "hello@qaidentity.test", phone: "+15125550000" } });
+  await db2.doc(`subAccounts/${SUB_ID}/aiAgent/profile`).set({ businessName: "QA Identity Dental" });
+  const { resolveWorkspaceIdentity } = await import("../src/lib/funnels/identity");
+  const id1 = await resolveWorkspaceIdentity(SUB_ID);
+  check("8a. identity resolves real workspace data (profile name wins)",
+    id1.businessName === "QA Identity Dental" && id1.email === "hello@qaidentity.test" && id1.phone === "+15125550000");
+  check("8b. no invented fields (address/credentials absent)", !("address" in id1) && !("credentials" in id1));
+  await db2.doc(`subAccounts/${SUB_ID}/aiAgent/profile`).delete();
+  const id2 = await resolveWorkspaceIdentity(SUB_ID);
+  check("8c. falls back to workspace name; empty workspace yields empty identity", id2.businessName === "QA Identity Co");
+  await db2.doc(`subAccounts/${SUB_ID}`).delete();
+  const { sectionHasRenderableContent } = await import("../src/lib/funnels/art-direction");
+  check("8d. footer with real data is renderable; empty is not",
+    sectionHasRenderableContent({ id: "x", type: "business_footer", config: { businessName: "A" } } as never) === true &&
+    sectionHasRenderableContent({ id: "y", type: "business_footer", config: {} } as never) === false);
+}
+
+// 9. BUSINESS REALITY ENGINE slices A/C/E — category models + evidence law
+{
+  const { inferAuthenticityCategory, stockAllowedFor, assetManifest, AUTHENTICITY_MODELS } = await import("../src/lib/funnels/authenticity");
+  check("9a. category inference: dental archetype -> health service", inferAuthenticityCategory({ genre: "lead_gen", archetype: "medical_wellness" }) === "local_service_health");
+  check("9b. category inference: tripwire -> physical product", inferAuthenticityCategory({ genre: "tripwire", archetype: null }) === "physical_product");
+  check("9c. evidence law: product photos may NEVER be stocked", !stockAllowedFor("physical_product", "product_photo") && !stockAllowedFor("physical_product", "packaging_photo"));
+  check("9d. evidence law: service ambience MAY be stocked", stockAllowedFor("local_service_health", "office_photo") && stockAllowedFor("b2b_services", "facility_photo"));
+  check("9e. nonprofit program photos are never-stock (no counterfeit impact)", !stockAllowedFor("nonprofit", "program_photo"));
+  check("9f. every category has a manifest, high-value first", (Object.keys(AUTHENTICITY_MODELS) as (keyof typeof AUTHENTICITY_MODELS)[]).every((c) => {
+    const m2 = assetManifest(c, 4);
+    return m2.length >= 3 && m2[0].value === "high";
+  }));
+  check("9g. synthesizable assets are presentation-of-real-facts only (guide cover, deliverable preview)",
+    AUTHENTICITY_MODELS.info_product.find((x) => x.kind === "guide_cover")?.fabricability === "synthesizable" &&
+    AUTHENTICITY_MODELS.enterprise_software.find((x) => x.kind === "deliverable_preview")?.fabricability === "synthesizable");
+}
+
 // 7. Ascend Intelligence bridge (read side): synced frameworks reach the
 //    generation-context loader with real content and full card shape.
 {
