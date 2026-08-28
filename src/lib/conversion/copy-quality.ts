@@ -117,6 +117,11 @@ const FABRICATION = [
   // answer in 60 seconds" when the supplied fact was only "a dispatcher
   // answers during operating hours".
   { re: /\b(?:answer|response|reply|arrive|arrival|on.?site|call(?:ed)?\s?back)\w*\b.{0,25}\b(?:in|within)\s+\d+\s*(?:seconds?|minutes?|hours?)\b|\b(?:in|within)\s+\d+\s*(?:seconds?|minutes?|hours?)\b.{0,25}\b(?:answer|response|arrival|on.?site)\b/i, severity: "high" as const, note: "Response/arrival-time promise — only state a speed commitment the business actually made." },
+  // Invented dollar-outcome promises ("reclaim $300-$800/month", "save
+  // $2,000 a year") — caught in the Evidence Composition certification:
+  // the model attached unsupplied recovery figures to a real audience
+  // stat. An outcome number the business never stated is fabricated proof.
+  { re: /\b(?:save|reclaim|recover|find|earn|add|make)\w*\s+(?:up to\s+)?\$\d[\d,]*(?:\s*[-–]\s*\$?\d[\d,]*)?(?:\s*\/?\s*(?:mo|month|week|year|yr|day))?\b/i, severity: "high" as const, note: "Dollar-outcome promise — only state a figure the business actually supplied." },
   // Invented impact ratios ("$25/month funds one child's program").
   { re: /\$\d+(?:\/(?:mo|month))?\s+(?:funds|provides|feeds|educates|sponsors|buys)\s+(?:one|a|an|\d+)\b/i, severity: "high" as const, note: "Impact-ratio claim — only use a real, supplied program figure." },
 ];

@@ -14,10 +14,11 @@ const BASELINES = {
   "enterprise-security-a": "HIsPy6iTij1kANrcfAvK",
 };
 const bc = JSON.parse(readFileSync(new URL("../.bre-certify.json", import.meta.url), "utf8"));
+const only = process.argv[3]; // e.g. "-d" -> only keys ending in -d
 const targets = [
   ...Object.entries(BASELINES).map(([k, id]) => ({ k, id })),
   ...Object.entries(bc).map(([k, id]) => ({ k, id })),
-];
+].filter((t) => !only || t.k.endsWith(only));
 
 const browser = await puppeteer.launch({
   executablePath: "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
@@ -26,7 +27,7 @@ const browser = await puppeteer.launch({
 });
 for (const t of targets) {
   const page = await browser.newPage();
-  await page.setViewport({ width: 1280, height: 900, deviceScaleFactor: 1 });
+  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
   try {
     const resp = await page.goto(`https://crm.divinex.io/lp/${t.id}`, { waitUntil: "networkidle0", timeout: 90_000 });
     // Scroll through so IntersectionObserver entrance animations fire.
@@ -42,7 +43,14 @@ for (const t of targets) {
     });
     await new Promise((r) => setTimeout(r, 1100));
     await page.screenshot({ path: `${OUT}/${t.k}.png`, fullPage: true });
-    console.log(`${t.k}: ${resp?.status()} -> ${OUT}/${t.k}.png`);
+    // Above-the-fold judgment: realistic desktop viewport crop.
+    await page.screenshot({ path: `${OUT}/${t.k}--fold.png`, fullPage: false });
+    // Mobile.
+    await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2 });
+    await page.reload({ waitUntil: "networkidle0", timeout: 90_000 });
+    await new Promise((r) => setTimeout(r, 900));
+    await page.screenshot({ path: `${OUT}/${t.k}--mobile.png`, fullPage: true });
+    console.log(`${t.k}: ${resp?.status()} -> full + fold + mobile`);
   } catch (e) {
     console.log(`${t.k}: FAILED ${e.message}`);
   }

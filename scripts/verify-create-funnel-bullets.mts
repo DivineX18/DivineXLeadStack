@@ -482,6 +482,8 @@ function check(label: string, ok: boolean, detail?: string) {
   check("5h. imperative flags are ADVISORY (low severity)", lowOnly("Schedule Your Technical Evaluation"));
   check("5i. response-time promise trips fabricationRisk", hasFabricationRisk(mkHead("Get a Real Answer in 60 Seconds")));
   check("5j. negation frame still flagged", weak("Why This Isn't a Gimmick"));
+  check("5k. invented dollar-outcome promise trips fabricationRisk", hasFabricationRisk(mkHead("The audit 120k followers use to reclaim $300-$800/month")));
+  check("5l. a plain price does NOT trip it", !hasFabricationRisk(mkHead("The $39 Sensitive Skin Starter Kit")));
 }
 
 // 6. Supplied-evidence validate round-trip: real https URLs only, capped, never invented.

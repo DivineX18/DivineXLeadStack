@@ -108,8 +108,9 @@ const model = process.env.AI_REPLIES_DEFAULT_MODEL?.trim() || "anthropic/claude-
 const user = await auth.createUser({ email: `qa-bre-${Date.now()}@test.local` });
 const results: Record<string, string> = {};
 
+const onlyD = process.argv.includes("--evidence-pass");
 for (const probe of PROBES) {
-  for (const variant of ["b", "c"] as const) {
+  for (const variant of (onlyD ? (["d"] as const) : (["b", "c"] as const))) {
     const SUB = `qa-bre-${probe.key}-${variant}`;
     await db.doc(`agencies/qa-bre-ag`).set({ id: "qa-bre-ag", name: "QA BRE" });
     await db.doc(`subAccounts/${SUB}`).set({
@@ -118,7 +119,7 @@ for (const probe of PROBES) {
     });
     await db.doc(`subAccounts/${SUB}/aiAgent/profile`).set({ businessName: probe.workspace.businessName });
     const ctx = { uid: user.uid, subAccountId: SUB, agencyId: "qa-bre-ag", subAccountRole: "subAccountAdmin" } as unknown as AiSuiteActionContext;
-    const brief = variant === "b" ? probe.briefB : probe.briefC;
+    const brief = variant === "b" ? probe.briefB : probe.briefC; // "d" = same fixtures as C, new engine
 
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -150,6 +151,10 @@ for (const probe of PROBES) {
   }
 }
 
-writeFileSync(new URL("../.bre-certify.json", import.meta.url), JSON.stringify(results, null, 2));
+{
+  let prior: Record<string, string> = {};
+  try { prior = JSON.parse(readFileSync(new URL("../.bre-certify.json", import.meta.url), "utf8")); } catch { /* first run */ }
+  writeFileSync(new URL("../.bre-certify.json", import.meta.url), JSON.stringify({ ...prior, ...results }, null, 2));
+}
 console.log("\nRESULTS:", JSON.stringify(results, null, 2));
 process.exit(0);
