@@ -465,6 +465,17 @@ function check(label: string, ok: boolean, detail?: string) {
     check(`4-${label} trips fabricationRisk`, hasFabricationRisk(mk(text)));
   }
   check("4-clean copy does NOT trip", !hasFabricationRisk(mk("A gentle cleanser for reactive skin, with a full ingredient list on every box.")));
+
+  // 5. Headline laws (user QA on the stress-test pages).
+  const mkHead = (headline: string) =>
+    evaluateFunnelCopy([{ id: "s1", type: "hero", config: { headline } }] as never);
+  const weak = (headline: string) => mkHead(headline).issues.some((i) => i.kind === "weak_headline");
+  check("5a. booking-verb headline flagged", weak("Schedule Your Technical Evaluation"));
+  check("5b. 'Book Your…' flagged", weak("Book Your First Visit Without the Dread"));
+  check("5c. 'Find Out What…' flagged", weak("Find Out What's Actually Blocking Your Growth"));
+  check("5d. negative-word headline flagged", weak("Why Same-Day Repair Isn't a Gimmick for Us"));
+  check("5e. offer-led headline clean", !weak("A First Exam That Goes at Your Pace"));
+  check("5f. [YEAR] placeholder trips fabricationRisk", hasFabricationRisk(mkHead("Serving Phoenix Since [YEAR]")));
 }
 
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);

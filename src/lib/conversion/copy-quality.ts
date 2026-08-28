@@ -29,7 +29,8 @@ export type CopyIssueKind =
   | "generic_filler"
   | "possible_fabrication"
   | "name_swap_generic"
-  | "vague_cta";
+  | "vague_cta"
+  | "weak_headline";
 
 export type CopyIssueSeverity = "high" | "medium" | "low";
 
@@ -157,8 +158,45 @@ function isCtaField(field: string): boolean {
   return /(^|\.)cta|label$|buttontext|button_text/i.test(field);
 }
 
+/** Headline-bearing fields (hero + section headers) — the fields the
+ *  headline laws below apply to. */
+function isHeadlineField(field: string): boolean {
+  return /(^|\.)(headline|problemheadline|solutionheadline)$/i.test(field);
+}
+
+/** Unreplaced template placeholders — "Serving Phoenix Since [YEAR]" shipped
+ *  live in the 10-customer stress test. A bracketed ALL-CAPS token is never
+ *  legitimate copy; treated as high-severity so the review flag trips. */
+const TEMPLATE_PLACEHOLDER = /\[(?:[A-Z][A-Z0-9 _-]{0,14})\]/;
+
+/** Negative/objection words that must never appear in a HEADLINE — naming
+ *  the fear you're dispelling plants it ("Without the Dread", "Isn't a
+ *  Gimmick", "Not a Scam"). The pain belongs in problem-section BODY copy,
+ *  voiced as the prospect's own words — never in the promise line. */
+const HEADLINE_NEGATIVES = /\b(dread|gimmick|scam|ripoff|rip-off|not a (?:scam|gimmick|trick)|isn't a (?:scam|gimmick|trick)|without the (?:fear|dread|pain|anxiety))\b/i;
+
+/** Booking-verb openers — "Schedule Your Technical Evaluation", "Book Your
+ *  First Visit". The imperative ask is the BUTTON's job; a headline that
+ *  opens with it says nothing about the offer's value. */
+const BOOKING_VERB_OPENER = /^(schedule|book|request|register|claim|apply|sign up|get started|start|find out|discover|learn|download|take) (your|a|an|the|for|my|now|what|which|how|why)\b/i;
+
 function evaluateField(sectionType: string, field: string, text: string, issues: CopyIssue[]): void {
   const lower = text.toLowerCase();
+
+  // Unreplaced template placeholder — always a shipping bug.
+  if (TEMPLATE_PLACEHOLDER.test(text)) {
+    issues.push({ kind: "possible_fabrication", severity: "high", sectionType, field, excerpt: excerpt(text), note: "Unreplaced template placeholder (e.g. [YEAR]) — fill in the real fact or delete the claim." });
+  }
+
+  // Headline laws (hero headline + section headers only).
+  if (isHeadlineField(field)) {
+    if (BOOKING_VERB_OPENER.test(text.trim())) {
+      issues.push({ kind: "weak_headline", severity: "medium", sectionType, field, excerpt: excerpt(text), note: "Headline opens with the booking action — that's the button's job. Lead with the offer/outcome itself." });
+    }
+    if (HEADLINE_NEGATIVES.test(text)) {
+      issues.push({ kind: "weak_headline", severity: "medium", sectionType, field, excerpt: excerpt(text), note: "Headline names the fear/objection it's dispelling — state the positive promise instead; resolve the fear in body copy." });
+    }
+  }
 
   // Generic filler — banned buzzwords.
   for (const w of BANNED_BUZZWORDS) {
