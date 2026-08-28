@@ -55,6 +55,10 @@ try {
   cards.push(...renderPrinciplesAsCards(principles));
 } catch { /* no principles yet */ }
 cards.push(...renderFrameworksAsCards(CONVERSION_FRAMEWORKS));
+try {
+  const { listAscendFrameworks, renderAscendFrameworksAsCards } = await import("../src/lib/conversion/ascend-frameworks");
+  cards.push(...renderAscendFrameworksAsCards(await listAscendFrameworks()).map((c) => `${c.title}\n${c.body}`) as never[]);
+} catch { /* no synced frameworks */ }
 
 const system =
   "You are Zeno, the conversion strategist and funnel builder inside DivineX Flow. " +

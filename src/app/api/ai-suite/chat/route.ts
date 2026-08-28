@@ -227,6 +227,15 @@ export async function POST(request: Request) {
     // the same AiSuiteKnowledgeCard mechanism the prompt builder already knows,
     // so buildAiSuiteSystemPrompt needs zero changes.
     cards.push(...renderFrameworksAsCards(CONVERSION_FRAMEWORKS));
+    // Ascend Intelligence Library (synced frameworks — see
+    // lib/conversion/ascend-frameworks.ts). Best-effort: zero synced docs or
+    // a read failure leaves the context exactly as before the bridge existed.
+    try {
+      const { listAscendFrameworks, renderAscendFrameworksAsCards } = await import("@/lib/conversion/ascend-frameworks");
+      cards.push(...renderAscendFrameworksAsCards(await listAscendFrameworks()));
+    } catch {
+      // Swallowed — same rationale as the learned-principles read above.
+    }
   }
 
   const systemPrompt = buildAiSuiteSystemPrompt({

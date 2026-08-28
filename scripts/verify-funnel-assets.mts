@@ -84,5 +84,17 @@ check("6m. thanks page has paid order-confirmation variant", src("src/app/lp/[fu
 check("6n. published pages drop placeholder-only hero media", src("src/components/funnels/sections/hero-section.tsx").includes('published && !config.mediaUrl && config.mediaType !== "none"'));
 check("6o. /lp welcome bar renders delivery + download", src("src/app/lp/[funnelId]/page.tsx").includes("Download it now"));
 
+
+// 7. Ascend Intelligence bridge (read side): synced frameworks reach the
+//    generation-context loader with real content and full card shape.
+{
+  const { listAscendFrameworks, renderAscendFrameworksAsCards } = await import("../src/lib/conversion/ascend-frameworks");
+  const fws = await listAscendFrameworks();
+  check("7a. synced Ascend frameworks load (run sync-ascend-frameworks first)", fws.length >= 1);
+  check("7b. every framework carries real content", fws.every((f) => f.content.length > 200));
+  const cards2 = renderAscendFrameworksAsCards(fws);
+  check("7c. cards carry id/levels/title/body", cards2.every((c) => c.id.startsWith("ascend-framework-") && c.levels.includes("sub-account") && c.body.length > 200));
+}
+
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);
 if (failures > 0) process.exit(1);

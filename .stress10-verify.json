@@ -5,15 +5,15 @@
       {
         "name": "create_funnel",
         "ok": true,
-        "note": "created yQi87uS643sUj8Cu2duu"
+        "note": "created RYx2dUNYhyLn0siUHu0E"
       }
     ],
     "error": null,
     "funnels": [
       {
-        "id": "yQi87uS643sUj8Cu2duu",
-        "url": "/lp/yQi87uS643sUj8Cu2duu",
-        "name": "Find your growth bottleneck in 5 minutes",
+        "id": "RYx2dUNYhyLn0siUHu0E",
+        "url": "/lp/RYx2dUNYhyLn0siUHu0E",
+        "name": "Growth Bottleneck Scorecard",
         "genre": "lead_magnet",
         "persuasionDepth": "standard",
         "decisionComplexity": "low",
@@ -26,35 +26,36 @@
         "bridge": null,
         "salesArgument": {
           "beliefChain": [
-            "Most growth stalls point to ONE specific bottleneck, not everything at once.",
-            "The right diagnostic can name that bottleneck in minutes, not weeks of analysis.",
-            "Once they know the bottleneck, the next step is clear: a conversation with someone who specializes in fixing it.",
-            "A free self-assessment is the fastest way to move from paralysis to action."
+            "My growth has stalled and I'm uncertain why.",
+            "The fix is probably obvious — more traffic, more content, or better sales skills.",
+            "Actually, I can see which of the five layers (traffic/conversion/sales/ops/retention) is my real constraint with a diagnostic.",
+            "Once I know which layer is broken, I can prioritize the fix instead of guessing.",
+            "A strategy call with someone who understands this framework is worth having."
           ],
-          "corePromise": "You'll know your exact growth bottleneck and which single lever to pull next.",
-          "primaryObjection": "Skepticism that a free tool could be thorough enough to actually help, or concern it's really just a sales trap."
+          "corePromise": "Identify your real growth constraint in 5 minutes, so you fix the right layer first.",
+          "primaryObjection": "Is this just a lead-gen trap? Will I be pressured into a call or upsell?"
         },
         "sections": [
           {
             "type": "hero",
             "canvas": null,
             "role": "hook",
-            "serves": "Most growth stalls point to ONE specific bottleneck, not everything at once.",
-            "headline": "Find your growth bottleneck in 5 minutes",
-            "cta": "Get Your Free Scorecard",
+            "serves": "My growth has stalled and I'm uncertain why.",
+            "headline": "Find Your Real Growth Constraint in 5 Minutes",
+            "cta": "Get Your Scorecard",
             "priceCents": null
           }
         ],
         "workflows": [
           {
-            "id": "caiAD55NZpfvKvRvffVr",
-            "name": "Find your growth bottleneck in 5 minutes — follow-up",
+            "id": "90i5rbcrEiaoRox97onf",
+            "name": "Growth Bottleneck Scorecard — follow-up",
             "trigger": {
               "type": "form.submitted",
               "filters": {
                 "all": []
               },
-              "formId": "lGC4i5tjQj8fSKFumowe"
+              "formId": "iSSFAUCY3wyS2ruD6JOl"
             },
             "nodes": [
               {
@@ -69,443 +70,19 @@
                 "subject": null,
                 "bodyPreview": null,
                 "seconds": null,
-                "tag": "Growth Bottleneck Scorecard Downloaded"
+                "tag": "Growth Scorecard Downloaded"
               },
               {
                 "type": "send_email",
-                "subject": "Your Growth Bottleneck Scorecard is ready",
-                "bodyPreview": "Hi there,\n\nYour scorecard is attached. Open it, run through the quick self-assessment, and you'll have a clear picture of where your growth is actually stuck.\n\nOnce you know your bottleneck, the next step is usually a conversation about which lever moves the needle fastest for your business. If that sounds useful, reply to this email and we can find a time.\n\nLooking forward to seeing what you disc",
+                "subject": "Your Growth Bottleneck Scorecard Results (+ What to Fix First)",
+                "bodyPreview": "Your scorecard is ready.\n\nOpen it now to see which of the five layers (traffic, conversion, sales, operations, or retention) is your actual constraint — and what to prioritize first.\n\nOnce you know your constraint, you'll see clear next steps. If you'd like to talk through the diagnosis and map out a 90-day plan, I'm available for a free 30-minute strategy call — just reply to this email or book a",
                 "seconds": null,
                 "tag": null
               },
               {
                 "type": "notify",
-                "subject": "New lead: Find your growth bottleneck in 5 minutes",
-                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just submitted \"Find your growth bottleneck in 5 minutes\" and was tagged \"Growth Bottleneck Scorecard Downloaded\". A follow-up task has been created.",
-                "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "wait",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": 86400,
-                "tag": null
-              },
-              {
-                "type": "create_task",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": null,
-                "tag": null
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "key": "6-dentist",
-    "toolCalls": [
-      {
-        "name": "create_funnel",
-        "ok": true,
-        "note": "created jzCWpvQdgFbPZbNklaFa"
-      }
-    ],
-    "error": null,
-    "funnels": [
-      {
-        "id": "jzCWpvQdgFbPZbNklaFa",
-        "url": "/lp/jzCWpvQdgFbPZbNklaFa",
-        "name": "A first exam where you stay in control",
-        "genre": "lead_gen",
-        "persuasionDepth": "lean",
-        "decisionComplexity": "low",
-        "artDirection": {
-          "transformation": "fear_to_safety",
-          "energy": "calm",
-          "density": "medium",
-          "humanity": "people_led"
-        },
-        "bridge": null,
-        "salesArgument": {
-          "beliefChain": [
-            "Most dental visits put the dentist in control, not the patient",
-            "This practice is intentionally different—they've redesigned the visit around anxious patients",
-            "That means I can control the pace, know costs up front, and stop if I need to",
-            "That's enough reassurance to book a first visit"
-          ],
-          "corePromise": "A dental exam where you stay in charge—no judgment, no surprises, no panic",
-          "primaryObjection": "I'm still scared they'll move too fast or pressure me into something I'm not ready for"
-        },
-        "sections": [
-          {
-            "type": "hero",
-            "canvas": null,
-            "role": "hook",
-            "serves": "Most dental visits put the dentist in control, not the patient",
-            "headline": "A first exam where you stay in control",
-            "cta": "See Available Times",
-            "priceCents": null
-          },
-          {
-            "type": "photo_gallery",
-            "canvas": null,
-            "role": "proof",
-            "serves": null,
-            "headline": null,
-            "cta": null,
-            "priceCents": null
-          },
-          {
-            "type": "proof_strip",
-            "canvas": null,
-            "role": "proof",
-            "serves": null,
-            "headline": null,
-            "cta": null,
-            "priceCents": null
-          },
-          {
-            "type": "benefits_grid",
-            "canvas": "warm_paper",
-            "role": "promise",
-            "serves": "This practice is intentionally different—they've redesigned the visit around anxious patients + That means I can control the pace, know costs up front, and stop if I need to",
-            "headline": "What your first visit includes",
-            "cta": null,
-            "priceCents": null
-          },
-          {
-            "type": "offer",
-            "canvas": "clean",
-            "role": "offer",
-            "serves": "That's enough reassurance to book a first visit",
-            "headline": "",
-            "cta": "See Available Times",
-            "priceCents": null
-          },
-          {
-            "type": "faq",
-            "canvas": "warm_paper",
-            "role": "objections",
-            "serves": "That means I can control the pace, know costs up front, and stop if I need to",
-            "headline": null,
-            "cta": null,
-            "priceCents": null
-          },
-          {
-            "type": "cta_banner",
-            "canvas": "brand_tint",
-            "role": "close",
-            "serves": "That's enough reassurance to book a first visit",
-            "headline": "Ready to take the first step on your terms",
-            "cta": "See Available Times",
-            "priceCents": null
-          }
-        ],
-        "workflows": [
-          {
-            "id": "uItvDB4dLIobuHUvvRFq",
-            "name": "A first exam where you stay in control — follow-up",
-            "trigger": {
-              "type": "form.submitted",
-              "filters": {
-                "all": []
-              },
-              "formId": "G3IlhfPI8kIZaNRdyTga"
-            },
-            "nodes": [
-              {
-                "type": "create_deal",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "add_tag",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": null,
-                "tag": "A first exam where you stay in control r"
-              },
-              {
-                "type": "send_email",
-                "subject": "You're in — A first exam where you stay in control",
-                "bodyPreview": "Thanks for signing up! We've got your details and will be in touch shortly.\n\n{{unsubscribeLink}}",
-                "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "notify",
-                "subject": "New lead: A first exam where you stay in control",
-                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just submitted \"A first exam where you stay in control\" and was tagged \"A first exam where you stay in control r\". A follow-up task has been created.",
-                "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "wait",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": 86400,
-                "tag": null
-              },
-              {
-                "type": "create_task",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": null,
-                "tag": null
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "key": "7-hvac",
-    "toolCalls": [
-      {
-        "name": "create_funnel",
-        "ok": true,
-        "note": "created 8jIJxuMYW2eLhpVdYt6h"
-      }
-    ],
-    "error": null,
-    "funnels": [
-      {
-        "id": "8jIJxuMYW2eLhpVdYt6h",
-        "url": "/lp/8jIJxuMYW2eLhpVdYt6h",
-        "name": "AC Down in the Heat? Get a Real Answer in 60 Seconds",
-        "genre": "lead_gen",
-        "persuasionDepth": "lean",
-        "decisionComplexity": "low",
-        "artDirection": {
-          "transformation": "panic_to_relief",
-          "energy": "urgent",
-          "density": "rich",
-          "humanity": "people_led"
-        },
-        "bridge": null,
-        "salesArgument": {
-          "beliefChain": [
-            "A real person actually answers the phone right now (not a robot or voicemail).",
-            "Same-day appointments are genuinely available—we tell you YES or NO in one call, not 'maybe'.",
-            "We quote the full price before any work starts, so no surprise invoice.",
-            "Every hour the AC is off costs comfort and money; calling takes 60 seconds and solves it today."
-          ],
-          "corePromise": "Get your AC back today—no runaround, no surprise costs, just a real person who knows if we can help you right now.",
-          "primaryObjection": "They'll overcharge me once I commit, or I'll be on hold forever and it won't be same-day anyway."
-        },
-        "sections": [
-          {
-            "type": "hero",
-            "canvas": null,
-            "role": "hook",
-            "serves": "A real person actually answers the phone right now (not a robot or voicemail).",
-            "headline": "AC Down in the Heat? Get a Real Answer in 60 Seconds",
-            "cta": "Call Now for Same-Day Availability",
-            "priceCents": null
-          },
-          {
-            "type": "proof_strip",
-            "canvas": null,
-            "role": "proof",
-            "serves": null,
-            "headline": null,
-            "cta": null,
-            "priceCents": null
-          },
-          {
-            "type": "benefits_grid",
-            "canvas": "dark_immersive",
-            "role": "promise",
-            "serves": "Same-day appointments are genuinely available—we tell you YES or NO in one call, not 'maybe'. + We quote the full price before any work starts, so no surprise invoice.",
-            "headline": "What Happens When You Call",
-            "cta": null,
-            "priceCents": null
-          },
-          {
-            "type": "offer",
-            "canvas": "brand_tint",
-            "role": "offer",
-            "serves": "Every hour the AC is off costs comfort and money; calling takes 60 seconds and solves it today.",
-            "headline": "",
-            "cta": "Call Now for Same-Day Availability",
-            "priceCents": null
-          },
-          {
-            "type": "faq",
-            "canvas": null,
-            "role": "objections",
-            "serves": null,
-            "headline": null,
-            "cta": null,
-            "priceCents": null
-          },
-          {
-            "type": "cta_banner",
-            "canvas": "clean",
-            "role": "close",
-            "serves": "Every hour the AC is off costs comfort and money; calling takes 60 seconds and solves it today.",
-            "headline": "Your AC Doesn't Get Better on Its Own",
-            "cta": "Call Now for Same-Day Availability",
-            "priceCents": null
-          }
-        ],
-        "workflows": []
-      }
-    ]
-  },
-  {
-    "key": "9-enterprise-saas",
-    "toolCalls": [
-      {
-        "name": "create_funnel",
-        "ok": true,
-        "note": "created 91lSAi5LMYhKRpzQZhBL"
-      }
-    ],
-    "error": null,
-    "funnels": [
-      {
-        "id": "91lSAi5LMYhKRpzQZhBL",
-        "url": "/lp/91lSAi5LMYhKRpzQZhBL",
-        "name": "Technical Evaluation Designed for Multi-Stakeholder Procurement",
-        "genre": "application",
-        "persuasionDepth": "lean",
-        "decisionComplexity": "enterprise",
-        "artDirection": {
-          "transformation": "uncertainty_to_confidence",
-          "energy": "calm",
-          "density": "rich",
-          "humanity": "balanced"
-        },
-        "bridge": null,
-        "salesArgument": {
-          "beliefChain": [
-            "This vendor treats evaluation seriously and understands multi-stakeholder governance.",
-            "They will show us integration depth, deployment options, and threat detection logic—not just a feature list.",
-            "The evaluation is designed for us to make a real decision, not to be sold.",
-            "We can start now and stay on track for Q4/Q1 procurement."
-          ],
-          "corePromise": "A technical evaluation that earns buy-in from security, IT, ops, and procurement—or confidence that this platform isn't the right fit.",
-          "primaryObjection": "We're already talking to three other vendors; why add another evaluation to our plate?"
-        },
-        "sections": [
-          {
-            "type": "hero",
-            "canvas": null,
-            "role": "hook",
-            "serves": "This vendor treats evaluation seriously and understands multi-stakeholder governance.",
-            "headline": "Technical Evaluation Designed for Multi-Stakeholder Procurement",
-            "cta": "Schedule Technical Evaluation",
-            "priceCents": null
-          },
-          {
-            "type": "photo_gallery",
-            "canvas": null,
-            "role": "proof",
-            "serves": null,
-            "headline": null,
-            "cta": null,
-            "priceCents": null
-          },
-          {
-            "type": "benefits_grid",
-            "canvas": "warm_paper",
-            "role": "promise",
-            "serves": "The evaluation is designed for us to make a real decision, not to be sold.",
-            "headline": "What Your Evaluation Includes",
-            "cta": null,
-            "priceCents": null
-          },
-          {
-            "type": "included",
-            "canvas": "clean",
-            "role": "offer",
-            "serves": "We can start now and stay on track for Q4/Q1 procurement.",
-            "headline": "Who This Evaluation Is For",
-            "cta": null,
-            "priceCents": null
-          },
-          {
-            "type": "agenda",
-            "canvas": "warm_paper",
-            "role": "mechanism",
-            "serves": "The evaluation is designed for us to make a real decision, not to be sold.",
-            "headline": null,
-            "cta": null,
-            "priceCents": null
-          },
-          {
-            "type": "comparison",
-            "canvas": "clean",
-            "role": "belief_shift",
-            "serves": "They will show us integration depth, deployment options, and threat detection logic—not just a feature list.",
-            "headline": "Technical Evaluation vs. The Typical Vendor Demo",
-            "cta": null,
-            "priceCents": null
-          },
-          {
-            "type": "cta_banner",
-            "canvas": "brand_tint",
-            "role": "close",
-            "serves": "We can start now and stay on track for Q4/Q1 procurement.",
-            "headline": "Start Your Technical Evaluation",
-            "cta": "Schedule Technical Evaluation",
-            "priceCents": null
-          },
-          {
-            "type": "offer",
-            "canvas": "warm_paper",
-            "role": "offer",
-            "serves": "We can start now and stay on track for Q4/Q1 procurement.",
-            "headline": "",
-            "cta": "Schedule Technical Evaluation",
-            "priceCents": null
-          }
-        ],
-        "workflows": [
-          {
-            "id": "1VMoIGq6OxqrFy9qR36Q",
-            "name": "Technical Evaluation Designed for Multi-Stakeholder Procurement — follow-up",
-            "trigger": {
-              "type": "form.submitted",
-              "filters": {
-                "all": []
-              },
-              "formId": "vFtusv6EQygmxmi1TQOK"
-            },
-            "nodes": [
-              {
-                "type": "create_deal",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "add_tag",
-                "subject": null,
-                "bodyPreview": null,
-                "seconds": null,
-                "tag": "Technical Evaluation Designed for Multi-"
-              },
-              {
-                "type": "send_email",
-                "subject": "You're in — Technical Evaluation Designed for Multi-Stakeholder Procurement",
-                "bodyPreview": "Thanks for signing up! We've got your details and will be in touch shortly.\n\n{{unsubscribeLink}}",
-                "seconds": null,
-                "tag": null
-              },
-              {
-                "type": "notify",
-                "subject": "New lead: Technical Evaluation Designed for Multi-Stakeholder Procurement",
-                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just submitted \"Technical Evaluation Designed for Multi-Stakeholder Procurement\" and was tagged \"Technical Evaluation Designed for Multi-\". A follow-up task has been created.",
+                "subject": "New lead: Growth Bottleneck Scorecard",
+                "bodyPreview": "{{contact.firstName}} ({{contact.email}}) just submitted \"Growth Bottleneck Scorecard\" and was tagged \"Growth Scorecard Downloaded\". A follow-up task has been created.",
                 "seconds": null,
                 "tag": null
               },

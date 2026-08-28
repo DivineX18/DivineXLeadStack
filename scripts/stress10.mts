@@ -103,6 +103,10 @@ try {
   cards.push(...renderPrinciplesAsCards(await listActivePrinciplesForArchetype(null)));
 } catch { /* none yet */ }
 cards.push(...renderFrameworksAsCards(CONVERSION_FRAMEWORKS));
+try {
+  const { listAscendFrameworks, renderAscendFrameworksAsCards } = await import("../src/lib/conversion/ascend-frameworks");
+  cards.push(...renderAscendFrameworksAsCards(await listAscendFrameworks()).map((c) => `${c.title}\n${c.body}`) as never[]);
+} catch { /* no synced frameworks */ }
 const system =
   "You are Zeno, the conversion strategist and funnel builder inside DivineX Flow. " +
   "When the user asks you to build a funnel, call the create_funnel tool with COMPLETE arguments — you are the strategist, copy chief, offer architect, and creative director. " +
