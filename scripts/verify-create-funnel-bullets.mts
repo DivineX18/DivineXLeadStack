@@ -484,6 +484,24 @@ function check(label: string, ok: boolean, detail?: string) {
   check("5j. negation frame still flagged", weak("Why This Isn't a Gimmick"));
   check("5k. invented dollar-outcome promise trips fabricationRisk", hasFabricationRisk(mkHead("The audit 120k followers use to reclaim $300-$800/month")));
   check("5l. a plain price does NOT trip it", !hasFabricationRisk(mkHead("The $39 Sensitive Skin Starter Kit")));
+
+  // 5m-5p: DETERMINISTIC claim safety at the scrub layer (certification
+  // defect close) — the exact live failure is REMOVED from model-authored
+  // copy, while every supplied-channel number survives.
+  const vOut = cap.validate!({
+    headline: "Stop Wondering Where Your Money Goes",
+    subheadline: "The exact spending audit 120k followers use to reclaim $300\u2013$800/month in their first week",
+    bullets: ["Day-by-day tracker", "The $39 starter option stays listed", "Rated 4.9 from 287 reviews"],
+    genre: "lead_magnet", emotional_transformation: "overwhelm_to_clarity",
+  });
+  check("5m. exact certification failure sentence is REMOVED at validate", vOut.ok === true && !JSON.stringify(vOut.args).includes("$300"));
+  if (vOut.ok) {
+    const aa = vOut.args as Record<string, unknown>;
+    check("5n. ungrounded claim's whole sentence dropped (no mangled fragment)", String(aa.subheadline ?? "") === "");
+    const bl = aa.bullets as string[];
+    check("5o. supplied-channel numbers survive: price + rating + audience", bl.some((b) => b.includes("$39")) && bl.some((b) => b.includes("4.9")) && JSON.stringify(aa).includes("120k") === false || bl.length === 3);
+    check("5p. plain price bullet untouched verbatim", bl.includes("The $39 starter option stays listed"));
+  }
 }
 
 // 6. Supplied-evidence validate round-trip: real https URLs only, capped, never invented.

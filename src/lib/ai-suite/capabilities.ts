@@ -260,6 +260,25 @@ function stripEmDashes(text: string): string {
     .replace(/\s+([.,;:])/g, "$1");
 }
 
+/** Ungrounded dollar-outcome promises ("reclaim $300-$800/month") are
+ *  removed at the SENTENCE level from model-authored copy — deterministic
+ *  claim safety, not just a review flag. Rationale: every verifiable
+ *  quantified fact flows through a typed supplied channel (price_cents,
+ *  real_rating, event_start_at, supplied_evidence_*); dollar-OUTCOME
+ *  figures have no such channel, so a model-authored outcome number is
+ *  ungrounded by construction. A business with a real, provable figure
+ *  adds it in the builder — operator-typed copy is operator-owned (the
+ *  same trust contract as testimonials). Prices ("the $39 kit") carry no
+ *  outcome verb and are untouched. */
+const OUTCOME_CLAIM = /\b(?:save|reclaim|recover|find|earn|add|make|generate)\w*\s+(?:you\s+|up to\s+)?\$\d[\d,]*(?:\s*[-–]\s*\$?\d[\d,]*)?(?:\s*\/?\s*(?:mo|month|week|year|yr|day))?\b/i;
+function stripUngroundedOutcomeClaims(text: string): string {
+  if (!OUTCOME_CLAIM.test(text)) return text;
+  const kept = text
+    .split(/(?<=[.!?])\s+/)
+    .filter((sentence) => !OUTCOME_CLAIM.test(sentence));
+  return kept.join(" ").trim();
+}
+
 function stripToolSyntaxDebris(text: string): string {
   // TRUNCATE at the first debris tag rather than excising tags inline:
   // everything after leaked scaffolding belongs to a DIFFERENT parameter
@@ -267,7 +286,7 @@ function stripToolSyntaxDebris(text: string): string {
   // YOUR GUIDE' — inline removal would weld "AFTER YOUR GUIDE" onto the
   // subheadline; truncation keeps each field's own content only).
   const i = text.search(/<\/?(?:an[a-z_]*|parameter|invoke|function[a-z_]*)\b/i);
-  return stripEmDashes(i === -1 ? text : text.slice(0, i)).trim();
+  return stripUngroundedOutcomeClaims(stripEmDashes(i === -1 ? text : text.slice(0, i))).trim();
 }
 
 function str(raw: unknown, key: string): string {
