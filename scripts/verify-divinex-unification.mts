@@ -214,6 +214,17 @@ await db.doc(`subAccounts/${SUB}`).set({ id: SUB, agencyId: AG, name: "QA Unify"
     readFileSync("/Users/boss/DivineX-Business-Intelligence/artifacts/api-server/src/lib/brandDiscovery.ts", "utf8").includes("headlessRender"));
 }
 
+// ── 7. LIVE-SMOKE REGRESSIONS (bugs the deployed chain surfaced) ──
+{
+  const ascendSrc = readFileSync("/Users/boss/DivineX-Business-Intelligence/artifacts/api-server/src/lib/divinexContract.ts", "utf8");
+  check("7a. discovery re-publishes AFTER assets are inserted (snapshot carries them)",
+    /if \(inserted > 0\) await publishProfile/.test(ascendSrc));
+  const bd = readFileSync("/Users/boss/DivineX-Business-Intelligence/artifacts/api-server/src/lib/brandDiscovery.ts", "utf8");
+  check("7b. icon fonts excluded from brand typography", bd.includes("ICON_FONT_RE") && /fontawesome/i.test(bd));
+  check("7c. route paths are relative (router mounts at /api — no double prefix)",
+    !/router\.(get|post|patch)\("\/api\//.test(readFileSync("/Users/boss/DivineX-Business-Intelligence/artifacts/api-server/src/routes/divinex.ts", "utf8")));
+}
+
 await db.doc(`divinexProfiles/${SUB}`).delete();
 await db.doc(`subAccounts/${SUB}`).delete();
 console.log(`\n=== ${failures === 0 ? "ALL PASS" : `${failures} FAILURE(S)`} ===`);
