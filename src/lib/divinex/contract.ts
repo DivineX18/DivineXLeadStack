@@ -52,7 +52,18 @@ export interface DivinexProfileSnapshot {
   business: Record<string, unknown>;
   offers: { id: string; name: string; kind: string }[];
   brand: Record<string, unknown>;
-  assets: { id: number; fileUrl: string; fileType: string; purpose: string | null }[];
+  assets: {
+    id: number;
+    fileUrl: string;
+    fileType: string;
+    purpose: string | null;
+    sourcePageUrl?: string | null;
+    /** Slice 3: proposed marketing classification (customer-correctable). */
+    classification?: string | null;
+    confidence?: number | null;
+    /** "approved" gates every Flow consumer; discovery writes "candidate". */
+    status?: string;
+  }[];
   provenance: Record<string, unknown>;
 }
 

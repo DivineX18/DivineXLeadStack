@@ -78,6 +78,8 @@ export const CONDITION_OPS: { value: ConditionOp; label: string }[] = [
   { value: "has_tag", label: "has tag" },
   { value: "in_stage", label: "is in stage" },
   { value: "source_is", label: "source is" },
+  { value: "greater_than", label: "is greater than" },
+  { value: "less_than", label: "is less than" },
   { value: "lifecycle_state_is", label: "lifecycle state is (domain:state)" },
   { value: "lifecycle_state_in", label: "lifecycle state in (domain:a,b)" },
   { value: "lifecycle_state_not", label: "lifecycle state is not (domain:state)" },

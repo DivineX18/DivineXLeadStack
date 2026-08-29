@@ -30,6 +30,10 @@ export type ConditionOp =
   | "has_tag"
   | "in_stage"
   | "source_is"
+  // Numeric comparisons (Campaign Architect segmentation: "over $500k goes
+  // to consulting"). Additive — string ops are untouched.
+  | "greater_than"
+  | "less_than"
   // Lifecycle State Engine (additive — tags/stage ops untouched). Value
   // format: "domain:state" (is/not) or "domain:stateA,stateB" (in); the
   // contact's LATEST lifecycle record in that domain is the authority.

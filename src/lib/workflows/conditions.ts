@@ -34,6 +34,15 @@ function evalOne(contact: Contact, c: Condition): boolean {
       return String(raw ?? "") === val;
     case "not_equals":
       return String(raw ?? "") !== val;
+    case "greater_than":
+    case "less_than": {
+      // Numeric compare with digit extraction, so "$750,000" and "750000"
+      // both work (form values arrive as free text).
+      const num = Number(String(raw ?? "").replace(/[^0-9.-]/g, ""));
+      const target = Number(val.replace(/[^0-9.-]/g, ""));
+      if (!Number.isFinite(num) || !Number.isFinite(target)) return false;
+      return c.op === "greater_than" ? num > target : num < target;
+    }
     case "contains":
       return String(raw ?? "").toLowerCase().includes(val.toLowerCase());
     default:

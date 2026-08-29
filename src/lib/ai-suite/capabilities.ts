@@ -5131,6 +5131,36 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // team/proof contexts. Runs BEFORE applyArtDirection so an urgent hero
       // with a real photo composes as the immersive full-bleed treatment
       // instead of dropping media. Best-effort: any failure changes nothing.
+      // DIVINEX SLICE 6 — canonical profile as generation INPUT. The frozen
+      // engines are untouched: this only fills inputs the model didn't
+      // supply (brand accent/axes, approved evidence assets, real logo).
+      // No snapshot → profileInputs is null → certified behavior exactly.
+      const profileInputs = await (async () => {
+        try {
+          const { resolveProfileInputs } = await import("@/lib/divinex/consume-profile");
+          return await resolveProfileInputs(subAccountId);
+        } catch {
+          return null;
+        }
+      })();
+      if (profileInputs) {
+        // Brand axes: model choice always wins; the profile fills gaps.
+        if (!args.accentColor && profileInputs.accentColor) args.accentColor = profileInputs.accentColor;
+        if (!args.campaignEnergy && profileInputs.campaignEnergy) args.campaignEnergy = profileInputs.campaignEnergy;
+        if (!args.campaignHumanity && profileInputs.campaignHumanity) args.campaignHumanity = profileInputs.campaignHumanity;
+        if (!args.visualDensity && profileInputs.visualDensity) args.visualDensity = profileInputs.visualDensity;
+        if (!args.logoUrl && profileInputs.identity.logoUrl) args.logoUrl = profileInputs.identity.logoUrl;
+        // Approved, classified imagery — real evidence beats stock, and
+        // evidence-class marks ride the existing supplied-evidence strip.
+        if (!args.heroMediaUrl && profileInputs.assets.hero) {
+          args.heroMediaUrl = profileInputs.assets.hero;
+          args.heroMediaType = "image";
+        }
+        if (!args.suppliedEvidenceLogos && profileInputs.assets.evidenceLogos.length > 0) {
+          args.suppliedEvidenceLogos = profileInputs.assets.evidenceLogos.map((l) => ({ url: l.url, alt: l.label }));
+        }
+      }
+
       // BUSINESS REALITY ENGINE (slice A): resolve the authenticity category
       // once — it gates imagery-as-evidence below and drives the asset
       // manifest in the reply. Model override wins; genre+archetype floor.
@@ -5271,6 +5301,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         try {
           const { resolveWorkspaceIdentity } = await import("@/lib/funnels/identity");
           const identity = await resolveWorkspaceIdentity(subAccountId);
+          // Canonical profile identity wins when present (Slice 6).
+          if (profileInputs?.identity) {
+            if (profileInputs.identity.businessName) identity.businessName = profileInputs.identity.businessName;
+            if (profileInputs.identity.email) identity.email = profileInputs.identity.email;
+            if (profileInputs.identity.phone) identity.phone = profileInputs.identity.phone;
+            if (profileInputs.identity.logoUrl) identity.logoUrl = profileInputs.identity.logoUrl;
+          }
           if (args.logoUrl && typeof args.logoUrl === "string") identity.logoUrl = args.logoUrl as string;
           if (identity.businessName || identity.email || identity.phone) {
             sectionsToSave = [
@@ -5567,6 +5604,204 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         resultText: summaryLines.join("\n"),
         ref: { kind: "funnel", id: funnelId },
       };
+    },
+  },
+  {
+    name: "apply_workflow_plan",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Build the follow-up sequence for a campaign (draft)",
+    description:
+      "BUILD the follow-up you designed. Use when the user approves a follow-up plan, supplies their own emails ('here are my 5 emails'), or asks to change one ('make email 2 less aggressive', 'move it to day 4', 'delete the last one'). You describe the COMPLETE DESIRED STATE of the sequence and a deterministic compiler turns it into a real DRAFT workflow with real email subjects/bodies, real waits, real segmentation branches and a real exit condition — the customer never copy/pastes your emails into the builder. EDITS: re-send the whole desired state with the change applied (include workflow_id) — it overwrites, so send every message you want to keep, not just the changed one. CUSTOMER-SUPPLIED COPY IS INSTALLED VERBATIM: never rewrite emails the user gave you unless they asked. The workflow is always created as a DRAFT — it cannot contact anyone until the customer clicks Publish in Flow, so say that plainly when you report back. Timing is real: delay_hours is measured from signup. Segmentation becomes real branches: give the form field, the comparison and the tag. Every email automatically keeps the unsubscribe link and the goal-tag exit check, so a converted lead stops receiving the sequence.",
+    parameters: {
+      type: "object",
+      properties: {
+        campaign_name: { type: "string", description: "Short name for this campaign's follow-up (used as the workflow name)." },
+        form_id: { type: "string", description: "The capture form that triggers this sequence (from create_funnel's result or check_funnel_status). Omit only if the workflow should be wired up later." },
+        workflow_id: { type: "string", description: "EDIT MODE: the existing draft workflow to overwrite with this desired state. Omit to create a new draft." },
+        goal_tag: { type: "string", description: "Tag whose presence EXITS the sequence. Prefer the canonical auto-applied states: booked, purchased, replied, accepted, won." },
+        goal_state: { type: "string", description: "Plain-language state that ends the journey ('booked the consultation')." },
+        handoff_days: { type: "number", description: "Days from signup until a human-handoff task is created." },
+        messages: {
+          type: "array",
+          description: "The COMPLETE desired sequence, in order. The message with delay_hours 0 becomes the instant confirmation; the rest become goal-gated follow-ups.",
+          items: {
+            type: "object",
+            properties: {
+              delay_hours: { type: "number", description: "Hours after signup (0 = immediate)." },
+              subject: { type: "string" },
+              body: { type: "string", description: "Full email body. Customer-supplied copy goes in verbatim." },
+              purpose: { type: "string", description: "This message's job in the journey." },
+              comm_type: {
+                type: "string",
+                enum: ["transactional", "operational", "reminder", "nurture", "recovery", "sales_followup", "stewardship", "reactivation"],
+              },
+              origin: { type: "string", enum: ["supplied", "generated"], description: "'supplied' when the customer wrote it." },
+            },
+            required: ["delay_hours", "subject", "body", "purpose", "comm_type"],
+            additionalProperties: false,
+          },
+        },
+        segmentation: {
+          type: "array",
+          description: "Optional routing rules. Each becomes a real if_else branch that tags the lead; the tag then drives audiences, triggers and reporting.",
+          items: {
+            type: "object",
+            properties: {
+              field: { type: "string", description: "Form field name the routing reads (e.g. annual_revenue)." },
+              operator: { type: "string", enum: ["equals", "not_equals", "contains", "greater_than", "less_than"] },
+              value: { type: "string" },
+              tag: { type: "string", description: "Tag applied to matching leads." },
+              label: { type: "string", description: "Human label for the review summary." },
+            },
+            required: ["field", "operator", "value", "tag", "label"],
+            additionalProperties: false,
+          },
+        },
+        form_fields: {
+          type: "array",
+          description: "Fields the form must collect for the segmentation to work (name/label/type). Required whenever segmentation references a field.",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              label: { type: "string" },
+              type: { type: "string", enum: ["text", "email", "phone", "select", "number"] },
+              required: { type: "boolean" },
+            },
+            required: ["name", "label", "type"],
+            additionalProperties: false,
+          },
+        },
+        objective: {
+          type: "string",
+          enum: ["leads", "appointments", "sales", "applications", "donations", "registrations"],
+        },
+      },
+      required: ["campaign_name", "goal_tag", "goal_state", "messages", "objective"],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const r = raw as Record<string, unknown>;
+      const campaignName = str(raw, "campaign_name").slice(0, 80);
+      const goalTag = str(raw, "goal_tag").toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+      const goalState = str(raw, "goal_state").slice(0, 120);
+      if (!campaignName) return { ok: false, error: "campaign_name is required — name it yourself from the campaign context and call again." };
+      if (!goalTag || !goalState) return { ok: false, error: "goal_tag and goal_state are required (what ends this journey?) — decide them yourself and call again." };
+      const messagesRaw = Array.isArray(r.messages) ? r.messages : [];
+      const messages = messagesRaw
+        .filter((m): m is Record<string, unknown> => !!m && typeof m === "object")
+        .map((m) => ({
+          channel: "email" as const,
+          delayHours: Math.max(0, Math.min(2160, Number(m.delay_hours ?? m.delayHours) || 0)),
+          subject: typeof m.subject === "string" ? stripToolSyntaxDebris(m.subject.trim()).slice(0, 160) : "",
+          body: typeof m.body === "string" ? stripToolSyntaxDebris(fixLiteralNewlines(m.body.trim())) : "",
+          purpose: typeof m.purpose === "string" ? m.purpose.trim().slice(0, 120) : "",
+          commType: (["transactional", "operational", "reminder", "nurture", "recovery", "sales_followup", "stewardship", "reactivation"].includes(m.comm_type as string)
+            ? m.comm_type
+            : "nurture") as "transactional" | "nurture",
+          origin: (m.origin === "supplied" ? "supplied" : "generated") as "supplied" | "generated",
+          anchorOffsetHours: null,
+        }))
+        .filter((m) => m.subject && m.body)
+        .slice(0, 12);
+      if (messages.length === 0) {
+        return { ok: false, error: "at least one message with a subject and body is required — write them yourself (or use the customer's copy verbatim) and call again." };
+      }
+      const segmentation = (Array.isArray(r.segmentation) ? r.segmentation : [])
+        .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
+        .map((x) => ({
+          field: String(x.field ?? "").trim().slice(0, 60),
+          operator: (["equals", "not_equals", "contains", "greater_than", "less_than"].includes(x.operator as string) ? x.operator : "equals") as "equals" | "not_equals" | "contains" | "greater_than" | "less_than",
+          value: String(x.value ?? "").trim().slice(0, 120),
+          tag: String(x.tag ?? "").trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").slice(0, 40),
+          label: String(x.label ?? "").trim().slice(0, 80),
+        }))
+        .filter((x) => x.field && x.tag)
+        .slice(0, 8);
+      const formFields = (Array.isArray(r.form_fields) ? r.form_fields : [])
+        .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
+        .map((x) => ({
+          name: String(x.name ?? "").trim().slice(0, 60),
+          label: String(x.label ?? x.name ?? "").trim().slice(0, 80),
+          type: (["text", "email", "phone", "select", "number"].includes(x.type as string) ? x.type : "text") as "text",
+          required: x.required !== false,
+        }))
+        .filter((x) => x.name);
+      return {
+        ok: true,
+        args: {
+          campaignName,
+          formId: str(raw, "form_id").trim() || null,
+          workflowId: str(raw, "workflow_id").trim() || null,
+          goalTag,
+          goalState,
+          handoffDays: Number.isFinite(Number(r.handoff_days)) ? Math.max(0, Math.min(30, Number(r.handoff_days))) : 3,
+          messages,
+          segmentation,
+          formFields,
+          objective: ["leads", "appointments", "sales", "applications", "donations", "registrations"].includes(str(raw, "objective"))
+            ? str(raw, "objective")
+            : "leads",
+        },
+      };
+    },
+    summarize: (args) => {
+      const msgs = (args.messages as unknown[]).length;
+      const segs = (args.segmentation as unknown[]).length;
+      return `Build a DRAFT follow-up for "${args.campaignName}": ${msgs} email${msgs === 1 ? "" : "s"}${segs > 0 ? `, ${segs} segmentation rule${segs === 1 ? "" : "s"}` : ""}, exits on "${args.goalTag}".`;
+    },
+    execute: async (ctx, args) => {
+      const { applyWorkflowPlan } = await import("@/lib/divinex/apply-workflow-plan");
+      const { renderPlanSummary } = await import("@/lib/divinex/campaign");
+      const plan: import("@/lib/divinex/campaign").CampaignPlan = {
+        planVersion: 1 as const,
+        status: "approved" as const,
+        intent: {
+          businessProfileId: 0,
+          subAccountId: ctx.subAccountId!,
+          objective: args.objective as "leads",
+        },
+        funnelStrategy: {},
+        formRequirements: { fields: args.formFields as { name: string; label: string; type: "text"; required: boolean }[] },
+        segmentationRules: args.segmentation as never[],
+        followUpStrategy: {
+          goalTag: args.goalTag as string,
+          goalState: args.goalState as string,
+          handoffDays: args.handoffDays as number,
+          messages: args.messages as never[],
+        },
+        crmRequirements: {},
+        assetSelections: [],
+        brandProfileVersion: null,
+      };
+      plan.summary = renderPlanSummary(plan as never);
+      const result = await applyWorkflowPlan({
+        subAccountId: ctx.subAccountId!,
+        agencyId: ctx.agencyId!,
+        createdByUid: ctx.uid,
+        plan: plan as never,
+        workflowId: (args.workflowId as string) || undefined,
+        formId: (args.formId as string) || null,
+        displayName: args.campaignName as string,
+      });
+      if (!result.ok) {
+        throw new CapabilityUserError(
+          `Couldn't build the sequence: ${(result.errors ?? []).join("; ")}. Fix the plan and call apply_workflow_plan again.`,
+        );
+      }
+      const lines = [
+        "✅ Follow-up sequence built (DRAFT)",
+        "",
+        plan.summary,
+        "",
+        `${result.emailCount} email step${result.emailCount === 1 ? "" : "s"} with your exact copy, ${result.nodeCount} nodes total.`,
+        "Every email carries the unsubscribe link and a goal-tag check, so anyone who converts stops receiving it.",
+        "",
+        "STATUS",
+        "This is a DRAFT — it cannot contact anyone until you open it in Workflows and click Publish.",
+      ];
+      return { resultText: lines.join("\n"), ref: { kind: "workflow", id: result.workflowId! } };
     },
   },
   {

@@ -230,6 +230,43 @@ export async function POST(request: Request) {
     // Ascend Intelligence Library (synced frameworks — see
     // lib/conversion/ascend-frameworks.ts). Best-effort: zero synced docs or
     // a read failure leaves the context exactly as before the bridge existed.
+    // DIVINEX SLICE 7 — shared Zeno context: the canonical Business/Brand
+    // profile reaches Flow's Zeno the same way frameworks do, so one
+    // strategist knows the business across both products. Best-effort;
+    // no snapshot = today's context exactly.
+    try {
+      const { getDivinexProfileSnapshot } = await import("@/lib/divinex/contract");
+      const snap = await getDivinexProfileSnapshot(actionCtx.subAccountId!);
+      if (snap) {
+        const business = snap.business as Record<string, unknown>;
+        const brand = (snap.brand ?? {}) as { visual?: Record<string, unknown>; voice?: Record<string, unknown> };
+        const approved = (snap.assets ?? []).filter((a) => (a.status ?? "approved") === "approved");
+        const lines = [
+          `Business: ${business.name ?? "(unnamed)"}${business.type ? ` — ${business.type}` : ""}`,
+          business.websiteUrl ? `Website: ${business.websiteUrl}` : "",
+          business.audience ? `Audience: ${business.audience}` : "",
+          business.offer ? `Primary offer: ${business.offer}` : "",
+          snap.offers?.length ? `Known offers (reference by id): ${snap.offers.map((o) => `${o.id} = "${o.name}"`).join("; ")}` : "",
+          brand.voice ? `Brand voice: ${JSON.stringify(brand.voice).slice(0, 400)}` : "",
+          brand.visual ? `Brand visual: ${JSON.stringify(brand.visual).slice(0, 400)}` : "",
+          approved.length
+            ? `Approved brand assets (${approved.length}): ${approved.slice(0, 12).map((a) => `#${a.id} ${a.classification ?? "asset"}`).join(", ")}`
+            : "No approved brand assets yet — ask for the ones that would most strengthen the page rather than using stand-ins.",
+          "",
+          "USE THIS: never ask the customer for anything above — you already know it. Reference offers and assets by their ids. This is DURABLE business truth; campaign-specific intent (what to promote right now, to whom, with what follow-up) is gathered per campaign and never written back here.",
+        ].filter(Boolean);
+        cards.push({
+          id: "divinex-business-profile",
+          levels: ["sub-account"],
+          title: "This workspace's business + brand (canonical)",
+          location: "DivineX Business Profile",
+          keywords: ["business", "brand", "profile", "assets", "offers"],
+          body: lines.join("\n"),
+        });
+      }
+    } catch {
+      // Swallowed — Zeno works without the profile, same as before.
+    }
     try {
       const { listAscendFrameworks, renderAscendFrameworksAsCards } = await import("@/lib/conversion/ascend-frameworks");
       cards.push(...renderAscendFrameworksAsCards(await listAscendFrameworks()));
