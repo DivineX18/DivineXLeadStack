@@ -502,6 +502,12 @@ function check(label: string, ok: boolean, detail?: string) {
     check("5o. supplied-channel numbers survive: price + rating + audience", bl.some((b) => b.includes("$39")) && bl.some((b) => b.includes("4.9")) && JSON.stringify(aa).includes("120k") === false || bl.length === 3);
     check("5p. plain price bullet untouched verbatim", bl.includes("The $39 starter option stays listed"));
   }
+
+  // 5q: validation errors are SELF-CORRECT instructions to the model, never
+  // questions to relay (live failure: Zeno asked the user for a headline).
+  const vMissing = cap.validate!({ genre: "lead_gen", emotional_transformation: "overwhelm_to_clarity", bullets: "One,Two" });
+  check("5q. missing-headline error instructs the model to write it and retry, never ask",
+    vMissing.ok === false && /yourself/i.test(vMissing.error ?? "") && /never ask|do not ask/i.test(vMissing.error ?? ""));
 }
 
 // 6. Supplied-evidence validate round-trip: real https URLs only, capped, never invented.

@@ -109,7 +109,8 @@ const user = await auth.createUser({ email: `qa-bre-${Date.now()}@test.local` })
 const results: Record<string, string> = {};
 
 const onlyD = process.argv.includes("--evidence-pass");
-for (const probe of PROBES) {
+const probeFilter = process.argv.find((x) => x.startsWith("--probe="))?.slice(8) ?? null;
+for (const probe of PROBES.filter((pr) => !probeFilter || pr.key === probeFilter)) {
   for (const variant of (onlyD ? (["d"] as const) : (["b", "c"] as const))) {
     const SUB = `qa-bre-${probe.key}-${variant}`;
     await db.doc(`agencies/qa-bre-ag`).set({ id: "qa-bre-ag", name: "QA BRE" });
