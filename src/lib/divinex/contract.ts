@@ -98,7 +98,10 @@ export async function getDivinexProfileSnapshot(
 export async function reconcileProfileFromAscend(
   businessProfileId: number,
 ): Promise<{ ok: boolean; result?: string; error?: string }> {
-  const base = process.env.NEXT_PUBLIC_ASCEND_APP_URL ?? "https://app.divinex.io";
+  // The Ascend API server is served at ascend.divinex.io (verified:
+  // app.divinex.io hosts the unified /app shell and 307s API paths).
+  // ASCEND_API_BASE_URL overrides for staging/local.
+  const base = process.env.ASCEND_API_BASE_URL ?? "https://ascend.divinex.io";
   if (!divinexContractConfigured()) return { ok: false, error: "not_configured" };
   try {
     const res = await fetch(`${base}/api/divinex/profile/${businessProfileId}`, {
