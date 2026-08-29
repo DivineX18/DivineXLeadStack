@@ -5383,6 +5383,12 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             ...(args.accentColor ? { accentColor: args.accentColor as string } : {}),
             ...(args.theme ? { theme: args.theme as "light" | "dark" } : {}),
             ...(args.eventStartAt ? { eventStartAt: args.eventStartAt as string } : {}),
+            // Per-funnel SEO derived from the page's own certified copy —
+            // deterministic, operator-editable in the builder afterward.
+            seo: {
+              title: `${(args.headline as string) || (args.funnelName as string) || "Untitled"}`.slice(0, 70),
+              description: `${(args.subheadline as string) || (args.salesArgument as { corePromise?: string } | null)?.corePromise || ""}`.slice(0, 170),
+            },
             ...(bridgeTarget
               ? {
                   bridge: {

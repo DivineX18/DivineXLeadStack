@@ -596,6 +596,11 @@ export interface FunnelDoc {
    *  builder RESCHEDULES every pending reminder automatically (the engine
    *  re-reads it live on each wake). */
   eventStartAt?: string | null;
+  /** Per-funnel SEO/share metadata. Auto-derived at generation from the
+   *  page's own certified copy (headline + business identity), operator-
+   *  editable in the builder. Rendered via generateMetadata on /lp — a
+   *  funnel tab/share shows the CLIENT's business, never the deployment. */
+  seo?: { title?: string; description?: string; ogImage?: string };
   /** The uploaded lead-magnet file (PDF) this funnel delivers after signup —
    *  stored via the chunked funnelAssets store; `url` is the public serve
    *  path (/api/funnel-asset/[id]) appended into the confirmation workflow

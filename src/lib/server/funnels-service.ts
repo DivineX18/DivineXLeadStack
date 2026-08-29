@@ -193,6 +193,8 @@ export interface FunnelPatch {
   bridge?: FunnelDoc["bridge"];
   /** Webinar/event start time (ISO) — anchors wait_until reminders. */
   eventStartAt?: string | null;
+  /** Per-funnel SEO/share metadata. */
+  seo?: FunnelDoc["seo"];
   decisionComplexity?: FunnelDoc["decisionComplexity"];
   logoUrl?: string;
   sections?: FunnelSection[];
@@ -365,6 +367,7 @@ export async function updateFunnelServerSide(opts: {
   if (patch.salesArgument !== undefined) write.salesArgument = patch.salesArgument;
   if (patch.bridge !== undefined) write.bridge = patch.bridge;
   if (patch.eventStartAt !== undefined) write.eventStartAt = patch.eventStartAt;
+  if (patch.seo !== undefined) write.seo = patch.seo;
   if (patch.persuasionDepth !== undefined) write.persuasionDepth = patch.persuasionDepth;
   if (patch.decisionComplexity !== undefined) write.decisionComplexity = patch.decisionComplexity;
   if (patch.logoUrl !== undefined) write.logoUrl = patch.logoUrl;

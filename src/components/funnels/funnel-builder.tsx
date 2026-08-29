@@ -188,6 +188,8 @@ export function FunnelBuilder({
   const [bridgeNextFunnelId, setBridgeNextFunnelId] = useState("");
   const [bridgeNextCta, setBridgeNextCta] = useState("");
   const [eventStartAt, setEventStartAt] = useState("");
+  const [seoTitle, setSeoTitle] = useState("");
+  const [seoDescription, setSeoDescription] = useState("");
   const [allFunnels, setAllFunnels] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
@@ -257,6 +259,8 @@ export function FunnelBuilder({
         setBridgeNextFunnelId(d.funnel.bridge?.nextFunnelId ?? "");
         setBridgeNextCta(d.funnel.bridge?.nextCta ?? "");
         setEventStartAt(d.funnel.eventStartAt ? new Date(d.funnel.eventStartAt).toISOString().slice(0, 16) : "");
+        setSeoTitle(d.funnel.seo?.title ?? "");
+        setSeoDescription(d.funnel.seo?.description ?? "");
         setAccentColor(d.funnel.accentColor);
         setDesignPack(d.funnel.designPack ?? "classic");
         const strategy = d.funnel.designStrategy;
@@ -334,6 +338,7 @@ export function FunnelBuilder({
           designStrategy: resolvedStrategy,
           logoUrl,
           eventStartAt: eventStartAt ? new Date(eventStartAt).toISOString() : null,
+          seo: { title: seoTitle || undefined, description: seoDescription || undefined },
           bridge: {
             headline: bridgeHeadline || undefined,
             message: bridgeMessage || undefined,
@@ -473,6 +478,16 @@ export function FunnelBuilder({
               <Input value={bridgeNextCta} onChange={(e) => setBridgeNextCta(e.target.value)} placeholder="Take a look" maxLength={80} />
             </div>
           )}
+          <div className="sm:col-span-2 grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">SEO title (tab &amp; share preview)</label>
+              <Input value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} placeholder="Auto: your headline + business name" maxLength={70} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">SEO description</label>
+              <Input value={seoDescription} onChange={(e) => setSeoDescription(e.target.value)} placeholder="Auto: your subheadline" maxLength={170} />
+            </div>
+          </div>
           <div>
             <label className="text-xs font-semibold text-muted-foreground">Event date &amp; time (webinars/events)</label>
             <Input type="datetime-local" value={eventStartAt} onChange={(e) => setEventStartAt(e.target.value)} />

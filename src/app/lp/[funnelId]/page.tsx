@@ -4,6 +4,38 @@ import { PublicFunnelView } from "@/components/funnels/public-funnel-view";
 
 export const dynamic = "force-dynamic";
 
+/** Per-funnel SEO/share metadata — the tab and every share preview carry
+ *  the CLIENT's page identity, never the deployment brand. Falls back from
+ *  the operator-editable seo block to the certified page copy itself. */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ funnelId: string }>;
+}) {
+  const { funnelId } = await params;
+  const data = await loadFunnelForRender(funnelId);
+  if (!data) return {};
+  const { funnel } = data;
+  const hero = funnel.sections.find((s) => s.type === "hero")?.config as
+    | { headline?: string; subheadline?: string; mediaUrl?: string }
+    | undefined;
+  const footer = funnel.sections.find((s) => s.type === "business_footer")?.config as
+    | { businessName?: string }
+    | undefined;
+  const baseTitle = funnel.seo?.title || hero?.headline || funnel.name;
+  const title = footer?.businessName && !baseTitle.includes(footer.businessName)
+    ? `${baseTitle} | ${footer.businessName}`.slice(0, 70)
+    : baseTitle.slice(0, 70);
+  const description = (funnel.seo?.description || hero?.subheadline || "").slice(0, 170) || undefined;
+  const ogImage = funnel.seo?.ogImage || (hero?.mediaUrl && /^https?:/.test(hero.mediaUrl) ? hero.mediaUrl : undefined);
+  return {
+    title,
+    description,
+    openGraph: { title, description, ...(ogImage ? { images: [ogImage] } : {}) },
+    twitter: { card: ogImage ? "summary_large_image" : "summary", title, description },
+  };
+}
+
 export default async function PublicFunnelPage({
   params,
   searchParams,

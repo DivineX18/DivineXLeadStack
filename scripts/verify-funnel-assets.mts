@@ -139,6 +139,15 @@ check("6o. /lp welcome bar renders delivery + download", src("src/app/lp/[funnel
   check("10g. manifest leads with the trust question", caps.includes("the page must answer"));
 }
 
+// 11. Per-funnel SEO metadata (platform plumbing, freeze-compatible)
+{
+  const src = (f: string) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
+  check("11a. /lp exports generateMetadata (client identity, not deployment brand)", src("src/app/lp/[funnelId]/page.tsx").includes("export async function generateMetadata"));
+  check("11b. create_funnel auto-derives seo from certified copy", src("src/lib/ai-suite/capabilities.ts").includes("seo: {"));
+  check("11c. PATCH route sanitizes seo (length caps, https og)", src("src/app/api/sub-accounts/[id]/funnels/[funnelId]/route.ts").includes("patch.seo = seo"));
+  check("11d. render loader is request-deduped (metadata + page = one read)", src("src/lib/funnels/load-funnel-for-render.ts").includes("cache(loadFunnelForRenderUncached)"));
+}
+
 // 7. Ascend Intelligence bridge (read side): synced frameworks reach the
 //    generation-context loader with real content and full card shape.
 {

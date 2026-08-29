@@ -170,6 +170,19 @@ export async function PATCH(
         : null;
     patch.bridge = bridge;
   }
+  if (body.seo !== undefined && typeof body.seo === "object" && body.seo !== null) {
+    const o = body.seo as Record<string, unknown>;
+    const str2 = (v: unknown, cap: number) =>
+      typeof v === "string" && v.trim() ? v.trim().slice(0, cap) : undefined;
+    const seo: NonNullable<FunnelPatch["seo"]> = {};
+    const title = str2(o.title, 70);
+    const description = str2(o.description, 170);
+    const ogImage = typeof o.ogImage === "string" && /^https?:\/\//.test(o.ogImage) ? o.ogImage.slice(0, 1000) : undefined;
+    if (title) seo.title = title;
+    if (description) seo.description = description;
+    if (ogImage) seo.ogImage = ogImage;
+    patch.seo = seo;
+  }
   if ("eventStartAt" in body) {
     const v = body.eventStartAt;
     patch.eventStartAt =

@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 
 import { getAdminDb } from "@/lib/firebase/admin";
 import type { CheckoutConfig, FunnelDoc, HeroConfig, OfferConfig, TicketTiersConfig } from "@/types/funnels";
@@ -16,7 +17,11 @@ export interface RenderableFunnel {
  *  isn't published — callers should notFound() on null (draft and missing
  *  treated identically, same as the booking page's pattern, so an
  *  unpublished funnel's existence is never leaked). */
-export async function loadFunnelForRender(
+/** Per-request dedupe (React cache): generateMetadata + the page component
+ *  both call this — one Firestore read serves both. */
+export const loadFunnelForRender = cache(loadFunnelForRenderUncached);
+
+async function loadFunnelForRenderUncached(
   funnelId: string,
 ): Promise<RenderableFunnel | null> {
   const db = getAdminDb();
