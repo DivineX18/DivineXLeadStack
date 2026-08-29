@@ -116,6 +116,7 @@ const PUBLIC_PATHS = [
   // unguessable asset id is the capability token; the link is what a
   // subscriber receives by email, so it must resolve without a session.
   "/api/funnel-asset",
+  "/api/webhooks/divinex",
   // Custom-domain resolver — internal rewrite target for Funnels custom
   // domains (see customDomainRewrite() below); never linked to directly.
   "/cdomain",
