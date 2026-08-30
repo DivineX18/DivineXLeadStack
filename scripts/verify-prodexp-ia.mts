@@ -41,6 +41,26 @@ const login = await fetch(`${BASE}/api/login`, { headers: { Authorization: `Bear
 const cookie = `${(login.headers.getSetCookie?.() ?? []).map((c) => c.split(";")[0]).join("; ")}; active_workspace_id=${WORKSPACE}`;
 check("0. Authenticated session", cookie.includes("="));
 
+/**
+ * The unified shell only renders when the request is on the Ascend
+ * hostname AND the workspace is entitled AND the unified_shell flag is on.
+ * Locally that's what ASCEND_SHELL_MODE_OVERRIDE is for; on a deployed
+ * staging service (NODE_ENV=production) the override cannot fire, so the
+ * workspace has to genuinely qualify. Diagnose that up front instead of
+ * reporting six confusing redirect failures.
+ */
+const probe = await fetch(`${BASE}/app/home`, { headers: { cookie }, redirect: "manual" });
+if (!probe.ok) {
+  console.log(
+    `\nThe shell resolved to crm_only, so no /app/* section can render here.\n` +
+      `  ${BASE}/app/home -> ${probe.status} ${probe.headers.get("location") ?? ""}\n` +
+      `  Needs all three: the request host equals NEXT_PUBLIC_ASCEND_APP_URL's host,\n` +
+      `  workspace ${WORKSPACE} is entitled to full_ascend, and the unified_shell flag\n` +
+      `  is on for it. Locally, start the server with ASCEND_SHELL_MODE_OVERRIDE=full_ascend.`,
+  );
+  process.exit(1);
+}
+
 // ── The six customer-facing sections ────────────────────────────────────
 const SECTIONS: [string, string, string][] = [
   ["Home", "/app/home", "Home"],
