@@ -35,6 +35,10 @@ export interface ProfileDerivedInputs {
     product?: string;
     team?: string[];
     environment?: string[];
+    /** Real photography from the business, usable for gallery/section media.
+     *  Most photos on a real site land here — they are genuinely theirs, we
+     *  just aren't claiming what each one depicts. */
+    gallery: string[];
     /** Evidence-class marks (partner/press/certification) — rendered as an
      *  evidence strip, never as brand-owned imagery. */
     evidenceLogos: { url: string; label: string }[];
@@ -80,15 +84,32 @@ export async function resolveProfileInputs(subAccountId: string): Promise<Profil
   const teamShots = [...byClass("founder"), ...byClass("team")];
   const environmentShots = byClass("environment");
   const productShots = byClass("product");
+  // Discovery marks a large LANDSCAPE photograph as "hero" — the only class
+  // whose shape is known to work in a hero slot.
+  const heroShots = byClass("hero");
+  const photoShots = byClass("photo");
 
-  // Hero preference follows evidence value, not decoration: a real product
-  // for product businesses, a real person for people-led ones, otherwise
-  // an environment shot. Absent → undefined (engines compose around it).
+  // Hero preference: a picture the site itself leads with beats anything we
+  // infer. Then evidence value — a real product for product businesses, a
+  // real person for people-led ones, an environment shot otherwise — and
+  // general photography last. Absent → undefined (engines compose around
+  // it and leave an honest labeled placeholder).
+  //
+  // Note the ordering change: productShots used to come FIRST, which is how
+  // an icon misclassified as "product" became a workspace's hero image.
   const hero =
+    heroShots[0] ??
     productShots[0] ??
     (photography.includes("people-first") ? teamShots[0] : undefined) ??
     environmentShots[0] ??
-    teamShots[0];
+    teamShots[0] ??
+    photoShots[0];
+
+  // Gallery: every real photo of theirs that isn't already the hero. Ordered
+  // so the site's own lead imagery comes first.
+  const gallery = [...heroShots, ...photoShots, ...byClass("event"), ...byClass("customer")]
+    .filter((url) => url !== hero)
+    .slice(0, 12);
 
   const inputs: ProfileDerivedInputs = {
     businessProfileId: snapshot.businessProfileId,
@@ -105,6 +126,7 @@ export async function resolveProfileInputs(subAccountId: string): Promise<Profil
       product: productShots[0],
       team: teamShots.slice(0, 4),
       environment: environmentShots.slice(0, 4),
+      gallery,
       evidenceLogos,
     },
     offers: snapshot.offers ?? [],

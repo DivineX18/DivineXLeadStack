@@ -4934,6 +4934,9 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           id: `s_gallery_${Date.now()}`,
           type: "photo_gallery",
           config: {
+            // Filled from the business's own approved photography once the
+            // canonical profile resolves (see below); the honest labeled
+            // placeholder stands when there is none.
             images: [],
             layout: ((args.galleryLayout as string) || designStrategy?.galleryLayout || "grid") as PhotoGalleryConfig["layout"],
             placeholderLabel: galleryPlaceholderLabel,
@@ -5158,6 +5161,52 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         }
         if (!args.suppliedEvidenceLogos && profileInputs.assets.evidenceLogos.length > 0) {
           args.suppliedEvidenceLogos = profileInputs.assets.evidenceLogos.map((l) => ({ url: l.url, alt: l.label }));
+        }
+        // Real photography from their own site fills the gallery. Captions
+        // are deliberately omitted — we know these images are theirs, not
+        // what each one depicts, and inventing a caption is exactly the
+        // fabrication the engine forbids. No photos → the honest labeled
+        // placeholder stands, unchanged.
+        if (profileInputs.assets.gallery.length > 0) {
+          // Spread the business's own photography DOWN the page rather than
+          // stacking it in one grid: a story portrait, one photo per benefit
+          // item, and only the remainder in the gallery. Sections without a
+          // real media field are skipped — writing imageUrl to a config that
+          // has no such field is silently dropped by the renderer, which is
+          // exactly how "distributed" imagery ended up as a single row.
+          const pool = [...profileInputs.assets.gallery];
+          let taken = 0;
+          const next = () => (taken < pool.length ? pool[taken++] : null);
+
+          sectionsToSave = sectionsToSave.map((sec): FunnelSection => {
+            if (sec.type === "story") {
+              const cfg = sec.config as { photoUrl?: string };
+              if (cfg.photoUrl) return sec;
+              const url = next();
+              return url ? ({ ...sec, config: { ...cfg, photoUrl: url } } as FunnelSection) : sec;
+            }
+            if (sec.type === "benefits_grid") {
+              const cfg = sec.config as { items?: { imageUrl?: string }[] };
+              if (!Array.isArray(cfg.items)) return sec;
+              const items = cfg.items.map((it) => {
+                if (it.imageUrl) return it;
+                const url = next();
+                return url ? { ...it, imageUrl: url } : it;
+              });
+              return { ...sec, config: { ...cfg, items } } as FunnelSection;
+            }
+            return sec;
+          });
+
+          const leftover = pool.slice(taken);
+          if (leftover.length > 0) {
+            sectionsToSave = sectionsToSave.map((sec) => {
+              if (sec.type !== "photo_gallery") return sec;
+              const cfg = sec.config as PhotoGalleryConfig;
+              if (cfg.images && cfg.images.length > 0) return sec;
+              return { ...sec, config: { ...cfg, images: leftover.slice(0, 6).map((url) => ({ url })) } };
+            });
+          }
         }
       }
 
