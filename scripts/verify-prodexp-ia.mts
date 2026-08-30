@@ -14,16 +14,19 @@
  */
 import { readFileSync } from "node:fs";
 
-for (const line of readFileSync(new URL("../../.env.local", import.meta.url), "utf8").split("\n")) {
+for (const line of readFileSync(new URL("../.env.local", import.meta.url), "utf8").split("\n")) {
   const i = line.indexOf("=");
   if (i > 0 && !line.startsWith("#")) process.env[line.slice(0, i).trim()] ??= line.slice(i + 1).trim().replace(/^["']|["']$/g, "");
 }
 
 const BASE = process.env.E2E_BASE ?? "http://localhost:3112";
-const WORKSPACE = "x4NOJFn8bTyav7OeJc1v";
+/** Override with E2E_WORKSPACE. The unified shell only renders for a
+ *  workspace with an ACTIVE workspace mapping (full_ascend tier) — today
+ *  that is DivineX #1000, not #1001. */
+const WORKSPACE = process.env.E2E_WORKSPACE ?? "MEYB8CbWlE5fxAn3TJOp";
 const UID = "irkY5HKIzxb64l5qCyHroTrudJa2";
 
-const { getAdminAuth } = await import("../../src/lib/firebase/admin.ts");
+const { getAdminAuth } = await import("../src/lib/firebase/admin.ts");
 
 let failures = 0;
 const check = (label: string, ok: boolean, note = "") => {

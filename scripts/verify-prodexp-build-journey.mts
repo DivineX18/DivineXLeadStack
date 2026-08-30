@@ -14,18 +14,17 @@
  */
 import { readFileSync } from "node:fs";
 
-for (const line of readFileSync(new URL("../../.env.local", import.meta.url), "utf8").split("\n")) {
+for (const line of readFileSync(new URL("../.env.local", import.meta.url), "utf8").split("\n")) {
   const i = line.indexOf("=");
   if (i > 0 && !line.startsWith("#")) process.env[line.slice(0, i).trim()] ??= line.slice(i + 1).trim().replace(/^["']|["']$/g, "");
 }
 
 const BASE = process.env.E2E_BASE ?? "http://localhost:3111";
-const WORKSPACE = "x4NOJFn8bTyav7OeJc1v"; // DivineX #1001 — authorized for testing
+const WORKSPACE = process.env.E2E_WORKSPACE ?? "x4NOJFn8bTyav7OeJc1v"; // DivineX #1001
 const UID = "irkY5HKIzxb64l5qCyHroTrudJa2"; // active admin of that workspace
-const ASCEND_HOST = process.env.E2E_ASCEND_HOST ?? "app.divinex.io";
 const OTHER_UID = "sWfGDIvnimXHwSpvdNIP7yvUzrx1"; // admin of a DIFFERENT workspace
 
-const { getAdminAuth, getAdminDb } = await import("../../src/lib/firebase/admin.ts");
+const { getAdminAuth, getAdminDb } = await import("../src/lib/firebase/admin.ts");
 const db = getAdminDb();
 
 let failures = 0;
@@ -207,30 +206,6 @@ const retryRes = await fetch(`${BASE}/api/ai-suite/confirm`, {
 });
 const retry = (await retryRes.json().catch(() => null)) as { ok?: boolean; resultRef?: { id: string } | null } | null;
 check("7c. Retrying a failed action succeeds and returns its own resultRef", !!retry?.resultRef?.id, `${retry?.resultRef?.id}`);
-
-// ── 7d. The new customer information architecture actually renders ─────
-for (const [label, path] of [
-  ["Campaigns", "/app/campaigns"],
-  ["CRM", "/app/crm"],
-  ["Intelligence", "/app/intelligence"],
-  ["Brand & Assets", "/app/brand"],
-  ["Home", "/app/home"],
-] as const) {
-  const r = await fetch(`${BASE}${path}`, {
-    headers: { cookie: withWorkspace, host: ASCEND_HOST },
-    redirect: "manual",
-  });
-  const html = r.ok ? await r.text() : "";
-  check(`7d. ${label} renders at ${path}`, r.ok && html.includes(label.split(" ")[0]), `status ${r.status}`);
-}
-for (const [legacy, dest] of [
-  ["/app/create", "/app/campaigns"],
-  ["/app/grow", "/app/crm"],
-  ["/app/identify", "/app/intelligence"],
-] as const) {
-  const r = await fetch(`${BASE}${legacy}`, { headers: { cookie: withWorkspace, host: ASCEND_HOST }, redirect: "manual" });
-  check(`7e. ${legacy} still works (redirects to ${dest})`, r.headers.get("location")?.includes(dest) ?? false, `${r.status} -> ${r.headers.get("location")}`);
-}
 
 // ── 8. Cleanup ──────────────────────────────────────────────────────────
 const created = [funnelId, retry?.resultRef?.id].filter(Boolean) as string[];
