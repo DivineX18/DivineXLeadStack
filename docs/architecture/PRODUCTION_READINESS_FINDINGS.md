@@ -135,3 +135,15 @@ unseen CTA converts at zero.
 
 Applies to the hero specifically; later sections may fall below the fold as
 normal.
+
+### Perceptual asset dedupe (post-beta Asset Intelligence)
+
+URL dedupe (shipped) fixes the observed defect: one image stored under
+several entries because a real site emits a srcset variant per breakpoint.
+It cannot catch two genuinely different CDN URLs that resolve to the same
+underlying picture (a re-upload, a crop, a differently-transformed original).
+
+Deliberately OUT of scope for this release — it needs content-level
+comparison (perceptual hash), which is an Asset Intelligence capability
+rather than a selection fix. Logged so the certification suite's "no
+repeated imagery" check is understood as URL-level, not perceptual.

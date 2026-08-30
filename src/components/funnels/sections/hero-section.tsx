@@ -2,6 +2,34 @@ import { Check, Play, User } from "lucide-react";
 import type { HeroConfig } from "@/types/funnels";
 import type { LeadForm } from "@/types/forms";
 import { CtaButton } from "./cta-button";
+
+/**
+ * ABOVE-THE-FOLD DECISION COMPLETENESS.
+ *
+ * The invariant is not "the hero is N pixels tall". It is that on a typical
+ * viewport a visitor can understand what this is, why it matters, what to do,
+ * and see enough evidence to trust it — WITHOUT scrolling. Observed failing on
+ * a real page: the headline consumed the whole first screen, the media sat
+ * below it, and the CTA plus the trust row fell off the fold entirely.
+ *
+ * Expressed in viewport units so it adapts rather than being tuned to one
+ * device. `svh` (small viewport height) is deliberate: on mobile it excludes
+ * the browser chrome that `vh` ignores, which is exactly where the CTA was
+ * being pushed out of sight.
+ *
+ * The rule when space is tight: MEDIA YIELDS. Imagery supports the decision;
+ * it never outranks the CTA or the trust evidence. This is why the hero is
+ * allowed to carry no image at all — a logo, a strong headline, a CTA and a
+ * trust row can satisfy the invariant on their own, and the composition
+ * engine decides per business rather than obeying a "hero needs a photo" rule.
+ */
+const FOLD_SECTION = "flex min-h-[100svh] flex-col justify-center px-4 py-12 sm:py-16";
+/** Headline scales with the SHORTER axis too, so a long headline shrinks on a
+ *  short screen instead of pushing the CTA under the fold. */
+const FOLD_HEADLINE = "clamp(1.875rem, min(5.5vw, 7.2svh), 3.5rem)";
+/** Hero media is capped in viewport height and contained, never cropped to a
+ *  fixed box — it gives up space first. */
+const FOLD_MEDIA = "max-h-[32svh] w-auto object-contain";
 import { DeviceFrame } from "./device-frame";
 import { MediaPlaceholder } from "./media-placeholder";
 
@@ -34,7 +62,7 @@ function MediaBlock({
           />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={config.mediaUrl} alt="" className="h-full w-full object-cover" />
+          <img src={config.mediaUrl} alt="" className={`h-full w-full object-cover ${FOLD_MEDIA}`} />
         )
       ) : config.mediaPlaceholderLabel ? (
         <MediaPlaceholder label={config.mediaPlaceholderLabel} accentColor={accentColor} className="h-full w-full" />
@@ -188,7 +216,7 @@ export function HeroSection({
 
   if (layout === "background_image" && config.mediaUrl) {
     return (
-      <section className="relative overflow-hidden px-4 py-24 sm:py-32">
+      <section className={`relative overflow-hidden ${FOLD_SECTION}`}>
         {config.mediaType === "video" ? (
           <video
             src={config.mediaUrl}
@@ -207,7 +235,7 @@ export function HeroSection({
           {eyebrow}
           <h1
             className="text-balance font-extrabold tracking-tight"
-            style={{ fontSize: "clamp(2.25rem, 6vw, 4.25rem)", lineHeight: 1.08 }}
+            style={{ fontSize: FOLD_HEADLINE, lineHeight: 1.08 }}
           >
             {headlineNode}
           </h1>
@@ -229,7 +257,7 @@ export function HeroSection({
   if (layout === "founder_image") {
     return (
       <section
-        className="relative overflow-hidden px-4 pb-16 pt-20 sm:pt-28"
+        className={`relative overflow-hidden ${FOLD_SECTION}`}
         style={{
           backgroundImage: `linear-gradient(180deg, ${accentColor}22 0%, ${accentColor}0a 45%, transparent 80%), radial-gradient(ellipse 70% 50% at 50% 0%, ${accentColor}30, transparent)`,
         }}
@@ -260,7 +288,7 @@ export function HeroSection({
           {eyebrow}
           <h1
             className="text-balance font-extrabold tracking-tight"
-            style={{ fontSize: "clamp(2rem, 5.5vw, 3.5rem)", lineHeight: 1.1 }}
+            style={{ fontSize: FOLD_HEADLINE, lineHeight: 1.1 }}
           >
             {headlineNode}
           </h1>
@@ -282,7 +310,7 @@ export function HeroSection({
   if (layout === "split") {
     return (
       <section
-        className="relative overflow-hidden px-4 pb-16 pt-20 sm:pt-28"
+        className={`relative overflow-hidden ${FOLD_SECTION}`}
         style={{
           backgroundImage: `linear-gradient(180deg, ${accentColor}22 0%, ${accentColor}0a 45%, transparent 80%), radial-gradient(ellipse 70% 50% at 50% 0%, ${accentColor}30, transparent)`,
         }}
@@ -292,7 +320,7 @@ export function HeroSection({
             {eyebrow}
             <h1
               className="text-balance font-extrabold tracking-tight"
-              style={{ fontSize: "clamp(2.25rem, 5vw, 3.5rem)", lineHeight: 1.08 }}
+              style={{ fontSize: FOLD_HEADLINE, lineHeight: 1.08 }}
             >
               {headlineNode}
             </h1>
@@ -316,7 +344,7 @@ export function HeroSection({
   if (layout === "browser_mockup" || layout === "phone_mockup") {
     return (
       <section
-        className="relative overflow-hidden px-4 pb-16 pt-20 sm:pt-28"
+        className={`relative overflow-hidden ${FOLD_SECTION}`}
         style={{
           backgroundImage: `linear-gradient(180deg, ${accentColor}22 0%, ${accentColor}0a 45%, transparent 80%), radial-gradient(ellipse 70% 50% at 50% 0%, ${accentColor}30, transparent)`,
         }}
@@ -326,7 +354,7 @@ export function HeroSection({
             {eyebrow}
             <h1
               className="text-balance font-extrabold tracking-tight"
-              style={{ fontSize: "clamp(2.25rem, 5vw, 3.5rem)", lineHeight: 1.08 }}
+              style={{ fontSize: FOLD_HEADLINE, lineHeight: 1.08 }}
             >
               {headlineNode}
             </h1>
