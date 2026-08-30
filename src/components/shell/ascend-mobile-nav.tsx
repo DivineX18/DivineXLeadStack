@@ -36,12 +36,12 @@ export function AscendMobileNav({ branding, navigation, capabilities, zenoHref }
 
   return (
     <>
-      <Button variant="ghost" size="icon" className="text-white/70 hover:bg-white/5 hover:text-white md:hidden" onClick={() => setOpen(true)} aria-label="Open navigation">
+      <Button variant="ghost" size="icon" className="text-[var(--dx-text-secondary)] hover:bg-[var(--dx-surface-2)] hover:text-[var(--dx-text-primary)] md:hidden" onClick={() => setOpen(true)} aria-label="Open navigation">
         <Menu className="h-5 w-5" aria-hidden="true" />
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="left" className="theme-ascend w-72 border-white/10 bg-[#08090d] p-4 text-white">
+        <SheetContent side="left" className="theme-ascend w-72 border-[var(--dx-border-subtle)] bg-[#08090d] p-4 text-[var(--dx-text-primary)]">
           <SheetHeader className="sr-only">
             <SheetTitle>Navigation</SheetTitle>
           </SheetHeader>

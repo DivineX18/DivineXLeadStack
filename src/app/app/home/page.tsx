@@ -90,7 +90,7 @@ export default async function AscendHomePage() {
         description="Where your business stands, and what to do about it."
         action={
           <Link
-            href={`/sa/${workspaceId}/ai-suite`}
+            href="/app/zeno"
             className="dx-primary-action inline-flex items-center gap-2 rounded-[var(--dx-radius)] px-4 py-2.5 text-sm font-semibold"
           >
             <Sparkles className="h-4 w-4" />

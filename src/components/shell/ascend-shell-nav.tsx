@@ -26,7 +26,7 @@ export function AscendShellNav({ sections, ariaLabel = "Lifecycle navigation" }:
   const pathname = usePathname();
 
   if (sections.length === 0) {
-    return <p className="px-3 text-sm text-white/60">No workspace selected.</p>;
+    return <p className="px-3 text-sm text-[var(--dx-text-muted)]">No workspace selected.</p>;
   }
 
   return (
@@ -45,7 +45,7 @@ export function AscendShellNav({ sections, ariaLabel = "Lifecycle navigation" }:
                 tabIndex={0}
                 aria-disabled="true"
                 aria-label={`${section.label} — locked. ${reason}`}
-                className="flex cursor-not-allowed items-center justify-between gap-2 rounded-md px-3 py-2 text-sm text-white/55 outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                className="flex cursor-not-allowed items-center justify-between gap-2 rounded-md px-3 py-2 text-sm text-[var(--dx-text-muted)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--dx-focus)]"
               >
                 <span>{section.label}</span>
                 <Lock aria-hidden="true" className="h-3.5 w-3.5" />
@@ -58,8 +58,8 @@ export function AscendShellNav({ sections, ariaLabel = "Lifecycle navigation" }:
               key={section.id}
               href={section.href}
               aria-current={active ? "page" : undefined}
-              className={`rounded-md px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white/40 motion-reduce:transition-none ${
-                active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5 hover:text-white"
+              className={`rounded-md px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--dx-focus)] motion-reduce:transition-none ${
+                active ? "bg-[var(--dx-surface-3)] text-[var(--dx-text-primary)]" : "text-[var(--dx-text-secondary)] hover:bg-[var(--dx-surface-2)] hover:text-[var(--dx-text-primary)]"
               }`}
             >
               {section.label}

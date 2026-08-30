@@ -21,23 +21,23 @@ export default async function CommandCenterPage() {
   return (
     <div className="max-w-6xl space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-white">Command Center</h1>
-        <p className="mt-1 text-sm text-white/50">
+        <h1 className="text-2xl font-semibold tracking-tight text-[var(--dx-text-primary)]">Command Center</h1>
+        <p className="mt-1 text-sm text-[var(--dx-text-muted)]">
           Manage every workspace in your agency, its provisioning state, product entitlements, and rollout — without leaving Ascend.
         </p>
       </div>
 
       <CommandCenterWorkspaceList />
 
-      <section className="rounded-2xl border border-white/10 p-5" style={{ background: "var(--glass-1)", backdropFilter: "blur(12px)" }}>
-        <h2 className="mb-1 text-sm font-medium text-white/70">Platform rollout</h2>
-        <p className="mb-4 text-xs text-white/40">Applies across the whole deployment, not per workspace.</p>
+      <section className="rounded-2xl border border-[var(--dx-border-subtle)] p-5" style={{ background: "var(--glass-1)", backdropFilter: "blur(12px)" }}>
+        <h2 className="mb-1 text-sm font-medium text-[var(--dx-text-secondary)]">Platform rollout</h2>
+        <p className="mb-4 text-xs text-[var(--dx-text-muted)]">Applies across the whole deployment, not per workspace.</p>
         <AscendRolloutSection />
       </section>
 
-      <section className="rounded-2xl border border-white/10 p-5" style={{ background: "var(--glass-1)", backdropFilter: "blur(12px)" }}>
-        <h2 className="mb-1 text-sm font-medium text-white/70">Design Intelligence</h2>
-        <p className="mb-4 text-xs text-white/40">
+      <section className="rounded-2xl border border-[var(--dx-border-subtle)] p-5" style={{ background: "var(--glass-1)", backdropFilter: "blur(12px)" }}>
+        <h2 className="mb-1 text-sm font-medium text-[var(--dx-text-secondary)]">Design Intelligence</h2>
+        <p className="mb-4 text-xs text-[var(--dx-text-muted)]">
           The Landing Page Calibration Engine — every generated funnel is scored against a 13-point premium bar, and
           operator feedback trains the design vault Zeno draws on for every future page, across every workspace.
         </p>

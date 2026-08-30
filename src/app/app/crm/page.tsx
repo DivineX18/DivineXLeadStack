@@ -4,6 +4,7 @@ import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-placeholder";
 import { composeBusinessHealthSummary } from "@/lib/intelligence/compose-business-health";
 import { MetricCard, formatCents } from "@/components/ascend/metric-card";
+import { PageHeader } from "@/components/divinex/ui";
 
 /**
  * DivineX Production Experience 2.0 — CRM (formerly the "Grow" index;
@@ -38,13 +39,11 @@ export default async function CrmPage() {
   const meta = health?.meta;
 
   return (
-    <div className="max-w-6xl space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-white">CRM</h1>
-        <p className="mt-1 text-sm text-white/50">
-          Your customers and the work in front of you — leads, pipeline, tasks and conversations at a glance, then the tools to work them.
-        </p>
-      </div>
+    <div className="mx-auto w-full max-w-6xl space-y-8">
+      <PageHeader
+        title="CRM"
+        description="Your customers and the work in front of you — leads, pipeline, tasks and conversations at a glance, then the tools to work them."
+      />
 
       {/* Operational insight — the "where do things stand" layer before the tools */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -74,19 +73,20 @@ export default async function CrmPage() {
 
       {/* Execution tools */}
       <div>
-        <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-white/40">Work your growth</h2>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--dx-text-muted)" }}>Work your growth</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {SECTIONS.map((s) => (
             <Link
               key={s.href}
               href={s.href}
-              className="group flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition-colors hover:border-white/20 hover:bg-white/[0.06]"
+              className="group flex flex-col gap-2 rounded-[var(--dx-radius-lg)] border p-5 transition-colors hover:border-[var(--dx-border-active)] motion-reduce:transition-none"
+              style={{ backgroundColor: "var(--dx-surface-2)", borderColor: "var(--dx-border-subtle)" }}
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+              <span className="flex h-9 w-9 items-center justify-center rounded-[var(--dx-radius-sm)]" style={{ backgroundColor: "var(--dx-primary-subtle)", color: "var(--dx-primary)" }}>
                 <s.icon className="h-4 w-4" />
               </span>
-              <span className="font-medium text-white">{s.label}</span>
-              <span className="text-xs text-white/50">{s.description}</span>
+              <span className="font-medium" style={{ color: "var(--dx-text-primary)" }}>{s.label}</span>
+              <span className="text-xs" style={{ color: "var(--dx-text-secondary)" }}>{s.description}</span>
             </Link>
           ))}
         </div>

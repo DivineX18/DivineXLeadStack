@@ -19,16 +19,16 @@ interface AscendSectionPlaceholderProps {
 export function AscendSectionPlaceholder({ title, description, links }: AscendSectionPlaceholderProps) {
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-semibold tracking-tight text-white">{title}</h1>
-      <p className="mt-2 text-white/60">{description}</p>
+      <h1 className="text-2xl font-semibold tracking-tight text-[var(--dx-text-primary)]">{title}</h1>
+      <p className="mt-2 text-[var(--dx-text-muted)]">{description}</p>
       {links.length > 0 && (
         <div className="mt-6 flex flex-col gap-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-white/40">Continue in your workspace</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--dx-text-muted)]">Continue in your workspace</p>
           {links.map((link) => (
             <a
               key={link.href}
               href={link.href}
-              className="rounded-md border border-white/10 px-4 py-3 text-sm text-white/80 transition-colors hover:bg-white/5 hover:text-white"
+              className="rounded-md border border-[var(--dx-border-subtle)] px-4 py-3 text-sm text-[var(--dx-text-secondary)] transition-colors hover:bg-[var(--dx-surface-2)] hover:text-[var(--dx-text-primary)]"
             >
               {link.label} →
             </a>

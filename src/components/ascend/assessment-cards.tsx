@@ -26,7 +26,7 @@ export function LatestAssessmentCard({ dashboardSummary }: { dashboardSummary: W
             href="https://ascend.divinex.io/growth-scanner"
             target="_blank"
             rel="noreferrer"
-            className="underline decoration-white/30 underline-offset-2 hover:text-[var(--dx-text-primary)] hover:decoration-white/60"
+            className="underline decoration-[var(--dx-border)] underline-offset-2 hover:text-[var(--dx-text-primary)] hover:decoration-[var(--dx-text-secondary)]"
           >
             Run a Growth Audit
           </a>
@@ -59,7 +59,7 @@ export function AssessmentHistoryCard({ dashboardSummary }: { dashboardSummary: 
             href="https://ascend.divinex.io/growth-scanner"
             target="_blank"
             rel="noreferrer"
-            className="underline decoration-white/30 underline-offset-2 hover:text-[var(--dx-text-primary)] hover:decoration-white/60"
+            className="underline decoration-[var(--dx-border)] underline-offset-2 hover:text-[var(--dx-text-primary)] hover:decoration-[var(--dx-text-secondary)]"
           >
             Run a Growth Scan
           </a>{" "}

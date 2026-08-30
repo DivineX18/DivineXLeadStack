@@ -8,6 +8,7 @@ import { RecommendationsListCard } from "@/components/ascend/recommendation-card
 import { BusinessMemoryCard } from "@/components/ascend/memory-card";
 import { GrowthTimelineCard } from "@/components/ascend/timeline-card";
 import { RunGrowthScanCard } from "@/components/ascend/run-growth-scan-card";
+import { PageHeader } from "@/components/divinex/ui";
 
 /**
  * Ascend OS Phase 2, Slice 9 — the real Identify section: Overview
@@ -40,11 +41,11 @@ export default async function IntelligencePage() {
   const isFullAscend = shell?.workspace?.entitlements?.effectiveTier === "full_ascend";
 
   return (
-    <div className="max-w-6xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-white">Intelligence</h1>
-        <p className="mt-1 text-sm text-white/50">What DivineX knows about your business — growth scans, findings, recommendations and the history behind them.</p>
-      </div>
+    <div className="mx-auto w-full max-w-6xl space-y-6">
+      <PageHeader
+        title="Intelligence"
+        description="What DivineX knows about your business — growth scans, findings, recommendations and the history behind them."
+      />
 
       <RunGrowthScanCard saId={workspaceId} hasBusinessProfile={!!mapping?.primaryAscendBusinessProfileId} isFullAscend={isFullAscend} />
 

@@ -10,7 +10,7 @@
 function SkeletonCard() {
   return (
     <div
-      className="h-32 animate-pulse rounded-2xl border border-white/10"
+      className="h-32 animate-pulse rounded-2xl border border-[var(--dx-border-subtle)]"
       style={{ background: "var(--glass-1)" }}
     />
   );
@@ -20,8 +20,8 @@ export default function AscendHomeLoading() {
   return (
     <div className="max-w-6xl space-y-6">
       <div className="space-y-2">
-        <div className="h-7 w-32 animate-pulse rounded bg-white/10" />
-        <div className="h-4 w-64 animate-pulse rounded bg-white/5" />
+        <div className="h-7 w-32 animate-pulse rounded bg-[var(--dx-surface-3)]" />
+        <div className="h-4 w-64 animate-pulse rounded bg-[var(--dx-surface-2)]" />
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 12 }).map((_, i) => (

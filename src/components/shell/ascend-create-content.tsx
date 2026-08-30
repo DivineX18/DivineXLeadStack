@@ -55,8 +55,8 @@ export function AscendCreateContent({
   return (
     <div className="max-w-6xl space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-white">{title}</h1>
-        <p className="mt-1 text-sm text-white/50">{description}</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-[var(--dx-text-primary)]">{title}</h1>
+        <p className="mt-1 text-sm text-[var(--dx-text-muted)]">{description}</p>
       </div>
 
       <section className="rounded-[var(--dx-radius-lg)] border p-6" style={{ backgroundColor: "var(--dx-surface-1)", borderColor: "var(--dx-border-subtle)" }}>

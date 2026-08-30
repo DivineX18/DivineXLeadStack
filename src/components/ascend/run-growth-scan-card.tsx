@@ -143,13 +143,13 @@ export function RunGrowthScanCard({
               onChange={(e) => setWebsiteUrl(e.target.value)}
               placeholder="https://example.com"
               disabled={state.phase === "starting"}
-              className="w-full rounded-md border border-[var(--dx-border-subtle)] bg-[var(--dx-surface-2)] px-3 py-2 text-sm text-[var(--dx-text-primary)] placeholder:text-[var(--dx-text-primary)]/30 outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+              className="w-full rounded-md border border-[var(--dx-border-subtle)] bg-[var(--dx-surface-2)] px-3 py-2 text-sm text-[var(--dx-text-primary)] placeholder:text-[var(--dx-text-primary)]/30 outline-none focus-visible:ring-2 focus-visible:ring-[var(--dx-focus)]"
             />
           </div>
           <button
             onClick={handleRun}
             disabled={state.phase === "starting"}
-            className="inline-flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-medium text-black hover:bg-white/90 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50 dx-primary-action"
           >
             {state.phase === "starting" ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
             {state.phase === "starting" ? "Starting…" : "Run Growth Scan"}

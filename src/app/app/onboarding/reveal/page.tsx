@@ -88,7 +88,7 @@ export default async function RevealPage({
             />
           </div>
           {opportunities.length > 0 && (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+            <div className="rounded-2xl border border-[var(--dx-border-subtle)] bg-[var(--dx-surface-2)] p-6">
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] opacity-40">
                 Top opportunities
               </p>
@@ -106,7 +106,7 @@ export default async function RevealPage({
       ) : (
         /* HONEST REDUCED REVEAL — no scan intelligence available yet. */
         <div className="mt-10 space-y-4">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+          <div className="rounded-2xl border border-[var(--dx-border-subtle)] bg-[var(--dx-surface-2)] p-6">
             <p className="opacity-80">
               DivineX now understands your business
               {business.name ? `, ${business.name}` : ""}
@@ -122,11 +122,11 @@ export default async function RevealPage({
       )}
 
       {(brand.visual?.tokens?.palette?.length ?? 0) > 0 && (
-        <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+        <div className="mt-4 flex items-center gap-3 rounded-2xl border border-[var(--dx-border-subtle)] bg-[var(--dx-surface-2)] p-5">
           <span className="text-[11px] font-semibold uppercase tracking-[0.14em] opacity-40">Your brand</span>
           <div className="flex gap-1.5">
             {brand.visual!.tokens!.palette!.slice(0, 5).map((c) => (
-              <span key={c} className="h-6 w-6 rounded-md border border-white/10" style={{ backgroundColor: c }} />
+              <span key={c} className="h-6 w-6 rounded-md border border-[var(--dx-border-subtle)]" style={{ backgroundColor: c }} />
             ))}
           </div>
           {approvedAssets.length > 0 && (
@@ -145,7 +145,7 @@ export default async function RevealPage({
         {/* Assistance Recommendation — secondary by design; software first. */}
         <Link
           href="/app/assistance?context=post_reveal"
-          className="inline-flex items-center justify-center rounded-xl border border-white/15 px-5 py-3.5 text-sm opacity-70 transition-opacity hover:opacity-100"
+          className="dx-secondary-action inline-flex items-center justify-center rounded-[var(--dx-radius)] px-5 py-3.5 text-sm"
         >
           Get launch help
         </Link>
@@ -156,7 +156,7 @@ export default async function RevealPage({
 
 function Card({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+    <div className="rounded-2xl border border-[var(--dx-border-subtle)] bg-[var(--dx-surface-2)] p-6">
       <div className="flex items-center gap-2">
         {icon}
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] opacity-40">{label}</p>

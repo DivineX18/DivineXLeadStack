@@ -85,7 +85,8 @@ export default async function AscendAppLayout({ children }: { children: ReactNod
     );
   }
 
-  const zenoHref = shell.workspace ? `/sa/${shell.workspace.workspaceId}/ai-suite` : null;
+  // Zeno is native to the shell now (Phase E) — no bounce out to /sa/*.
+  const zenoHref = shell.workspace ? "/app/zeno" : null;
   const email = shell.identity.session.user?.email ?? null;
   // shell.branding tracks the REAL resolved mode, which is "crm_only" for
   // a command-center-bypass render (no active full_ascend workspace) —
@@ -95,7 +96,7 @@ export default async function AscendAppLayout({ children }: { children: ReactNod
   const branding = shell.mode === "full_ascend" ? shell.branding : ascendDarkBranding();
 
   return (
-    <div className="theme-ascend flex min-h-dvh bg-[#08090d] text-white">
+    <div className="theme-ascend flex min-h-dvh bg-[#08090d] text-[var(--dx-text-primary)]">
       <a
         href="#ascend-main"
         className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-4 focus-visible:top-4 focus-visible:z-50 focus-visible:rounded-md focus-visible:bg-white focus-visible:px-4 focus-visible:py-2 focus-visible:text-sm focus-visible:font-medium focus-visible:text-black"
@@ -103,14 +104,14 @@ export default async function AscendAppLayout({ children }: { children: ReactNod
         Skip to content
       </a>
 
-      <aside className="hidden w-64 shrink-0 border-r border-white/10 bg-black/40 p-4 md:flex">
+      <aside className="hidden w-64 shrink-0 border-r border-[var(--dx-border-subtle)] bg-black/40 p-4 md:flex">
         <AscendShellSidebarContent branding={branding} navigation={shell.navigation} capabilities={shell.capabilities} zenoHref={zenoHref} />
       </aside>
 
       <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-white/10 px-4 md:justify-end md:px-6">
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--dx-border-subtle)] px-4 md:justify-end md:px-6">
           <AscendMobileNav branding={branding} navigation={shell.navigation} capabilities={shell.capabilities} zenoHref={zenoHref} />
-          <span className="text-sm font-medium text-white/80 md:hidden">{branding.productName}</span>
+          <span className="text-sm font-medium text-[var(--dx-text-secondary)] md:hidden">{branding.productName}</span>
           <div className="ml-auto md:ml-0">
             <AscendUserMenu email={email} />
           </div>

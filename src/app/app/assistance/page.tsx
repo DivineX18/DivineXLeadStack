@@ -40,7 +40,7 @@ export default async function AssistancePage({
       <h1 className="text-3xl font-bold tracking-tight">Getting help</h1>
 
       {recommendations.length === 0 ? (
-        <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+        <div className="mt-8 rounded-2xl border border-[var(--dx-border-subtle)] bg-[var(--dx-surface-2)] p-6">
           <p className="font-semibold">Nothing here is worth your money right now.</p>
           <p className="mt-2 opacity-70">
             Based on where your business is, paid assistance would not be the highest-leverage spend. Keep building with
@@ -53,10 +53,10 @@ export default async function AssistancePage({
             const service = rec.service ? SERVICE_CATALOG[rec.service] : null;
             if (!service) return null;
             return (
-              <div key={rec.trigger + service.key} className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+              <div key={rec.trigger + service.key} className="rounded-2xl border border-[var(--dx-border-subtle)] bg-[var(--dx-surface-2)] p-6">
                 <p className="text-lg font-semibold">{rec.headline}</p>
                 <p className="mt-2 opacity-70">{rec.explanation}</p>
-                <div className="mt-5 rounded-xl border border-white/10 p-4">
+                <div className="mt-5 rounded-xl border border-[var(--dx-border-subtle)] p-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <p className="font-semibold">{service.name}</p>
                     <p className="text-sm opacity-70">{service.price}</p>
@@ -67,7 +67,7 @@ export default async function AssistancePage({
                     ))}
                   </ul>
                   {service.humanWindow && (
-                    <p className="mt-3 rounded-lg bg-white/5 p-3 text-xs opacity-70">{service.humanWindow}</p>
+                    <p className="mt-3 rounded-lg bg-[var(--dx-surface-2)] p-3 text-xs opacity-70">{service.humanWindow}</p>
                   )}
                   {service.qualificationOnly && (
                     <p className="mt-3 text-xs opacity-60">Available by qualification only.</p>

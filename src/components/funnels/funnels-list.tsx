@@ -272,7 +272,7 @@ export function FunnelsList({
                   </Button>
                   {/* Continue with Zeno — opens Zeno already scoped to this
                       funnel and its current state. */}
-                  <Button variant="ghost" size="sm" className="hidden sm:inline-flex" render={<Link href={`/app/campaigns?zeno=funnel:${f.id}`} />}>
+                  <Button variant="ghost" size="sm" className="hidden sm:inline-flex" render={<Link href={`/app/zeno?funnel=${f.id}`} />}>
                     <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Continue with Zeno
                   </Button>
 
@@ -286,7 +286,7 @@ export function FunnelsList({
                           <ExternalLink className="mr-2 h-4 w-4" /> View live page
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem render={<Link href={`/app/campaigns?zeno=funnel:${f.id}`} />}>
+                      <DropdownMenuItem render={<Link href={`/app/zeno?funnel=${f.id}`} />}>
                         <Sparkles className="mr-2 h-4 w-4" /> Continue with Zeno
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
