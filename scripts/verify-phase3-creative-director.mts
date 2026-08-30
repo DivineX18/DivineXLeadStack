@@ -125,7 +125,13 @@ try {
     genre: "lead_gen",
     headline: "See Our Recent Installs",
     bullets: ["Licensed techs", "Same-day quotes"],
-    visual_archetype: "local_service",
+    // ARCHETYPE UPDATED 2026-08-30: local_service is collapsed to
+    // direct_response by the deliberate bold-default decision, so its own
+    // gallery default was never going to survive. nonprofit_mission keeps its
+    // archetype AND carries a community_photo media strategy, so a gallery
+    // section actually exists for the override to apply to — luxury_premium
+    // survives the filter but uses founder_photo, which builds no gallery.
+    visual_archetype: "nonprofit_mission",
     gallery_layout: "carousel",
   });
   check("4d. gallery_layout override proposal validates", overrideValidated.ok);
@@ -201,7 +207,13 @@ try {
     const sections = snap.data()!.sections as { type: string; config: Record<string, unknown> }[];
     const ctaBearing = sections.find((s) => (s.config as { cta?: { style?: string } }).cta?.style === "popup_form");
     const cta = ctaBearing?.config.cta as { popupLayout?: string } | undefined;
-    check("4k. No-archetype legacy path never gets popup-style intelligence", !cta?.popupLayout);
+    // CONTRACT UPDATED 2026-08-30. There is no longer a "legacy" path that
+    // skips design intelligence: omitting visual_archetype now resolves to
+    // direct_response, so every funnel gets a real strategy. Verified: a
+    // no-archetype build stores designStrategy.visualArchetype
+    // "direct_response" and a popupLayout of "split_benefits". Asserting the
+    // absence would force the product back to a path that no longer exists.
+    check("4k. Omitting an archetype still yields real design intelligence", !!cta?.popupLayout, String(cta?.popupLayout));
     check("4l. No-archetype legacy path never gets a gallery section", !sections.some((s) => s.type === "photo_gallery"));
   }
 } finally {

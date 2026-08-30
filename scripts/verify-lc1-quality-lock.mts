@@ -141,14 +141,24 @@ const createdFunnelIds: string[] = [];
 
 try {
   // webinar is the one genre whose framework includes a "story" (Host)
-  // stage — coach_consultant's founder_photo media strategy should
-  // produce a real story.photoPlaceholderLabel + brief when no real photo
-  // was given.
+  // stage, and the archetype's founder_photo media strategy should produce a
+  // real story.photoPlaceholderLabel + brief when no real photo was given.
+  //
+  // ARCHETYPE UPDATED 2026-08-30: this used coach_consultant, which a later
+  // deliberate decision collapses to direct_response (see
+  // DISTINCT_INDUSTRY_ARCHETYPES in capabilities.ts — bold direct-response is
+  // the default because the model kept choosing washed-light looks). Only
+  // luxury_premium, nonprofit_mission and professional_enterprise keep their
+  // own archetype, so the mechanism must be tested through one of those.
+  // Verified directly: luxury_premium yields
+  //   label "Add your photo"
+  //   brief "Me presenting at a live workshop · Purpose: … · Recommended 800×800"
+  // i.e. the behaviour works; only the archetype choice was obsolete.
   const validated = cap.validate!({
     genre: "webinar",
     headline: "How We Book 20 Calls a Month Without Cold Outreach",
     bullets: ["Real benefit one", "Real benefit two"],
-    visual_archetype: "coach_consultant",
+    visual_archetype: "luxury_premium",
     media_subject: "Me presenting at a live workshop",
     story_paragraphs: ["Why this works: real reasoning, not a fabricated case study."],
   });
