@@ -64,7 +64,14 @@ function check(label: string, ok: boolean, detail?: string) {
     // The character immediately after the kept text in the ORIGINAL string
     // must be a word boundary (space or end-of-string), never a mid-word
     // cut (found live 2026-08-03: "...every morn").
-    const boundaryChar = overlong[sub.length];
+    // ASSERTION CORRECTED 2026-08-30. Index the string truncation actually
+    // operated on, not the raw input. stripEmDashes runs first and rewrites
+    // " — " (3 chars) to ", " (2), so every index after the dash shifts by
+    // one and the raw string reports a mid-word cut that never happened.
+    // Verified: the real output ends "...together every" — a clean word
+    // boundary. The quality law itself holds; only the check was wrong.
+    const transformed = overlong.replace(/\s*—\s*/g, ", ");
+    const boundaryChar = transformed[sub.length];
     check(
       "1d. The cut point in the original text lands on a real word boundary",
       boundaryChar === undefined || boundaryChar === " ",

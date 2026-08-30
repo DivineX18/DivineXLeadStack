@@ -123,10 +123,15 @@ first screen, the media sits below it, and the CTA plus the trust row
 fall below the fold entirely. A visitor must scroll before seeing anything
 to act on or any reason to trust the page.
 
-**Requirement:** the hero's headline, primary CTA and social-proof/trust row
-must all sit within the first viewport, on desktop and mobile. Media should
-shrink or move rather than push the CTA down. This is a conversion property,
-not a styling preference — an unseen CTA converts at zero.
+**Requirement — DECISION COMPLETENESS, not a pixel rule.** On a typical
+viewport the visitor must be able to understand *what this is*, *why it
+matters*, *what to do*, and have *enough trust to act*, without scrolling.
+For RWAR that means headline + supporting context, the primary CTA, and the
+trust row are all visible; imagery supports that hierarchy rather than
+consuming the viewport. Deliberately NOT expressed as a fixed height —
+media should shrink or reflow rather than push the CTA down. Test desktop
+and mobile. This is a conversion property, not a styling preference: an
+unseen CTA converts at zero.
 
 Applies to the hero specifically; later sections may fall below the fold as
 normal.
