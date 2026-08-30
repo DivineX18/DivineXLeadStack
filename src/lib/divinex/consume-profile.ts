@@ -107,7 +107,14 @@ export async function resolveProfileInputs(subAccountId: string): Promise<Profil
 
   // Gallery: every real photo of theirs that isn't already the hero. Ordered
   // so the site's own lead imagery comes first.
-  const gallery = [...heroShots, ...photoShots, ...byClass("event"), ...byClass("customer")]
+  // DEDUPE BY URL. A real site serves the same image from several entries
+  // (Wix emits a srcset variant per breakpoint), so discovery legitimately
+  // stores it more than once. Without this the same photograph is placed in
+  // multiple sections of one page — found at output level on the RWAR probe:
+  // 9 image slots, only 6 distinct pictures.
+  const gallery = Array.from(
+    new Set([...heroShots, ...photoShots, ...byClass("event"), ...byClass("customer")]),
+  )
     .filter((url) => url !== hero)
     .slice(0, 12);
 
