@@ -37,14 +37,21 @@ export type ShellMode = "full_ascend" | "crm_only";
  * instruction ("Zeno is globally available but is not a primary navigation
  * item").
  */
+/**
+ * DIVINEX PRODUCTION EXPERIENCE 2.0 — customer-facing information
+ * architecture. The methodology names (Identify/Create/Launch/Grow/
+ * Optimize/Scale) remain a valid internal lens, but they required
+ * customers to learn DivineX's methodology before they could find their
+ * own funnel. Primary navigation is now nouns the customer already owns.
+ * The permission/module gating mechanism is unchanged — only the labels,
+ * routes and grouping moved.
+ */
 export const ASCEND_LIFECYCLE_SECTIONS = [
   "home",
-  "identify",
-  "create",
-  "launch",
-  "grow",
-  "optimize",
-  "scale",
+  "campaigns",
+  "crm",
+  "intelligence",
+  "brand",
   "settings",
 ] as const;
 export type AscendLifecycleSectionId = (typeof ASCEND_LIFECYCLE_SECTIONS)[number];

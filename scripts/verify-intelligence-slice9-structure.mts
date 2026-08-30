@@ -145,11 +145,14 @@ function check(label: string, pass: boolean) {
 // ── 10. Home/Identify pages call the wrapper layer, never the composers directly ──
 {
   const home = read("src/app/app/home/page.tsx");
-  const identify = read("src/app/app/identify/page.tsx");
+  // Production Experience 2.0 renamed the "Identify" section to
+  // "Intelligence"; /app/identify now redirects here. Same page component,
+  // same wrapper-layer rule.
+  const identify = read("src/app/app/intelligence/page.tsx");
   check("10a. Home page imports resolveHomeDashboard from the wrapper file", home.includes('from "@/lib/intelligence/intelligence-wrappers"'));
   check("10b. Home page never imports the raw composer directly", !/^import .*compose-home-dashboard/m.test(home));
-  check("10c. Identify page imports resolveIdentifyDashboard from the wrapper file", identify.includes('from "@/lib/intelligence/intelligence-wrappers"'));
-  check("10d. Identify page never imports the raw composer directly", !/^import .*compose-identify-dashboard/m.test(identify));
+  check("10c. Intelligence page imports resolveIdentifyDashboard from the wrapper file", identify.includes('from "@/lib/intelligence/intelligence-wrappers"'));
+  check("10d. Intelligence page never imports the raw composer directly", !/^import .*compose-identify-dashboard/m.test(identify));
 }
 
 console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);

@@ -22,6 +22,7 @@ export function OfferSection({
   ctaAnimationLevel,
   successRedirect,
   captureSuccess,
+  previewMode,
 }: {
   config: OfferConfig;
   accentColor: string;
@@ -31,6 +32,7 @@ export function OfferSection({
   ctaAnimationLevel?: "none" | "minimal" | "moderate" | "expressive";
   successRedirect?: string;
   captureSuccess?: { message: string; downloadUrl?: string; downloadName?: string };
+  previewMode?: boolean;
 }) {
   const price = formatPrice(config.priceCents);
   const strikePrice = formatPrice(config.strikethroughPriceCents);
@@ -115,6 +117,7 @@ export function OfferSection({
             animationLevel={ctaAnimationLevel}
             successRedirect={successRedirect}
               captureSuccess={captureSuccess}
+              previewMode={previewMode}
             className="block w-full rounded-xl px-6 py-4 text-center text-base font-bold text-white shadow-[0_8px_24px_-6px_var(--accent-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-6px_var(--accent-shadow)]"
           />
         </div>

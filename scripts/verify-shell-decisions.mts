@@ -7,7 +7,7 @@ import { decideShellMode } from "../src/lib/shell/decide-shell-mode.ts";
 import { buildShellNavigation, LIFECYCLE_REQUIREMENTS } from "../src/lib/shell/build-shell-navigation.ts";
 import { resolveShellBranding } from "../src/lib/shell/resolve-shell-branding.ts";
 import { decideShellFallbackRoute } from "../src/lib/shell/resolve-shell-fallback-route.ts";
-import type { ShellModeSignals } from "../src/types/ascend-shell.ts";
+import { ASCEND_LIFECYCLE_SECTIONS, type ShellModeSignals } from "../src/types/ascend-shell.ts";
 import type { WorkspaceIdentity } from "../src/types/identity.ts";
 import type { WorkspaceEntitlementSummary } from "../src/types/workspace-entitlements.ts";
 
@@ -73,6 +73,7 @@ function check(label: string, pass: boolean) {
     "pipeline.read",
     "reports.read",
     "recommendations.read",
+    "workspace.read",
     "workspace.update",
   ];
   const activeWorkspace: WorkspaceIdentity = {
@@ -91,7 +92,13 @@ function check(label: string, pass: boolean) {
   );
 
   const fullNav = buildShellNavigation(activeWorkspace);
-  check("A fully-permissioned, fully-entitled workspace resolves all 8 sections", fullNav.length === 8);
+  // Production Experience 2.0 replaced the methodology sections with the
+  // customer IA (home/campaigns/crm/intelligence/brand/settings). The
+  // registry stays the single source of truth for how many there are.
+  check(
+    `A fully-permissioned, fully-entitled workspace resolves all ${ASCEND_LIFECYCLE_SECTIONS.length} sections`,
+    fullNav.length === ASCEND_LIFECYCLE_SECTIONS.length,
+  );
   check("Every section is visible and unlocked when role + entitlement both allow it", fullNav.every((s) => s.visible && !s.locked));
   check("Home has no permission/module requirement", LIFECYCLE_REQUIREMENTS.home.permission === null && LIFECYCLE_REQUIREMENTS.home.module === null);
 
@@ -101,19 +108,19 @@ function check(label: string, pass: boolean) {
     allowedPermissions: allowedPermissionsFull.filter((p) => p !== "pipeline.read"),
   };
   const navMissingPermission = buildShellNavigation(noGrowPermission);
-  const growItem = navMissingPermission.find((s) => s.id === "grow")!;
-  check("Missing the required PERMISSION hides the section entirely (visible=false)", growItem.visible === false && growItem.locked === false);
+  const crmItem = navMissingPermission.find((s) => s.id === "crm")!;
+  check("Missing the required PERMISSION hides the section entirely (visible=false)", crmItem.visible === false && crmItem.locked === false);
 
   // Has permission, workspace lacks the MODULE -> visible but locked
-  const noBroadcastsModule: WorkspaceIdentity = {
+  const noFunnelsModule: WorkspaceIdentity = {
     ...activeWorkspace,
-    entitlements: { ...entitlementsAllModules, allowedModules: entitlementsAllModules.allowedModules.filter((m) => m !== "broadcasts") },
+    entitlements: { ...entitlementsAllModules, allowedModules: entitlementsAllModules.allowedModules.filter((m) => m !== "funnels") },
   };
-  const navMissingModule = buildShellNavigation(noBroadcastsModule);
-  const launchItem = navMissingModule.find((s) => s.id === "launch")!;
+  const navMissingModule = buildShellNavigation(noFunnelsModule);
+  const campaignsItem = navMissingModule.find((s) => s.id === "campaigns")!;
   check(
     "Has the permission but the workspace doesn't own the MODULE -> visible=true, locked=true, with a reason",
-    launchItem.visible === true && launchItem.locked === true && typeof launchItem.lockedReason === "string",
+    campaignsItem.visible === true && campaignsItem.locked === true && typeof campaignsItem.lockedReason === "string",
   );
 }
 

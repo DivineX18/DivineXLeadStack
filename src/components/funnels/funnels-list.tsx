@@ -6,6 +6,11 @@ import Link from "next/link";
 import { toast } from "sonner";
 import {
   BookOpen,
+  Eye,
+  ExternalLink,
+  MoreHorizontal,
+  Pencil,
+  Sparkles,
   ChevronDown,
   Clapperboard,
   ClipboardCheck,
@@ -234,7 +239,11 @@ export function FunnelsList({
           {rows.map((f) => {
             const genre = GENRES.find((g) => g.id === f.genre);
             return (
-              <div key={f.id} className="flex items-center gap-3 p-4 hover:bg-muted/40">
+              <div key={f.id} className="flex flex-wrap items-center gap-3 p-4 hover:bg-muted/40">
+                {/* The row itself opens the editor — but the explicit
+                    actions below are what the customer actually reaches
+                    for. Delete is demoted into the overflow menu: it must
+                    never sit beside the primary action. */}
                 <Link href={`${baseHref}/${f.id}`} className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="truncate font-medium">{f.name}</span>
@@ -242,35 +251,54 @@ export function FunnelsList({
                       className={
                         f.status === "published"
                           ? "rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
-                          : "rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                          : "rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400"
                       }
                     >
                       {f.status === "published" ? "Published" : "Draft"}
                     </span>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {genre?.label ?? f.genre}
-                  </div>
+                  <div className="text-xs text-muted-foreground">{genre?.label ?? f.genre}</div>
                 </Link>
-                {f.status === "published" && (
-                  <a
-                    href={`/lp/${f.id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs text-primary underline-offset-2 hover:underline"
-                  >
-                    View live
-                  </a>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  aria-label={`Delete funnel "${f.name}"`}
-                  onClick={() => remove(f.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+
+                <div className="flex items-center gap-1.5">
+                  {/* PREVIEW — the fix for "Zeno built it but I never saw
+                      it". Always available, draft or published, via the one
+                      canonical preview route. */}
+                  <Button variant="secondary" size="sm" render={<Link href={`/preview/funnel/${f.id}`} />}>
+                    <Eye className="mr-1.5 h-3.5 w-3.5" /> Preview
+                  </Button>
+                  <Button variant="ghost" size="sm" render={<Link href={`${baseHref}/${f.id}`} />}>
+                    <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
+                  </Button>
+                  {/* Continue with Zeno — opens Zeno already scoped to this
+                      funnel and its current state. */}
+                  <Button variant="ghost" size="sm" className="hidden sm:inline-flex" render={<Link href={`/app/campaigns?zeno=funnel:${f.id}`} />}>
+                    <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Continue with Zeno
+                  </Button>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`More actions for ${f.name}`} />}>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {f.status === "published" && (
+                        <DropdownMenuItem render={<a href={`/lp/${f.id}`} target="_blank" rel="noreferrer" />}>
+                          <ExternalLink className="mr-2 h-4 w-4" /> View live page
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem render={<Link href={`/app/campaigns?zeno=funnel:${f.id}`} />}>
+                        <Sparkles className="mr-2 h-4 w-4" /> Continue with Zeno
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => remove(f.id)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete funnel
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             );
           })}

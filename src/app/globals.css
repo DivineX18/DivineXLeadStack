@@ -69,6 +69,78 @@ body {
   --glass-1: rgba(255, 255, 255, 0.03);
   --glass-2: rgba(255, 255, 255, 0.06);
   --glass-3: rgba(255, 255, 255, 0.1);
+
+  /* DIVINEX PRODUCTION EXPERIENCE 2.0 — semantic tokens.
+     Evolves the jade/indigo/cobalt foundation above into the full surface,
+     text and role scale the app actually consumes. Deep navy-charcoal, not
+     pure black; every component reads these instead of literal colors. */
+  --dx-surface-0: #0b0d12;   /* application background */
+  --dx-surface-1: #11141b;   /* panels, sidebar */
+  --dx-surface-2: #171b24;   /* cards */
+  --dx-surface-3: #1e232e;   /* raised / hover */
+  --dx-elevated:  #232936;   /* dialogs, drawers, menus */
+
+  --dx-border-subtle: rgba(255, 255, 255, 0.08);
+  --dx-border:        rgba(255, 255, 255, 0.13);
+  --dx-border-active: hsl(var(--cobalt) / 0.55);
+
+  --dx-text-primary:   rgba(255, 255, 255, 0.95);
+  --dx-text-secondary: rgba(255, 255, 255, 0.68);
+  --dx-text-muted:     rgba(255, 255, 255, 0.45);
+
+  /* Role colors — semantic, never decorative. */
+  --dx-primary:            hsl(var(--cobalt));
+  --dx-primary-hover:      hsl(217 91% 66%);
+  --dx-primary-subtle:     hsl(var(--cobalt) / 0.14);
+  --dx-primary-foreground: #06070a;
+
+  --dx-growth:         hsl(var(--jade));
+  --dx-growth-subtle:  hsl(var(--jade) / 0.14);
+
+  --dx-zeno:           hsl(var(--indigo));
+  --dx-zeno-subtle:    hsl(var(--indigo) / 0.16);
+
+  --dx-opportunity:        hsl(38 92% 58%);
+  --dx-opportunity-subtle: hsl(38 92% 58% / 0.14);
+
+  --dx-destructive:        hsl(0 72% 62%);
+  --dx-destructive-subtle: hsl(0 72% 62% / 0.13);
+
+  --dx-focus: hsl(var(--cobalt) / 0.85);
+  --dx-disabled: rgba(255, 255, 255, 0.28);
+
+  /* Elevation */
+  --dx-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --dx-shadow-2: 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  --dx-shadow-3: 0 24px 56px -24px rgba(0, 0, 0, 0.75);
+
+  /* Radius */
+  --dx-radius-sm: 0.5rem;
+  --dx-radius:    0.75rem;
+  --dx-radius-lg: 1rem;
+}
+
+.theme-ascend .dx-primary-action {
+  background-color: var(--dx-primary);
+  color: var(--dx-primary-foreground);
+}
+.theme-ascend .dx-primary-action:hover:not(:disabled) {
+  background-color: var(--dx-primary-hover);
+}
+.theme-ascend .dx-secondary-action {
+  border-color: var(--dx-border);
+  color: var(--dx-text-primary);
+  background-color: transparent;
+}
+.theme-ascend .dx-secondary-action:hover:not(:disabled) {
+  background-color: var(--dx-surface-3);
+  border-color: var(--dx-border-active);
+}
+
+/* Focus visibility is a token, not a per-component decision. */
+.theme-ascend :focus-visible {
+  outline: 2px solid var(--dx-focus);
+  outline-offset: 2px;
 }
 
 /* Slice 8.5 — honor prefers-reduced-motion inside the Ascend shell scope.

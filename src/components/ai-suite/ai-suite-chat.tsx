@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import {
+import { Eye, Pencil,
   ArrowRight,
   Check,
   Loader2,
@@ -52,7 +52,66 @@ type UiMessage =
       summary: string;
       status: ProposalStatus;
       resultText?: string;
+      /** BUILD COMPLETION CONTRACT (Production Experience 2.0): what Zeno
+       *  actually built. The confirm route has always returned this; the UI
+       *  previously discarded it, which is why a successful funnel build
+       *  looked like nothing happened. */
+      resultRef?: { kind: string; id: string } | null;
     };
+
+/**
+ * What Zeno just built, with the actions that prove it exists. Draft
+ * funnels route to the ONE canonical preview (drafts render there and
+ * nowhere else); workflows route to their builder, where the human Publish
+ * boundary lives.
+ */
+function BuildResult({ resultRef }: { resultRef: { kind: string; id: string } | null }) {
+  if (!resultRef?.id) return null;
+
+  if (resultRef.kind === "funnel") {
+    return (
+      <div className="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-3">
+        <p className="text-xs font-semibold">Your funnel is ready</p>
+        <p className="mt-0.5 text-[11px] text-muted-foreground">
+          It is saved as a draft — nothing is public until you publish it.
+        </p>
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          <Button size="sm" render={<Link href={`/preview/funnel/${resultRef.id}`} />}>
+            <Eye className="mr-1.5 h-3.5 w-3.5" /> Preview funnel
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            render={<Link href={`/app/campaigns/funnel/${resultRef.id}`} />}
+          >
+            <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
+          </Button>
+          <Button size="sm" variant="ghost" render={<Link href="/app/campaigns" />}>
+            Open campaigns
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (resultRef.kind === "workflow") {
+    return (
+      <div className="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-3">
+        <p className="text-xs font-semibold">Your follow-up is ready</p>
+        <p className="mt-0.5 text-[11px] text-muted-foreground">
+          Saved as a draft — it cannot contact anyone until you publish it.
+        </p>
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          <Button size="sm" render={<Link href={`/app/launch/workflows/${resultRef.id}`} />}>
+            Review follow-up
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
 
 const LANDING_COPY: Record<AiSuiteLevel, { heading: string; sub: string }> = {
   agency: {
@@ -263,7 +322,10 @@ export function AiSuiteChat({
       (m): m is Extract<UiMessage, { kind: "proposal" }> =>
         m.kind === "proposal" && m.id === id,
     );
-    if (!msg || msg.status !== "pending" || confirmingId) return;
+    // "failed" is retryable on purpose: a build that fell over on a
+    // transient error must not become a dead end the customer can only
+    // escape by retyping the whole request.
+    if (!msg || (msg.status !== "pending" && msg.status !== "failed") || confirmingId) return;
     setError(null);
     setConfirmingId(id);
     try {
@@ -280,12 +342,17 @@ export function AiSuiteChat({
       const data = (await res.json().catch(() => null)) as {
         ok?: boolean;
         resultText?: string;
+        resultRef?: { kind: string; id: string } | null;
         error?: string;
       } | null;
       if (!res.ok || !data?.ok) {
         throw new Error(data?.error || `Action failed (${res.status})`);
       }
-      updateProposal(id, { status: "confirmed", resultText: data.resultText });
+      updateProposal(id, {
+        status: "confirmed",
+        resultText: data.resultText,
+        resultRef: data.resultRef ?? null,
+      });
     } catch (err) {
       const m = err instanceof Error ? err.message : "The action failed.";
       updateProposal(id, { status: "failed", resultText: m });
@@ -296,7 +363,7 @@ export function AiSuiteChat({
 
   function updateProposal(
     id: string,
-    patch: { status: ProposalStatus; resultText?: string },
+    patch: { status: ProposalStatus; resultText?: string; resultRef?: { kind: string; id: string } | null },
   ) {
     setMessages((prev) =>
       prev.map((m) =>
@@ -553,21 +620,50 @@ function ProposalCard({
         )}
 
         {msg.status === "confirmed" && (
-          <p className="mt-2 flex items-start gap-1.5 whitespace-pre-wrap text-xs text-emerald-600 dark:text-emerald-400">
-            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span className="min-w-0 break-words">
-              {linkify(msg.resultText || "Done.")}
-            </span>
-          </p>
+          <>
+            <p className="mt-2 flex items-start gap-1.5 whitespace-pre-wrap text-xs text-emerald-600 dark:text-emerald-400">
+              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span className="min-w-0 break-words">
+                {linkify(msg.resultText || "Done.")}
+              </span>
+            </p>
+            {/* BUILD COMPLETION CONTRACT: if Zeno built something, the
+                customer sees it and can open it immediately. Never a
+                silent success that leaves them hunting a list. */}
+            <BuildResult resultRef={msg.resultRef ?? null} />
+          </>
         )}
         {msg.status === "cancelled" && (
           <p className="mt-2 text-xs text-muted-foreground">Cancelled.</p>
         )}
         {msg.status === "failed" && (
-          <p className="mt-2 flex items-start gap-1.5 text-xs text-destructive">
-            <X className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            {msg.resultText || "The action failed."}
-          </p>
+          <div className="mt-2">
+            <p className="flex items-start gap-1.5 text-xs text-destructive">
+              <X className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span className="min-w-0 break-words">
+                {msg.resultText || "The action failed."}
+              </span>
+            </p>
+            {/* Nothing was saved, so retrying is safe and cannot duplicate
+                work — say so, then offer the retry. A failure with no way
+                forward is the state customers get stuck in. */}
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Nothing was created, so it&apos;s safe to try again.
+            </p>
+            <div className="mt-2 flex items-center gap-2">
+              <Button size="sm" variant="secondary" onClick={onConfirm} disabled={busy}>
+                {busy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-3.5 w-3.5" />
+                )}
+                Try again
+              </Button>
+              <Button size="sm" variant="ghost" onClick={onCancel} disabled={busy}>
+                Cancel
+              </Button>
+            </div>
+          </div>
         )}
       </div>
     </div>

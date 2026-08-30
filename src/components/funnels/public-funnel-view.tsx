@@ -192,9 +192,15 @@ const RADIUS_TO_PX: Record<string, string> = {
 export function PublicFunnelView({
   funnel,
   forms,
+  previewMode = false,
 }: {
   funnel: FunnelDoc;
   forms: Record<string, LeadForm>;
+  /** Authenticated draft preview (Production Experience 2.0): renders the
+   *  page exactly as it will publish, but suppresses every side-effecting
+   *  action — no real leads, no automation firing, no production
+   *  analytics. Set ONLY by the /app/preview route. */
+  previewMode?: boolean;
 }) {
   const dark = funnel.theme === "dark";
   // Warm off-white base instead of stark #fff — softens the "website" feel and
@@ -278,6 +284,7 @@ export function PublicFunnelView({
                   accentColor={funnel.accentColor}
                   theme={funnel.theme}
                   forms={forms}
+                  previewMode={previewMode}
                   successRedirect={
                     funnel.status === "published"
                       ? funnel.bridge?.nextFunnelId

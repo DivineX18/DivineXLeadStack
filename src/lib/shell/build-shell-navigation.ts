@@ -28,23 +28,23 @@ export const LIFECYCLE_REQUIREMENTS: Record<
   { permission: WorkspacePermission | null; module: WorkspaceModule | null }
 > = {
   home: { permission: null, module: null },
-  identify: { permission: "assessments.read", module: "growth_scan" },
-  create: { permission: "funnels.read", module: "funnels" },
-  launch: { permission: "broadcasts.read", module: "broadcasts" },
-  grow: { permission: "pipeline.read", module: "pipeline" },
-  optimize: { permission: "reports.read", module: "reports" },
-  scale: { permission: "recommendations.read", module: "recommendations" },
+  // Campaigns is where marketing execution lives (funnels + their forms,
+  // follow-up and automation), so it inherits the funnels gate.
+  campaigns: { permission: "funnels.read", module: "funnels" },
+  crm: { permission: "pipeline.read", module: "pipeline" },
+  intelligence: { permission: "assessments.read", module: "growth_scan" },
+  // Brand & Assets is DivineX-level canonical profile data, not a
+  // purchasable Flow module — permission-gated only.
+  brand: { permission: "workspace.read", module: null },
   settings: { permission: "workspace.update", module: null },
 };
 
 const LIFECYCLE_LABELS: Record<AscendLifecycleSectionId, string> = {
   home: "Home",
-  identify: "Identify",
-  create: "Create",
-  launch: "Launch",
-  grow: "Grow",
-  optimize: "Optimize",
-  scale: "Scale",
+  campaigns: "Campaigns",
+  crm: "CRM",
+  intelligence: "Intelligence",
+  brand: "Brand & Assets",
   settings: "Settings",
 };
 

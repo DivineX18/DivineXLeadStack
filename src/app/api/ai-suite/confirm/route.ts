@@ -171,7 +171,16 @@ export async function POST(request: Request) {
       subAccountId: ctx.subAccountId,
       kind: "action",
     });
-    return NextResponse.json({ ok: true, resultText: result.resultText });
+    // BUILD COMPLETION CONTRACT (Production Experience 2.0): return the
+    // pointer to what was actually built, not just prose about it. It was
+    // already recorded in the audit trail above but never sent to the
+    // client, so a successful funnel build rendered as a sentence with no
+    // way to open the thing that was created.
+    return NextResponse.json({
+      ok: true,
+      resultText: result.resultText,
+      resultRef: result.ref ?? null,
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "unknown error";
     console.error(`[ai-suite/confirm] ${cap.name} failed:`, msg);

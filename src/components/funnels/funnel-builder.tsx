@@ -374,7 +374,7 @@ export function FunnelBuilder({
         </span>
         <div className="flex gap-2">
           <a
-            href={`/funnel-preview/${saId}/${funnelId}`}
+            href={`/preview/funnel/${funnelId}`}
             target="_blank"
             rel="noreferrer"
             className="flex items-center text-sm text-primary underline-offset-2 hover:underline"

@@ -32,6 +32,18 @@ async function loadFunnelForRenderUncached(
 
   const funnel: FunnelDoc = { id: snap.id, ...data, createdAt: null, updatedAt: null };
 
+  const forms = await loadFunnelFormsForPreview(funnel);
+  return { funnel, forms };
+}
+
+/**
+ * The section→form resolution used by BOTH the published renderer and the
+ * authenticated draft preview, so preview and production can never drift.
+ * Exported for the preview route (drafts are rejected by the loader above
+ * on purpose — publishing is a deliberate act).
+ */
+export async function loadFunnelFormsForPreview(funnel: FunnelDoc): Promise<Record<string, LeadForm>> {
+  const db = getAdminDb();
   const formIds = new Set<string>();
   for (const section of funnel.sections) {
     if (section.type === "hero") {
@@ -62,6 +74,5 @@ async function loadFunnelForRenderUncached(
       }
     }),
   );
-
-  return { funnel, forms };
+  return forms;
 }

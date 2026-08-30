@@ -34,6 +34,7 @@ export function CtaButton({
   inverted = false,
   successRedirect,
   captureSuccess,
+  previewMode = false,
 }: {
   label: string;
   href?: string;
@@ -64,6 +65,10 @@ export function CtaButton({
    *  download link — instead of navigating anywhere. successRedirect wins
    *  when both are set. */
   captureSuccess?: { message: string; downloadUrl?: string; downloadName?: string };
+  /** Draft preview: render exactly as production, but never submit. A
+   *  preview must not create real leads, fire automations or pollute
+   *  analytics (Production Experience 2.0 preview safety contract). */
+  previewMode?: boolean;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [captured, setCaptured] = useState(false);
@@ -88,7 +93,10 @@ export function CtaButton({
       "inline-flex items-center justify-center gap-2 px-9 py-4 text-base font-bold text-white shadow-[0_8px_24px_-6px_var(--accent-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-6px_var(--accent-shadow)]") +
     pulseClass;
 
-  const openModal = () => setModalOpen(true);
+  const openModal = () => {
+    if (previewMode) return; // inert in preview
+    setModalOpen(true);
+  };
   const closeModal = () => setModalOpen(false);
   // A visitor gets ~2.2s to read the "thanks" confirmation before the
   // modal dismisses itself — long enough to register, short enough not to
@@ -155,6 +163,25 @@ export function CtaButton({
     // on click, which is exactly the "sends people back to the top of the
     // page" bug — a real link renders as a link, anything else renders as
     // an inert button that does nothing rather than something misleading.
+    if (form && previewMode) {
+      // Same visual weight as the real embedded form, zero side effects.
+      return (
+        <div className="rounded-2xl border p-5 text-left" style={{ borderColor: `${accentColor}44` }}>
+          <p className="text-sm font-semibold">{form.name || "Lead form"}</p>
+          <p className="mt-1 text-xs opacity-60">
+            {(form.fields ?? []).map((f) => f.label).join(" · ") || "Your capture fields"}
+          </p>
+          <span
+            className={btnClass + " mt-4 w-full cursor-not-allowed opacity-70"}
+            style={buttonStyle}
+            aria-disabled
+          >
+            {label}
+          </span>
+          <p className="mt-2 text-center text-[11px] opacity-50">Submissions are disabled in preview</p>
+        </div>
+      );
+    }
     if (form) {
       if (captured && confirmationPanel) {
         return <div className="rounded-2xl border bg-white/60 shadow-sm dark:bg-white/5">{confirmationPanel}</div>;

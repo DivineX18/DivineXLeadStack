@@ -38,22 +38,29 @@ export function AscendCreateContent({
   saId,
   isAdmin,
   websiteMaxSites,
+  title = "Create",
+  description = "Build funnels and websites — the same proven builders, native to Ascend.",
+  funnelBaseHref = "/app/create/funnels",
 }: {
   saId: string;
   isAdmin: boolean;
   websiteMaxSites: number | null;
+  /** Production Experience 2.0: the same content renders under the
+   *  customer-facing "Campaigns" section. Title/href are props so there is
+   *  exactly ONE implementation, not a second copy per section name. */
+  title?: string;
+  description?: string;
+  funnelBaseHref?: string;
 }) {
   return (
     <div className="max-w-6xl space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-white">Create</h1>
-        <p className="mt-1 text-sm text-white/50">
-          Build funnels and websites — the same proven builders, native to Ascend.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight text-white">{title}</h1>
+        <p className="mt-1 text-sm text-white/50">{description}</p>
       </div>
 
       <section className="rounded-2xl bg-white p-6 text-foreground shadow-sm">
-        <FunnelsList saId={saId} baseHref={`/app/create/funnels`} />
+        <FunnelsList saId={saId} baseHref={funnelBaseHref} />
       </section>
 
       <section className="rounded-2xl bg-white p-6 text-foreground shadow-sm">

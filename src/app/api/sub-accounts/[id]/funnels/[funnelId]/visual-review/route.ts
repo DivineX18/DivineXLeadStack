@@ -60,7 +60,7 @@ export async function POST(
       { status: 200 },
     );
   }
-  const previewUrl = `${appUrl}/funnel-preview/${subAccountId}/${funnelId}`;
+  const previewUrl = `${appUrl}/preview/funnel/${funnelId}`;
 
   const imageBase64 = await captureFunnelScreenshot(previewUrl);
   if (!imageBase64) {
