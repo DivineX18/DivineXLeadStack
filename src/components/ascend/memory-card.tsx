@@ -18,10 +18,10 @@ const STATUS_LABEL: Record<MemoryActionItem["status"], string> = {
 };
 
 const STATUS_TONE: Record<MemoryActionItem["status"], string> = {
-  pending: "text-white/50",
+  pending: "text-[var(--dx-text-muted)]",
   in_progress: "text-amber-400",
   completed: "text-emerald-400",
-  skipped: "text-white/30",
+  skipped: "text-[var(--dx-text-primary)]/30",
 };
 
 export function BusinessMemoryCard({ memory }: { memory: WithMeta<MemoryActionItem[]> }) {
@@ -30,28 +30,28 @@ export function BusinessMemoryCard({ memory }: { memory: WithMeta<MemoryActionIt
     <AscendCardShell title="Business Memory" action={<IntelligenceStatusBadge meta={memory.meta} />}>
       {items.length > 0 ? (
         <>
-          <p className="text-sm text-white/60">
-            <span className="font-semibold text-white/85">{items.filter((i) => i.status === "completed").length}</span> completed of {items.length} action
+          <p className="text-sm text-[var(--dx-text-muted)]">
+            <span className="font-semibold text-[var(--dx-text-primary)]/85">{items.filter((i) => i.status === "completed").length}</span> completed of {items.length} action
             items
           </p>
           <ul className="mt-3 space-y-2">
             {items.slice(0, 5).map((item) => (
-              <li key={item.id} className="rounded-lg border border-white/10 px-3 py-2">
+              <li key={item.id} className="rounded-lg border border-[var(--dx-border-subtle)] px-3 py-2">
                 <p className={`text-xs uppercase tracking-wide ${STATUS_TONE[item.status]}`}>{STATUS_LABEL[item.status]}</p>
-                <p className="mt-0.5 text-sm text-white/80">{item.recommendation}</p>
+                <p className="mt-0.5 text-sm text-[var(--dx-text-secondary)]">{item.recommendation}</p>
               </li>
             ))}
           </ul>
         </>
       ) : (
-        <p className="text-sm text-white/40">
+        <p className="text-sm text-[var(--dx-text-muted)]">
           {memory.meta.reasonCode === "no_linked_business_profile" ? (
             <>
               <a
                 href="https://ascend.divinex.io/dashboard"
                 target="_blank"
                 rel="noreferrer"
-                className="underline decoration-white/30 underline-offset-2 hover:text-white hover:decoration-white/60"
+                className="underline decoration-white/30 underline-offset-2 hover:text-[var(--dx-text-primary)] hover:decoration-white/60"
               >
                 Link a business profile
               </a>{" "}

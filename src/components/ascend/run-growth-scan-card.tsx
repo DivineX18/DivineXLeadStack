@@ -115,7 +115,7 @@ export function RunGrowthScanCard({
   if (!isFullAscend) {
     return (
       <AscendCardShell title="Growth Scan">
-        <p className="text-sm text-white/40">Growth Scans are part of Full Ascend — not available on this workspace&apos;s current plan.</p>
+        <p className="text-sm text-[var(--dx-text-muted)]">Growth Scans are part of Full Ascend — not available on this workspace&apos;s current plan.</p>
       </AscendCardShell>
     );
   }
@@ -123,7 +123,7 @@ export function RunGrowthScanCard({
   if (!hasBusinessProfile) {
     return (
       <AscendCardShell title="Growth Scan">
-        <p className="text-sm text-white/40">
+        <p className="text-sm text-[var(--dx-text-muted)]">
           This workspace isn&apos;t linked to an Ascend business profile yet, so a scan can&apos;t run. This links automatically the next time you sign in
           through Ascend — check back shortly, or contact support if it persists.
         </p>
@@ -136,14 +136,14 @@ export function RunGrowthScanCard({
       {(state.phase === "idle" || state.phase === "starting") && (
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-xs text-white/50">Website URL (optional — leave blank to use the one on file)</label>
+            <label className="mb-1 block text-xs text-[var(--dx-text-muted)]">Website URL (optional — leave blank to use the one on file)</label>
             <input
               type="url"
               value={websiteUrl}
               onChange={(e) => setWebsiteUrl(e.target.value)}
               placeholder="https://example.com"
               disabled={state.phase === "starting"}
-              className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+              className="w-full rounded-md border border-[var(--dx-border-subtle)] bg-[var(--dx-surface-2)] px-3 py-2 text-sm text-[var(--dx-text-primary)] placeholder:text-[var(--dx-text-primary)]/30 outline-none focus-visible:ring-2 focus-visible:ring-white/40"
             />
           </div>
           <button
@@ -158,7 +158,7 @@ export function RunGrowthScanCard({
       )}
 
       {state.phase === "running" && (
-        <div className="flex items-center gap-2 text-sm text-white/70">
+        <div className="flex items-center gap-2 text-sm text-[var(--dx-text-secondary)]">
           <Loader2 className="h-4 w-4 animate-spin" />
           Scanning your website and analyzing results — this usually takes 30-90 seconds.
         </div>
@@ -170,9 +170,9 @@ export function RunGrowthScanCard({
             <CheckCircle2 className="h-4 w-4" />
             Scan complete — score {state.overallScore}/100 ({state.scoreLabel})
           </div>
-          <p className="text-xs text-white/50">Biggest bottleneck: {state.biggestBottleneck}</p>
-          <p className="text-xs text-white/40">Your Growth Score and recommendations below now reflect this scan.</p>
-          <button onClick={() => setState({ phase: "idle" })} className="mt-1 inline-flex items-center gap-1.5 text-xs text-white/60 hover:text-white">
+          <p className="text-xs text-[var(--dx-text-muted)]">Biggest bottleneck: {state.biggestBottleneck}</p>
+          <p className="text-xs text-[var(--dx-text-muted)]">Your Growth Score and recommendations below now reflect this scan.</p>
+          <button onClick={() => setState({ phase: "idle" })} className="mt-1 inline-flex items-center gap-1.5 text-xs text-[var(--dx-text-muted)] hover:text-[var(--dx-text-primary)]">
             <RotateCcw className="h-3 w-3" /> Run another scan
           </button>
         </div>
@@ -186,7 +186,7 @@ export function RunGrowthScanCard({
           </div>
           <button
             onClick={() => setState({ phase: "idle" })}
-            className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:bg-white/5"
+            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--dx-border-subtle)] px-3 py-1.5 text-xs text-[var(--dx-text-secondary)] hover:bg-[var(--dx-surface-2)]"
           >
             <RotateCcw className="h-3 w-3" /> Try again
           </button>

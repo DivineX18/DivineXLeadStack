@@ -20,25 +20,25 @@ export function GrowthScoreCard({ dashboardSummary }: { dashboardSummary: WithMe
             <span className="text-3xl font-semibold tracking-tight" style={{ color: "hsl(var(--jade))" }}>
               {data.latestGrowthScore !== null ? Math.round(data.latestGrowthScore) : "—"}
             </span>
-            <span className="text-sm text-white/40">/ 100</span>
-            {data.scoreLabel && <span className="ml-1 text-xs text-white/50">{data.scoreLabel}</span>}
+            <span className="text-sm text-[var(--dx-text-muted)]">/ 100</span>
+            {data.scoreLabel && <span className="ml-1 text-xs text-[var(--dx-text-muted)]">{data.scoreLabel}</span>}
           </div>
-          {data.primaryConstraint && <p className="mt-2 text-xs text-white/60">Primary constraint: {data.primaryConstraint}</p>}
+          {data.primaryConstraint && <p className="mt-2 text-xs text-[var(--dx-text-muted)]">Primary constraint: {data.primaryConstraint}</p>}
           {data.scoreSource && (
-            <p className="mt-1 text-[11px] text-white/30">
+            <p className="mt-1 text-[11px] text-[var(--dx-text-primary)]/30">
               From your latest {data.scoreSource === "website_scan" ? "Website Scan" : "Business Assessment"}
             </p>
           )}
         </>
       ) : (
-        <p className="text-sm text-white/40">
+        <p className="text-sm text-[var(--dx-text-muted)]">
           {dashboardSummary.meta.reasonCode === "no_linked_business_profile" ? (
             <>
               <a
                 href="https://ascend.divinex.io/dashboard"
                 target="_blank"
                 rel="noreferrer"
-                className="underline decoration-white/30 underline-offset-2 hover:text-white hover:decoration-white/60"
+                className="underline decoration-white/30 underline-offset-2 hover:text-[var(--dx-text-primary)] hover:decoration-white/60"
               >
                 Link a business profile
               </a>{" "}

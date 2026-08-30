@@ -91,8 +91,10 @@ So Ascend currently has **no usable dev-first path**: work off `main` cannot
 land on `dev` without a real reconciliation.
 
 The asset-classification work was therefore committed to a feature branch
-off `main` (`brand-asset-classification` @ `e4dc534`) and deployed to
-`ascend-bi-growth-scan-staging` for validation.
+off `main` (`brand-asset-classification` @ `e4dc534`). Its staging
+deployment is DEFERRED by decision: validating it standalone would have
+interrupted the UX programme, so it is preserved on that branch and folded
+into the single cross-repo release candidate built after Phase G.
 
 **Deliberately NOT fixed during the classifier work** (owner's call, and the
 right one): mixing branch reconciliation into pipeline validation adds risk

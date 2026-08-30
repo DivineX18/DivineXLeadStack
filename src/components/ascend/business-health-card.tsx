@@ -16,7 +16,7 @@ import type { WithMeta, BusinessHealthSummary } from "@/types/intelligence";
  */
 function healthLabel(data: BusinessHealthSummary): { label: string; tone: string } {
   if (data.overdueTaskCount > 5) return { label: "Needs attention", tone: "text-amber-400" };
-  if (data.overdueTaskCount > 0) return { label: "On track, some overdue", tone: "text-white/70" };
+  if (data.overdueTaskCount > 0) return { label: "On track, some overdue", tone: "text-[var(--dx-text-secondary)]" };
   return { label: "On track", tone: "text-emerald-400" };
 }
 
@@ -27,23 +27,23 @@ export function BusinessHealthCard({ businessHealth }: { businessHealth: WithMet
       {data ? (
         <>
           <p className={`text-sm font-medium ${healthLabel(data).tone}`}>{healthLabel(data).label}</p>
-          <dl className="mt-3 grid grid-cols-2 gap-3 text-xs text-white/60 sm:grid-cols-3">
+          <dl className="mt-3 grid grid-cols-2 gap-3 text-xs text-[var(--dx-text-muted)] sm:grid-cols-3">
             <div>
-              <dt className="text-white/40">Revenue (MTD)</dt>
-              <dd className="mt-0.5 text-sm text-white/85">{formatCents(data.revenueThisMonthCents)}</dd>
+              <dt className="text-[var(--dx-text-muted)]">Revenue (MTD)</dt>
+              <dd className="mt-0.5 text-sm text-[var(--dx-text-primary)]/85">{formatCents(data.revenueThisMonthCents)}</dd>
             </div>
             <div>
-              <dt className="text-white/40">Open pipeline</dt>
-              <dd className="mt-0.5 text-sm text-white/85">{formatCents(data.openPipelineValueCents)}</dd>
+              <dt className="text-[var(--dx-text-muted)]">Open pipeline</dt>
+              <dd className="mt-0.5 text-sm text-[var(--dx-text-primary)]/85">{formatCents(data.openPipelineValueCents)}</dd>
             </div>
             <div>
-              <dt className="text-white/40">Overdue tasks</dt>
-              <dd className="mt-0.5 text-sm text-white/85">{data.overdueTaskCount}</dd>
+              <dt className="text-[var(--dx-text-muted)]">Overdue tasks</dt>
+              <dd className="mt-0.5 text-sm text-[var(--dx-text-primary)]/85">{data.overdueTaskCount}</dd>
             </div>
           </dl>
         </>
       ) : (
-        <p className="text-sm text-white/40">Unavailable right now.</p>
+        <p className="text-sm text-[var(--dx-text-muted)]">Unavailable right now.</p>
       )}
     </AscendCardShell>
   );

@@ -15,18 +15,18 @@ export function LatestAssessmentCard({ dashboardSummary }: { dashboardSummary: W
     <AscendCardShell title="Latest Assessment" action={<IntelligenceStatusBadge meta={dashboardSummary.meta} />}>
       {data?.hasScan ? (
         <>
-          {data.latestGrowthScore !== null && <p className="text-sm text-white/80">Score: {Math.round(data.latestGrowthScore)} / 100</p>}
-          {data.scoreLabel && <p className="mt-1 text-xs text-white/50">{data.scoreLabel}</p>}
-          {data.recommendedAction && <p className="mt-2 text-xs text-white/60">{data.recommendedAction}</p>}
+          {data.latestGrowthScore !== null && <p className="text-sm text-[var(--dx-text-secondary)]">Score: {Math.round(data.latestGrowthScore)} / 100</p>}
+          {data.scoreLabel && <p className="mt-1 text-xs text-[var(--dx-text-muted)]">{data.scoreLabel}</p>}
+          {data.recommendedAction && <p className="mt-2 text-xs text-[var(--dx-text-muted)]">{data.recommendedAction}</p>}
         </>
       ) : (
-        <p className="text-sm text-white/40">
+        <p className="text-sm text-[var(--dx-text-muted)]">
           No assessment run yet.{" "}
           <a
             href="https://ascend.divinex.io/growth-scanner"
             target="_blank"
             rel="noreferrer"
-            className="underline decoration-white/30 underline-offset-2 hover:text-white hover:decoration-white/60"
+            className="underline decoration-white/30 underline-offset-2 hover:text-[var(--dx-text-primary)] hover:decoration-white/60"
           >
             Run a Growth Audit
           </a>
@@ -47,26 +47,26 @@ export function AssessmentHistoryCard({ dashboardSummary }: { dashboardSummary: 
     <AscendCardShell title="Assessment History" action={<IntelligenceStatusBadge meta={dashboardSummary.meta} />}>
       {data?.hasScan ? (
         <ul className="space-y-2">
-          <li className="rounded-lg border border-white/10 px-3 py-2.5">
-            <p className="text-sm text-white/80">{data.scoreLabel ?? "Scored"}</p>
-            {data.latestGrowthScore !== null && <p className="mt-0.5 text-xs text-white/40">Score: {Math.round(data.latestGrowthScore)} / 100</p>}
+          <li className="rounded-lg border border-[var(--dx-border-subtle)] px-3 py-2.5">
+            <p className="text-sm text-[var(--dx-text-secondary)]">{data.scoreLabel ?? "Scored"}</p>
+            {data.latestGrowthScore !== null && <p className="mt-0.5 text-xs text-[var(--dx-text-muted)]">Score: {Math.round(data.latestGrowthScore)} / 100</p>}
           </li>
         </ul>
       ) : (
-        <p className="text-sm text-white/40">
+        <p className="text-sm text-[var(--dx-text-muted)]">
           No assessments recorded yet.{" "}
           <a
             href="https://ascend.divinex.io/growth-scanner"
             target="_blank"
             rel="noreferrer"
-            className="underline decoration-white/30 underline-offset-2 hover:text-white hover:decoration-white/60"
+            className="underline decoration-white/30 underline-offset-2 hover:text-[var(--dx-text-primary)] hover:decoration-white/60"
           >
             Run a Growth Scan
           </a>{" "}
           to start your history.
         </p>
       )}
-      <p className="mt-3 text-[11px] text-white/30">
+      <p className="mt-3 text-[11px] text-[var(--dx-text-primary)]/30">
         Showing the latest assessment only — full paginated history is a follow-up once a dedicated bridge endpoint exists.
       </p>
     </AscendCardShell>
@@ -80,14 +80,14 @@ export function ReportsCard({ reports }: { reports: WithMeta<IntelligenceReportS
       {items.length > 0 ? (
         <ul className="space-y-2">
           {items.slice(0, 5).map((r) => (
-            <li key={r.id} className="flex items-center justify-between rounded-lg border border-white/10 px-3 py-2 text-sm">
-              <span className="text-white/80">{r.title || r.reportType.replace(/_/g, " ")}</span>
-              {r.score !== null && <span className="text-xs text-white/40">{Math.round(r.score)}</span>}
+            <li key={r.id} className="flex items-center justify-between rounded-lg border border-[var(--dx-border-subtle)] px-3 py-2 text-sm">
+              <span className="text-[var(--dx-text-secondary)]">{r.title || r.reportType.replace(/_/g, " ")}</span>
+              {r.score !== null && <span className="text-xs text-[var(--dx-text-muted)]">{Math.round(r.score)}</span>}
             </li>
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-white/40">No reports yet.</p>
+        <p className="text-sm text-[var(--dx-text-muted)]">No reports yet.</p>
       )}
     </AscendCardShell>
   );
@@ -106,11 +106,11 @@ export function BlueprintSummaryCard({ dashboardSummary }: { dashboardSummary: W
     <AscendCardShell title="Blueprint Summary" action={<IntelligenceStatusBadge meta={dashboardSummary.meta} />}>
       {data?.latestBlueprintHeadline || data?.recommendedFunnel ? (
         <>
-          {data.latestBlueprintHeadline && <p className="text-sm text-white/80">{data.latestBlueprintHeadline}</p>}
-          {data.recommendedFunnel && <p className="mt-1 text-xs text-white/50">Recommended funnel: {data.recommendedFunnel}</p>}
+          {data.latestBlueprintHeadline && <p className="text-sm text-[var(--dx-text-secondary)]">{data.latestBlueprintHeadline}</p>}
+          {data.recommendedFunnel && <p className="mt-1 text-xs text-[var(--dx-text-muted)]">Recommended funnel: {data.recommendedFunnel}</p>}
         </>
       ) : (
-        <p className="text-sm text-white/40">No blueprint recommendation yet. Full Blueprint Studio detail is a follow-up slice.</p>
+        <p className="text-sm text-[var(--dx-text-muted)]">No blueprint recommendation yet. Full Blueprint Studio detail is a follow-up slice.</p>
       )}
     </AscendCardShell>
   );

@@ -20,8 +20,8 @@ export function MetricCard({
 }) {
   return (
     <AscendCardShell title={label} action={meta ? <IntelligenceStatusBadge meta={meta} /> : undefined}>
-      <p className="text-2xl font-semibold tracking-tight text-white">{value}</p>
-      {subLabel && <p className="mt-1 text-xs text-white/50">{subLabel}</p>}
+      <p className="text-2xl font-semibold tracking-tight text-[var(--dx-text-primary)]">{value}</p>
+      {subLabel && <p className="mt-1 text-xs text-[var(--dx-text-muted)]">{subLabel}</p>}
     </AscendCardShell>
   );
 }

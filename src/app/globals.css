@@ -120,6 +120,41 @@ body {
   --dx-radius-lg: 1rem;
 }
 
+/*
+ * PRODUCTION EXPERIENCE 2.0, Phase C — make the shell's theme reach the
+ * components inside it.
+ *
+ * The DivineX tokens above were scoped to `.theme-ascend`, but the shadcn
+ * tokens every Flow component actually renders with (--background,
+ * --card, --border, …) were only ever defined on `:root` (light) and
+ * `.dark`. So a Flow builder mounted inside the dark Ascend shell drew
+ * itself with the LIGHT palette, and the workaround was to wrap it in a
+ * white panel — which is precisely the "Flow wrapped in Ascend chrome"
+ * the North Star names as the thing to fix.
+ *
+ * Mapping the shadcn surface here means nested Flow components inherit the
+ * shell's theme natively, and the white wrappers can go. Values mirror the
+ * existing `.dark` block so nothing new is invented; only the scope is.
+ */
+.theme-ascend {
+  --background: var(--dx-surface-0);
+  --foreground: var(--dx-text-primary);
+  --card: var(--dx-surface-2);
+  --card-foreground: var(--dx-text-primary);
+  --popover: var(--dx-elevated);
+  --popover-foreground: var(--dx-text-primary);
+  --secondary: var(--dx-surface-3);
+  --secondary-foreground: var(--dx-text-primary);
+  --muted: var(--dx-surface-3);
+  --muted-foreground: var(--dx-text-muted);
+  --accent: var(--dx-surface-3);
+  --accent-foreground: var(--dx-text-primary);
+  --destructive: var(--dx-destructive);
+  --border: var(--dx-border-subtle);
+  --input: var(--dx-border);
+  --ring: var(--dx-focus);
+}
+
 .theme-ascend .dx-primary-action {
   background-color: var(--dx-primary);
   color: var(--dx-primary-foreground);

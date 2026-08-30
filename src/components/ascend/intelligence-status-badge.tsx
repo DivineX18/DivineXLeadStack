@@ -31,11 +31,11 @@ export function IntelligenceStatusBadge({ meta }: { meta: IntelligenceFetchMeta 
   };
 
   const tone: Record<Exclude<IntelligenceFetchMeta["status"], "ok">, string> = {
-    cached: "text-white/50",
+    cached: "text-[var(--dx-text-muted)]",
     stale: "text-amber-400",
-    unavailable: "text-white/40",
+    unavailable: "text-[var(--dx-text-muted)]",
     timeout: "text-amber-400",
-    empty: "text-white/40",
+    empty: "text-[var(--dx-text-muted)]",
   };
 
   return (

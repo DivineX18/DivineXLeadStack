@@ -13,14 +13,14 @@ import type { WithMeta, CroAuditRecommendation } from "@/types/intelligence";
 const IMPACT_TONE: Record<CroAuditRecommendation["impact"], string> = {
   High: "text-emerald-400",
   Medium: "text-amber-400",
-  Low: "text-white/50",
+  Low: "text-[var(--dx-text-muted)]",
 };
 
 function RecommendationRow({ rec }: { rec: CroAuditRecommendation }) {
   return (
-    <li className="rounded-lg border border-white/10 px-3 py-2.5">
-      <p className="text-sm text-white/85">{rec.fix}</p>
-      <p className="mt-1 text-xs text-white/40">
+    <li className="rounded-lg border border-[var(--dx-border-subtle)] px-3 py-2.5">
+      <p className="text-sm text-[var(--dx-text-primary)]/85">{rec.fix}</p>
+      <p className="mt-1 text-xs text-[var(--dx-text-muted)]">
         <span className={IMPACT_TONE[rec.impact]}>{rec.impact} impact</span> · {rec.difficulty} effort · {rec.categoryLabel}
       </p>
     </li>
@@ -41,7 +41,7 @@ export function RecommendedNextActionCard({
       {action ? (
         <RecommendationRow rec={action} />
       ) : (
-        <p className="text-sm text-white/40">Nothing to recommend right now — run a Growth Scan or CRO Audit under Identify.</p>
+        <p className="text-sm text-[var(--dx-text-muted)]">Nothing to recommend right now — run a Growth Scan or CRO Audit under Identify.</p>
       )}
     </AscendCardShell>
   );
@@ -60,7 +60,7 @@ export function RecommendationsListCard({ recommendations }: { recommendations: 
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-white/40">
+        <p className="text-sm text-[var(--dx-text-muted)]">
           {recommendations.meta.status === "unavailable" ? "Unavailable right now." : "No recommendations yet — run a CRO Audit to generate some."}
         </p>
       )}

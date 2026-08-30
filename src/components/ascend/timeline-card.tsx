@@ -16,7 +16,7 @@ import type { WithMeta, GrowthTimeline } from "@/types/intelligence";
 const DIRECTION_TONE: Record<"improved" | "declined" | "no_change", string> = {
   improved: "text-emerald-400",
   declined: "text-red-400",
-  no_change: "text-white/50",
+  no_change: "text-[var(--dx-text-muted)]",
 };
 
 export function GrowthTimelineCard({ timeline, limit = 5 }: { timeline: WithMeta<GrowthTimeline>; limit?: number }) {
@@ -34,11 +34,11 @@ export function GrowthTimelineCard({ timeline, limit = 5 }: { timeline: WithMeta
               {Math.abs(data.businessEvolution.difference)} vs. previous scan
             </span>
           </div>
-          {data.businessEvolution.summary && <p className="mt-2 text-xs text-white/60">{data.businessEvolution.summary}</p>}
+          {data.businessEvolution.summary && <p className="mt-2 text-xs text-[var(--dx-text-muted)]">{data.businessEvolution.summary}</p>}
           {data.categoryDeltas.length > 0 && (
             <ul className="mt-3 space-y-1.5">
               {data.categoryDeltas.slice(0, limit).map((c) => (
-                <li key={c.key} className="flex items-center justify-between text-xs text-white/50">
+                <li key={c.key} className="flex items-center justify-between text-xs text-[var(--dx-text-muted)]">
                   <span>{c.label}</span>
                   <span className={DIRECTION_TONE[c.direction === "improved" ? "improved" : c.direction === "declined" ? "declined" : "no_change"]}>
                     {c.difference > 0 ? "+" : ""}
@@ -50,9 +50,9 @@ export function GrowthTimelineCard({ timeline, limit = 5 }: { timeline: WithMeta
           )}
         </>
       ) : timeline.meta.status === "empty" ? (
-        <p className="text-sm text-white/40">Run a second Growth Scan to see how your score changes over time.</p>
+        <p className="text-sm text-[var(--dx-text-muted)]">Run a second Growth Scan to see how your score changes over time.</p>
       ) : (
-        <p className="text-sm text-white/40">No timeline available yet.</p>
+        <p className="text-sm text-[var(--dx-text-muted)]">No timeline available yet.</p>
       )}
     </AscendCardShell>
   );

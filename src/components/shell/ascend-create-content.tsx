@@ -59,11 +59,11 @@ export function AscendCreateContent({
         <p className="mt-1 text-sm text-white/50">{description}</p>
       </div>
 
-      <section className="rounded-2xl bg-white p-6 text-foreground shadow-sm">
+      <section className="rounded-[var(--dx-radius-lg)] border p-6" style={{ backgroundColor: "var(--dx-surface-1)", borderColor: "var(--dx-border-subtle)" }}>
         <FunnelsList saId={saId} baseHref={funnelBaseHref} />
       </section>
 
-      <section className="rounded-2xl bg-white p-6 text-foreground shadow-sm">
+      <section className="rounded-[var(--dx-radius-lg)] border p-6" style={{ backgroundColor: "var(--dx-surface-1)", borderColor: "var(--dx-border-subtle)" }}>
         {isAdmin ? (
           <AscendWebsitesSection saId={saId} websiteMaxSites={websiteMaxSites} />
         ) : (
