@@ -383,7 +383,7 @@ export function HeroSection({
 
   return (
     <section
-      className="relative overflow-hidden px-4 pb-10 pt-10 sm:pt-16"
+      className={`relative overflow-hidden ${FOLD_SECTION}`}
       style={{
         backgroundImage: `linear-gradient(180deg, ${accentColor}22 0%, ${accentColor}0a 45%, transparent 80%), radial-gradient(ellipse 70% 50% at 50% 0%, ${accentColor}30, transparent)`,
       }}
