@@ -106,6 +106,7 @@ import {
   type AnimationLevel,
   type VisualDensity,
   type CtaStrategyId,
+  type GalleryLayoutId,
 } from "@/lib/funnels/design-strategy";
 import { createFormServerSide } from "@/lib/server/forms-service";
 import {
@@ -4437,8 +4438,28 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         (lightPalettes.length > 0
           ? lightPalettes[Math.abs(paletteHash) % lightPalettes.length].id
           : undefined);
+      // GENUINE DEFECT FIX (regression classification, 2026-08-30):
+      // resolveDesignStrategy accepts NINE overrides and create_funnel passed
+      // only two, so seven documented visual instructions — the ones the tool
+      // schema explicitly invites the model to use — were parsed, validated,
+      // and then silently dropped. A valid hero_layout could never reach the
+      // page: line ~4537 reads `designStrategy.heroLayout ?? args.heroLayout`,
+      // and since a strategy always exists the fallback was dead code.
+      //
+      // Passing them HERE rather than applying them downstream is deliberate:
+      // the engine already validates each against the resolved archetype's own
+      // approved options, so an invalid override stays ignored exactly as
+      // documented. The frozen engine's contract is unchanged — it is simply
+      // being given the inputs it was always designed to receive.
       const designStrategy = resolveDesignStrategy(effectiveArchetype, {
         ...(variedPaletteId ? { paletteId: variedPaletteId } : {}),
+        ...(args.colorMode ? { colorMode: args.colorMode as ColorMode } : {}),
+        ...(args.typographyPairing ? { typographyPairing: args.typographyPairing as TypographyPairingId } : {}),
+        ...(args.heroLayout ? { heroLayout: args.heroLayout as HeroLayoutId } : {}),
+        ...(args.animationLevel ? { animationLevel: args.animationLevel as AnimationLevel } : {}),
+        ...(args.visualDensity ? { visualDensity: args.visualDensity as VisualDensity } : {}),
+        ...(args.mediaStrategy ? { mediaStrategy: args.mediaStrategy as MediaStrategyId } : {}),
+        ...(args.galleryLayout ? { galleryLayout: args.galleryLayout as GalleryLayoutId } : {}),
         ctaStrategy: ((args.ctaStyle as string) || undefined) as CtaStrategyId | undefined,
       });
       // Persuasion depth (Sales Argument Engine): multi-factor — commitment,

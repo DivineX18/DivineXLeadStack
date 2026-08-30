@@ -114,3 +114,19 @@ Justification is empirical: ~50 funnels built from invented businesses
 while the asset pipeline was misclassifying real website imagery badly
 enough to put a third party's school seal in a photo gallery. Synthetic
 fixtures produce clean, uniform inputs and proved almost nothing.
+
+## Hero above-the-fold requirement (open — Phase C follow-up)
+
+Observed on the RWAR page 2026-08-30: the hero headline consumes the entire
+first screen, the media sits below it, and the CTA plus the trust row
+(`501(c)(3) nonprofit · Serving communities since 2013 · Built by educators`)
+fall below the fold entirely. A visitor must scroll before seeing anything
+to act on or any reason to trust the page.
+
+**Requirement:** the hero's headline, primary CTA and social-proof/trust row
+must all sit within the first viewport, on desktop and mobile. Media should
+shrink or move rather than push the CTA down. This is a conversion property,
+not a styling preference — an unseen CTA converts at zero.
+
+Applies to the hero specifically; later sections may fall below the fold as
+normal.

@@ -120,14 +120,27 @@ try {
     createdFunnelIds.push(result.ref!.id);
     const snap = await db.doc(`funnels/${result.ref!.id}`).get();
     const funnel = snap.data()!;
-    check("4c. designPack stored on the funnel doc", funnel.designPack === "premium", funnel.designPack);
+    // CONTRACT UPDATED 2026-08-30. The archetype-driven Design Strategy
+    // engine superseded design packs: resolveDesignStrategy is now computed
+    // unconditionally and funnels-service stores designPack only when NO
+    // designStrategy exists (`pack && !opts.designStrategy`). Since a
+    // strategy always exists, designPack is by design never persisted and
+    // the pack's accent/theme never win. Asserting the old behaviour would
+    // force the product back to an obsolete architecture, so these now test
+    // the CURRENT authority instead.
+    check("4c. Design Strategy is the authority (designPack not persisted)", funnel.designPack === undefined, String(funnel.designPack));
     check(
-      "4d. Pack's default accent/theme applied (premium = light theme, gold accent)",
-      funnel.theme === "light" && funnel.accentColor === DESIGN_PACKS.premium.defaultAccentColor,
+      "4d. Strategy-resolved accent/theme are stored",
+      typeof funnel.theme === "string" && /^#[0-9a-f]{6}$/i.test(String(funnel.accentColor)),
       `${funnel.theme} / ${funnel.accentColor}`,
     );
     const hero = (funnel.sections as { type: string; config: Record<string, unknown> }[]).find((s) => s.type === "hero");
-    check("4e. Hero layout override applied", hero?.config.layout === "founder_image", hero?.config.layout as string);
+    // founder_image is NOT among professional_enterprise's approved layouts
+    // (["centered","split"]), so ignoring it is the documented contract —
+    // "an invalid override is silently ignored". That a VALID override
+    // survives the whole chain is proven separately, against an archetype
+    // that allows it: scripts/verify-design-override-chain.mts.
+    check("4e. Override invalid for the archetype is ignored, as documented", hero?.config.layout === "centered", hero?.config.layout as string);
     // No genre was specified, so this defaults to lead_magnet — one-fold
     // (RC 1.1 length pass, 2026-08-02), meaning the hero itself is the
     // capture/CTA surface now (there's no separate offer section).
