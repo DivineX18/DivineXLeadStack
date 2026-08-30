@@ -81,3 +81,34 @@ different business.
 
 Lives in the frozen Sales Argument / Business Reality engines, so it is
 recorded here rather than patched.
+
+### Ascend `dev` branch has diverged from `main` (open — deferred debt)
+
+`DivineX-Business-Intelligence`'s `dev` branch cannot fast-forward from
+`main` and does not contain `artifacts/api-server/src/lib/brandDiscovery.ts`
+at all — a stash-pop onto it conflicted immediately (`DU`, deleted-by-us).
+So Ascend currently has **no usable dev-first path**: work off `main` cannot
+land on `dev` without a real reconciliation.
+
+The asset-classification work was therefore committed to a feature branch
+off `main` (`brand-asset-classification` @ `e4dc534`) and deployed to
+`ascend-bi-growth-scan-staging` for validation.
+
+**Deliberately NOT fixed during the classifier work** (owner's call, and the
+right one): mixing branch reconciliation into pipeline validation adds risk
+to both. Resolve the branch strategy before any final production promotion.
+
+This is the same class of problem as the Flow staging drift above — a
+deployment path that looks like it exists but doesn't actually work — and
+both stem from services and branches maintained by hand rather than declared
+in `render.yaml`.
+
+## Testing policy change (adopted 2026-08-30)
+
+Real-business probes are now part of every major visual/generation
+certification, not a diagnostic reached for only when something looks wrong.
+Justification is empirical: ~50 funnels built from invented businesses
+("Summit HVAC", "Lakeside Family Dental") passed a 10-scenario stress test
+while the asset pipeline was misclassifying real website imagery badly
+enough to put a third party's school seal in a photo gallery. Synthetic
+fixtures produce clean, uniform inputs and proved almost nothing.
