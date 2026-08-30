@@ -44,6 +44,14 @@ const MAX_HISTORY_TURNS = 12;
 const MAX_MESSAGE_CHARS = 4000;
 /** Max read-only lookups the model may chain in one user turn. */
 const MAX_LOOKUP_HOPS = 3;
+/**
+ * How many times the model may repair a WRITE capability's arguments before
+ * we give up. Every capability's validate() error is written as an
+ * instruction to the model ("write a headline yourself and call it again"),
+ * so it has to reach the model to do anything. Two attempts is enough for a
+ * missing-field repair without letting a confused turn spin.
+ */
+const MAX_WRITE_REPAIR_HOPS = 2;
 
 function sanitizeMessages(input: unknown): AiSuiteChatMessage[] | null {
   if (!Array.isArray(input)) return null;
@@ -300,12 +308,47 @@ export async function POST(request: Request) {
   // to the model as tool messages) until the model produces either text or a
   // confirm-gated write proposal. Writes are NEVER executed here.
   let turn;
+  let writeRepairs = 0;
   try {
     for (let hop = 0; ; hop++) {
       turn = await runAiSuiteTurn({ messages: llmMessages, tools });
       const call = turn.toolCall;
       if (!call || hop >= MAX_LOOKUP_HOPS) break;
       const cap = getCapability(call.name);
+
+      // A WRITE the model got wrong: hand the validation error back to it so
+      // it can fix the arguments, the same way a lookup result goes back.
+      // Without this the turn dead-ends and the customer is shown the raw
+      // instruction text ("YOU are the copywriter…") — internal prompt
+      // engineering surfacing as a question, and the build never happens.
+      if (
+        cap &&
+        !cap.readonly &&
+        cap.level === lvl &&
+        roleSatisfies(cap.requiredRole, roleCtx) &&
+        writeRepairs < MAX_WRITE_REPAIR_HOPS
+      ) {
+        const attempt = cap.validate(call.args);
+        if (attempt.ok) break; // good args — fall through to the proposal path
+        writeRepairs++;
+        console.warn(`[ai-suite/chat] ${cap.name} args rejected (repair ${writeRepairs}): ${attempt.error}`);
+        llmMessages.push(
+          {
+            role: "assistant",
+            content: turn.text,
+            tool_calls: [
+              {
+                id: call.id,
+                type: "function",
+                function: { name: call.name, arguments: JSON.stringify(call.args) },
+              },
+            ],
+          },
+          { role: "tool", tool_call_id: call.id, content: `Invalid arguments: ${attempt.error}` },
+        );
+        continue;
+      }
+
       if (
         !cap ||
         !cap.readonly ||
@@ -402,10 +445,15 @@ export async function POST(request: Request) {
         };
         return NextResponse.json(response);
       }
-      // Model tried to act but the args are incomplete — ask, don't propose.
+      // Still wrong after its repair attempts. validate() errors are written
+      // for the model, not the customer — surfacing one verbatim shows people
+      // internal instructions. Log the real reason, say something true and
+      // useful instead.
+      console.warn(`[ai-suite/chat] ${cap.name} args still invalid after ${writeRepairs} repair(s): ${validated.error}`);
       const response: AiSuiteChatResponse = {
         type: "message",
-        text: `I can help with that, but ${validated.error}. Could you tell me?`,
+        text:
+          "I couldn't put that together yet. Tell me a bit more about the offer and who it's for, and I'll build you a draft.",
       };
       return NextResponse.json(response);
     }

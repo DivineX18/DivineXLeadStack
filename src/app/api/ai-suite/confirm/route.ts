@@ -143,8 +143,13 @@ export async function POST(request: Request) {
   // Re-validate the args server-side — the client's payload is never trusted.
   const validated = cap.validate(body.args);
   if (!validated.ok) {
+    // validate() errors are written as instructions to the MODEL ("YOU are
+    // the copywriter…"). The chat route repairs them by handing them back to
+    // the model; if one reaches here the proposal is stale or the underlying
+    // data changed. Log the real reason, tell the customer something true.
+    console.warn(`[ai-suite/confirm] ${cap.name} args invalid: ${validated.error}`);
     return NextResponse.json(
-      { error: `Can't run that action: ${validated.error}.` },
+      { error: "That request is missing something I need. Ask me again and I'll rebuild it." },
       { status: 400 },
     );
   }
