@@ -1621,7 +1621,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     menuLabel:
       "Set up a new community with its first course and lesson (returns the live URLs)",
     description:
-      "Set up a new community (a Skool-style group with a feed + classroom) in this sub-account, including its first course and first lesson, and return the live URLs. Gather conversationally before calling: the community's name, who can join (open, or approval-required), an optional one-line tagline, the first lesson's title, and optionally a YouTube/Vimeo video URL and/or lesson text. Everything is created PUBLISHED and live on confirm. Free-to-join communities only — for a paid community, point the user at Sidebar → Community (pricing needs PayPal setup).",
+      "Set up a new community (a Skool-style group with a feed + classroom) in this sub-account, including its first course and first lesson, and return the live URLs. Gather conversationally before calling: the community's name, who can join (open, or approval-required), an optional one-line tagline, the first lesson's title, and optionally a YouTube/Vimeo video URL and/or lesson text. Everything is created PUBLISHED and live on confirm. Free-to-join communities only — for a paid community, point the user at Create (pricing needs PayPal setup).",
     parameters: {
       type: "object",
       properties: {
@@ -1757,7 +1757,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       return {
         resultText: `Your community “${group.name}” is live.\nCommunity feed: ${communityUrl}\nFirst lesson “${lesson.title}”${videoNote}: ${lessonUrl}\nMembers sign in via a magic link (tied to their contact record) — share the community URL to invite them${
           args.joinPolicy === "approval" ? "; join requests will wait for your approval" : ""
-        }. Manage everything under Sidebar → Community.`,
+        }. Manage everything under Create.`,
         ref: { kind: "communityGroup", id: group.id },
       };
     },
@@ -3303,7 +3303,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       return {
         resultText: `The build for “${
           (args.siteName as string) || (args.heading as string)
-        }” is submitted — it takes about 1–3 minutes to generate. Watch it go live under Sidebar → Website; the card shows the live URL when it's ready.`,
+        }” is submitted — it takes about 1–3 minutes to generate. Watch it go live under Create; the card shows the live URL when it's ready.`,
         ref: { kind: "website", id: siteId },
       };
     },
@@ -3326,7 +3326,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       if (snap.empty) {
         return {
           resultText:
-            "No websites exist in this workspace yet. Ask me to build one, or use Sidebar → Website.",
+            "No websites exist in this workspace yet. Ask me to build one, or use Create.",
         };
       }
       const lines = snap.docs.map((d) => {
@@ -5666,7 +5666,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       summaryLines.push(
         "",
         "STATUS",
-        "Everything above is in Draft. Review each asset before publishing/activating — Sidebar → Funnels" +
+        "Everything above is in Draft. Review each asset before publishing/activating — Create" +
           (createdFormId ? " / Forms / Templates / Workflows." : "."),
       );
 
@@ -5956,7 +5956,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       if (funnels.length === 0) {
         return {
           resultText:
-            "No funnels exist in this workspace yet. Ask me to build one, or use Sidebar → Funnels.",
+            "No funnels exist in this workspace yet. Ask me to build one, or use Create.",
         };
       }
       const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";

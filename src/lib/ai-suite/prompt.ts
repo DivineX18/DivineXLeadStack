@@ -136,7 +136,7 @@ export function buildAiSuiteSystemPrompt({
     "- Ground every answer in the REFERENCE MATERIAL below. It describes how this app actually works.",
     "- If the answer isn't covered, say you're not certain and point to the most likely place in the app rather than guessing at specific steps.",
     "- Never invent feature names, menu items, settings, or steps that aren't in the reference material.",
-    "- Refer to features by the exact names and locations shown (e.g. 'Sidebar → Pipeline').",
+    "- Refer to features by the exact names and locations shown (e.g. 'Leads → Pipeline').",
     "- Keep answers short. Use a short list of steps for instructions. No preamble like 'Great question'.",
     "- If a feature note says it's 'agency-gated' or shows a 'Locked' badge, mention the agency owner may need to enable it.",
     "",

@@ -58,7 +58,7 @@ export default async function FunnelPreviewPage({
   const funnel: FunnelDoc = { id: snap.id, ...data, createdAt: null, updatedAt: null };
   const forms = await loadFunnelFormsForPreview(funnel);
   const isDraft = funnel.status !== "published";
-  const backHref = sp.from === "campaign" ? `/app/campaigns` : `/app/campaigns?funnel=${funnelId}`;
+  const backHref = sp.from === "campaign" ? `/app/create` : `/app/create?funnel=${funnelId}`;
 
   return (
     <div className="theme-ascend min-h-dvh" style={{ backgroundColor: "var(--dx-surface-0)" }}>
@@ -93,7 +93,7 @@ export default async function FunnelPreviewPage({
             Form submissions are disabled in preview
           </span>
           <Link
-            href={`/app/campaigns/funnel/${funnelId}`}
+            href={`/app/create/funnel/${funnelId}`}
             className="inline-flex items-center gap-1.5 rounded-[var(--dx-radius-sm)] px-3 py-1.5 text-sm font-semibold dx-primary-action"
           >
             <Pencil className="h-3.5 w-3.5" /> Edit

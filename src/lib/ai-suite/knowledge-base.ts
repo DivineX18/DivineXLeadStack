@@ -10,7 +10,7 @@ const GET_LEADS_CARD: AiSuiteKnowledgeCard = {
   id: "get-leads",
   levels: ["sub-account"],
   title: "Get Leads (experimental prospecting)",
-  location: "Sidebar → Get Leads",
+  location: "Leads → Get Leads",
   keywords: ["get leads", "prospect", "prospecting", "find businesses", "local business", "google maps", "lead finder", "scrape", "no website", "radius", "map", "import leads", "custom service", "tag"],
   body:
     "Get Leads finds local businesses that might need whatever you sell. Pick a business type (a curated list, plus your own — admins click Manage services to add or remove service types), set a location (start typing and pick from the suggestions that appear, or use your current location), a radius, and Max results (10/20/40 — this caps how many businesses come back AND how many enrichment credits one search can spend, so you can't burn credits in a single run), then search — results take 1–3 minutes because each business is enriched with emails and social links. Results show on a map and an enriched list (phone, email, website, rating); amber pins and the 'No website' filter flag businesses without a website. Tick the ones you want, optionally edit the 'Tag as' value (pre-filled from the search, e.g. 'plumbers-brisbane'), and click Import to create contacts (source 'Get Leads' plus that tag; duplicates by phone/email are skipped). Follow up using the tag: a Workflow with the 'contact created' trigger filtered to that tag, a Broadcast to that tag's audience, or an outbound voice campaign over it. Results aren't saved — import before leaving the page. It's experimental and agency-gated: if it shows 'Locked', ask your agency owner to enable it. The deployment also needs an Outscraper API key configured (searches spend the agency's Outscraper credits).",
@@ -37,7 +37,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "workspace-assistant",
     levels: ["sub-account", "agency"],
     title: "Zeno, your AI assistant",
-    location: "Sidebar → Zeno / Agency → Zeno",
+    location: "Ask Zeno — available anywhere",
     keywords: ["assistant", "zeno", "ai suite", "chatbot", "help", "actions", "confirm", "safe", "permissions", "what can you do"],
     body:
       "Zeno is DivineX's in-app AI assistant, available at two levels: inside each sub-account (scoped strictly to that one workspace's data) and at the agency level (agency owner only — can answer across sub-accounts and act inside a named one). Both answer how-to questions and perform a fixed set of actions; every action shows a confirmation card and nothing runs until you confirm. All executed actions are audit-logged. Both are OFF by default because replies use the agency's AI credits: the agency owner enables Zeno per sub-account from the Manage dialog, and at the agency level from Agency → Settings → Zeno.",
@@ -46,7 +46,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "contacts",
     levels: ["sub-account"],
     title: "Contacts",
-    location: "Sidebar → Contacts",
+    location: "Leads → Contacts",
     keywords: ["contact", "lead", "people", "import", "csv", "export", "notes", "activity", "tags"],
     body:
       "Contacts holds every lead and customer for the sub-account. Add or edit a contact from the add/edit modal, and open a contact to see its profile with notes and a unified activity timeline. You can import and export contacts as CSV. Contacts carry a source badge (e.g. Web Chat, Booking, Form) showing where they came from, plus captured marketing attribution (UTM/referrer) when they arrived via a public form. The assistant can add a contact (with tags) or search contacts for you.",
@@ -56,7 +56,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "pipeline",
     levels: ["sub-account"],
     title: "Pipeline (Kanban)",
-    location: "Sidebar → Pipeline",
+    location: "Leads → Pipeline",
     keywords: ["pipeline", "kanban", "deal", "stage", "drag", "won", "lost", "board", "opportunity", "value"],
     body:
       "Pipeline is a drag-and-drop Kanban board with six stages (New → Contacted → Qualified → Proposal → Won / Lost). Each deal card shows its value and days-in-stage. Drag a deal across stages to update it; moving to Lost prompts for a lost reason. One contact can have multiple deals. Accepted quotes can auto-create a Won-stage deal. The assistant can create a deal for a contact, move a deal to another stage (including Won/Lost), and give you a pipeline snapshot with counts and values per stage.",
@@ -65,7 +65,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "calendar",
     levels: ["sub-account"],
     title: "Calendar",
-    location: "Sidebar → Calendar",
+    location: "Leads → Calendar",
     keywords: ["calendar", "event", "appointment", "month", "schedule"],
     body:
       "Calendar is a month grid for manual events. Click a day to add an event, optionally link it to a contact, and it writes to the contact's activity timeline. Public self-service booking is handled separately under Booking.",
@@ -74,7 +74,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "booking",
     levels: ["sub-account"],
     title: "Booking pages",
-    location: "Sidebar → Booking",
+    location: "Leads → Booking",
     keywords: ["booking", "calendly", "slot", "appointment", "self-service", "reschedule", "cancel", "reminder"],
     body:
       "Booking is a Calendly-style public slot picker per sub-account. Configure a booking page (durations, working hours, required fields, optional price and reminders), then share its public URL. A visitor picks a slot; the server re-verifies availability, reconciles a contact, creates a calendar event, and sends an ICS-attached confirmation email. Reschedule, cancel, reminders, and paid-hold expiry are handled automatically.",
@@ -83,7 +83,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "tasks",
     levels: ["sub-account"],
     title: "Tasks",
-    location: "Sidebar → Tasks",
+    location: "Leads → Tasks",
     keywords: ["task", "todo", "due", "overdue", "follow up", "reminder"],
     body:
       "Tasks organizes todos into Today / Overdue / Upcoming / Done, with a due-today badge in the sidebar. Tasks can be linked to a contact. Several features auto-create follow-up tasks — e.g. a Web Chat or Voice lead capture creates a 'follow up' task due today. The assistant can create a task for you, with a due date and an optional linked contact.",
@@ -92,7 +92,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "forms",
     levels: ["sub-account"],
     title: "Forms",
-    location: "Sidebar → Forms",
+    location: "Create → Forms",
     keywords: ["form", "builder", "field", "public", "embed", "iframe", "capture", "landing"],
     body:
       "Forms is a drag-order field builder with six field types that map to contact fields. Each form gets a public hosted page and an iframe embed snippet. On submit it auto-creates a contact (and optionally a deal), captures marketing attribution, and can trigger the Speed-to-Lead automation. Attach automations from the form's Automation panel.",
@@ -101,7 +101,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "products",
     levels: ["sub-account"],
     title: "Products catalog",
-    location: "Sidebar → Products",
+    location: "Create → Products",
     keywords: ["product", "catalog", "price", "item", "invoice", "line item"],
     body:
       "Products is a reusable per-sub-account catalog (name, description, unit price, currency, active flag). When building a quote or invoice, use 'Add from catalog' to snapshot a product into a line item — editing a product later never changes historical quotes/invoices.",
@@ -110,7 +110,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "quotes-invoices",
     levels: ["sub-account"],
     title: "Quotes & Invoices",
-    location: "Sidebar → Quotes",
+    location: "Create → Quotes",
     keywords: ["quote", "estimate", "invoice", "line item", "accept", "decline", "paid", "paypal", "send"],
     body:
       "Quotes lets you build a line-itemed quote (with discount, tax, terms, validity), send it via a branded email, and the recipient views and accepts or declines on a public page. Accepting can auto-create a Won-stage deal. A quote can be converted to an invoice; invoices can show a PayPal.me 'Pay' button (paste your PayPal.me username under Settings → Payments). Payment is marked paid manually after it lands. Sending requires Resend (email) to be configured.",
@@ -119,7 +119,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "website",
     levels: ["sub-account", "agency"],
     title: "Website builder",
-    location: "Sidebar → Website",
+    location: "Create → Website",
     keywords: ["website", "site", "gitpage", "landing", "publish", "build", "vsl", "niche", "template", "like a site", "gym site"],
     body:
       "Website builds a marketing site per sub-account via gitpage.site — fill the sectioned form (Basics / Pages / Services / Design / FAQ), choose Local (multi-page) or VSL (single-page video funnel), optionally pick a niche template (Gym & Fitness, Home Services, Real Estate), and click Build. The build queues and publishes to a live URL in a few minutes. Each sub-account can hold up to 5 sites. The assistant can also build a site for you from a description ('build me a gym website like fitness.com') — it can read a reference site for tone, picks the matching niche template, drafts the copy, and submits the build after you confirm; it can also check whether a build is done. Niche templates need the business's street address. This feature is agency-gated: if the Website entry shows a 'Locked' badge, ask your agency owner to enable it.",
@@ -128,16 +128,16 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "workflows",
     levels: ["sub-account"],
     title: "Workflows (visual automation builder)",
-    location: "Sidebar → Workflows",
+    location: "Create → Workflows",
     keywords: ["workflow", "automation", "builder", "speed to lead", "trigger", "sms", "email", "drip", "nurture", "publish", "template"],
     body:
-      "Workflows is a visual automation builder: pick a trigger (e.g. form submitted, contact created, deal stage changed, quote/invoice marked paid), then chain steps like send SMS, send email, wait, and create task. Start from a template — Speed-to-Lead, Appointment Confirmation, Lead Nurture, Stage-Change Follow-up, Post-Purchase Nurture — or blank. Post-Purchase Nurture fires on the 'quote.paid' trigger, which covers BOTH quotes marked paid and invoices marked paid (invoices have no 'accepted' step of their own, so this is the only trigger that fires after a PayPal-paid invoice). Workflows are created as drafts; publish to make them live, and check per-run history under the workflow's Runs. Emails must include the unsubscribe link. Delayed steps run through a background queue, so workflows need QStash configured on the deployment. The assistant can create a workflow from a starter template for you (as a draft). Related settings — the Reply-To address, sending-hours window, and the 'Pause all workflows' switch — live under Sidebar → Settings → Sending preferences (Messaging tab), not on the Workflows page.",
+      "Workflows is a visual automation builder: pick a trigger (e.g. form submitted, contact created, deal stage changed, quote/invoice marked paid), then chain steps like send SMS, send email, wait, and create task. Start from a template — Speed-to-Lead, Appointment Confirmation, Lead Nurture, Stage-Change Follow-up, Post-Purchase Nurture — or blank. Post-Purchase Nurture fires on the 'quote.paid' trigger, which covers BOTH quotes marked paid and invoices marked paid (invoices have no 'accepted' step of their own, so this is the only trigger that fires after a PayPal-paid invoice). Workflows are created as drafts; publish to make them live, and check per-run history under the workflow's Runs. Emails must include the unsubscribe link. Delayed steps run through a background queue, so workflows need QStash configured on the deployment. The assistant can create a workflow from a starter template for you (as a draft). Related settings — the Reply-To address, sending-hours window, and the 'Pause all workflows' switch — live under Settings → Sending preferences (Messaging tab), not on the Workflows page.",
   },
   {
     id: "ai-agents",
     levels: ["sub-account"],
     title: "AI Agents",
-    location: "Sidebar → AI Agents",
+    location: "Create → AI Agents",
     keywords: ["ai agent", "bot", "web chat", "sms", "whatsapp", "voice", "persona", "channel", "openrouter", "outbound"],
     body:
       "AI Agents is one persona (system prompt + business hours + escalation keywords + optional website knowledge base) that answers across channels. Configure the shared persona on the Overview, then enable channels: Web Chat (an embeddable widget), SMS and WhatsApp (auto-replies on the dedicated Twilio number), and Voice (AI answers inbound calls). Outbound Voice proactively dials contacts. Every channel needs a non-empty persona prompt first, and channels that send need a dedicated Twilio number (Settings → SMS). Note: AI Agents answers your CLIENTS' inbound messages — Zeno (this assistant) helps YOU use the app, and is separate.",
@@ -146,7 +146,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "conversations",
     levels: ["sub-account"],
     title: "Conversations (unified inbox)",
-    location: "Sidebar → Conversations",
+    location: "Leads → Conversations",
     keywords: ["conversation", "inbox", "message", "reply", "unified", "thread", "chat"],
     body:
       "Conversations is a unified inbox across SMS, WhatsApp, and (when enabled) Facebook/Instagram DMs. Open a thread to read history and reply from the composer; the available send channels depend on what's connected and whether the contact has messaged on that channel. An unread badge appears in the sidebar.",
@@ -155,7 +155,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "broadcasts",
     levels: ["sub-account"],
     title: "Broadcasts (bulk email)",
-    location: "Sidebar → Broadcasts",
+    location: "Create → Broadcasts",
     keywords: ["broadcast", "bulk", "email", "blast", "campaign", "audience", "send"],
     body:
       "Broadcasts sends an email template to a filtered audience (all contacts, a tag, or a pipeline stage). It reuses the automations engine and every email must include the unsubscribe link. Opted-out and email-less contacts are skipped automatically. Broadcasts is agency-gated — if it shows 'Locked', ask your agency owner to enable it. Bulk SMS is not available.",
@@ -164,7 +164,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "social",
     levels: ["sub-account"],
     title: "Social Planner",
-    location: "Sidebar → Social Planner",
+    location: "Create → Social Planner",
     keywords: ["social", "post", "facebook", "instagram", "schedule", "publish", "planner", "meta"],
     body:
       "Social Planner schedules and auto-publishes posts to a connected Facebook Page and Instagram Business account. Compose a caption, paste an image URL, pick Facebook/Instagram targets and a time; posts publish at the scheduled time. It rides the same Facebook/Instagram connection as the inbox (connect it under Settings → Facebook & Instagram). Agency-gated and Meta-only.",
@@ -173,7 +173,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "community",
     levels: ["sub-account"],
     title: "Community & Courses",
-    location: "Sidebar → Community",
+    location: "Create → Community",
     keywords: ["community", "course", "group", "skool", "classroom", "member", "feed"],
     body:
       "Community is a Skool-style space with a group feed, a classroom for courses (sections + lessons with YouTube/Vimeo video), leaderboards, and gamification. Groups can be free or paid, open-join or approval-required; members join via magic link and are tied to contacts — share the community's public URL to invite them. It's agency-gated — if 'Locked', ask your agency owner to enable it. The assistant can set up a new free community for you, including its first course and lesson, and give you the live URLs.",
@@ -182,7 +182,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "reports",
     levels: ["sub-account"],
     title: "Reports",
-    location: "Sidebar → Reports",
+    location: "Performance",
     keywords: ["report", "kpi", "funnel", "revenue", "chart", "analytics", "attribution", "source"],
     body:
       "Reports shows date-range KPIs, a pipeline funnel, a won-revenue chart, and a leads-by-source donut. There's also a revenue-attribution view (first-touch, forms-only) tying revenue back to the source that generated it.",
@@ -191,7 +191,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "sa-settings",
     levels: ["sub-account"],
     title: "Sub-account settings",
-    location: "Sidebar → Settings Sub-Account",
+    location: "Settings",
     keywords: ["settings", "twilio", "sms", "email domain", "api key", "webhook", "payments", "paypal", "members", "send window"],
     body:
       "Settings is where you configure the sub-account: dedicated Twilio SMS (paste your Account SID, Auth Token, and From number to enable SMS threads + AI channels), a dedicated email sending domain (agency-gated), Sending preferences (Reply-To address, sending-hours window, pause-all-workflows), API keys + webhooks for the public API (agency-gated), PayPal.me for invoice payments, members + invites, and the Facebook & Instagram connection.",
@@ -200,7 +200,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "sending-preferences",
     levels: ["sub-account"],
     title: "Sending preferences (Reply-To, send window, pause workflows)",
-    location: "Sidebar → Settings Sub-Account → Sending preferences (Messaging tab)",
+    location: "Settings → Sending preferences",
     keywords: ["reply-to", "reply to", "replies", "bounce", "send window", "quiet hours", "sending hours", "pause", "pause workflows", "pause automations", "stop workflows", "kill switch"],
     body:
       "The Sending preferences card (Settings → Messaging tab) holds three workspace-wide controls. (1) Reply-To email: replies to every automated and broadcast email route to this address — required before using a dedicated sending domain, because the domain has no inbox and replies to it would bounce. (2) Sending hours: an optional window (start hour, end hour, timezone) so workflow messages outside it wait for the next window start instead of sending overnight. (3) Pause all workflows: an emergency stop — while paused, no workflow triggers fire and in-flight runs stop at their next step; resume from the same card. These used to live on the old Automations settings page; they're in Settings now.",
@@ -209,7 +209,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "api-webhooks",
     levels: ["sub-account"],
     title: "Public API & outbound webhooks",
-    location: "Sidebar → Settings Sub-Account → API Keys / Webhooks",
+    location: "Settings → API Keys / Webhooks",
     keywords: ["webhook", "api", "n8n", "make", "zapier", "integration", "endpoint", "trigger", "automation tool", "signing secret", "events", "rest"],
     body:
       "Each sub-account can integrate with external tools two ways. (1) Outbound webhooks: register an endpoint URL (from n8n, Make, Zapier, or custom) plus an event allowlist, and matching events (contact.created, deal.won, form.submitted, quote.accepted, booking.created, message.received, …) get POSTed to it, signed Stripe-style with a per-subscription secret. One webhook covers ONE event category — create one per category. Failed deliveries retry with backoff; 10 straight failures auto-pauses the webhook. (2) REST API: mint keys (lsk_live_/lsk_test_) under API Keys for inbound calls. Both require the agency owner to enable API access for this sub-account (a feature gate). The assistant can set up a webhook for you — just say what should trigger it and give the endpoint URL, and it sends a test event to verify it's live. n8n users: n8n shows two URLs per webhook node — the Test URL (/webhook-test/, only works while the editor is listening) and the Production URL (/webhook/, requires the workflow's Active toggle ON). Use the Production URL for permanent hooks.",
@@ -218,7 +218,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "templates",
     levels: ["sub-account"],
     title: "Templates (email & SMS)",
-    location: "Sidebar → Templates",
+    location: "Create → Templates",
     keywords: ["template", "email template", "sms template", "merge tag", "unsubscribe", "message", "reusable"],
     body:
       "Templates holds reusable email and SMS message bodies with merge tags (e.g. {{contact.firstName}}) that personalize per recipient. Workflows and Broadcasts pick from these templates when sending. Every email template must include {{unsubscribeLink}} — the editor enforces it for compliance.",
@@ -227,7 +227,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "dashboard",
     levels: ["sub-account"],
     title: "Dashboard",
-    location: "Sidebar → Dashboard",
+    location: "Home",
     keywords: ["dashboard", "home", "kpi", "overview", "leads map", "summary", "activity"],
     body:
       "Dashboard is the workspace home: KPI summary, a pipeline snapshot, recent activity, and a leads map with clustered pins showing where contacts came from (locations are captured on public form submissions; the map needs a Mapbox token configured on the deployment).",
@@ -236,7 +236,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "logs",
     levels: ["sub-account"],
     title: "Logs (API & webhook deliveries)",
-    location: "Sidebar → Logs",
+    location: "Settings → Logs",
     keywords: ["logs", "delivery", "webhook log", "api log", "debug", "failed", "retry", "redeliver"],
     body:
       "Logs shows integration history for the workspace: recent public-API requests per key, and outbound webhook events with each delivery attempt (HTTP status, error, retries). Use it to debug an integration — a failing webhook shows the response your endpoint returned, and you can redeliver an event after fixing the endpoint.",
@@ -285,7 +285,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "workspace-subscription",
     levels: ["sub-account"],
     title: "Your subscription (workspace billing)",
-    location: "Sidebar → Settings → Your subscription",
+    location: "Settings → Your subscription",
     keywords: ["subscription", "billing", "payment", "card", "invoice", "paywall", "paused", "past due", "update card", "manage billing"],
     body:
       "If your provider bills this workspace as a subscription, Settings shows a 'Your subscription' card with your plan, monthly price, and status. Workspace admins can click 'Manage billing' to update the card or view invoices on Stripe's secure portal, and 'Complete checkout' if payment is still owed. If a renewal payment fails you'll see a warning banner with time to fix the card; after the grace period the workspace pauses behind a payment screen until it's paid — your data is safe and access restores instantly on payment. Pricing and plan changes are handled by your provider (the agency owner).",

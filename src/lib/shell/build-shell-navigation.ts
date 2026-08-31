@@ -28,23 +28,25 @@ export const LIFECYCLE_REQUIREMENTS: Record<
   { permission: WorkspacePermission | null; module: WorkspaceModule | null }
 > = {
   home: { permission: null, module: null },
-  // Campaigns is where marketing execution lives (funnels + their forms,
-  // follow-up and automation), so it inherits the funnels gate.
-  campaigns: { permission: "funnels.read", module: "funnels" },
-  crm: { permission: "pipeline.read", module: "pipeline" },
+  // CREATE absorbs what was "Campaigns": everything Ascend builds — funnels,
+  // pages, emails/SMS, ads/social, documents, media — as one searchable
+  // library rather than a separate destination per asset type.
+  create: { permission: "funnels.read", module: "funnels" },
+  // LEADS absorbs what was "CRM": contacts, pipeline, conversations,
+  // appointments and follow-up, framed as "who should I talk to?".
+  leads: { permission: "pipeline.read", module: "pipeline" },
+  // PERFORMANCE answers "what's happening?" — business outcomes, not GA4.
+  performance: { permission: "reports.read", module: "reports" },
   intelligence: { permission: "assessments.read", module: "growth_scan" },
-  // Brand & Assets is DivineX-level canonical profile data, not a
-  // purchasable Flow module — permission-gated only.
-  brand: { permission: "workspace.read", module: null },
   settings: { permission: "workspace.update", module: null },
 };
 
 const LIFECYCLE_LABELS: Record<AscendLifecycleSectionId, string> = {
   home: "Home",
-  campaigns: "Campaigns",
-  crm: "CRM",
+  create: "Create",
+  leads: "Leads",
+  performance: "Performance",
   intelligence: "Intelligence",
-  brand: "Brand & Assets",
   settings: "Settings",
 };
 

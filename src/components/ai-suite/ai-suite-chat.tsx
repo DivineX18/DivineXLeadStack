@@ -82,12 +82,12 @@ function BuildResult({ resultRef }: { resultRef: { kind: string; id: string } | 
           <Button
             size="sm"
             variant="secondary"
-            render={<Link href={`/app/campaigns/funnel/${resultRef.id}`} />}
+            render={<Link href={`/app/create/funnel/${resultRef.id}`} />}
           >
             <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
           </Button>
-          <Button size="sm" variant="ghost" render={<Link href="/app/campaigns" />}>
-            Open campaigns
+          <Button size="sm" variant="ghost" render={<Link href="/app/create" />}>
+            Open Create
           </Button>
         </div>
       </div>
@@ -102,7 +102,7 @@ function BuildResult({ resultRef }: { resultRef: { kind: string; id: string } | 
           Saved as a draft — it cannot contact anyone until you publish it.
         </p>
         <div className="mt-2.5 flex flex-wrap gap-2">
-          <Button size="sm" render={<Link href={`/app/launch/workflows/${resultRef.id}`} />}>
+          <Button size="sm" render={<Link href={`/app/create/workflows/${resultRef.id}`} />}>
             Review follow-up
           </Button>
         </div>

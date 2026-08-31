@@ -1,30 +1,11 @@
-import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
-import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-placeholder";
-import { FunnelBuilder } from "@/components/funnels/funnel-builder";
+import { redirect } from "next/navigation";
 
-/**
- * The funnel editor inside Campaigns. FunnelBuilder is reused as-is (the
- * same prop-driven component /app/create/funnels/[funnelId] and
- * /sa/[id]/funnels/[funnelId] render) — one editor, three entry points.
- */
-export default async function CampaignFunnelEditorPage({
+/** P0.3 — the funnel editor moved into Create. */
+export default async function LegacyCampaignFunnelPage({
   params,
 }: {
   params: Promise<{ funnelId: string }>;
 }) {
   const { funnelId } = await params;
-  const shell = await resolveShellContextForPage();
-  const saId = shell?.workspace?.workspaceId ?? null;
-
-  if (!saId) {
-    return (
-      <AscendSectionPlaceholder
-        title="Campaigns"
-        description="Pick a workspace to edit this funnel."
-        links={[]}
-      />
-    );
-  }
-
-  return <FunnelBuilder saId={saId} funnelId={funnelId} />;
+  redirect(`/app/create/funnel/${funnelId}`);
 }

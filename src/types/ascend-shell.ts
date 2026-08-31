@@ -48,10 +48,10 @@ export type ShellMode = "full_ascend" | "crm_only";
  */
 export const ASCEND_LIFECYCLE_SECTIONS = [
   "home",
-  "campaigns",
-  "crm",
+  "create",
+  "leads",
+  "performance",
   "intelligence",
-  "brand",
   "settings",
 ] as const;
 export type AscendLifecycleSectionId = (typeof ASCEND_LIFECYCLE_SECTIONS)[number];
