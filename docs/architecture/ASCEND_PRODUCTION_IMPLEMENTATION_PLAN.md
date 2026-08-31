@@ -236,14 +236,61 @@ run and visually spot-checked before P0.5 is called done.
 **Acceptance:** Copilot invokes real capabilities, not just text; nothing
 external fires without approval.
 
-### P0.7 — Public marketing + one pricing page *(C8, C9)*
+### P0.7 — Unified Ascend product marketing experience *(C8, C9)*
 
-- One Ascend site, Old Way → New Opportunity narrative, one dominant CTA.
-- One pricing page: ASCEND / ASCEND PRO / AGENCY, driven by **configurable plan
-  metadata** — no hard-coded commercial rules.
-- Capability states (Available / Beta / Coming Soon) so copy cannot overclaim.
+**Scope: a PRODUCT marketing experience, not the DivineX corporate website.**
+Its only job is to advertise and sell Ascend, the AI Growth Operating System.
 
-**Acceptance:** no fabricated proof; every claim maps to a shipped capability.
+**In scope**
+- What Ascend is; the problem it solves; how Zeno works
+- Intelligence + Execution
+- Business use case; Agency use case (a plan/scope extension, not a second
+  product pitch)
+- Core capabilities, framed as outcomes rather than a feature list
+- Product screenshots / demonstration — show, don't tell
+- Pricing: ASCEND / ASCEND PRO / AGENCY, driven by **configurable plan
+  metadata**; no hard-coded commercial rules
+- Signup / checkout CTA, and login
+- Capability states (Available / Beta / Coming Soon) so copy cannot overclaim
+
+**Narrative**
+
+*The Old Way* — disconnected tools, dashboards, data, and manual execution;
+the owner still has to work out what to do.
+
+*The Ascend Way* — Ascend learns the business → Zeno identifies what matters →
+Zeno builds the next move → the user reviews → Ascend executes → Ascend
+measures → Zeno learns.
+
+**Explicitly OUT of scope** (belongs to the separate DivineX.io project — do
+not let this phase become a corporate-site rebuild):
+- Mindful Wealth
+- Broader DivineX Services
+- Resources / Thought Leadership
+- Corporate About architecture
+- WordPress migration
+
+**Routing**
+- Marketing lives at an approved public product route, e.g. `divinex.io/ascend`
+- The authenticated application remains `app.divinex.io`
+- CTAs lead to `app.divinex.io/signup`, `app.divinex.io/login`, and
+  checkout/onboarding as appropriate
+
+**OPEN DECISION — needs an answer before build.** This repo currently serves
+`crm.divinex.io` and `app.divinex.io` (see `render.yaml` domains and
+`SAFE_APP_HOSTNAMES`). `divinex.io` itself is a separate property. So
+`divinex.io/ascend` is either (a) built inside the separate DivineX.io project
+and links across, or (b) served by this app on an additional hostname/path.
+That choice determines whether P0.7 is work in this repo at all. Do not start
+P0.7 until it is settled — building it in the wrong property is expensive to
+undo, and the middleware treats unrecognised hostnames as tenant custom
+domains (a documented fail-closed guard that would 404 the marketing site).
+
+**Acceptance:** no fabricated proof — no invented testimonials, customer
+counts, statistics or outcomes, including as placeholders that could ship;
+every claim maps to a shipped capability or is explicitly marked Beta /
+Coming Soon; one dominant CTA per narrative; the excluded corporate sections
+are absent.
 
 ### P1 — Execution expansion
 Email/SMS automation depth, advanced workflows, ad-platform execution, social
