@@ -49,10 +49,16 @@ export default async function AscendHomePage() {
         <ErrorState
           title="We couldn't load your overview"
           body="Your data is safe — this is a problem reading it, not a problem with it. Your workspace is still fully usable."
+          // NON-ENUMERATION / NO TENANT-SPECIFIC LINKS. This error state is
+          // reachable on a path where the requested workspace may not be one
+          // the caller can access, so it must not construct a
+          // workspace-specific URL: doing so echoes a tenant identifier into
+          // a denied response and hands an unauthorized caller a live link.
+          // "Try again" and the workspace picker are both tenant-neutral.
           actions={
             <>
               <SecondaryAction href="/app/home">Try again</SecondaryAction>
-              <SecondaryAction href={`/sa/${workspaceId}/dashboard`}>Open workspace dashboard</SecondaryAction>
+              <SecondaryAction href="/agency">Choose a workspace</SecondaryAction>
             </>
           }
         />

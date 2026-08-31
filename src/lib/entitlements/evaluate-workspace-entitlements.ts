@@ -101,9 +101,24 @@ export async function evaluateWorkspaceEntitlements(
   // here, deliberately — unlike the billing-lapsed exemption below, this
   // gate is a real plan decision, not a payment failure, so the owner
   // should see exactly what their client's plan actually grants.
-  const mappingActive = mapping?.status === "active";
+  //
+  // P0.2 — ENTITLEMENT, NOT LINKAGE, DECIDES ACCESS.
+  //
+  // This previously also required an active workspaceMappings row. That row
+  // is the TECHNICAL linkage to an Ascend business profile, and it is created
+  // only by the SSO bridge or an operator CLI — there is no self-service path
+  // that produces one. So the commercial decision (the plan gate) could be
+  // fully satisfied and the customer still could not reach the product they
+  // had paid for. In practice exactly ONE workspace ever qualified.
+  //
+  // Under the locked product model Ascend IS the product, so eligibility must
+  // follow the plan. The mapping keeps its real job — linking a workspace to
+  // an Ascend profile for SSO and profile sync — and a workspace without one
+  // degrades exactly as an unmapped workspace always has: resolveProfileInputs
+  // returns null and generation falls back to certified no-profile behaviour.
+  // It is no longer an access gate.
   const ascendGateOn = sub.ascendIntelligenceEnabledByAgency === true;
-  const effectiveTier: WorkspaceTier = mappingActive && ascendGateOn ? "full_ascend" : "crm_only";
+  const effectiveTier: WorkspaceTier = ascendGateOn ? "full_ascend" : "crm_only";
 
   const billingState = sub.billing ? effectiveBillingState(sub.billing) : "comped";
   const billingLapsed = billingState === "lapsed" && !callerIsAgencyOwner;

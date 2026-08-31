@@ -130,7 +130,33 @@ simply removing the current restriction. Required order:
 
 **Never fabricate mappings for certification.**
 
-**Acceptance:** all four steps above, evidenced.
+**TENANT ISOLATION MUST BE BIDIRECTIONAL AND BEHAVIOURAL.** Proving "B can
+see B" is not isolation. Required, against the second legitimately provisioned
+workspace:
+
+| Direction | Expected |
+|---|---|
+| A → A | authorized reads/writes succeed |
+| B → B | authorized reads/writes succeed |
+| A → B | unauthorized reads/writes FAIL |
+| B → A | unauthorized reads/writes FAIL |
+
+**Plus workspace switching in the actual unified shell.** Server-side tenancy
+can be perfect while client state or cache leaks after a switch:
+
+- A → switch to B: no A-specific CRM, campaigns, intelligence, profile,
+  assets, Zeno context or cached customer data remains visible as B.
+- B → switch to A: same in reverse.
+
+**Verify isolation at the owning authority.** Where a backend belongs to
+Ascend rather than Flow, prove it there — shell isolation does not prove
+backend isolation.
+
+**Provisioning must be real.** Not manually-created mappings, not direct
+database surgery, not certification-only state.
+
+**Acceptance:** all four steps, the bidirectional matrix, and both switch
+directions — evidenced behaviourally.
 
 ### P0.3 — Navigation + Create library *(C1)*
 
@@ -418,6 +444,55 @@ P0.7 last of the P0s, because marketing must describe what actually ships.
   text-only sections.
 
 ---
+
+## 4b. CERTIFICATION INTEGRITY LAW
+
+**A passing verification script is not evidence unless the assertion actually
+executes against a state capable of disproving it.**
+
+Prompted by three instances of the same false-confidence pattern in one cycle:
+a fold check whose regex matched 1 of 5 layouts and still reported PASS; an
+escalation block placed after `process.exit`, never executed, while the suite
+printed CERTIFIED; and that same block then run as an account which already
+held the role, making the write a no-op that looked like an open security hole.
+
+For every P0 certification:
+
+- confirm critical assertions **execute** before termination;
+- use an actor/state **capable of failing** the condition under test;
+- prefer **behavioural** verification over source inspection for security,
+  tenancy, provisioning, deployment and customer-visible behaviour;
+- **fail closed** when required evidence cannot be obtained;
+- never count an unexecuted, skipped, unreachable, no-op or inapplicable
+  assertion as a pass.
+
+**Before final P0 certification, audit the P0 verification scripts themselves
+for these failure modes.** The certifiers get certified.
+
+### ENVIRONMENT FIDELITY
+
+**A security, privacy, deployment, performance, serialization, routing,
+caching or customer-visible finding must NOT be characterised as a production
+defect solely from development-mode behaviour.**
+
+Where behaviour can differ by runtime/build mode:
+
+1. reproduce against a **production build**;
+2. remove certification-only overrides unless the override itself is under test;
+3. verify the exact response/artifact a production customer receives;
+4. distinguish dev instrumentation from production serialization;
+5. only then assign production severity.
+
+Dev-mode failures remain useful engineering signals, but are labelled as such
+until reproduced under production-equivalent conditions.
+
+Locked after a real misclassification: a tenant-data disclosure was reported
+as `BLOCKED BY A GENUINE DEFECT` on the strength of a dev-server run made with
+`ASCEND_SHELL_MODE_OVERRIDE=full_ascend`. The production build emitted 22KB
+instead of 219KB and contained none of the workspace name, Firestore
+internals, membership paths or permission objects. One real defect survived
+(a tenant-specific link on the denied path) — but the severity was wrong, and
+the override meant the shell never even took its production redirect.
 
 ## 5. Working agreements
 
