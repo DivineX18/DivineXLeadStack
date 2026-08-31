@@ -602,7 +602,16 @@ service cloud.firestore {
     // Role/agency fields are server-only.
     match /users/{userId} {
       allow read: if isAuthed() && request.auth.uid == userId;
-      allow update: if isAuthed() && request.auth.uid == userId;
+      // P0.1 PRIVILEGE-ESCALATION GUARD. This doc is self-writable, and
+      // `platformRole` (Super Admin, Platform Admin, Support, …) lives on it
+      // and is resolved server-side. Without this clause a browser could run
+      // updateDoc(doc(db,'users',myUid), {platformRole:'super_admin'}) and
+      // grant itself the platform. Only the Admin SDK may set it — see
+      // scripts/seed-platform-roles.mts. Everything else a user could
+      // previously self-update still works.
+      allow update: if isAuthed()
+                    && request.auth.uid == userId
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['platformRole']);
       allow create, delete: if false;
 
       // Push-notification device registry (PWA). Created/updated only by
