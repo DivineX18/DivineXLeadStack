@@ -4,6 +4,11 @@ import { authMiddleware } from "next-firebase-auth-edge/lib/next/middleware";
 
 const PUBLIC_PATHS = [
   "/",
+  // P0.1/U3 — deployment provenance (branch + commit). Public and
+  // secret-free on purpose: verifying which build a service is running must
+  // not require a session, since the deployment drift this prevents was
+  // found while probing an environment we could not yet authenticate to.
+  "/api/version",
   "/login",
   "/signup",
   "/terms",

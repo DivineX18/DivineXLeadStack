@@ -93,8 +93,17 @@ customers if done correctly.
 vocabularies during migration. Deploy rules **before** any writer emits new
 values, or existing members lose access.
 
+**U3 — STAGING PROVENANCE IS PRODUCTION INFRASTRUCTURE, NOT DEFERRED DEBT.**
+P0.1 must establish a reliable source of truth for what branch/commit each
+staging service runs, and prevent the silent deployment drift hit twice during
+certification (a service reporting "Deployed" while serving a 20-day-old
+branch, and a green suite passing against a build missing the change).
+
 **Acceptance:** every existing member retains identical access; Super Admin
-resolves server-side; a forged client role claim changes nothing.
+resolves server-side; a forged client role claim changes nothing; every
+deployed service reports its own branch + commit over HTTP, so the deployed
+artifact can be verified rather than inferred; staging services are declared
+in `render.yaml`.
 
 ### P0.2 — Ungate Ascend *(C2 — highest blast radius in the whole plan)*
 
@@ -111,9 +120,17 @@ product. This must be staged, not flipped.
 to every workspace at once. Every workspace's data must already be tenant-safe
 under the shell — proven for one workspace, not yet for many.
 
-**Acceptance:** a second workspace, provisioned through the **real** path,
-receives its mapping and shell automatically. *This is the standing
-pre-broader-beta requirement; do not hand-create a mapping to satisfy it.*
+**P0.2 SAFETY LAW (locked).** Do NOT globally expose the unified shell by
+simply removing the current restriction. Required order:
+1. Provision a second legitimate Complete/full_ascend workspace **through the
+   real provisioning path**.
+2. Verify mapping + entitlements + shell access resolve automatically.
+3. Prove cross-workspace isolation.
+4. Only then widen eligibility deliberately, according to entitlement.
+
+**Never fabricate mappings for certification.**
+
+**Acceptance:** all four steps above, evidenced.
 
 ### P0.3 — Navigation + Create library *(C1)*
 
@@ -125,8 +142,16 @@ pre-broader-beta requirement; do not hand-create a mapping to satisfy it.*
   Funnels, Emails & SMS, Ads & Social, Documents, Media) and one primary CTA:
   `+ Create with Zeno`.
 
+**U2 — customer-facing navigation guidance must be reconciled against the
+final IA.** Zeno tells customers to click things ("Sidebar → Funnels /
+Community / Website"). After the rename those instructions are wrong. Do NOT
+merely patch the six currently-known strings — sweep all customer-facing
+navigation guidance and prevent recurrence.
+
 **Acceptance:** no dead links; every legacy path lands somewhere real;
-`verify-prodexp-ia.mts` updated to the new IA.
+`verify-prodexp-ia.mts` updated to the new IA; **no customer-facing string
+references a navigation destination that does not exist in the final IA**,
+enforced by a regression check rather than a one-time grep.
 
 ### P0.4 — Approval system *(C6)*
 
@@ -291,8 +316,18 @@ run and visually spot-checked before P0.5 is called done.
 - Growth Plan: multi-step requests produce a plan → autonomous internal drafts
   → one review experience → per-asset or whole-plan approval.
 
+**U1 — customer-facing Zeno output must never expose internals.** Prohibited
+in anything a customer reads: internal orchestration metadata, raw
+implementation instructions, bridge parameters (e.g. `bridge_next_funnel_id`),
+inappropriate internal design rationale (e.g. "chosen for consultants" on a
+dental page, enterprise-procurement guidance on a $99 offer), and redundant
+competing completion messages (a "Growth System Created" banner above the
+completion card's own success state).
+
 **Acceptance:** Copilot invokes real capabilities, not just text; nothing
-external fires without approval.
+external fires without approval; **no customer-visible Zeno output contains
+internal orchestration metadata or competing completion messages**, enforced
+by a regression check.
 
 ### P0.7 — Unified Ascend product marketing experience *(C8, C9)*
 
