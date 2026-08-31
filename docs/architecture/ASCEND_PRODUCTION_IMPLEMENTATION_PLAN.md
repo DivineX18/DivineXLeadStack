@@ -155,9 +155,75 @@ byte-level classification, URL dedupe, theme-asset exclusion).
   repetition, generic-AI appearance, factual consistency) before a page is
   marked Ready for Review. Auto-repair obvious failures.
 
-**Acceptance:** extend `verify-asset-pipeline-output.mts`; a page that fails
-the Critic never reaches Ready for Review; no fabricated evidence (existing BRE
-guarantees hold).
+#### P0.5 acceptance requirements (owner-specified)
+
+**(1) The hero is decided separately from the rest of the page.**
+
+For every generated page the Director must resolve the hero to exactly one of:
+
+- hero needs a first-party image
+- hero needs a generated/contextual image
+- hero is intentionally text-only
+
+`hero.mediaType = none` followed immediately by a dense 3–4 image gallery is
+**not permitted** unless the page strategy specifically determined that
+hierarchy. Observed failing on a real page (apostillecorp): empty hero, then a
+4-up gallery, which reads as an image dump regardless of the assets being
+correct. When the hero is intentionally text-only, the next section must not
+recreate that impression.
+
+Hero visual hierarchy is a scored dimension in the Critic.
+
+**(2) First-party is necessary, NOT sufficient.**
+
+Grade every candidate:
+
+| Grade | Meaning | Use |
+|---|---|---|
+| First-party, high quality | Real, specific, well-shot | Prefer |
+| First-party, relevant but generic | Theirs, but stock-style | Use sparingly, strongest one only |
+| First-party, low quality / poor fit | Theirs, but weak or wrong | Avoid |
+| Unusable | Chrome, theme asset, too small | Never |
+
+An asset does not earn placement merely by living under `/uploads/`. Observed:
+apostillecorp's own photography is stock-style, so maximum first-party usage
+would have produced a worse page than fewer, stronger images.
+
+When the business's own imagery is generic, valid responses are: use only the
+strongest relevant asset; reduce image quantity; use intentional no-image
+sections; or recommend approved custom imagery where policy allows. The goal
+is **brand authenticity AND page quality** — not maximum first-party usage.
+
+**(3) The Critic evaluates page-level visual rhythm, not image presence.**
+
+Must flag: image clustering; gallery dumps; repeated image patterns; too many
+images above the fold; long stretches with no visual support where imagery
+would aid clarity; the same asset used twice; unrelated imagery; excessive
+stock-style imagery; image-heavy sections that weaken hierarchy.
+
+The page must read as **intentionally art-directed**, not populated from an
+inventory.
+
+#### How these become testable
+
+Deterministic, hard-asserted in `verify-asset-pipeline-output.mts`:
+- hero decision is one of the three explicit outcomes, recorded on the funnel
+- no empty-hero-followed-by-dense-gallery pattern
+- no asset repeated across sections (URL-level; perceptual is post-beta)
+- above-the-fold image count within budget
+- no unusable-grade asset placed anywhere
+
+Judgment-based, model-scored with human spot-checks — these cannot be honestly
+regex-asserted, and claiming otherwise would repeat the mistake where a green
+suite hid a real visual defect:
+- "reads as art-directed"
+- generic-stock-style severity
+- whether a no-image section was the right call
+
+**Acceptance:** extend `verify-asset-pipeline-output.mts` with the
+deterministic set; a page failing the Critic never reaches Ready for Review; no
+fabricated evidence (existing BRE guarantees hold); a real-business probe is
+run and visually spot-checked before P0.5 is called done.
 
 ### P0.6 — Zeno Copilot + Growth Plans *(C7, §10)*
 
