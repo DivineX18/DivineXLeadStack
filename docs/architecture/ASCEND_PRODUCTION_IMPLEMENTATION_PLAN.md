@@ -174,7 +174,22 @@ recreate that impression.
 
 Hero visual hierarchy is a scored dimension in the Critic.
 
-**(2) First-party is necessary, NOT sufficient.**
+**(2) First-party preference is necessary; first-party STATUS is not a
+placement entitlement.**
+
+The ordering is: **authenticity → relevance → quality → composition need →
+placement.** First-party is a strong positive signal, not a right to appear.
+
+A generated page is NOT required to use first-party photography. The Director
+may legitimately conclude the hero needs generated/contextual imagery, or
+should be text-only, and some businesses simply have no usable first-party
+photography at all.
+
+**Implementation warning:** do NOT implement this as `mustUseFirstParty =
+true` or any equivalent hard requirement. That recreates the exact Apostille
+failure this requirement exists to eliminate — a page filled with the
+business's own generic stock-style imagery because it was theirs, not because
+it was good.
 
 Grade every candidate:
 
@@ -270,21 +285,23 @@ not let this phase become a corporate-site rebuild):
 - Corporate About architecture
 - WordPress migration
 
-**Routing**
-- Marketing lives at an approved public product route, e.g. `divinex.io/ascend`
-- The authenticated application remains `app.divinex.io`
-- CTAs lead to `app.divinex.io/signup`, `app.divinex.io/login`, and
-  checkout/onboarding as appropriate
+**PROPERTY BOUNDARY — LOCKED**
 
-**OPEN DECISION — needs an answer before build.** This repo currently serves
-`crm.divinex.io` and `app.divinex.io` (see `render.yaml` domains and
-`SAFE_APP_HOSTNAMES`). `divinex.io` itself is a separate property. So
-`divinex.io/ascend` is either (a) built inside the separate DivineX.io project
-and links across, or (b) served by this app on an additional hostname/path.
-That choice determines whether P0.7 is work in this repo at all. Do not start
-P0.7 until it is settled — building it in the wrong property is expensive to
-undo, and the middleware treats unrecognised hostnames as tenant custom
-domains (a documented fail-closed guard that would 404 the marketing site).
+| DivineX public website (`divinex.io`) | Unified Ascend application (`app.divinex.io`) |
+|---|---|
+| Ascend product marketing, likely `/ascend` | signup / login / provisioning / onboarding |
+| Positioning + demonstrations | Home, Campaigns, CRM, Intelligence, Brand & Assets |
+| ASCEND / ASCEND PRO / AGENCY pricing | Zeno |
+| Signup / checkout entry points | Agency / multi-business experience |
+| Broader DivineX corporate content elsewhere on the same property | Everything after someone enters the product |
+
+**Implementation owner: the DivineX public website project, NOT this repo.**
+Public marketing responsibilities are not added to the application repo merely
+because the Ascend app is implemented here.
+
+**P0.7 REMAINS IN THIS PLAN.** It is a launch dependency with a different
+implementation owner — do not drop it from the launch checklist just because
+it is not Flow code. Ascend cannot launch without it.
 
 **Acceptance:** no fabricated proof — no invented testimonials, customer
 counts, statistics or outcomes, including as placeholders that could ship;
@@ -332,3 +349,27 @@ P0.7 last of the P0s, because marketing must describe what actually ships.
 4. Verify the deployed artifact, never the dashboard — this caught two false
    greens this cycle.
 5. Additive migrations; production data is preserved.
+
+---
+
+## 6. Release sequencing — LOCKED
+
+    Current RC human test
+      -> consolidated punch list
+      -> reconcile findings against P0.1-P0.7
+      -> execute P0
+      -> full certification
+      -> second human acceptance test
+      -> production
+
+**The release candidate is FROZEN during the human test.** The point is a
+clean before/after read of the pre-P0 baseline, which is impossible if the
+product changes underneath the person judging it. P0.3 changes navigation and
+P0.5 changes generated-page visual direction, so this is the last chance to
+judge the current experience as a customer would.
+
+**Triage protocol during the test: categorise, do not fix.** Each finding is
+one of — bug / UX problem / visual-quality problem / missing capability /
+already addressed by a planned P0 phase. Fixing individual visible symptoms
+mid-test obscures the underlying system problem, which is how a single
+misclassified asset previously read as four separate defects.
