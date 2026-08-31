@@ -195,6 +195,56 @@ check("21. Unauthorized vs nonexistent: same redirect", denied.headers.get("loca
 check("22. Unauthorized vs nonexistent: identical payload size", dBody.length === gBody.length, `${dBody.length} vs ${gBody.length}`);
 check("23. Neither denial echoes the requested id", !dBody.includes(B) && !gBody.includes(GHOST));
 
+// ── SHELL-LEVEL ISOLATION (post-widening) ───────────────────────────────
+// Previously untestable: the unified_shell flag sat at internal_admin, so
+// non-owner actors were redirected out of /app/* regardless of membership.
+// Now that the flag is widened to `beta` for these entitled workspaces, the
+// SHELL itself can be certified — not just the API beneath it.
+//
+// /preview/funnel/{id} is used as the sentinel surface because it
+// SERVER-renders the funnel name and is tenant-gated. The campaigns list is a
+// client component (onSnapshot), so its data never appears in server HTML and
+// could not prove anything either way.
+{
+  const shellEntry = (s: string, ws: string) =>
+    fetch(`${BASE}/app/home`, { headers: { cookie: ctxCookie(s, ws) }, redirect: "manual" });
+  const preview = (s: string, ws: string, funnelId: string) =>
+    fetch(`${BASE}/preview/funnel/${funnelId}`, { headers: { cookie: ctxCookie(s, ws) }, redirect: "manual" });
+
+  // 1. Authorized users enter the correct workspace shell.
+  const inA = await shellEntry(sA, A);
+  check("24. SHELL: authorized single-workspace actor enters A", inA.ok, `HTTP ${inA.status}`);
+  const inB = await shellEntry(sB, B);
+  check("25. SHELL: authorized single-workspace actor enters B", inB.ok, `HTTP ${inB.status}`);
+
+  // 2 + 3. Dual-access switching shows only the active workspace, and no
+  // stale tenant data survives the switch.
+  const dualA = await preview(sAB, A, plantedA);
+  const dualABody = dualA.ok ? await dualA.text() : "";
+  check("26. SHELL: dual-access in A sees A's sentinel", dualA.ok && dualABody.includes(SENTINEL_A), `HTTP ${dualA.status}`);
+  check("27. SHELL: dual-access in A does NOT see B's sentinel", !dualABody.includes(SENTINEL_B));
+  const dualB = await preview(sAB, B, plantedB);
+  const dualBBody = dualB.ok ? await dualB.text() : "";
+  check("28. SHELL: after switching to B, sees B's sentinel", dualB.ok && dualBBody.includes(SENTINEL_B), `HTTP ${dualB.status}`);
+  check("29. SHELL: no stale A data survives the switch", !dualBBody.includes(SENTINEL_A));
+
+  // 4 + 5. Unauthorized cross-workspace access denied, id not echoed.
+  const crossPreview = await preview(sA, A, plantedB); // A's actor, B's funnel
+  const crossBody = await crossPreview.text();
+  check("30. SHELL: unauthorized cannot preview another tenant's funnel", !crossPreview.ok, `HTTP ${crossPreview.status}`);
+  check("31. SHELL: denied preview leaks no sentinel", !crossBody.includes(SENTINEL_B));
+  const crossShell = await shellEntry(sA, B);
+  const crossShellBody = await crossShell.text();
+  check("32. SHELL: forged workspace context is denied", !crossShell.ok, `HTTP ${crossShell.status}`);
+  check("33. SHELL: forged context echoes no tenant id", !crossShellBody.includes(B));
+
+  // 6. Non-enumeration holds at the shell too.
+  const gShell = await shellEntry(sA, GHOST);
+  const gBody = await gShell.text();
+  check("34. SHELL: unauthorized vs nonexistent same status", crossShell.status === gShell.status, `${crossShell.status} vs ${gShell.status}`);
+  check("35. SHELL: unauthorized vs nonexistent identical payload", crossShellBody.length === gBody.length, `${crossShellBody.length} vs ${gBody.length}`);
+}
+
 for (const c of cleanup) await c();
 console.log(`\ncleaned up ${cleanup.length} probe records`);
 console.log(bad === 0 ? "TENANT ISOLATION CERTIFIED (bidirectional, sentinel-proven)" : `${bad} CHECK(S) FAILED`);
