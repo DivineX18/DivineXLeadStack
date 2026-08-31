@@ -155,6 +155,49 @@ byte-level classification, URL dedupe, theme-asset exclusion).
   repetition, generic-AI appearance, factual consistency) before a page is
   marked Ready for Review. Auto-repair obvious failures.
 
+#### P0.5 destination — what "done" means
+
+**100% automated strategy and composition. Human contribution ONLY where
+authentic source material does not exist.**
+
+Not a percentage target. A responsibility boundary: DivineX owns every
+*decision*; the human supplies only what cannot be decided into existence.
+
+DivineX decides, always and automatically:
+- page structure, copy, hierarchy, hero treatment
+- which sections need visual support at all
+- which existing assets are genuinely good enough
+- where each approved asset belongs
+- what kind of missing asset would improve the page
+
+DivineX must NOT manufacture authenticity to chase automation. If a section
+needs a photo of the founder, team, product, office, completed project or
+customer experience and that photograph does not exist, the correct output is
+a **deliberate gap with an extremely specific brief** — never a stock photo
+pretending to solve it.
+
+**The four states, exhaustive:**
+
+| Situation | Correct behaviour |
+|---|---|
+| Great assets available | Use them automatically |
+| An appropriate generatable visual | Create or recommend it |
+| No image improves the section | Intentionally no image |
+| Authentic photo required but missing | Precise human shot brief |
+
+Both extremes are failures: "AI does absolutely everything" manufactures
+fake authenticity; "AI builds the page and humans decorate it" abandons the
+composition decisions that are the actual product.
+
+**Placeholder UX (P0.5, not deferred).** A gap must be actionable in place —
+Upload photo · Choose from Brand Library · Generate alternative (where
+generation is appropriate). The user must not have to leave the funnel,
+navigate to Brand & Assets, upload, return, find the section and reconnect it.
+
+**Page state language.** A page with open gaps is not "incomplete". State it
+as capability, e.g. *"Publishable now. Stronger with 2 photos."* — the page
+publishes cleanly today and upgrades the moment real imagery exists.
+
 #### P0.5 acceptance requirements (owner-specified)
 
 **(1) The hero is decided separately from the rest of the page.**
