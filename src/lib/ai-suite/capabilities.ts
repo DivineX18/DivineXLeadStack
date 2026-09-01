@@ -5160,6 +5160,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // engines are untouched: this only fills inputs the model didn't
       // supply (brand accent/axes, approved evidence assets, real logo).
       // No snapshot → profileInputs is null → certified behavior exactly.
+      // Roles whose whole function IS the visual: without real media the
+      // section cannot do its job, because the imagery IS the evidence.
+      // A hero is deliberately absent — a strong headline, offer and trust
+      // row can carry it, which is exactly why necessity is not positional.
+      const EVIDENCE_BEARING_ROLES = new Set(["gallery", "proof"]);
       let visualRequirements: VisualRequirement[] = [];
       let visualDecisions: VisualDecision[] = [];
       const profileInputs = await (async () => {
@@ -5242,10 +5247,17 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               role: r.role,
               sectionType: s.sectionType,
               brief: r.brief,
-              // The hero carries the page; a missing hero photograph is worth
-              // blocking on. Everything else is an improvement, not a defect —
-              // not every missing photo should stop a publishable page.
-              blocksReadiness: s.sectionType === "hero",
+              // SEMANTIC, not positional. Deriving this from
+              // `sectionType === "hero"` was wrong in both directions: a hero
+              // may legitimately be text-led (proved in the adversarial
+              // suite), while a non-hero visual can be the evidence the
+              // page's argument rests on.
+              //
+              // A requirement is "required" only when the section cannot
+              // fulfil its ROLE without real media — i.e. showing the work IS
+              // the argument. Everything else is publishable now and stronger
+              // later. The Critic re-judges this against the finished page.
+              necessity: EVIDENCE_BEARING_ROLES.has(r.role) ? "required" : "recommended",
             };
           });
         visualDecisions = slotResolutions

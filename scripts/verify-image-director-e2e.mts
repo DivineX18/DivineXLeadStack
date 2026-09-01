@@ -94,7 +94,7 @@ check("10. E2E: no media label contradicts its own type (the 'Add a video' bug)"
 // STRUCTURED STATE, split by MEANING. A requirement is actionable; a
 // decision is a completed choice. Modelling both as one list would force
 // every consumer to remember which entries are not gaps.
-const reqs = (f as { visualRequirements?: { id: string; brief: string; blocksReadiness: boolean; sectionType: string }[] }).visualRequirements;
+const reqs = (f as { visualRequirements?: { id: string; brief: string; necessity: string; sectionType: string }[] }).visualRequirements;
 const decisions = (f as { visualDecisions?: { reason: string; sectionType: string }[] }).visualDecisions;
 
 check("11. Unresolved requirements persist as structured state", Array.isArray(reqs), JSON.stringify(reqs));
@@ -106,12 +106,57 @@ check("13. A deliberate omission is a DECISION, never a requirement",
 
 // "Stronger with N photos" counts REQUIREMENTS only. A resolved design
 // decision must never make the page look incomplete.
-const improvementCount = (reqs ?? []).filter((r) => !r.blocksReadiness).length;
-check("14. Improvement count excludes design decisions", improvementCount === (reqs ?? []).filter((r) => !r.blocksReadiness).length && !(decisions ?? []).some((d) => (reqs ?? []).some((r) => r.sectionType === d.sectionType)),
+const improvementCount = (reqs ?? []).filter((r) => r.necessity === "recommended").length;
+check("14. Improvement count excludes design decisions",
+  !(decisions ?? []).some((d) => (reqs ?? []).some((r) => r.sectionType === d.sectionType)),
   `N=${improvementCount}`);
+// Necessity must be SEMANTIC. A hero requirement is not "required" merely by
+// being the hero — a text-led hero is a legitimate composition.
+check("16. Necessity is semantic, not positional (a hero req is not auto-required)",
+  (reqs ?? []).every((r) => r.sectionType !== "hero" || r.necessity === "recommended"),
+  JSON.stringify((reqs ?? []).map((r) => `${r.sectionType}=${r.necessity}`)));
 check("15. Every requirement carries a targetable id and a real brief",
   (reqs ?? []).every((r) => r.id.includes(":") && r.brief.length > 12),
   JSON.stringify((reqs ?? []).map((r) => r.id)));
+
+// ── SCENARIO 2: a library with NO usable landscape photograph ───────────
+// Checks 15/16 above pass vacuously when the library happens to yield a hero
+// photo — zero requirements satisfy "every requirement is well-formed". This
+// scenario FORCES an authentic_photo_required so those properties are
+// actually exercised, which is the whole point of the semantic-necessity
+// correction.
+{
+  await ref.set({
+    contract: "divinex.profile", contractVersion: 1, profileVersion: 10000,
+    publishedAt: new Date().toISOString(), businessProfileId: 0, flowSubAccountId: SA,
+    business: { name: "Portrait Only" }, offers: [], brand: {},
+    assets: [
+      // Portrait only — usable, but never a hero.
+      { id: 1, fileUrl: "https://x.test/u/founder.jpg", fileType: "image", classification: "photo", status: "approved", width: 1588, height: 2048, purpose: "Founder portrait" },
+    ],
+  }, { merge: false });
+
+  const v2 = cap.validate!({
+    funnel_name: "[E2E] director portrait-only", headline: "A Clear Offer With No Landscape Photo",
+    genre: "lead_gen", bullets: ["Real benefit one", "Real benefit two", "Real benefit three"],
+    visual_archetype: "nonprofit_mission", media_subject: "Mobile notary meeting a client at a kitchen table",
+  });
+  if (!v2.ok) throw new Error(v2.error);
+  const b2 = await cap.execute!(ctx as never, v2.args);
+  const f2 = (await db.doc(`funnels/${b2.ref!.id}`).get()).data()!;
+  const r2 = (f2 as { visualRequirements?: { id: string; brief: string; necessity: string; sectionType: string }[] }).visualRequirements ?? [];
+
+  check("17. NON-VACUOUS: a library with no landscape photo produces a real requirement",
+    r2.length > 0, JSON.stringify(r2.map((r) => `${r.sectionType}=${r.necessity}`)));
+  check("18. That requirement carries a targetable id", r2.every((r) => r.id.includes(":")), JSON.stringify(r2.map((r) => r.id)));
+  check("19. And the SPECIFIC shot brief, not a generic label",
+    r2.some((r) => r.brief.toLowerCase().includes("notary")), JSON.stringify(r2.map((r) => r.brief.slice(0, 40))));
+  check("20. SEMANTIC NECESSITY: a missing hero photo is 'recommended', not auto-'required'",
+    r2.filter((r) => r.sectionType === "hero").every((r) => r.necessity === "recommended"),
+    JSON.stringify(r2.map((r) => `${r.sectionType}=${r.necessity}`)));
+
+  await db.doc(`funnels/${b2.ref!.id}`).delete();
+}
 
 await db.doc(`funnels/${built.ref!.id}`).delete();
 if (prior) await ref.set(prior, { merge: false }); else await ref.delete();

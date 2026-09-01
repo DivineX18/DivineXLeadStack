@@ -72,8 +72,33 @@ export interface VisualRequirement {
   sectionType: string;
   /** The shot brief — specific enough to act on without asking us. */
   brief: string;
-  /** False when the Director judged the page publishable without it. */
-  blocksReadiness: boolean;
+  /**
+   * SEMANTIC, never positional. An earlier version derived this from
+   * `sectionType === "hero"`, which is wrong in both directions: a hero may
+   * legitimately be text-led, while a non-hero visual can be the evidence the
+   * page's argument actually rests on.
+   *
+   *   required     the section cannot fulfil its role without this — the
+   *                page's argument or evidence genuinely depends on it
+   *   recommended  publishable and reviewable now; authentic media would
+   *                make it stronger
+   *
+   * The Critic has the final say on readiness against the finished artifact.
+   */
+  necessity: "required" | "recommended";
+  /**
+   * How this requirement was satisfied, when it has been. Resolution means
+   * "this visual role is handled" — NOT "authentic first-party evidence now
+   * exists". A generated image must never become evidence merely because it
+   * filled a slot and turned the UI green.
+   */
+  resolvedWith?: {
+    provenance: "first_party_upload" | "brand_library" | "generated";
+    url: string;
+    /** True only for genuine business media. Generated visuals are never
+     *  evidence, however well they fit the slot. */
+    countsAsAuthenticEvidence: boolean;
+  };
 }
 
 /**
