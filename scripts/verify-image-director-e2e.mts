@@ -155,6 +155,56 @@ check("15. Every requirement carries a targetable id and a real brief",
     r2.filter((r) => r.sectionType === "hero").every((r) => r.necessity === "recommended"),
     JSON.stringify(r2.map((r) => `${r.sectionType}=${r.necessity}`)));
 
+  // ── RESOLUTION LOOP: state and composition must AGREE ─────────────────
+  // The failure that matters is the UI saying a photo is handled while the
+  // page still lacks it, or the reverse — either makes the product lie.
+  const { resolveVisualRequirement, countOutstandingImprovements } =
+    await import("../src/lib/funnels/resolve-visual-requirement.ts");
+  const heroReq = r2.find((r) => r.sectionType === "hero")!;
+
+  check("21. Before resolution, the improvement is counted",
+    countOutstandingImprovements(f2 as never) === r2.length, `N=${countOutstandingImprovements(f2 as never)}`);
+
+  // ADVERSARIAL PROVENANCE: a GENERATED visual fills the slot but must never
+  // become authentic first-party evidence. This is the exact boundary a
+  // resolution flow would quietly erode to make the UI green.
+  const GEN = "https://x.test/generated/alt-hero.jpg";
+  const res = await resolveVisualRequirement({
+    funnelId: b2.ref!.id, subAccountId: SA, requirementId: heroReq.id,
+    provenance: "generated", url: GEN,
+  });
+  const f3 = (await db.doc(`funnels/${b2.ref!.id}`).get()).data()!;
+  const r3 = (f3 as { visualRequirements?: { id: string; resolvedWith?: { provenance: string; countsAsAuthenticEvidence: boolean; url: string } }[] }).visualRequirements ?? [];
+  const hero3 = (f3.sections as { type: string; config: Record<string, unknown> }[]).find((x) => x.type === "hero");
+
+  check("22. Resolution reaches the COMPOSED PAGE, not just state",
+    hero3?.config.mediaUrl === GEN, String(hero3?.config.mediaUrl));
+  check("23. Structured state agrees with the page",
+    r3.find((r) => r.id === heroReq.id)?.resolvedWith?.url === GEN);
+  check("24. PROVENANCE PRESERVED: generated stays 'generated'",
+    r3.find((r) => r.id === heroReq.id)?.resolvedWith?.provenance === "generated");
+  check("25. A generated visual is NOT authentic first-party evidence",
+    res.countsAsAuthenticEvidence === false &&
+      r3.find((r) => r.id === heroReq.id)?.resolvedWith?.countsAsAuthenticEvidence === false);
+  check("26. The stale placeholder brief is cleared from the composed hero",
+    !hero3?.config.mediaPlaceholderBrief, String(hero3?.config.mediaPlaceholderBrief ?? ""));
+  check("27. Resolved requirements stop counting toward improvements",
+    countOutstandingImprovements(f3 as never) === 0, `N=${countOutstandingImprovements(f3 as never)}`);
+
+  // Targeting: an unknown requirement id must fail, not resolve something else.
+  let rejected = false;
+  try {
+    await resolveVisualRequirement({ funnelId: b2.ref!.id, subAccountId: SA, requirementId: "nope:nope", provenance: "generated", url: GEN });
+  } catch { rejected = true; }
+  check("28. Actions target a SPECIFIC requirement id, not 'a photo somewhere'", rejected);
+
+  // Tenancy holds inside the transaction too.
+  let crossDenied = false;
+  try {
+    await resolveVisualRequirement({ funnelId: b2.ref!.id, subAccountId: "some-other-workspace", requirementId: heroReq.id, provenance: "generated", url: GEN });
+  } catch { crossDenied = true; }
+  check("29. TENANCY: another workspace cannot resolve this funnel's slot", crossDenied);
+
   await db.doc(`funnels/${b2.ref!.id}`).delete();
 }
 

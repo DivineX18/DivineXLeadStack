@@ -4,6 +4,7 @@ import { ArrowLeft, Eye, Pencil } from "lucide-react";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { requireSubAccountMemberForPage } from "@/lib/auth/require-tenancy-page";
 import { PublicFunnelView } from "@/components/funnels/public-funnel-view";
+import { VisualRequirementsPanel } from "@/components/funnels/visual-requirements-panel";
 import { loadFunnelFormsForPreview } from "@/lib/funnels/load-funnel-for-render";
 import type { FunnelDoc } from "@/types/funnels";
 
@@ -100,6 +101,17 @@ export default async function FunnelPreviewPage({
           </Link>
         </span>
       </div>
+
+      {/* Unresolved visual requirements, resolvable in place. Deliberately
+          ABOVE the page: a blank slot inside the composition reads as a bug,
+          whereas a named brief with actions reads as the next step. Completed
+          Director decisions are not shown — they are resolved choices, not
+          gaps. */}
+      <VisualRequirementsPanel
+        subAccountId={data.subAccountId}
+        funnelId={funnelId}
+        requirements={funnel.visualRequirements ?? []}
+      />
 
       {/* The REAL production renderer against the live draft document. */}
       <PublicFunnelView funnel={funnel} forms={forms} previewMode />
