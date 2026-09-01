@@ -108,6 +108,7 @@ import {
   type CtaStrategyId,
   type GalleryLayoutId,
 } from "@/lib/funnels/design-strategy";
+import { planPageVisuals } from "@/lib/funnels/image-director";
 import { createFormServerSide } from "@/lib/server/forms-service";
 import {
   createMessageTemplateServerSide,
@@ -5174,61 +5175,92 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         if (!args.campaignHumanity && profileInputs.campaignHumanity) args.campaignHumanity = profileInputs.campaignHumanity;
         if (!args.visualDensity && profileInputs.visualDensity) args.visualDensity = profileInputs.visualDensity;
         if (!args.logoUrl && profileInputs.identity.logoUrl) args.logoUrl = profileInputs.identity.logoUrl;
-        // Approved, classified imagery — real evidence beats stock, and
-        // evidence-class marks ride the existing supplied-evidence strip.
-        if (!args.heroMediaUrl && profileInputs.assets.hero) {
-          args.heroMediaUrl = profileInputs.assets.hero;
-          args.heroMediaType = "image";
-        }
+        // ── IMAGE DIRECTOR (P0.5) — the ONE authoritative visual decision.
+        //
+        // The page-level plan is produced BEFORE placement and then fulfilled.
+        // This replaces the older inline distribution, which decided each
+        // section independently: individually reasonable choices that added up
+        // to a bad page (the Apostille failure). There is now a single
+        // composition authority, not two that can disagree.
+        //
+        // Marks and seals ride the evidence strip and are never photography.
         if (!args.suppliedEvidenceLogos && profileInputs.assets.evidenceLogos.length > 0) {
           args.suppliedEvidenceLogos = profileInputs.assets.evidenceLogos.map((l) => ({ url: l.url, alt: l.label }));
         }
-        // Real photography from their own site fills the gallery. Captions
-        // are deliberately omitted — we know these images are theirs, not
-        // what each one depicts, and inventing a caption is exactly the
-        // fabrication the engine forbids. No photos → the honest labeled
-        // placeholder stands, unchanged.
-        if (profileInputs.assets.gallery.length > 0) {
-          // Spread the business's own photography DOWN the page rather than
-          // stacking it in one grid: a story portrait, one photo per benefit
-          // item, and only the remainder in the gallery. Sections without a
-          // real media field are skipped — writing imageUrl to a config that
-          // has no such field is silently dropped by the renderer, which is
-          // exactly how "distributed" imagery ended up as a single row.
-          const pool = [...profileInputs.assets.gallery];
-          let taken = 0;
-          const next = () => (taken < pool.length ? pool[taken++] : null);
 
-          sectionsToSave = sectionsToSave.map((sec): FunnelSection => {
-            if (sec.type === "story") {
-              const cfg = sec.config as { photoUrl?: string };
-              if (cfg.photoUrl) return sec;
-              const url = next();
-              return url ? ({ ...sec, config: { ...cfg, photoUrl: url } } as FunnelSection) : sec;
-            }
-            if (sec.type === "benefits_grid") {
-              const cfg = sec.config as { items?: { imageUrl?: string }[] };
-              if (!Array.isArray(cfg.items)) return sec;
-              const items = cfg.items.map((it) => {
-                if (it.imageUrl) return it;
-                const url = next();
-                return url ? { ...it, imageUrl: url } : it;
-              });
-              return { ...sec, config: { ...cfg, items } } as FunnelSection;
-            }
-            return sec;
-          });
+        const visualPlan = planPageVisuals({
+          sectionTypes: sectionsToSave.map((sec) => sec.type),
+          assets: profileInputs.assets.visualCandidates,
+          heroBrief: (mediaSubject || heroMediaBrief || "") || null,
+          // NOT coupled to whether a gallery is wanted. An earlier version
+          // passed `wantsGallerySection && resolvedMediaStrategy` here, which
+          // forced a text-led hero whenever a gallery was merely CONSIDERED —
+          // pushing the strongest landscape photograph out of the hero and
+          // leaving the page with no imagery at all. The hero is decided on
+          // its own merits from the assets available; a text-led hero is a
+          // real outcome, but it must be chosen, not inherited.
+          heroPrefersText: false,
+        });
 
-          const leftover = pool.slice(taken);
-          if (leftover.length > 0) {
-            sectionsToSave = sectionsToSave.map((sec) => {
-              if (sec.type !== "photo_gallery") return sec;
-              const cfg = sec.config as PhotoGalleryConfig;
-              if (cfg.images && cfg.images.length > 0) return sec;
-              return { ...sec, config: { ...cfg, images: leftover.slice(0, 6).map((url) => ({ url })) } };
-            });
-          }
+        // Hero is applied to the SECTION, not to args. The hero section is
+        // composed much earlier in this function, so assigning args.* here
+        // would be read by nothing — the same ordering trap that made
+        // designPack unreachable. Evidence over assumption: the Director
+        // returns a correct hero in isolation, and it still arrived blank on
+        // the composed page until this moved to the section itself.
+
+        // Fulfil the plan's section slots. Sections the plan did not give
+        // imagery to stay text-only ON PURPOSE.
+        const bySection = new Map<string, string[]>();
+        for (const slot of visualPlan.slots) {
+          if (slot.resolution.kind !== "asset") continue;
+          const list = bySection.get(slot.sectionType) ?? [];
+          list.push(slot.resolution.url);
+          bySection.set(slot.sectionType, list);
         }
+
+        sectionsToSave = sectionsToSave.map((sec): FunnelSection => {
+          if (sec.type === "hero") {
+            const cfg = sec.config as HeroConfig;
+            if (cfg.mediaUrl) return sec; // an explicit model-supplied asset wins
+            if (visualPlan.hero.kind === "asset") {
+              return { ...sec, config: { ...cfg, mediaType: "image", mediaUrl: visualPlan.hero.url } } as FunnelSection;
+            }
+            // A request or a deliberate no-image hero must EXPLAIN itself.
+            // Rendering an unexplained empty slot is the "unresolved state
+            // masquerading as a completed visual" failure — the operator
+            // cannot tell a decision from a bug.
+            const brief =
+              visualPlan.hero.kind === "authentic_photo_required" ? visualPlan.hero.brief : visualPlan.hero.reason;
+            const label =
+              visualPlan.hero.kind === "authentic_photo_required" ? "Photo needed" : "Intentionally text-led";
+            return {
+              ...sec,
+              config: { ...cfg, mediaType: "none", mediaPlaceholderLabel: label, mediaPlaceholderBrief: brief },
+            } as FunnelSection;
+          }
+          const urls = bySection.get(sec.type);
+          if (!urls || urls.length === 0) return sec;
+          if (sec.type === "story") {
+            const cfg = sec.config as { photoUrl?: string };
+            return cfg.photoUrl ? sec : ({ ...sec, config: { ...cfg, photoUrl: urls[0] } } as FunnelSection);
+          }
+          if (sec.type === "benefits_grid") {
+            const cfg = sec.config as { items?: { imageUrl?: string }[] };
+            if (!Array.isArray(cfg.items)) return sec;
+            let i = 0;
+            const items = cfg.items.map((it) => (it.imageUrl || i >= urls.length ? it : { ...it, imageUrl: urls[i++] }));
+            return { ...sec, config: { ...cfg, items } } as FunnelSection;
+          }
+          if (sec.type === "photo_gallery") {
+            const cfg = sec.config as PhotoGalleryConfig;
+            if (cfg.images && cfg.images.length > 0) return sec;
+            // Captions omitted deliberately: we know the images are theirs,
+            // not what each depicts, and inventing one is fabrication.
+            return { ...sec, config: { ...cfg, images: urls.map((url) => ({ url })) } } as FunnelSection;
+          }
+          return sec;
+        });
       }
 
       // BUSINESS REALITY ENGINE (slice A): resolve the authenticity category

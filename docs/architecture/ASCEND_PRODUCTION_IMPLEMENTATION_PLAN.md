@@ -509,6 +509,21 @@ For every P0 certification:
 **Before final P0 certification, audit the P0 verification scripts themselves
 for these failure modes.** The certifiers get certified.
 
+### OUTCOME ASSERTION LAW
+
+**A certification check must assert the CUSTOMER-IMPACTING property it claims
+to certify, not merely an upstream condition correlated with it.**
+
+Intermediate state, source inspection, types, successful calls and expected
+inputs are supporting evidence. They do not replace checking the final
+customer-visible outcome.
+
+Applied to P0.5, the tested chain is end-to-end:
+
+    create_funnel -> Director -> composed funnel -> Critic -> preview
+
+A pure module passing 21/21 does not certify the phase; the composed page does.
+
 ### ENVIRONMENT FIDELITY
 
 **A security, privacy, deployment, performance, serialization, routing,

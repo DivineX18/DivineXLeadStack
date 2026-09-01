@@ -63,6 +63,12 @@ export interface DivinexProfileSnapshot {
     confidence?: number | null;
     /** "approved" gates every Flow consumer; discovery writes "candidate". */
     status?: string;
+    /** P0.5 — intrinsic pixel dimensions, read from the image bytes by
+     *  Ascend discovery. ABSENT on every pre-P0.5 snapshot, so the Image
+     *  Director must degrade safely without them (an unknown-size asset is
+     *  graded "generic" and never becomes a hero). */
+    width?: number | null;
+    height?: number | null;
   }[];
   provenance: Record<string, unknown>;
 }

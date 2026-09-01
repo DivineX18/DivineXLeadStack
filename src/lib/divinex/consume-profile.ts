@@ -1,5 +1,6 @@
 import "server-only";
 import { getDivinexProfileSnapshot, type DivinexProfileSnapshot } from "@/lib/divinex/contract";
+import type { CandidateAsset } from "@/lib/funnels/image-director";
 
 /**
  * FLOW CONSUMPTION OF THE CANONICAL PROFILE (Unification Slice 6).
@@ -42,10 +43,18 @@ export interface ProfileDerivedInputs {
     /** Evidence-class marks (partner/press/certification) — rendered as an
      *  evidence strip, never as brand-owned imagery. */
     evidenceLogos: { url: string; label: string }[];
+    /** P0.5 — every approved asset in the shape the Image Director grades,
+     *  so composition decisions are made against the FULL library rather
+     *  than a pre-filtered list someone else already chose from. */
+    visualCandidates: CandidateAsset[];
   };
   /** Canonical offers, referenceable by stable id. */
   offers: { id: string; name: string; kind: string }[];
 }
+
+/** Classes that are genuine photography. Marks, seals, wordmarks and
+ *  decorative graphics are never photography, however first-party. */
+const PHOTOGRAPHIC_CLASSES = new Set(["hero", "photo", "founder", "team", "customer", "product", "environment", "event"]);
 
 const PEOPLE_CLASSES = new Set(["founder", "team", "customer"]);
 const EVIDENCE_CLASSES = new Set(["partner", "certification", "evidence"]);
@@ -135,6 +144,15 @@ export async function resolveProfileInputs(subAccountId: string): Promise<Profil
       environment: environmentShots.slice(0, 4),
       gallery,
       evidenceLogos,
+      visualCandidates: approved.map((a) => ({
+        url: a.fileUrl,
+        classification: a.classification ?? "unknown",
+        width: a.width ?? null,
+        height: a.height ?? null,
+        isPhotograph: PHOTOGRAPHIC_CLASSES.has(a.classification ?? ""),
+        approved: true,
+        alt: a.purpose ?? null,
+      })),
     },
     offers: snapshot.offers ?? [],
   };
