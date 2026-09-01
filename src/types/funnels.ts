@@ -16,7 +16,63 @@ export type FunnelGenre =
   | "tripwire"
   | "webinar"
   | "lead_gen";
-export type FunnelStatus = "draft" | "published";
+/**
+ * APPROVAL STATES — P0.4. ADDITIVE ONLY.
+ *
+ * "draft" and "published" are the ORIGINAL values and remain valid forever:
+ * every existing funnel carries one of them, and nothing is migrated. The new
+ * states describe the review journey the product now expresses; "published"
+ * IS the live state and is shown to customers as "Live".
+ *
+ * The safety property that matters: only "published" renders publicly.
+ * "approved" and "scheduled" deliberately do NOT — approving something is not
+ * the same as making it live, and conflating them would publish work a human
+ * only agreed to in principle. See isPubliclyRenderable().
+ */
+export type FunnelStatus =
+  | "draft"
+  | "ready_for_review"
+  | "changes_requested"
+  | "approved"
+  | "scheduled"
+  | "published"
+  | "paused"
+  | "archived";
+
+/** The ONLY state that may be served to the public. Deliberately a
+ *  whitelist: a new state added later is non-public until someone
+ *  deliberately adds it here. */
+export function isPubliclyRenderable(status: FunnelStatus | undefined | null): boolean {
+  return status === "published";
+}
+
+/** Customer-facing label. "published" reads as "Live" — customers think in
+ *  terms of what the public can see, not our storage value. */
+export const FUNNEL_STATUS_LABEL: Record<FunnelStatus, string> = {
+  draft: "Draft",
+  ready_for_review: "Ready for review",
+  changes_requested: "Changes requested",
+  approved: "Approved",
+  scheduled: "Scheduled",
+  published: "Live",
+  paused: "Paused",
+  archived: "Archived",
+};
+
+/** Who/what produced or changed an asset, and who allowed it to go out.
+ *  Every field optional: existing records predate this and must stay valid. */
+export interface ApprovalMetadata {
+  /** "ai" when Zeno authored it, "human" when a person did. */
+  origin?: "ai" | "human";
+  createdByUid?: string;
+  lastEditedByUid?: string;
+  lastEditedAt?: string;
+  approvedByUid?: string;
+  approvedAt?: string;
+  /** Who actually made it public — distinct from who approved it. */
+  publishedByUid?: string;
+  publishedAt?: string;
+}
 
 export type FunnelSectionType =
   | "hero"
@@ -550,6 +606,8 @@ export interface FunnelDoc {
   name: string;
   genre: FunnelGenre;
   status: FunnelStatus;
+  /** P0.4 — optional; absent on every pre-P0.4 record. */
+  approval?: ApprovalMetadata;
   theme: "light" | "dark";
   /** Hex string with leading #. */
   accentColor: string;

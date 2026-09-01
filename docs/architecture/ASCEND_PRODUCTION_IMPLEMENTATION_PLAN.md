@@ -486,6 +486,33 @@ Where behaviour can differ by runtime/build mode:
 Dev-mode failures remain useful engineering signals, but are labelled as such
 until reproduced under production-equivalent conditions.
 
+### BUILD-TIME ENVIRONMENT LAW
+
+**Any `NEXT_PUBLIC_*` value affecting routing, hostname, shell eligibility,
+links or customer-visible behaviour is part of the BUILT ARTIFACT.**
+
+For certification:
+
+- record the build-time values used;
+- do not assume a runtime env change can alter an already-built client bundle;
+- verify the production build was compiled with the intended hostname/config;
+- if a route unexpectedly redirects or points at another host, inspect
+  build-time env provenance BEFORE classifying it as an application defect.
+
+A production-equivalent certification is **commit + build-time environment +
+deployed artifact**, not commit alone.
+
+Locked after the same trap produced a false signal twice: rebuilding without
+`NEXT_PUBLIC_ASCEND_APP_URL` silently reverted the Ascend hostname, and every
+`/app/*` route 307'd. It looks identical to a broken shell.
+
+### EVERY PHASE CERTIFIES AGAINST THE FINAL P0.3 IA
+
+No phase may introduce a route, label, CTA, completion link or Zeno
+instruction that recreates the old Flow mental model. `verify-ia-consistency`
+runs as part of every subsequent phase's certification, so P0.4–P0.7 cannot
+quietly undo the consolidation P0.3 just did.
+
 Locked after a real misclassification: a tenant-data disclosure was reported
 as `BLOCKED BY A GENUINE DEFECT` on the strength of a dev-server run made with
 `ASCEND_SHELL_MODE_OVERRIDE=full_ascend`. The production build emitted 22KB

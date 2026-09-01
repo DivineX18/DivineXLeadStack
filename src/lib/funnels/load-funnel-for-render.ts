@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 
 import { getAdminDb } from "@/lib/firebase/admin";
+import { isPubliclyRenderable } from "@/types/funnels";
 import type { CheckoutConfig, FunnelDoc, HeroConfig, OfferConfig, TicketTiersConfig } from "@/types/funnels";
 import type { LeadForm } from "@/types/forms";
 
@@ -28,7 +29,10 @@ async function loadFunnelForRenderUncached(
   const snap = await db.collection("funnels").doc(funnelId).get();
   if (!snap.exists) return null;
   const data = snap.data() as Omit<FunnelDoc, "id">;
-  if (data.status !== "published") return null;
+  // PUBLISH BOUNDARY. Uses the explicit whitelist rather than a !== check so
+  // that adding a state (approved, scheduled, paused…) can never accidentally
+  // make it public. Approving is not publishing.
+  if (!isPubliclyRenderable(data.status)) return null;
 
   const funnel: FunnelDoc = { id: snap.id, ...data, createdAt: null, updatedAt: null };
 

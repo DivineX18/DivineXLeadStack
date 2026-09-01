@@ -17,6 +17,7 @@ import { FunnelDomainsSection } from "@/components/funnels/funnel-domains-sectio
 import { FunnelDesignFeedback } from "@/components/funnels/funnel-design-feedback";
 import type { LeadForm } from "@/types/forms";
 import type {
+  FunnelStatus,
   BusinessFooterConfig,
   AgendaConfig,
   BeforeAfterConfig,
@@ -173,7 +174,7 @@ export function FunnelBuilder({
 }) {
   const [funnel, setFunnel] = useState<FunnelDoc | null>(null);
   const [name, setName] = useState("");
-  const [status, setStatus] = useState<"draft" | "published">("draft");
+  const [status, setStatus] = useState<FunnelStatus>("draft");
   const [theme, setTheme] = useState<"light" | "dark">("light");
   // Files & delivery (Multistep Journey): operator uploads — images for
   // section media, and the lead-magnet PDF (auto-wired into the confirmation
