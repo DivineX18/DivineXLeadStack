@@ -206,6 +206,33 @@ byte-level classification, URL dedupe, theme-asset exclusion).
   repetition, generic-AI appearance, factual consistency) before a page is
   marked Ready for Review. Auto-repair obvious failures.
 
+#### IMAGE DIRECTOR OUTPUT LAW
+
+**Produce a PAGE-LEVEL visual plan before placement. Never score assets
+section by section independently.**
+
+The plan determines, for the page as a whole:
+
+- the hero visual state;
+- which sections actually benefit from imagery;
+- the intended visual ROLE of each selected image;
+- density and spacing across the whole page;
+- whether an existing asset, a generated visual, or an authentic missing asset
+  best serves each role;
+- which sections should intentionally remain text-only.
+
+Asset selection then FULFILS that plan.
+
+This is the architectural form of the Apostille lesson. The failure there was
+not that individual images were poor — several were the business's own. It was
+that nothing governed the collection of decisions, so individually reasonable
+choices produced a visually bad page.
+
+**No unresolved media state may masquerade as a completed visual.** When the
+Director decides `authentic_photo_required` and none exists, the output is an
+explicit, actionable request — the photo that is needed, plus the ways to
+supply it — not a blank rectangle labelled "Add a video".
+
 #### P0.5 destination — what "done" means
 
 **100% automated strategy and composition. Human contribution ONLY where
@@ -389,23 +416,36 @@ not let this phase become a corporate-site rebuild):
 - Corporate About architecture
 - WordPress migration
 
-**PROPERTY BOUNDARY — LOCKED**
+**PROPERTY BOUNDARY — LOCKED (updated)**
 
-| DivineX public website (`divinex.io`) | Unified Ascend application (`app.divinex.io`) |
+Three properties, three jobs. This SUPERSEDES the earlier note that P0.7
+belonged to the DivineX public website project.
+
+| Property | Owns |
 |---|---|
-| Ascend product marketing, likely `/ascend` | signup / login / provisioning / onboarding |
-| Positioning + demonstrations | Home, Campaigns, CRM, Intelligence, Brand & Assets |
-| ASCEND / ASCEND PRO / AGENCY pricing | Zeno |
-| Signup / checkout entry points | Agency / multi-business experience |
-| Broader DivineX corporate content elsewhere on the same property | Everything after someone enters the product |
+| `divinex.io` | The existing DivineX WordPress company/ecosystem site. **Not touched by P0.7.** It only needs links/CTAs into Ascend later. |
+| `ascend.divinex.io` | **P0.7's scope** — the Ascend acquisition and onboarding experience. |
+| `app.divinex.io` | The authenticated Ascend application. |
 
-**Implementation owner: the DivineX public website project, NOT this repo.**
-Public marketing responsibilities are not added to the application repo merely
-because the Ascend app is implemented here.
+**Do NOT migrate or rebuild the DivineX WordPress site.** That is explicitly
+out of scope and would consume the launch.
 
-**P0.7 REMAINS IN THIS PLAN.** It is a launch dependency with a different
-implementation owner — do not drop it from the launch checklist just because
-it is not Flow code. Ascend cannot launch without it.
+**P0.7 is real product work, not a brochure.** The required journey is
+continuous:
+
+    Ascend marketing -> pricing -> signup -> workspace provisioning
+      -> guided onboarding -> first Growth System -> app.divinex.io
+
+So P0.7 owns both the public Ascend product-marketing surface AND the customer
+entry/onboarding continuity needed to reach the unified app. Signup,
+provisioning and onboarding may hand off into `app.divinex.io`, but the
+handoff must feel intentional rather than like arriving at a different product.
+
+That handoff is where the risk sits: provisioning already exists
+(createSubAccountForAgency + applyFeatureGates, proven in P0.2), and shell
+eligibility is now entitlement-derived, so a newly provisioned workspace can
+reach Ascend without operator intervention. P0.7 connects those to a public
+signup rather than inventing a second provisioning path.
 
 **Acceptance:** no fabricated proof — no invented testimonials, customer
 counts, statistics or outcomes, including as placeholders that could ship;
