@@ -59,6 +59,22 @@ export const FUNNEL_STATUS_LABEL: Record<FunnelStatus, string> = {
   archived: "Archived",
 };
 
+/**
+ * One unresolved visual decision on a page. `authentic_photo_required` means
+ * only the business can supply it — a photo of their team, work or premises —
+ * and the brief says exactly what to shoot. `intentionally_none` is a
+ * decision, not a gap, and is recorded so the UI can explain itself rather
+ * than looking broken.
+ */
+export interface VisualGap {
+  kind: "authentic_photo_required" | "intentionally_none";
+  /** Which slot: hero, story_portrait, benefit, gallery, proof. */
+  role: string;
+  sectionType: string;
+  /** The shot brief, or the reason a section is deliberately text-only. */
+  brief: string;
+}
+
 /** Who/what produced or changed an asset, and who allowed it to go out.
  *  Every field optional: existing records predate this and must stay valid. */
 export interface ApprovalMetadata {
@@ -608,6 +624,18 @@ export interface FunnelDoc {
   status: FunnelStatus;
   /** P0.4 — optional; absent on every pre-P0.4 record. */
   approval?: ApprovalMetadata;
+  /**
+   * P0.5 — UNRESOLVED VISUAL OPPORTUNITIES, as STRUCTURED STATE.
+   *
+   * Deliberately not encoded only as display text inside a section config.
+   * Zeno needs to know a page has an outstanding improvement, the UI needs to
+   * offer the right action against the right slot, and "Stronger with 2
+   * photos" has to be countable. Text in a config satisfies none of those.
+   *
+   * Absent on every pre-P0.5 funnel, and an empty array is meaningful: the
+   * Director found nothing outstanding.
+   */
+  visualGaps?: VisualGap[];
   theme: "light" | "dark";
   /** Hex string with leading #. */
   accentColor: string;

@@ -7,6 +7,7 @@ import { materializeCheckoutPrice } from "@/lib/funnels/materialize-price";
 import { buildFrameworkSections, type DecisionComplexity, type FunnelDepth } from "@/lib/funnels/frameworks";
 import { resolveDesignPack, type DesignPackId } from "@/lib/funnels/design-packs";
 import { resolveEffectiveDesignTokens, type DesignStrategy } from "@/lib/funnels/design-strategy";
+import type { VisualGap } from "@/types/funnels";
 import type {
   CheckoutConfig,
   FunnelDoc,
@@ -180,6 +181,8 @@ export async function createFunnelServerSide(opts: {
 export interface FunnelPatch {
   name?: string;
   status?: FunnelStatus;
+  /** P0.5 — unresolved visual decisions, as structured state. */
+  visualGaps?: VisualGap[];
   theme?: "light" | "dark";
   accentColor?: string;
   designPack?: DesignPackId;
@@ -363,6 +366,11 @@ export async function updateFunnelServerSide(opts: {
   if (patch.accentColor !== undefined) write.accentColor = patch.accentColor;
   if (patch.designPack !== undefined) write.designPack = patch.designPack;
   if (patch.designStrategy !== undefined) write.designStrategy = patch.designStrategy;
+  // P0.5 — the patch application is an explicit allowlist, so a field the
+  // TYPE accepts is still silently dropped unless it is written here. An
+  // empty array is meaningful (the Director found nothing outstanding), so
+  // this checks !== undefined rather than truthiness.
+  if (patch.visualGaps !== undefined) write.visualGaps = patch.visualGaps;
   if (patch.artDirection !== undefined) write.artDirection = patch.artDirection;
   if (patch.salesArgument !== undefined) write.salesArgument = patch.salesArgument;
   if (patch.bridge !== undefined) write.bridge = patch.bridge;
