@@ -75,7 +75,7 @@ import {
 } from "@/lib/server/funnels-service";
 import { scoreFunnelDesign } from "@/lib/design-intelligence/scoring";
 import { reviewFunnelCopy, type FunnelCopyReview } from "@/lib/conversion/funnel-copy-review";
-import type { OfferConfig, IncludedConfig, BenefitsGridConfig, CtaBannerConfig, FunnelDoc, FunnelSection, FunnelSectionType, HeroConfig, PhotoGalleryConfig, TicketTiersConfig, VisualGap } from "@/types/funnels";
+import type { OfferConfig, IncludedConfig, BenefitsGridConfig, CtaBannerConfig, FunnelDoc, FunnelSection, FunnelSectionType, HeroConfig, PhotoGalleryConfig, TicketTiersConfig, VisualRequirement, VisualDecision } from "@/types/funnels";
 import { imageryConfigured, searchSubjectImages } from "@/lib/funnels/imagery";
 import { inferAuthenticityCategory, stockAllowedFor, assetManifest, TRUST_QUESTIONS } from "@/lib/funnels/authenticity";
 import type { DesignPackId } from "@/lib/funnels/design-packs";
@@ -5160,7 +5160,8 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // engines are untouched: this only fills inputs the model didn't
       // supply (brand accent/axes, approved evidence assets, real logo).
       // No snapshot → profileInputs is null → certified behavior exactly.
-      let visualGaps: VisualGap[] = [];
+      let visualRequirements: VisualRequirement[] = [];
+      let visualDecisions: VisualDecision[] = [];
       const profileInputs = await (async () => {
         try {
           const { resolveProfileInputs } = await import("@/lib/divinex/consume-profile");
@@ -5220,32 +5221,39 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           bySection.set(slot.sectionType, list);
         }
 
-        // STRUCTURED STATE, not display text. Zeno must be able to see that a
-        // page has an outstanding improvement, the UI must offer the right
-        // action against the right slot, and "Stronger with 2 photos" has to
-        // be countable. A string inside a section config satisfies none of
-        // those, so the plan's unresolved decisions are persisted separately.
-        visualGaps = [
-          ...(visualPlan.hero.kind !== "asset"
-            ? [{
-                kind: visualPlan.hero.kind,
-                role: visualPlan.hero.role,
-                sectionType: "hero",
-                brief: visualPlan.hero.kind === "authentic_photo_required" ? visualPlan.hero.brief : visualPlan.hero.reason,
-              }]
-            : []),
-          ...visualPlan.slots
-            .filter((slot) => slot.resolution.kind !== "asset")
-            .map((slot) => ({
-              kind: slot.resolution.kind as "authentic_photo_required" | "intentionally_none",
-              role: slot.resolution.role,
-              sectionType: slot.sectionType,
-              brief:
-                slot.resolution.kind === "authentic_photo_required"
-                  ? slot.resolution.brief
-                  : (slot.resolution as { reason: string }).reason,
-            })),
+        // STRUCTURED STATE, split by MEANING rather than by a discriminator.
+        //
+        // A requirement is something only the business can supply and is
+        // actionable. A decision is a completed Director choice kept for
+        // audit. Keeping them in one list with a `kind` field would mean
+        // every consumer — preview, Zeno, readiness, the "Stronger with N
+        // photos" counter — has to remember that some entries are not gaps,
+        // and eventually one forgets.
+        const slotResolutions = [
+          { sectionType: "hero", resolution: visualPlan.hero },
+          ...visualPlan.slots,
         ];
+        visualRequirements = slotResolutions
+          .filter((s) => s.resolution.kind === "authentic_photo_required")
+          .map((s) => {
+            const r = s.resolution as { role: string; brief: string };
+            return {
+              id: `${s.sectionType}:${r.role}`,
+              role: r.role,
+              sectionType: s.sectionType,
+              brief: r.brief,
+              // The hero carries the page; a missing hero photograph is worth
+              // blocking on. Everything else is an improvement, not a defect —
+              // not every missing photo should stop a publishable page.
+              blocksReadiness: s.sectionType === "hero",
+            };
+          });
+        visualDecisions = slotResolutions
+          .filter((s) => s.resolution.kind === "intentionally_none")
+          .map((s) => {
+            const r = s.resolution as { role: string; reason: string };
+            return { role: r.role, sectionType: s.sectionType, reason: r.reason };
+          });
 
         sectionsToSave = sectionsToSave.map((sec): FunnelSection => {
           if (sec.type === "hero") {
@@ -5551,7 +5559,8 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             // improvements, the preview can offer the right action against the
             // right slot, and "Stronger with 2 photos" is countable. An empty
             // array is meaningful: the Director found nothing outstanding.
-            visualGaps,
+            visualRequirements,
+            visualDecisions,
             ...(args.accentColor ? { accentColor: args.accentColor as string } : {}),
             ...(args.theme ? { theme: args.theme as "light" | "dark" } : {}),
             ...(args.eventStartAt ? { eventStartAt: args.eventStartAt as string } : {}),

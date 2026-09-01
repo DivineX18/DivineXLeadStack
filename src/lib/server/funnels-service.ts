@@ -7,7 +7,7 @@ import { materializeCheckoutPrice } from "@/lib/funnels/materialize-price";
 import { buildFrameworkSections, type DecisionComplexity, type FunnelDepth } from "@/lib/funnels/frameworks";
 import { resolveDesignPack, type DesignPackId } from "@/lib/funnels/design-packs";
 import { resolveEffectiveDesignTokens, type DesignStrategy } from "@/lib/funnels/design-strategy";
-import type { VisualGap } from "@/types/funnels";
+import type { VisualRequirement, VisualDecision } from "@/types/funnels";
 import type {
   CheckoutConfig,
   FunnelDoc,
@@ -181,8 +181,10 @@ export async function createFunnelServerSide(opts: {
 export interface FunnelPatch {
   name?: string;
   status?: FunnelStatus;
-  /** P0.5 — unresolved visual decisions, as structured state. */
-  visualGaps?: VisualGap[];
+  /** P0.5 — actionable unresolved requirements. */
+  visualRequirements?: VisualRequirement[];
+  /** P0.5 — completed Director decisions, auditable but never actionable. */
+  visualDecisions?: VisualDecision[];
   theme?: "light" | "dark";
   accentColor?: string;
   designPack?: DesignPackId;
@@ -370,7 +372,8 @@ export async function updateFunnelServerSide(opts: {
   // TYPE accepts is still silently dropped unless it is written here. An
   // empty array is meaningful (the Director found nothing outstanding), so
   // this checks !== undefined rather than truthiness.
-  if (patch.visualGaps !== undefined) write.visualGaps = patch.visualGaps;
+  if (patch.visualRequirements !== undefined) write.visualRequirements = patch.visualRequirements;
+  if (patch.visualDecisions !== undefined) write.visualDecisions = patch.visualDecisions;
   if (patch.artDirection !== undefined) write.artDirection = patch.artDirection;
   if (patch.salesArgument !== undefined) write.salesArgument = patch.salesArgument;
   if (patch.bridge !== undefined) write.bridge = patch.bridge;

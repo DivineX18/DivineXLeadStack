@@ -60,19 +60,38 @@ export const FUNNEL_STATUS_LABEL: Record<FunnelStatus, string> = {
 };
 
 /**
- * One unresolved visual decision on a page. `authentic_photo_required` means
- * only the business can supply it — a photo of their team, work or premises —
- * and the brief says exactly what to shoot. `intentionally_none` is a
- * decision, not a gap, and is recorded so the UI can explain itself rather
- * than looking broken.
+ * A genuine UNRESOLVED REQUIREMENT: something only the business can supply —
+ * a photograph of their team, work or premises — with a brief saying exactly
+ * what to shoot. These are actionable: they drive Upload / Brand Library /
+ * Generate, and they are what "Stronger with N photos" counts.
  */
-export interface VisualGap {
-  kind: "authentic_photo_required" | "intentionally_none";
-  /** Which slot: hero, story_portrait, benefit, gallery, proof. */
+export interface VisualRequirement {
+  /** Stable id so an action targets THIS requirement, not "a photo somewhere". */
+  id: string;
   role: string;
   sectionType: string;
-  /** The shot brief, or the reason a section is deliberately text-only. */
+  /** The shot brief — specific enough to act on without asking us. */
   brief: string;
+  /** False when the Director judged the page publishable without it. */
+  blocksReadiness: boolean;
+}
+
+/**
+ * A COMPLETED Director decision, kept for auditability. Deliberately a
+ * SEPARATE type rather than a `kind` on the same array: "the gallery was
+ * omitted because only one strong photograph exists" is a resolved choice,
+ * not something a customer must fix. Modelling both as one list means every
+ * future consumer — preview, Zeno, readiness, counters — has to remember
+ * that some entries are not gaps, and eventually one forgets.
+ *
+ * These never count toward improvements, never create actions, never make a
+ * page look incomplete, and never block readiness.
+ */
+export interface VisualDecision {
+  role: string;
+  sectionType: string;
+  /** Why this slot is intentionally without imagery. */
+  reason: string;
 }
 
 /** Who/what produced or changed an asset, and who allowed it to go out.
@@ -625,17 +644,13 @@ export interface FunnelDoc {
   /** P0.4 — optional; absent on every pre-P0.4 record. */
   approval?: ApprovalMetadata;
   /**
-   * P0.5 — UNRESOLVED VISUAL OPPORTUNITIES, as STRUCTURED STATE.
-   *
-   * Deliberately not encoded only as display text inside a section config.
-   * Zeno needs to know a page has an outstanding improvement, the UI needs to
-   * offer the right action against the right slot, and "Stronger with 2
-   * photos" has to be countable. Text in a config satisfies none of those.
-   *
-   * Absent on every pre-P0.5 funnel, and an empty array is meaningful: the
-   * Director found nothing outstanding.
+   * P0.5 — things the customer could still supply. ACTIONABLE.
+   * Absent on every pre-P0.5 funnel; an empty array means the Director found
+   * nothing outstanding, which is different from never having run.
    */
-  visualGaps?: VisualGap[];
+  visualRequirements?: VisualRequirement[];
+  /** P0.5 — completed Director decisions. Auditable, never actionable. */
+  visualDecisions?: VisualDecision[];
   theme: "light" | "dark";
   /** Hex string with leading #. */
   accentColor: string;

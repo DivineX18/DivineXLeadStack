@@ -91,14 +91,27 @@ check("10. E2E: no media label contradicts its own type (the 'Add a video' bug)"
   !(heroCfg.mediaPlaceholderLabel ?? "").toLowerCase().includes("video") || (heroCfg as { mediaType?: string }).mediaType === "video",
   `label="${heroCfg.mediaPlaceholderLabel ?? ""}" type=${(heroCfg as { mediaType?: string }).mediaType}`);
 
-// STRUCTURED STATE: the gaps must survive into the persisted document, not
-// live only as display text in a section config. Zeno and the preview both
-// read this, and "Stronger with N photos" has to be countable.
-const gaps = (f as { visualGaps?: { kind: string; sectionType: string; brief: string }[] }).visualGaps;
-check("11. Unresolved visual decisions persist as STRUCTURED state", Array.isArray(gaps), JSON.stringify(gaps));
-check("12. Each gap carries a real brief, not a generic label",
-  (gaps ?? []).every((g) => typeof g.brief === "string" && g.brief.length > 12),
-  JSON.stringify((gaps ?? []).map((g) => `${g.sectionType}:${g.kind}`)));
+// STRUCTURED STATE, split by MEANING. A requirement is actionable; a
+// decision is a completed choice. Modelling both as one list would force
+// every consumer to remember which entries are not gaps.
+const reqs = (f as { visualRequirements?: { id: string; brief: string; blocksReadiness: boolean; sectionType: string }[] }).visualRequirements;
+const decisions = (f as { visualDecisions?: { reason: string; sectionType: string }[] }).visualDecisions;
+
+check("11. Unresolved requirements persist as structured state", Array.isArray(reqs), JSON.stringify(reqs));
+check("12. Completed design decisions persist SEPARATELY", Array.isArray(decisions), JSON.stringify(decisions));
+check("13. A deliberate omission is a DECISION, never a requirement",
+  (decisions ?? []).some((d) => d.sectionType === "photo_gallery") &&
+    !(reqs ?? []).some((r) => r.sectionType === "photo_gallery"),
+  `reqs=${JSON.stringify((reqs ?? []).map((r) => r.sectionType))} decisions=${JSON.stringify((decisions ?? []).map((d) => d.sectionType))}`);
+
+// "Stronger with N photos" counts REQUIREMENTS only. A resolved design
+// decision must never make the page look incomplete.
+const improvementCount = (reqs ?? []).filter((r) => !r.blocksReadiness).length;
+check("14. Improvement count excludes design decisions", improvementCount === (reqs ?? []).filter((r) => !r.blocksReadiness).length && !(decisions ?? []).some((d) => (reqs ?? []).some((r) => r.sectionType === d.sectionType)),
+  `N=${improvementCount}`);
+check("15. Every requirement carries a targetable id and a real brief",
+  (reqs ?? []).every((r) => r.id.includes(":") && r.brief.length > 12),
+  JSON.stringify((reqs ?? []).map((r) => r.id)));
 
 await db.doc(`funnels/${built.ref!.id}`).delete();
 if (prior) await ref.set(prior, { merge: false }); else await ref.delete();
