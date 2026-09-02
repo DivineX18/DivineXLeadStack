@@ -676,6 +676,19 @@ export interface FunnelDoc {
   visualRequirements?: VisualRequirement[];
   /** P0.5 — completed Director decisions. Auditable, never actionable. */
   visualDecisions?: VisualDecision[];
+  /**
+   * P0.5 — the Critic's structured verdict on the FINISHED composition.
+   * Persisted so a readiness decision is inspectable rather than an
+   * invisible AI opinion. Never contains internal reasoning. Absent means
+   * the page has not been reviewed, which is NOT the same as passing.
+   */
+  criticVerdict?: {
+    verdict: "ready" | "needs_correction";
+    findings: { severity: string; sectionType: string; category: string; correction: string }[];
+    evaluatedAt: string;
+    model: string;
+    round: number;
+  };
   theme: "light" | "dark";
   /** Hex string with leading #. */
   accentColor: string;

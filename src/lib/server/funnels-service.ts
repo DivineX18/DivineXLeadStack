@@ -185,6 +185,8 @@ export interface FunnelPatch {
   visualRequirements?: VisualRequirement[];
   /** P0.5 — completed Director decisions, auditable but never actionable. */
   visualDecisions?: VisualDecision[];
+  /** P0.5 — the Critic's structured verdict on the composed page. */
+  criticVerdict?: FunnelDoc["criticVerdict"];
   theme?: "light" | "dark";
   accentColor?: string;
   designPack?: DesignPackId;
@@ -374,6 +376,7 @@ export async function updateFunnelServerSide(opts: {
   // this checks !== undefined rather than truthiness.
   if (patch.visualRequirements !== undefined) write.visualRequirements = patch.visualRequirements;
   if (patch.visualDecisions !== undefined) write.visualDecisions = patch.visualDecisions;
+  if (patch.criticVerdict !== undefined) write.criticVerdict = patch.criticVerdict;
   if (patch.artDirection !== undefined) write.artDirection = patch.artDirection;
   if (patch.salesArgument !== undefined) write.salesArgument = patch.salesArgument;
   if (patch.bridge !== undefined) write.bridge = patch.bridge;
