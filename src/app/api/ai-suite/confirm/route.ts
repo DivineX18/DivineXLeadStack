@@ -9,6 +9,7 @@ import {
   roleSatisfies,
   type AiSuiteActionContext,
 } from "@/lib/ai-suite/capabilities";
+import { renderCompletion } from "@/lib/ai-suite/render-completion";
 import { recordAiSuiteAction } from "@/lib/ai-suite/audit";
 import { recordAiSuiteUsage } from "@/lib/ai-suite/usage";
 import type { AiSuiteConfirmRequest } from "@/types/ai-suite";
@@ -181,9 +182,23 @@ export async function POST(request: Request) {
     // already recorded in the audit trail above but never sent to the
     // client, so a successful funnel build rendered as a sentence with no
     // way to open the thing that was created.
+    // U1 — THE CUSTOMER RESPONSE BOUNDARY.
+    //
+    // `resultText` is the model-facing receipt: it carries raw ids, internal
+    // parameter names (bridge_next_funnel_id), and design-selection
+    // rationale. Returning it here is how all of that reached the customer.
+    //
+    // When a capability supplies a `completion`, that is the ONE authoritative
+    // customer-facing message and the receipt is WITHHELD — not filtered,
+    // withheld, so a newly-added internal detail cannot leak by default.
+    // Capabilities without one are readonly lookups whose resultText is
+    // already customer-safe prose.
+    const { completion } = result;
     return NextResponse.json({
       ok: true,
-      resultText: result.resultText,
+      ...(completion
+        ? { completion, resultText: renderCompletion(completion) }
+        : { resultText: result.resultText }),
       resultRef: result.ref ?? null,
     });
   } catch (err) {

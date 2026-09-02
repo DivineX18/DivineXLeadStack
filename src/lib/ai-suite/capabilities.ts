@@ -190,10 +190,42 @@ export interface AiSuiteActionContext {
   subAccountRole?: string;
 }
 
+/**
+ * THE CUSTOMER RESPONSE BOUNDARY (U1, P0.6).
+ *
+ * Internal orchestration metadata and customer prose are DIFFERENT FIELDS,
+ * not the same string filtered afterwards. Sanitising a receipt after the
+ * fact fails the moment a new internal detail is added and nobody updates
+ * the filter; separating the two means a leak requires someone to write the
+ * detail into the customer field deliberately.
+ *
+ * `resultText` stays exactly what it was: the machine/model-facing receipt.
+ * It keeps raw ids, internal parameter names and orchestration detail,
+ * because the model legitimately needs them to chain a next step.
+ *
+ * `completion` is the ONE authoritative customer-facing message. There is
+ * deliberately no second one: the capability returning a technical receipt
+ * while Zeno writes its own prose is how two competing completion messages
+ * reached the customer.
+ */
+export interface CustomerCompletion {
+  /** What was completed, in the customer's terms. No ids, no internals. */
+  outcome: string;
+  /** Anything genuinely needing their attention before this goes anywhere. */
+  review: string[];
+  /** Direct actions on the artifact — Preview / Review / Approve / Continue. */
+  nextActions: { label: string; kind: "preview" | "review" | "edit" | "approve" | "continue" }[];
+}
+
 export interface ExecuteResult {
-  /** Human-readable confirmation appended to the chat (or, for readonly
-   *  lookups, the tool result fed back to the model). */
+  /** INTERNAL. Human-readable confirmation for the MODEL (or, for readonly
+   *  lookups, the tool result fed back to it). May contain raw ids and
+   *  internal parameter names — it must never be rendered to a customer.
+   *  See CustomerCompletion above. */
   resultText: string;
+  /** The single authoritative customer-facing completion. When present, the
+   *  confirm route returns THIS and withholds `resultText`. */
+  completion?: CustomerCompletion;
   /** Optional pointer to the created resource, for the audit trail. */
   ref?: { kind: string; id: string };
   /**
@@ -5798,8 +5830,41 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           (createdFormId ? " / Forms / Templates / Workflows." : "."),
       );
 
+      // ── CUSTOMER COMPLETION (U1) — composed from what was really built ──
+      //
+      // Built from the SAME facts as the receipt above, but expressed as
+      // outcome / review / next action. Never mentions the funnel id, the
+      // bridge parameter, the Director, the Critic, or why a visual
+      // archetype was chosen — those stay in `resultText` for the model.
+      const review: string[] = [];
+      if (copyReview?.fabricationRisk) {
+        review.push("Some copy may claim results or testimonials that haven't been verified — check it before this goes live.");
+      }
+      const outstandingPhotos = visualRequirements.filter((r) => !r.resolvedWith);
+      const requiredPhotos = outstandingPhotos.filter((r) => r.necessity === "required").length;
+      if (requiredPhotos > 0) {
+        review.push(`${requiredPhotos} photo${requiredPhotos === 1 ? "" : "s"} still needed before the page works properly — you can add them from the preview.`);
+      } else if (outstandingPhotos.length > 0) {
+        review.push(`Ready to review now. ${outstandingPhotos.length} real photo${outstandingPhotos.length === 1 ? "" : "s"} would make it stronger — you can add them from the preview.`);
+      }
+      // P0.4: approved is not published. Say so plainly, every time.
+      review.push("Nothing is public yet — this is a draft until you publish it.");
+
+      const completion: CustomerCompletion = {
+        outcome: createdFormId
+          ? `Your "${displayName}" landing page is built, with its signup form, confirmation email and follow-up automation ready to go.`
+          : `Your "${displayName}" landing page is built and ready for you to look over.`,
+        review,
+        nextActions: [
+          { label: "Preview the page", kind: "preview" },
+          { label: "Make changes", kind: "edit" },
+          { label: "Keep going with Zeno", kind: "continue" },
+        ],
+      };
+
       return {
         resultText: summaryLines.join("\n"),
+        completion,
         ref: { kind: "funnel", id: funnelId },
       };
     },
