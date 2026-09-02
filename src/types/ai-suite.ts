@@ -54,6 +54,23 @@ export interface AiSuiteChatRequest {
   subAccountId?: string;
   /** Full conversation so far (the API is stateless — history is re-sent). */
   messages: AiSuiteChatMessage[];
+  /**
+   * P0.6 Phase 2 — where the customer currently is. DELIBERATELY NARROW.
+   *
+   * The client says WHERE; the server decides WHAT may be known there. Both
+   * fields are untrusted hints: `route` is normalized against a whitelist of
+   * the final IA surfaces, and `artifactRef` is re-resolved server-side and
+   * proven to belong to the authenticated workspace before anything about it
+   * is used. Neither authorizes a read.
+   *
+   * This is not a metadata bag: do NOT add profile, brand, diagnosis or
+   * artifact CONTENTS here. The browser could fetch them, which is exactly
+   * why they must not travel this way.
+   */
+  pageContext?: {
+    route?: string;
+    artifactRef?: { kind: string; id: string };
+  };
 }
 
 /**

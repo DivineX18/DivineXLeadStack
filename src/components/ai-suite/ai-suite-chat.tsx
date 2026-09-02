@@ -265,6 +265,11 @@ export function AiSuiteChat({
           level,
           subAccountId,
           messages: toApiHistory(next),
+          // P0.6 Phase 2 — WHERE the customer is, nothing more. The server
+          // normalizes this against the IA whitelist and decides what may be
+          // known there. Never send profile, brand or artifact CONTENTS from
+          // the browser: the server reads those from authority itself.
+          pageContext: { route: typeof window !== "undefined" ? window.location.pathname : undefined },
         }),
       });
       const data = (await res.json().catch(() => null)) as

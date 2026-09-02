@@ -281,6 +281,27 @@ export async function POST(request: Request) {
     } catch {
       // Swallowed — same rationale as the learned-principles read above.
     }
+
+    // P0.6 PHASE 2 — page + artifact context.
+    //
+    // The route is normalized to one of the final IA surfaces (an arbitrary
+    // string can never reach the prompt), and the artifact is resolved from
+    // authoritative storage against THIS authenticated workspace. A foreign
+    // or nonexistent reference both resolve to null, so nothing here can
+    // become a tenant-enumeration path.
+    try {
+      const { normalizeSurface, resolveArtifact, renderPageContextCard } =
+        await import("@/lib/ai-suite/page-context");
+      const pc = body.pageContext;
+      const surface = normalizeSurface(pc?.route);
+      const artifact = pc?.artifactRef
+        ? await resolveArtifact(actionCtx.subAccountId!, pc.artifactRef)
+        : null;
+      const card = renderPageContextCard(surface, artifact);
+      if (card) cards.push(card);
+    } catch {
+      // Swallowed — Zeno works without page context, exactly as before.
+    }
   }
 
   const systemPrompt = buildAiSuiteSystemPrompt({
