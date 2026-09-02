@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireSubAccountMember } from "@/lib/auth/require-tenancy";
 import { resolveVisualRequirement, VisualRequirementError, type ResolutionProvenance } from "@/lib/funnels/resolve-visual-requirement";
+import { ResolutionSourceError, verifyResolutionSource } from "@/lib/funnels/verify-resolution-source";
 
 const PROVENANCES: ResolutionProvenance[] = ["first_party_upload", "brand_library", "generated"];
 
@@ -26,12 +27,27 @@ export async function POST(
   if (!provenance || !PROVENANCES.includes(provenance)) {
     return NextResponse.json({ error: "Pick how this visual was supplied." }, { status: 400 });
   }
-  if (!url || !/^https?:\/\//i.test(url)) {
+  // An uploaded asset is served from a RELATIVE path (`/api/funnel-asset/…`),
+  // so an absolute-URL-only check rejected every genuine upload. Both shapes
+  // are accepted here; which one is legitimate for a given provenance is
+  // decided by verification below, not by this regex.
+  if (!url || !/^(https?:\/\/|\/)/i.test(url)) {
     return NextResponse.json({ error: "A valid image URL is required." }, { status: 400 });
   }
 
   try {
-    const result = await resolveVisualRequirement({ funnelId, subAccountId, requirementId, provenance, url });
+    // Provenance is VERIFIED AGAINST THE SOURCE before anything is written.
+    // A client claiming "brand_library" for an arbitrary URL would otherwise
+    // launder an unknown image into first-party evidence.
+    const source = await verifyResolutionSource({ subAccountId, provenance, url });
+    const result = await resolveVisualRequirement({
+      funnelId,
+      subAccountId,
+      requirementId,
+      provenance,
+      url,
+      sourceClassification: source.sourceClassification,
+    });
     return NextResponse.json({
       ok: true,
       requirement: result.requirement,
@@ -40,6 +56,9 @@ export async function POST(
       countsAsAuthenticEvidence: result.countsAsAuthenticEvidence,
     });
   } catch (err) {
+    if (err instanceof ResolutionSourceError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
     if (err instanceof VisualRequirementError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
     }

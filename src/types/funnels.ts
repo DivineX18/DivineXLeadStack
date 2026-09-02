@@ -98,6 +98,13 @@ export interface VisualRequirement {
     /** True only for genuine business media. Generated visuals are never
      *  evidence, however well they fit the slot. */
     countsAsAuthenticEvidence: boolean;
+    /**
+     * The asset's OWN classification at discovery time, carried across
+     * unchanged when it comes from the brand library. Resolution moves an
+     * asset into a slot; it does not reclassify it. Null for uploads, which
+     * were never discovered and so have no prior classification.
+     */
+    sourceClassification?: string | null;
   };
 }
 

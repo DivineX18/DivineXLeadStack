@@ -5554,6 +5554,44 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         bridgeTarget = target.id;
       }
 
+      // ── LANDING PAGE CRITIC (P0.5) — judges the FINISHED composition ────
+      //
+      // Runs here, at the end of composition, because that is the only point
+      // where the artifact the customer will see actually exists. Everything
+      // upstream judges inputs and decisions; this judges the result.
+      //
+      // The loop is Director → composition → Critic → targeted correction →
+      // re-composition → re-evaluation, bounded by MAX_CORRECTION_ROUNDS. An
+      // unbounded self-revision loop burns spend and oscillates rather than
+      // converging.
+      //
+      // A Critic OUTAGE MUST NOT PUBLISH AN UNREVIEWED PAGE. On failure the
+      // verdict stays null, which computeReadiness() treats as "not reviewed
+      // yet" — deliberately not as a pass.
+      let criticVerdict: FunnelDoc["criticVerdict"] | undefined;
+      try {
+        const { critiqueComposition, MAX_CORRECTION_ROUNDS } = await import("@/lib/funnels/landing-page-critic");
+        const { applyCriticCorrections } = await import("@/lib/funnels/critic-correction");
+
+        let verdict = await critiqueComposition(sectionsToSave, 0);
+
+        if (verdict.verdict === "needs_correction" && MAX_CORRECTION_ROUNDS > 0) {
+          const corrected = applyCriticCorrections(sectionsToSave, verdict.findings);
+          if (corrected.appliedCount > 0) {
+            // Re-composition is real: the corrected sections become the page.
+            sectionsToSave = corrected.sections;
+            visualDecisions = [...visualDecisions, ...corrected.decisions];
+            // Re-evaluate the ACTUAL corrected composition, not the intent to
+            // correct it. Asserting the correction worked without re-judging
+            // would be the upstream-correlate failure.
+            verdict = await critiqueComposition(sectionsToSave, 1);
+          }
+        }
+        criticVerdict = verdict;
+      } catch (err) {
+        console.error("[create_funnel] critic unavailable:", err instanceof Error ? err.message : err);
+      }
+
       try {
         await updateFunnelServerSide({
           subAccountId,
@@ -5573,6 +5611,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             // array is meaningful: the Director found nothing outstanding.
             visualRequirements,
             visualDecisions,
+            // The Critic's structured verdict on the finished page. Absent
+            // when the Critic was unreachable — which readiness reads as
+            // "not reviewed", never as "passed".
+            ...(criticVerdict ? { criticVerdict } : {}),
             ...(args.accentColor ? { accentColor: args.accentColor as string } : {}),
             ...(args.theme ? { theme: args.theme as "light" | "dark" } : {}),
             ...(args.eventStartAt ? { eventStartAt: args.eventStartAt as string } : {}),

@@ -65,6 +65,9 @@ export async function resolveVisualRequirement(input: {
   requirementId: string;
   provenance: ResolutionProvenance;
   url: string;
+  /** Carried from source verification — the asset's real classification,
+   *  never re-derived here. See verify-resolution-source.ts. */
+  sourceClassification?: string | null;
 }): Promise<{ requirement: VisualRequirement; countsAsAuthenticEvidence: boolean }> {
   const db = getAdminDb();
   const ref = db.doc(`funnels/${input.funnelId}`);
@@ -92,7 +95,12 @@ export async function resolveVisualRequirement(input: {
     const isEvidence = countsAsEvidence(input.provenance);
     const resolved: VisualRequirement = {
       ...target,
-      resolvedWith: { provenance: input.provenance, url: input.url, countsAsAuthenticEvidence: isEvidence },
+      resolvedWith: {
+        provenance: input.provenance,
+        url: input.url,
+        countsAsAuthenticEvidence: isEvidence,
+        sourceClassification: input.sourceClassification ?? null,
+      },
     };
 
     tx.update(ref, {
