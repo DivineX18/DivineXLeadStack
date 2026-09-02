@@ -9,6 +9,8 @@ import { GrowthScoreCard } from "@/components/ascend/growth-score-card";
 import { formatCents } from "@/components/ascend/metric-card";
 import { RecommendedNextActionCard } from "@/components/ascend/recommendation-card";
 import { GrowthTimelineCard } from "@/components/ascend/timeline-card";
+import { GrowthPlanCard } from "@/components/ascend/growth-plan-card";
+import { resolveGrowthPlanExecution } from "@/lib/intelligence/growth-plan-execution";
 import { BusinessMemoryCard } from "@/components/ascend/memory-card";
 import { LatestAssessmentCard, ReportsCard } from "@/components/ascend/assessment-cards";
 import { PageHeader, ErrorState, SecondaryAction } from "@/components/divinex/ui";
@@ -67,6 +69,9 @@ export default async function AscendHomePage() {
   }
 
   const { businessHealth, intelligence, recommendedNextAction } = result.data;
+  // Execution half of the plan. Best-effort: a read failure must not take
+  // down Home, which is the customer's primary orientation surface.
+  const growthPlanItems = await resolveGrowthPlanExecution(workspaceId).catch(() => []);
   const health = businessHealth.data;
 
   const metrics: { label: string; value: string; sub?: string }[] = [
@@ -112,6 +117,16 @@ export default async function AscendHomePage() {
         </div>
         <GrowthScoreCard dashboardSummary={intelligence.dashboardSummary} />
       </div>
+
+      {/* 1b — GROWTH PLAN, the execution half (P0.6 Phase 3). Home already
+          said what to do next; this says what has been built, what needs
+          review, and what happens next for work underway — so the customer
+          never reconstructs that from chat history or the Create library.
+          A read-time projection over the artifact's own state, so it cannot
+          drift out of agreement with the artifact. */}
+      <section className="mt-4">
+        <GrowthPlanCard items={growthPlanItems} />
+      </section>
 
       {/* 2 — the numbers. A strip, not five equal cards competing with the lead. */}
       <section className="mt-8">
