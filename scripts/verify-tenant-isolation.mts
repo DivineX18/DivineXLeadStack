@@ -122,7 +122,11 @@ const uidAB = await actor("ab", [A, B]);
 const [sA, sB, sAB] = [await session(uidA), await session(uidB), await session(uidAB)];
 
 const ctxCookie = (s: string, ws: string) => `${s}; active_workspace_id=${ws}`;
-const shell = (s: string, ws: string, path = "/app/crm") =>
+// P0.3 IA: "/app/crm" is now a deliberate redirect into "/app/leads", so
+// entering there returns 307 and the positive control fails for the wrong
+// reason. Every phase certifies against the FINAL IA, so this asserts the
+// destination that actually exists.
+const shell = (s: string, ws: string, path = "/app/leads") =>
   fetch(`${BASE}${path}`, { headers: { cookie: ctxCookie(s, ws) }, redirect: "manual" });
 
 // ── Actors really are scoped ─────────────────────────────────────────────
