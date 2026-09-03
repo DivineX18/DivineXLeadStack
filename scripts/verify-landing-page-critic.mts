@@ -91,10 +91,15 @@ const badPage: FunnelSection[] = [
 const soundPage: FunnelSection[] = [
   sec("hero", { headline: "Bring Reading With A Rapper To Your Campus", mediaUrl: "hero.jpg" }),
   sec("proof_strip", { logos: [{ url: "a" }, { url: "b" }] }),
-  sec("problem_solution", {}),
-  sec("benefits_grid", { items: [{ imageUrl: "b1" }, { imageUrl: "b2" }, {}] }),
-  sec("story", { photoUrl: "founder.jpg" }),
-  sec("offer", {}), sec("faq", {}), sec("cta_banner", {}),
+  sec("problem_solution", {
+    problemHeadline: "Assemblies feel like a lecture", problemText: "Kids tune out the moment it feels like school.",
+    solutionHeadline: "A show that actually lands", solutionText: "A rapper performs original songs built around the reading curriculum.",
+  }),
+  sec("benefits_grid", { items: [{ title: "Live performance", imageUrl: "b1" }, { title: "Curriculum tie-in", imageUrl: "b2" }, { title: "Free study guide" }] }),
+  sec("story", { photoUrl: "founder.jpg", paragraphs: ["I started this after watching a gym full of kids go silent for a story, not a lecture."] }),
+  sec("offer", { headline: "Book the assembly", bullets: ["45-minute live show", "Free study guide", "Fits any gym or auditorium"], ctaLabel: "Check dates" }),
+  sec("faq", { items: [{ question: "How long is the show?", answer: "About 45 minutes, built for a full assembly period." }] }),
+  sec("cta_banner", { headline: "Ready to book?", ctaLabel: "Check dates" }),
 ];
 
 let badVerdict = null, soundVerdict = null;

@@ -343,6 +343,42 @@ function deepStripDebris<T>(value: T): T {
 }
 
 /**
+ * VALIDATE IDEMPOTENCY — deep, non-destructive camelCase → snake_case aliasing.
+ *
+ * validate() runs TWICE against different key styles: the chat route validates
+ * the model's raw snake_case tool call, and the confirm route re-validates the
+ * camelCase object that this same validate() returned. Any field whose reader
+ * only knows the snake_case key is therefore SILENTLY DROPPED between the
+ * proposal a customer approved and the action that actually runs.
+ *
+ * This was covered by a hand-maintained per-capability rename map, which had
+ * drifted: 16 of create_funnel's fields were missing from it, including the
+ * entire Sales Argument Plan, decision complexity, campaign energy/humanity,
+ * traffic temperature, the real rating and the supplied evidence logos. That
+ * is the root cause of the traced negative fixture — the page was composed
+ * with no argument behind it because the argument never survived confirmation.
+ *
+ * A map that must be updated by hand every time a field is added will drift
+ * again. This derives the alias instead, and does it RECURSIVELY, so nested
+ * plans (sales_argument.belief_chain, automation_plan.goal_tag) round-trip
+ * too — something a top-level rename map structurally could not do.
+ *
+ * Non-destructive: an existing snake_case key always wins, so a real model
+ * payload is never rewritten by its own alias.
+ */
+function aliasCamelKeysDeep<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(aliasCamelKeysDeep) as unknown as T;
+  if (!value || typeof value !== "object") return value;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value)) out[k] = aliasCamelKeysDeep(v);
+  for (const [k, v] of Object.entries(out)) {
+    const snake = k.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
+    if (snake !== k && out[snake] === undefined) out[snake] = v;
+  }
+  return out as unknown as T;
+}
+
+/**
  * Some model responses write the literal two-character sequence "\n" as
  * TEXT inside a multi-paragraph string (rather than a real newline
  * character) — found live 2026-08-02: a generated confirmation email's
@@ -2948,36 +2984,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // camelCase keys back to their snake_case originals up front so every
       // `str(raw, "snake_case")` read below works either way.
       const rawObj = (rawIn ?? {}) as Record<string, unknown>;
-      const camelToSnake: Record<string, string> = {
-        siteName: "site_name",
-        buildType: "build_type",
-        videoLink: "video_link",
-        contactEmail: "contact_email",
-        ctaLink: "cta_link",
-        designPalette: "design_color_palette",
-        customColors: "custom_colors",
-        designTypography: "design_typography",
-        designLayout: "design_layout",
-        designComponents: "design_components",
-        designInteractions: "design_interactions",
-        designButtons: "design_buttons",
-        designContactForm: "design_contact_form",
-        designIcons: "design_icons",
-        servicesList: "services_list",
-        heroStatement: "hero_statement",
-        colorScheme: "color_scheme",
-        includeFaq: "include_faq",
-        includeContactPage: "include_contact_page",
-        includeServicesPage: "include_services_page",
-        includePrivacyPage: "include_privacy_page",
-        includeTermsPage: "include_terms_page",
-      };
-      const raw: Record<string, unknown> = deepStripDebris({ ...rawObj });
-      for (const [camel, snake] of Object.entries(camelToSnake)) {
-        if (raw[snake] === undefined && camel in rawObj) {
-          raw[snake] = rawObj[camel];
-        }
-      }
+      const raw: Record<string, unknown> = aliasCamelKeysDeep(deepStripDebris({ ...rawObj }));
 
       const heading = str(raw, "heading");
       if (!heading) return { ok: false, error: "a site heading is required" };
@@ -3912,51 +3919,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // original snake_case key and its own camelCase output key. Same
       // pattern create_website's validate() uses, for the same reason.
       const rawObj = (rawIn ?? {}) as Record<string, unknown>;
-      const camelToSnake: Record<string, string> = {
-        funnelName: "funnel_name",
-        priceCents: "price_cents",
-        ctaLabel: "cta_label",
-        accentColor: "accent_color",
-        faqItems: "faq_items",
-        includeCaptureForm: "include_capture_form",
-        confirmationEmailSubject: "confirmation_email_subject",
-        confirmationEmailBody: "confirmation_email_body",
-        storyParagraphs: "story_paragraphs",
-        storyByline: "story_byline",
-        guaranteeHeadline: "guarantee_headline",
-        guaranteeBody: "guarantee_body",
-        trustBadges: "trust_badges",
-        heroTrustBadges: "hero_trust_badges",
-        ctaBannerHeadline: "cta_banner_headline",
-        ctaBannerSubtext: "cta_banner_subtext",
-        layoutChoices: "layout_choices",
-        processSteps: "process_steps",
-        stageContent: "stage_content",
-        designPack: "design_pack",
-        heroLayout: "hero_layout",
-        ctaStyle: "cta_style",
-        ctaSecondaryLabel: "cta_secondary_label",
-        ctaSecondaryHref: "cta_secondary_href",
-        ctaPhoneNumber: "cta_phone_number",
-        ctaBookingPageSlug: "cta_booking_page_slug",
-        visualArchetype: "visual_archetype",
-        paletteVariant: "palette_variant",
-        colorMode: "color_mode",
-        typographyPairing: "typography_pairing",
-        animationLevel: "animation_level",
-        visualDensity: "visual_density",
-        mediaStrategy: "media_strategy",
-        heroMediaUrl: "hero_media_url",
-        heroMediaType: "hero_media_type",
-        mediaSubject: "media_subject",
-        galleryLayout: "gallery_layout",
-      };
-      const raw: Record<string, unknown> = deepStripDebris({ ...rawObj });
-      for (const [camel, snake] of Object.entries(camelToSnake)) {
-        if (raw[snake] === undefined && camel in rawObj) {
-          raw[snake] = rawObj[camel];
-        }
-      }
+      const raw: Record<string, unknown> = aliasCamelKeysDeep(deepStripDebris({ ...rawObj }));
 
       const headline = str(raw, "headline");
       if (!headline || headline.length > 80) {
@@ -5465,7 +5428,17 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // (headline/bullets/CTA) so the argument — and servesBelief coverage —
       // can never be absent. An explicit plan always wins.
       const effectivePlan =
-        (args.salesArgument as { beliefChain: string[]; corePromise: string; closeReason: string } | null) ??
+        (args.salesArgument as
+          | {
+              beliefChain: string[];
+              corePromise: string;
+              closeReason: string;
+              currentBelief?: string;
+              whyOldWayFails?: string;
+              mechanism?: string;
+              oldWay?: string;
+            }
+          | null) ??
         synthesizeSalesArgument({
           headline: args.headline as string,
           bullets: (args.bullets as string[]) ?? [],
@@ -5600,12 +5573,55 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // A Critic OUTAGE MUST NOT PUBLISH AN UNREVIEWED PAGE. On failure the
       // verdict stays null, which computeReadiness() treats as "not reviewed
       // yet" — deliberately not as a pass.
+      // ── SHELL SAFETY, applied BEFORE the Critic ─────────────────────────
+      // A section may be minimal; a section may be omitted; a section may NOT
+      // be empty-but-present. Pruning here (rather than only at the write
+      // boundary) means the Critic judges the page that will actually exist,
+      // instead of certifying a composition that the save is about to change.
+      // Never fabricates: the remedy for an empty section is removal.
+      {
+        const { pruneEmptySections } = await import("@/lib/funnels/section-completeness");
+        const pruned = pruneEmptySections(sectionsToSave);
+        if (pruned.removed.length > 0) {
+          console.warn(
+            `[create_funnel] omitted ${pruned.removed.length} empty section(s): ` +
+              pruned.removed.map((r) => r.sectionType).join(", "),
+          );
+          sectionsToSave = pruned.sections;
+          visualDecisions = [
+            ...visualDecisions,
+            ...pruned.removed.map((r) => ({
+              role: "omitted_empty_section",
+              sectionType: r.sectionType,
+              reason: `Omitted rather than shipped blank: ${r.reason}`,
+            })),
+          ];
+        }
+        if (!pruned.viability.viable) {
+          // Fail closed rather than hand back a page that looks finished and
+          // does nothing.
+          throw new CapabilityUserError(
+            `I couldn't build a working page from what I have: ${pruned.viability.reasons.join(" ")} Tell me a bit more about the offer and who it's for, and I'll rebuild it.`,
+          );
+        }
+      }
+
       let criticVerdict: FunnelDoc["criticVerdict"] | undefined;
       try {
         const { critiqueComposition, MAX_CORRECTION_ROUNDS } = await import("@/lib/funnels/landing-page-critic");
         const { applyCriticCorrections } = await import("@/lib/funnels/critic-correction");
 
-        let verdict = await critiqueComposition(sectionsToSave, 0);
+        // The offer the page is making — so CTA continuity is judged against
+        // the real promise rather than in the abstract.
+        const plan = args.salesArgument as { corePromise?: string; prospect?: string } | null;
+        const bizName = typeof args.businessName === "string" ? args.businessName : "";
+        const criticContext = {
+          ...(bizName ? { businessName: bizName } : {}),
+          ...(plan?.corePromise ? { corePromise: plan.corePromise } : {}),
+          ...(plan?.prospect ? { prospect: plan.prospect } : {}),
+        };
+
+        let verdict = await critiqueComposition(sectionsToSave, 0, criticContext);
 
         if (verdict.verdict === "needs_correction" && MAX_CORRECTION_ROUNDS > 0) {
           const corrected = applyCriticCorrections(sectionsToSave, verdict.findings);
@@ -5616,7 +5632,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             // Re-evaluate the ACTUAL corrected composition, not the intent to
             // correct it. Asserting the correction worked without re-judging
             // would be the upstream-correlate failure.
-            verdict = await critiqueComposition(sectionsToSave, 1);
+            verdict = await critiqueComposition(sectionsToSave, 1, criticContext);
           }
         }
         criticVerdict = verdict;
@@ -5637,6 +5653,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             ...(args.salesArgument ? { salesArgument: args.salesArgument as NonNullable<FunnelDoc["salesArgument"]> } : {}),
             ...(densityAdjustedStrategy ? { designStrategy: densityAdjustedStrategy } : {}),
             sections: sectionsToSave,
+            // Generated content: the write boundary prunes any empty shell
+            // that survived and fails closed rather than persisting a page
+            // that cannot convert. Redundant with the prune above by design —
+            // this is the backstop that holds for every generated write.
+            enforceCompleteness: true,
             // P0.5 — persisted as structured state so Zeno can see outstanding
             // improvements, the preview can offer the right action against the
             // right slot, and "Stronger with 2 photos" is countable. An empty

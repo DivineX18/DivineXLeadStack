@@ -231,6 +231,13 @@ export interface SalesArgumentPlanLike {
   beliefChain: string[];
   corePromise: string;
   closeReason: string;
+  /** The belief-shift material. Optional so every existing caller still
+   *  type-checks; when present it is what fills an otherwise-blank
+   *  problem/solution beat (see step 0 below). */
+  currentBelief?: string;
+  whyOldWayFails?: string;
+  mechanism?: string;
+  oldWay?: string;
 }
 
 /**
@@ -337,6 +344,66 @@ export function applySalesArgument(
 ): FunnelSection[] {
   const chain = plan.beliefChain.filter((b) => b.trim().length > 0);
   if (chain.length < 2) return sections;
+
+  // 0. THE BELIEF-SHIFT BEAT MUST CARRY THE ARGUMENT'S OWN WORDS.
+  //
+  // The framework seeds a problem/solution section because the argument needs
+  // that beat, but nothing downstream ever wrote its copy — so it reached the
+  // page as an empty shell, was skipped by the belief assignment below (it has
+  // no renderable content), and is now correctly OMITTED by shell safety. The
+  // result was a page missing a persuasion step its own plan says it requires.
+  //
+  // This is NOT fabrication: currentBelief / whyOldWayFails / mechanism are
+  // the model's own plan, already written and already stored. Rendering them
+  // into the section that exists to express them is the reconnection — the
+  // alternative was inventing copy, which is never acceptable, or dropping a
+  // required beat, which is what was happening.
+  //
+  // Only ever fills a BLANK section: any real authored copy always wins.
+  sections = sections.map((s) => {
+    if (s.type !== "problem_solution" || sectionHasRenderableContent(s)) return s;
+    const c = s.config as ProblemSolutionConfig;
+    const problemText = plan.currentBelief?.trim() || plan.whyOldWayFails?.trim() || "";
+    const solutionText = plan.mechanism?.trim() || plan.corePromise?.trim() || "";
+    if (!problemText || !solutionText) return s; // nothing honest to say — stays omittable
+    return {
+      ...s,
+      config: {
+        ...c,
+        problemHeadline: c.problemHeadline || (plan.oldWay?.trim() ? `The usual way: ${plan.oldWay.trim()}` : "The problem"),
+        problemText,
+        solutionHeadline: c.solutionHeadline || "How this works instead",
+        solutionText,
+      },
+    };
+  });
+
+  // 0b. THE OFFER MUST BE HEADED. The framework seeds the offer with an empty
+  // headline for the model to fill; when it doesn't, the section renders its
+  // bullets and CTA under nothing, which reads as a layout bug rather than an
+  // offer. corePromise is exactly the sentence that belongs there — again the
+  // model's own words, not invented copy. Only ever fills a BLANK headline.
+  sections = sections.map((s) => {
+    if (s.type !== "offer" && s.type !== "checkout") return s;
+    const c = s.config as { headline?: string };
+    if (c.headline?.trim()) return s;
+    const promise = plan.corePromise?.trim();
+    if (!promise) return s;
+    // A hard character slice cuts mid-word and reads as a rendering bug. Take
+    // the first sentence/clause when there is one, then fall back to trimming
+    // at a word boundary — never mid-word.
+    const firstClause = promise.split(/(?<=[.!?])\s+/)[0].trim();
+    const base = firstClause.length >= 20 && firstClause.length <= 80 ? firstClause : promise;
+    let headline = base.replace(/[.,;:]\s*$/, "");
+    if (headline.length > 80) {
+      headline = headline.slice(0, 80);
+      const lastSpace = headline.lastIndexOf(" ");
+      if (lastSpace > 40) headline = headline.slice(0, lastSpace);
+      headline = headline.replace(/[\s,;:]+$/, "");
+    }
+    return { ...s, config: { ...s.config, headline } };
+  });
+
   const first = chain[0];
   const last = chain[chain.length - 1];
   const middle = chain.slice(1, -1);

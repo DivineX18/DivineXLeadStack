@@ -6,6 +6,7 @@ import { getStripeForTenant } from "@/lib/stripe/tenant-server";
 import { materializeCheckoutPrice } from "@/lib/funnels/materialize-price";
 import { buildFrameworkSections, type DecisionComplexity, type FunnelDepth } from "@/lib/funnels/frameworks";
 import { resolveDesignPack, type DesignPackId } from "@/lib/funnels/design-packs";
+import { pruneEmptySections, evaluateSections } from "@/lib/funnels/section-completeness";
 import { resolveEffectiveDesignTokens, type DesignStrategy } from "@/lib/funnels/design-strategy";
 import type { VisualRequirement, VisualDecision } from "@/types/funnels";
 import type {
@@ -205,6 +206,19 @@ export interface FunnelPatch {
   decisionComplexity?: FunnelDoc["decisionComplexity"];
   logoUrl?: string;
   sections?: FunnelSection[];
+  /**
+   * SHELL SAFETY (final launch pass, checkpoint 1). Set by generated-content
+   * writers (the AI Suite). Empty-but-present sections in `sections` are
+   * OMITTED before the write, and the save FAILS CLOSED if what remains
+   * cannot function as a conversion experience.
+   *
+   * Deliberately opt-in rather than universal: a human editing in the builder
+   * routinely adds a section and fills it a moment later, and silently
+   * deleting their in-progress work would be its own defect. A human can see
+   * their own blank section; a generated one ships to a paying customer
+   * unseen. Publication is guarded separately and unconditionally below.
+   */
+  enforceCompleteness?: boolean;
 }
 
 /** For any `checkout` section in `stripe_checkout` mode, mints/reuses a real
@@ -385,13 +399,53 @@ export async function updateFunnelServerSide(opts: {
   if (patch.persuasionDepth !== undefined) write.persuasionDepth = patch.persuasionDepth;
   if (patch.decisionComplexity !== undefined) write.decisionComplexity = patch.decisionComplexity;
   if (patch.logoUrl !== undefined) write.logoUrl = patch.logoUrl;
-  if (patch.sections !== undefined) {
-    await assertNoChainCycle(opts.subAccountId, opts.funnelId, patch.sections);
-    const oldData = snap.data() as Omit<FunnelDoc, "id">;
+  const oldData = snap.data() as Omit<FunnelDoc, "id">;
+
+  // ── SHELL SAFETY ────────────────────────────────────────────────────────
+  // A section may be minimal. A section may be omitted. A section may NOT be
+  // empty-but-present. See lib/funnels/section-completeness.ts.
+  let sectionsToWrite = patch.sections;
+  if (sectionsToWrite !== undefined && patch.enforceCompleteness) {
+    const pruned = pruneEmptySections(sectionsToWrite);
+    if (!pruned.viability.viable) {
+      // Fail closed. Pruning to nothing is not a repair — it would ship a page
+      // that looks finished and does nothing. Never fill the gap with invented
+      // copy; the correct outcome is that this write does not happen.
+      throw new FunnelValidationError(
+        `This page can't be saved as a working funnel yet: ${pruned.viability.reasons.join(" ")}`,
+      );
+    }
+    if (pruned.removed.length > 0) {
+      console.warn(
+        `[funnels] pruned ${pruned.removed.length} empty section(s) from ${opts.funnelId}: ` +
+          pruned.removed.map((r) => `${r.sectionType} (${r.reason})`).join("; "),
+      );
+    }
+    sectionsToWrite = pruned.sections;
+  }
+
+  // Publication is guarded unconditionally, for every author. Going live is
+  // the moment a shell stops being an internal draft artifact and starts
+  // being what a paying customer's traffic lands on. Nothing is deleted here
+  // — the operator is told exactly what to fill or remove.
+  if (patch.status === "published") {
+    const finalSections = sectionsToWrite ?? oldData.sections ?? [];
+    const blanks = evaluateSections(finalSections).filter((e) => e.state === "empty");
+    if (blanks.length > 0) {
+      throw new FunnelValidationError(
+        `Fill in or remove these empty sections before publishing: ${blanks
+          .map((b) => `${b.sectionType} — ${b.reason}`)
+          .join(" ")}`,
+      );
+    }
+  }
+
+  if (sectionsToWrite !== undefined) {
+    await assertNoChainCycle(opts.subAccountId, opts.funnelId, sectionsToWrite);
     write.sections = await materializeSectionsPrices(
       opts.subAccountId,
       oldData.sections,
-      patch.sections,
+      sectionsToWrite,
     );
   }
   await ref.update(write);
