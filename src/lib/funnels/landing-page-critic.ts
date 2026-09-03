@@ -30,7 +30,11 @@ export type CriticCategory =
   | "imagery_weakens"
   | "text_would_be_stronger"
   | "density"
-  | "coherence";
+  | "coherence"
+  /** The heading promises something the content beneath it does not deliver —
+   *  e.g. "Everything you'll learn" over an enrollment process. Model-written
+   *  copy, so this is judgment, not a rule. */
+  | "heading_content_mismatch";
 
 export interface CriticFinding {
   severity: "blocking" | "major" | "minor";
@@ -39,6 +43,11 @@ export interface CriticFinding {
   /** Concise and actionable — enough for the Director to correct without
    *  a conversation. Customer-appropriate wording. */
   correction: string;
+  /** For heading_content_mismatch ONLY: the heading that would honestly
+   *  describe the content beneath. Supplied by the Critic because rewriting a
+   *  heading is judgment; APPLIED by the Director, so correction stays a
+   *  single authority. */
+  replacementHeading?: string;
 }
 
 export interface CriticVerdict {
@@ -58,6 +67,7 @@ export const MAX_CORRECTION_ROUNDS = 1;
 const CATEGORIES: CriticCategory[] = [
   "visual_hierarchy", "visual_rhythm", "generic_feel",
   "imagery_weakens", "text_would_be_stronger", "density", "coherence",
+  "heading_content_mismatch",
 ];
 
 /**
@@ -75,9 +85,25 @@ export function describeComposition(sections: FunnelSection[]): string {
       if (typeof c.photoUrl === "string") bits.push("has portrait");
       const imgs = (c.images as unknown[] | undefined)?.length ?? 0;
       if (imgs) bits.push(`${imgs} gallery images`);
-      const items = (c.items as { imageUrl?: string }[] | undefined) ?? [];
+      // THE ITEM LABELS, not just a count. Without them the Critic could see
+      // "4 items" under "Everything you'll learn" and had no way to know the
+      // items were Apply / Strategy call / Roadmap — i.e. it was structurally
+      // incapable of detecting a heading/content mismatch. A category alone
+      // would not have fixed that; the input had to change.
+      const items = (c.items as { label?: string; title?: string; heading?: string; imageUrl?: string }[] | undefined) ?? [];
       const withImg = items.filter((it) => it.imageUrl).length;
-      if (items.length) bits.push(`${items.length} items, ${withImg} with images`);
+      if (items.length) {
+        const labels = items
+          .map((it) => it.label ?? it.title ?? it.heading)
+          .filter((x): x is string => typeof x === "string" && x.length > 0)
+          .slice(0, 6)
+          .map((x) => x.slice(0, 40));
+        bits.push(
+          labels.length
+            ? `${items.length} items: ${labels.join(" / ")}${withImg ? `, ${withImg} with images` : ""}`
+            : `${items.length} items, ${withImg} with images`,
+        );
+      }
       const logos = (c.logos as unknown[] | undefined)?.length ?? 0;
       if (logos) bits.push(`${logos} partner logos`);
       const headline = typeof c.headline === "string" ? c.headline : "";
@@ -90,12 +116,14 @@ const SYSTEM = `You are a senior art director reviewing a finished landing page 
 
 You are given the page's section order and what media each section carries. Judge the COMPOSITION only — not the copy's persuasiveness, not the offer.
 
-Look for: weak or absent visual hierarchy; poor visual rhythm (imagery clustered in one place, or long stretches with none); a generic stock-photo feel; imagery that weakens rather than strengthens a section; sections where a text-only treatment would read stronger; awkward density; and whether the page reads as intentionally art-directed rather than populated from an inventory.
+FIRST, for every section that has both a heading and content: does the heading honestly describe what is underneath it? A heading that promises a curriculum ("Everything you'll learn") above an enrollment process (Apply, Strategy call, Roadmap), "How it works" above testimonials, "Results" above feature descriptions, or "What you'll receive" above a founder biography are all real failures — the visitor is told one thing and shown another. When you find one, use category "heading_content_mismatch" and supply "replacementHeading" with a short heading that honestly describes the content. THE BAR IS MISLEADING, NOT IMPROVABLE. Flag it ONLY when the heading promises a DIFFERENT KIND OF THING than what follows, so a visitor would feel misled. Generic-but-accurate headings are CORRECT and must NOT be flagged: "How it works" over process steps, "What's included" over a deliverables list, "About" over a bio, "FAQ" over questions. If your suggested replacement would merely be more specific or more compelling than the current heading, that is NOT a mismatch — say nothing. Almost all headings are fine; this finding should be rare.
+
+Also look for: weak or absent visual hierarchy; poor visual rhythm (imagery clustered in one place, or long stretches with none); a generic stock-photo feel; imagery that weakens rather than strengthens a section; sections where a text-only treatment would read stronger; awkward density; and whether the page reads as intentionally art-directed rather than populated from an inventory.
 
 A page with FEW images, or none, can be excellent. Do not treat missing imagery as a fault in itself. An image slot explicitly marked "image requested, not supplied" is a known gap, not a composition error.
 
 Reply with ONLY a JSON object:
-{"verdict":"ready"|"needs_correction","findings":[{"severity":"blocking"|"major"|"minor","sectionType":"<section>","category":"visual_hierarchy"|"visual_rhythm"|"generic_feel"|"imagery_weakens"|"text_would_be_stronger"|"density"|"coherence","correction":"<one concise, actionable sentence>"}]}
+{"verdict":"ready"|"needs_correction","findings":[{"severity":"blocking"|"major"|"minor","sectionType":"<section>","category":"visual_hierarchy"|"visual_rhythm"|"generic_feel"|"imagery_weakens"|"text_would_be_stronger"|"density"|"coherence","correction":"<one concise, actionable sentence>","replacementHeading":"<only for heading_content_mismatch>"}]}
 
 Use "blocking" only when the composition genuinely fails. Return an empty findings array when the page is sound. No prose outside the JSON.`;
 
@@ -113,6 +141,9 @@ function parseVerdict(raw: string, round: number, model: string): CriticVerdict 
           sectionType: String(f.sectionType),
           category: CATEGORIES.includes(f.category as CriticCategory) ? (f.category as CriticCategory) : "coherence",
           correction: String(f.correction).slice(0, 240),
+          ...(typeof f.replacementHeading === "string" && f.replacementHeading.trim()
+            ? { replacementHeading: String(f.replacementHeading).trim().slice(0, 80) }
+            : {}),
         }))
         .slice(0, 8)
     : [];
