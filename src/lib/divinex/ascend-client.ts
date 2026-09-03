@@ -123,4 +123,63 @@ export const ascend = {
    *  a miss returns ok:false and the reveal degrades honestly. */
   getIntelligence: (businessProfileId: number) =>
     call<Record<string, unknown>>(`/api/divinex/intelligence/${businessProfileId}`),
+
+  /**
+   * ASSET STUDIO — generate one of Ascend's mature deliverables (VSL script,
+   * ad/social copy, lead magnet, sales script, proposal, content plan, …)
+   * for a Flow workspace, WITHOUT the customer leaving unified DivineX.
+   *
+   * Identity is the workspace: Ascend resolves flowSubAccountId through
+   * divinex_workspace_mappings and fails closed when it isn't linked, so
+   * tenancy is enforced on the authoritative side, not asserted here.
+   *
+   * Generation runs Ascend's existing Asset Studio implementation — Flow is
+   * a transport, never a second generator. Longer timeout than the other
+   * calls because these are 4k-token longform generations.
+   */
+  generateAsset: (input: { flowSubAccountId: string; assetType: string; prompt?: string }) =>
+    call<{
+      ok: boolean;
+      asset?: {
+        id: number;
+        assetType: string;
+        title: string;
+        content: string;
+        businessProfileId: number | null;
+        createdAt: string;
+      };
+    }>("/api/divinex/generate-asset", { method: "POST", body: input, timeoutMs: 120_000 }),
+
+  /** The workspace's generated-asset library, for unified Create. Ascend
+   *  enforces the same workspace-linkage rule as generation. */
+  listAssets: (flowSubAccountId: string) =>
+    call<{
+      ok: boolean;
+      assets?: { id: number; assetType: string; title: string; content: string; source: string | null; createdAt: string }[];
+    }>(`/api/divinex/assets-library/${encodeURIComponent(flowSubAccountId)}`),
 };
+
+/** The Asset Studio deliverables unified Create exposes. These are Ascend's
+ *  OWN asset-type strings — the contract is the string, so this list stays in
+ *  sync by matching what the Asset Factory already offers rather than by
+ *  redefining the taxonomy in Flow. */
+export const ASCEND_ASSET_TYPES = [
+  "Offer",
+  "Lead Magnet",
+  "Lead Magnet Full Draft",
+  "Landing Page Copy",
+  "Thank You Page Copy",
+  "Sales Page Copy",
+  "VSL Script",
+  "Webinar Script",
+  "9-Email Sequence",
+  "Sales Call Script",
+  "Discovery Call Script",
+  "DM Script",
+  "Proposal",
+  "Content Plan",
+  "90-Day Roadmap",
+  "Funnel Workflow Map",
+] as const;
+
+export type AscendAssetType = (typeof ASCEND_ASSET_TYPES)[number];

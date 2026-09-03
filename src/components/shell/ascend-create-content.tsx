@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { FunnelsList } from "@/components/funnels/funnels-list";
 import { WebsiteBuilder } from "@/components/website/website-builder";
 import { effectiveWebsiteCap } from "@/lib/website/limits";
+import { AscendAssetsSection } from "@/components/shell/ascend-assets-section";
 import type { WebsiteDoc } from "@/types/website";
 
 /**
@@ -61,6 +62,10 @@ export function AscendCreateContent({
 
       <section className="rounded-[var(--dx-radius-lg)] border p-6" style={{ backgroundColor: "var(--dx-surface-1)", borderColor: "var(--dx-border-subtle)" }}>
         <FunnelsList saId={saId} baseHref={funnelBaseHref} />
+      </section>
+
+      <section className="rounded-[var(--dx-radius-lg)] border p-6" style={{ backgroundColor: "var(--dx-surface-1)", borderColor: "var(--dx-border-subtle)" }}>
+        <AscendAssetsSection saId={saId} isAdmin={isAdmin} />
       </section>
 
       <section className="rounded-[var(--dx-radius-lg)] border p-6" style={{ backgroundColor: "var(--dx-surface-1)", borderColor: "var(--dx-border-subtle)" }}>

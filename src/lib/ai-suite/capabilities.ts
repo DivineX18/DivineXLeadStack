@@ -115,6 +115,7 @@ import {
   MessageTemplateValidationError,
 } from "@/lib/server/message-templates-service";
 import { validateEmailBody } from "@/lib/automations/merge-tags";
+import { ascend, ascendConfigured, ASCEND_ASSET_TYPES } from "@/lib/divinex/ascend-client";
 import { updateWorkflowServerSide } from "@/lib/server/workflows-service";
 import { composeStrategyNodes, synthesizeAutomationPlan } from "@/lib/workflows/compose-strategy";
 import {
@@ -6250,6 +6251,79 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         if (err instanceof MessageTemplateValidationError) throw new CapabilityUserError(err.message);
         throw err;
       }
+    },
+  },
+  {
+    name: "create_asset",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Create a VSL script, ad copy, lead magnet, proposal, sales script or content plan",
+    description:
+      "Generate one of DivineX's longform deliverables for this workspace: VSL/webinar scripts, ad and social copy, lead magnets and documents, sales/discovery/DM scripts, proposals, content plans, 90-day roadmaps, offer write-ups and page copy. " +
+      "Use when the user asks for any of those by name or in plain language ('write me a VSL', 'I need a lead magnet', 'draft a proposal', 'give me social posts for this month', 'write a sales script'). " +
+      "It is generated from this workspace's real business, brand voice and diagnosis — so do NOT ask the user to restate their business, audience or offer. " +
+      "Pick the asset_type that best matches what they asked for, and put any extra steer (angle, campaign, audience nuance, length) in `prompt`. " +
+      "The result is saved as a reviewable draft in Create — nothing is published or sent. " +
+      "For a landing PAGE that must actually be hosted and take leads, use create_funnel instead — this writes copy/documents, it does not build a live page. For a single email use create_email.",
+    parameters: {
+      type: "object",
+      properties: {
+        asset_type: {
+          type: "string",
+          enum: [...ASCEND_ASSET_TYPES],
+          description: "Which deliverable to produce. Match the user's request as closely as possible.",
+        },
+        prompt: {
+          type: "string",
+          description:
+            "Optional extra direction — the specific angle, offer, campaign or audience nuance for THIS asset. The workspace's business, brand voice and diagnosis are supplied automatically; only add what they wouldn't already contain.",
+        },
+      },
+      required: ["asset_type"],
+      additionalProperties: false,
+    },
+    validate: (rawIn) => {
+      const raw = aliasCamelKeysDeep(deepStripDebris({ ...((rawIn ?? {}) as Record<string, unknown>) }));
+      const assetType = str(raw, "asset_type");
+      if (!(ASCEND_ASSET_TYPES as readonly string[]).includes(assetType)) {
+        return {
+          ok: false,
+          error: `asset_type must be one of: ${ASCEND_ASSET_TYPES.join(", ")}. Pick the closest match to what the user asked for and call again.`,
+        };
+      }
+      return { ok: true, args: { assetType, prompt: str(raw, "prompt").slice(0, 4000) } };
+    },
+    summarize: (args) =>
+      `Write a ${args.assetType as string} for this workspace, using its saved business and brand. It'll be saved as a draft for you to review.`,
+    execute: async (ctx, args) => {
+      if (!ascendConfigured()) {
+        throw new CapabilityUserError(
+          "The DivineX intelligence engine isn't configured on this deployment yet, so I can't generate that here.",
+        );
+      }
+      const res = await ascend.generateAsset({
+        flowSubAccountId: ctx.subAccountId!,
+        assetType: args.assetType as string,
+        ...(args.prompt ? { prompt: args.prompt as string } : {}),
+      });
+      if (!res.ok || !res.data?.asset) {
+        // workspace_not_linked is the fail-closed tenancy answer, not a bug.
+        const detail = (res.data as { error?: string } | undefined)?.error ?? res.error ?? "";
+        if (detail.includes("workspace_not_linked") || res.error === "ascend_403") {
+          throw new CapabilityUserError(
+            "This workspace isn't linked to a DivineX business profile yet, so I don't have the business and brand context these need. Finish onboarding first and I'll write it properly.",
+          );
+        }
+        throw new CapabilityUserError("I couldn't generate that just now. Try again in a moment.");
+      }
+      const asset = res.data.asset;
+      return {
+        resultText:
+          `Your ${asset.assetType} is ready — “${asset.title}”.\n\n` +
+          `• Written from this workspace's saved business and brand, not a generic template.\n` +
+          `• It's a draft: review and edit it in Create before you use it anywhere.`,
+        ref: { kind: "asset", id: String(asset.id) },
+      };
     },
   },
 ];
