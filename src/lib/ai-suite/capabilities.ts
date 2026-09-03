@@ -114,6 +114,7 @@ import {
   createMessageTemplateServerSide,
   MessageTemplateValidationError,
 } from "@/lib/server/message-templates-service";
+import { validateEmailBody } from "@/lib/automations/merge-tags";
 import { updateWorkflowServerSide } from "@/lib/server/workflows-service";
 import { composeStrategyNodes, synthesizeAutomationPlan } from "@/lib/workflows/compose-strategy";
 import {
@@ -6180,6 +6181,75 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         return `- "${f.name}": ${detail}`;
       });
       return { resultText: `Funnels in this workspace:\n${lines.join("\n")}` };
+    },
+  },
+  {
+    name: "create_email",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Write an email and save it as a reviewable draft",
+    description:
+      "WRITE an email and save it as a DRAFT message template in this workspace. Use when the user asks you to write/draft/compose an email — a follow-up, a re-engagement email, a nurture email, an announcement, a promotion. " +
+      "YOU are the copywriter: write the subject and body yourself from the business context in this conversation. Never ask the user to supply the copy — a draft they can edit always beats a question. " +
+      "NOTHING IS SENT. This only creates a draft the human reviews, edits and then sends or attaches to a workflow themselves — real emails to real people are on the other side of that review, so the send is always theirs to make. " +
+      "The body MUST contain the literal token {{unsubscribeLink}} (CAN-SPAM); put it on its own line at the end. You may also use {{firstName}}, {{lastName}}, {{email}} and {{businessName}} merge tags. " +
+      "IF A VALIDATION ERROR COMES BACK, fix the arguments yourself and call again immediately — a validation error is an instruction to you, never a question to relay to the user.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Short internal name for the template, e.g. 'Quote follow-up day 3'. Not shown to the recipient." },
+        subject: { type: "string", description: "The email subject line. Specific and concrete — write it yourself." },
+        body: {
+          type: "string",
+          description:
+            "The full email body as plain text with line breaks. Must include {{unsubscribeLink}} on its own line at the end. Write real, specific copy grounded in the business context — never placeholder text like [insert offer here].",
+        },
+      },
+      required: ["name", "subject", "body"],
+      additionalProperties: false,
+    },
+    validate: (rawIn) => {
+      const raw = aliasCamelKeysDeep(deepStripDebris({ ...((rawIn ?? {}) as Record<string, unknown>) }));
+      const name = str(raw, "name").slice(0, 80);
+      const subject = str(raw, "subject").slice(0, 200);
+      const body = fixLiteralNewlines(str(raw, "body"));
+      if (!name) return { ok: false, error: "name is required — name the template yourself (e.g. 'Quote follow-up day 3') and call again." };
+      if (!subject) return { ok: false, error: "subject is required — YOU are the copywriter: write a specific subject line yourself from the business context and call again. Never ask the user for copy." };
+      if (!body || body.length < 40) {
+        return { ok: false, error: "body is required and must be a real email (at least a few sentences) — write it yourself from the business context and call again. Never ask the user for copy." };
+      }
+      // Same CAN-SPAM rule the manual template editor enforces. Surfaced here
+      // so the model repairs it itself rather than failing at execute time.
+      const err = validateEmailBody(body);
+      if (err) {
+        return { ok: false, error: `${err} Add the literal token {{unsubscribeLink}} on its own line at the end of the body and call again.` };
+      }
+      return { ok: true, args: { name, subject, body: body.slice(0, 8000) } };
+    },
+    summarize: (args) =>
+      `Save a DRAFT email template “${args.name as string}” with subject “${args.subject as string}”. Nothing is sent — you review and send it yourself.`,
+    execute: async (ctx, args) => {
+      try {
+        const templateId = await createMessageTemplateServerSide({
+          subAccountId: ctx.subAccountId!,
+          createdByUid: ctx.uid,
+          name: args.name as string,
+          type: "email",
+          subject: args.subject as string,
+          body: args.body as string,
+        });
+        return {
+          resultText:
+            `Draft email “${args.name as string}” is saved.\n\n` +
+            `• Subject: ${args.subject as string}\n` +
+            `• It's a draft — nothing has been sent to anyone.\n` +
+            `• Review and edit it under Templates, then send it or attach it to a workflow when you're happy.`,
+          ref: { kind: "message_template", id: templateId },
+        };
+      } catch (err) {
+        if (err instanceof MessageTemplateValidationError) throw new CapabilityUserError(err.message);
+        throw err;
+      }
     },
   },
 ];
