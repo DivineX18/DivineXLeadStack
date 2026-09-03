@@ -65,5 +65,37 @@ for (const f of files) {
 check("4. No guidance points at deprecated top-level destinations", navGuidance.length === 0,
   navGuidance.slice(0, 3).join(" | "));
 
+// ── 5. Removed LIFECYCLE names are not offered as destinations ──────────
+//
+// GAP THIS CLOSES. Check 4 only matched inside double-quoted strings, and
+// only listed Campaigns/CRM/Brand. Human acceptance found customer-visible
+// copy reading "run a Growth Scan or CRO Audit under Identify" — JSX TEXT
+// CONTENT, naming a lifecycle destination P0.3 deleted. It sent customers to
+// a place that no longer exists in the navigation, and every source-level
+// check passed.
+//
+// So this scans raw source (quoted or not) and covers the removed lifecycle
+// vocabulary. The navigational preposition is required because "grow",
+// "scale" and "launch" are ordinary English words that appear legitimately
+// in marketing copy — only "…under Identify"-shaped guidance is a defect.
+const REMOVED_LIFECYCLE = "Identify|Launch|Grow|Optimize|Scale";
+const lifecycleGuidance: string[] = [];
+for (const f of files) {
+  // Strip comments FIRST. A comment legitimately discusses the old IA — this
+  // very check's own rationale does — and matching that would fail for the
+  // wrong reason. Handles JSX `{/* … */}` too, which a line-prefix test
+  // misses because the line begins with `{`.
+  const code = readFileSync(f, "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/^\s*\/\/.*$/gm, " ");
+  for (const m of code.matchAll(
+    new RegExp(`(?:go to|under|open|find it in|head to|from|in)\\s+(?:${REMOVED_LIFECYCLE})\\b(?!\\s*(?:ing|s\\b))`, "g"),
+  )) {
+    lifecycleGuidance.push(`${f}: …${m[0]}…`);
+  }
+}
+check("5. No customer copy sends users to a removed lifecycle destination",
+  lifecycleGuidance.length === 0, lifecycleGuidance.slice(0, 3).join(" | "));
+
 console.log(`\n${bad === 0 ? "IA CONSISTENT" : `${bad} CHECK(S) FAILED`}`);
 process.exit(bad === 0 ? 0 : 1);

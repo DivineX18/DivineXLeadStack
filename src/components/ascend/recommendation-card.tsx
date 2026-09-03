@@ -41,7 +41,10 @@ export function RecommendedNextActionCard({
       {action ? (
         <RecommendationRow rec={action} />
       ) : (
-        <p className="text-sm text-[var(--dx-text-muted)]">Nothing to recommend right now — run a Growth Scan or CRO Audit under Identify.</p>
+        // Names the FINAL IA destination. This previously pointed at a
+        // lifecycle section P0.3 removed, sending customers to a place that
+        // no longer exists in the navigation.
+        <p className="text-sm text-[var(--dx-text-muted)]">Nothing to recommend yet — run a Growth Scan or CRO Audit from Intelligence.</p>
       )}
     </AscendCardShell>
   );
