@@ -28,7 +28,7 @@ export default async function AscendSettingsPage() {
   }
 
   return (
-    <div className="rounded-2xl bg-white p-6 text-foreground shadow-sm">
+    <div className="rounded-2xl border border-[var(--dx-border-subtle)] bg-[var(--dx-surface-2)] p-6 text-[var(--dx-text-primary)]">
       <SubAccountProvider subAccountId={saId} inAscendShell>
         <SettingsPage />
       </SubAccountProvider>

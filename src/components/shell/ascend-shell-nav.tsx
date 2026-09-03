@@ -59,7 +59,7 @@ export function AscendShellNav({ sections, ariaLabel = "Lifecycle navigation" }:
               href={section.href}
               aria-current={active ? "page" : undefined}
               className={`rounded-md px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--dx-focus)] motion-reduce:transition-none ${
-                active ? "bg-[var(--dx-surface-3)] text-[var(--dx-text-primary)]" : "text-[var(--dx-text-secondary)] hover:bg-[var(--dx-surface-2)] hover:text-[var(--dx-text-primary)]"
+                active ? "bg-[var(--dx-active)] text-[var(--dx-text-primary)]" : "text-[var(--dx-text-secondary)] hover:bg-[var(--dx-hover)] hover:text-[var(--dx-text-primary)]"
               }`}
             >
               {section.label}

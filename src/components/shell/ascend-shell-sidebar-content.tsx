@@ -32,7 +32,7 @@ export function AscendShellSidebarContent({ branding, navigation, capabilities, 
         {capabilities.isAgencyOwner && (
           <Link
             href="/app/command-center"
-            className="rounded-md px-3 py-2 font-medium text-[var(--dx-text-secondary)] outline-none transition-colors hover:bg-[var(--dx-surface-2)] hover:text-[var(--dx-text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--dx-focus)] motion-reduce:transition-none"
+            className="rounded-md px-3 py-2 font-medium text-[var(--dx-text-secondary)] outline-none transition-colors hover:bg-[var(--dx-hover)] hover:text-[var(--dx-text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--dx-focus)] motion-reduce:transition-none"
           >
             Command Center
           </Link>
@@ -40,7 +40,7 @@ export function AscendShellSidebarContent({ branding, navigation, capabilities, 
         {capabilities.canUseZeno && zenoHref && (
           <a
             href={zenoHref}
-            className="rounded-md px-3 py-2 text-[var(--dx-text-secondary)] outline-none transition-colors hover:bg-[var(--dx-surface-2)] hover:text-[var(--dx-text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--dx-focus)] motion-reduce:transition-none"
+            className="rounded-md px-3 py-2 text-[var(--dx-text-secondary)] outline-none transition-colors hover:bg-[var(--dx-hover)] hover:text-[var(--dx-text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--dx-focus)] motion-reduce:transition-none"
           >
             Ask Zeno
           </a>
@@ -48,7 +48,7 @@ export function AscendShellSidebarContent({ branding, navigation, capabilities, 
         {capabilities.canSwitchWorkspace && (
           <a
             href="/agency?next=/app/home"
-            className="rounded-md px-3 py-2 text-[var(--dx-text-secondary)] outline-none transition-colors hover:bg-[var(--dx-surface-2)] hover:text-[var(--dx-text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--dx-focus)] motion-reduce:transition-none"
+            className="rounded-md px-3 py-2 text-[var(--dx-text-secondary)] outline-none transition-colors hover:bg-[var(--dx-hover)] hover:text-[var(--dx-text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--dx-focus)] motion-reduce:transition-none"
           >
             Switch workspace
           </a>
@@ -56,7 +56,7 @@ export function AscendShellSidebarContent({ branding, navigation, capabilities, 
         {capabilities.canAccessAgency && (
           <a
             href="/agency?next=/app/home"
-            className="rounded-md px-3 py-2 text-[var(--dx-text-secondary)] outline-none transition-colors hover:bg-[var(--dx-surface-2)] hover:text-[var(--dx-text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--dx-focus)] motion-reduce:transition-none"
+            className="rounded-md px-3 py-2 text-[var(--dx-text-secondary)] outline-none transition-colors hover:bg-[var(--dx-hover)] hover:text-[var(--dx-text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--dx-focus)] motion-reduce:transition-none"
           >
             Agency home
           </a>

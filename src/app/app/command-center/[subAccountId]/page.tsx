@@ -98,7 +98,7 @@ export default async function CommandCenterWorkspaceDetailPage({
         </>
       )}
 
-      <section className="rounded-2xl bg-white p-6 text-foreground shadow-sm">
+      <section className="rounded-2xl border border-[var(--dx-border-subtle)] bg-[var(--dx-surface-2)] p-6 text-[var(--dx-text-primary)]">
         <h2 className="mb-3 text-sm font-medium">Members &amp; invites</h2>
         <CommandCenterMembersPanel subAccountId={subAccountId} />
       </section>

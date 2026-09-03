@@ -149,7 +149,7 @@ export function AscendAssetsSection({ saId, isAdmin }: { saId: string; isAdmin: 
               key={a.id}
               type="button"
               onClick={() => setOpen(a)}
-              className="flex w-full items-center gap-3 rounded-[var(--dx-radius-md)] border p-3 text-left transition-colors hover:bg-[var(--dx-surface-2)]"
+              className="flex w-full items-center gap-3 rounded-[var(--dx-radius-md)] border p-3 text-left transition-colors hover:bg-[var(--dx-hover)]"
               style={{ borderColor: "var(--dx-border-subtle)" }}
             >
               <FileText className="h-4 w-4 shrink-0 text-[var(--dx-text-muted)]" />

@@ -68,7 +68,7 @@ export default async function AscendLaunchWorkflowEditorPage({
   };
 
   return (
-    <div className="mx-auto w-full max-w-5xl rounded-2xl bg-white p-6 text-foreground shadow-sm">
+    <div className="mx-auto w-full max-w-5xl rounded-2xl border border-[var(--dx-border-subtle)] bg-[var(--dx-surface-2)] p-6 text-[var(--dx-text-primary)]">
       <WorkflowBuilderLoader saId={saId} workflowId={workflowId} readiness={readiness} />
     </div>
   );

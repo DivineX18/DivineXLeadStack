@@ -7,6 +7,7 @@ import { ascendDarkBranding } from "@/lib/shell/resolve-shell-branding";
 import { AscendShellSidebarContent } from "@/components/shell/ascend-shell-sidebar-content";
 import { AscendMobileNav } from "@/components/shell/ascend-mobile-nav";
 import { AscendUserMenu } from "@/components/shell/ascend-user-menu";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 /**
  * Ascend OS Phase 2, Slice 8 (stabilized in Slice 8.5) — the Full Ascend
@@ -96,7 +97,7 @@ export default async function AscendAppLayout({ children }: { children: ReactNod
   const branding = shell.mode === "full_ascend" ? shell.branding : ascendDarkBranding();
 
   return (
-    <div className="theme-ascend flex min-h-dvh bg-[#08090d] text-[var(--dx-text-primary)]">
+    <div className="theme-ascend flex min-h-dvh bg-[var(--dx-surface-0)] text-[var(--dx-text-primary)]">
       <a
         href="#ascend-main"
         className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-4 focus-visible:top-4 focus-visible:z-50 focus-visible:rounded-md focus-visible:bg-white focus-visible:px-4 focus-visible:py-2 focus-visible:text-sm focus-visible:font-medium focus-visible:text-black"
@@ -104,7 +105,7 @@ export default async function AscendAppLayout({ children }: { children: ReactNod
         Skip to content
       </a>
 
-      <aside className="hidden w-64 shrink-0 border-r border-[var(--dx-border-subtle)] bg-black/40 p-4 md:flex">
+      <aside className="hidden w-64 shrink-0 border-r border-[var(--dx-border-subtle)] bg-[var(--dx-surface-1)] p-4 md:flex">
         <AscendShellSidebarContent branding={branding} navigation={shell.navigation} capabilities={shell.capabilities} zenoHref={zenoHref} />
       </aside>
 
@@ -112,7 +113,11 @@ export default async function AscendAppLayout({ children }: { children: ReactNod
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--dx-border-subtle)] px-4 md:justify-end md:px-6">
           <AscendMobileNav branding={branding} navigation={shell.navigation} capabilities={shell.capabilities} zenoHref={zenoHref} />
           <span className="text-sm font-medium text-[var(--dx-text-secondary)] md:hidden">{branding.productName}</span>
-          <div className="ml-auto md:ml-0">
+          <div className="ml-auto flex items-center gap-1 md:ml-0">
+            {/* Reuses the existing next-themes toggle — one theme engine, not
+                a second one. Light/dark now reach the whole unified shell
+                because every surface reads the --dx-* tokens. */}
+            <ThemeToggle />
             <AscendUserMenu email={email} />
           </div>
         </header>

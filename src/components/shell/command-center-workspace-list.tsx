@@ -54,7 +54,7 @@ export function CommandCenterWorkspaceList() {
   }, [workspaces, query, tierFilter]);
 
   return (
-    <div className="rounded-2xl bg-white p-6 text-foreground shadow-sm">
+    <div className="rounded-2xl border border-[var(--dx-border-subtle)] bg-[var(--dx-surface-2)] p-6 text-[var(--dx-text-primary)]">
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

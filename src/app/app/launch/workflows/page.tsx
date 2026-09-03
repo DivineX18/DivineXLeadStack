@@ -18,7 +18,7 @@ export default async function AscendLaunchWorkflowsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl rounded-2xl bg-white p-6 text-foreground shadow-sm">
+    <div className="mx-auto max-w-3xl rounded-2xl border border-[var(--dx-border-subtle)] bg-[var(--dx-surface-2)] p-6 text-[var(--dx-text-primary)]">
       <WorkflowsList saId={saId} />
     </div>
   );

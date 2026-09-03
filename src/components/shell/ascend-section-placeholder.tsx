@@ -28,7 +28,7 @@ export function AscendSectionPlaceholder({ title, description, links }: AscendSe
             <a
               key={link.href}
               href={link.href}
-              className="rounded-md border border-[var(--dx-border-subtle)] px-4 py-3 text-sm text-[var(--dx-text-secondary)] transition-colors hover:bg-[var(--dx-surface-2)] hover:text-[var(--dx-text-primary)]"
+              className="rounded-md border border-[var(--dx-border-subtle)] px-4 py-3 text-sm text-[var(--dx-text-secondary)] transition-colors hover:bg-[var(--dx-hover)] hover:text-[var(--dx-text-primary)]"
             >
               {link.label} →
             </a>

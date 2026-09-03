@@ -25,7 +25,7 @@ export function AscendUserMenu({ email }: { email: string | null }) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="text-[var(--dx-text-secondary)] hover:bg-[var(--dx-surface-2)] hover:text-[var(--dx-text-primary)]" />}>
+      <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="text-[var(--dx-text-secondary)] hover:bg-[var(--dx-hover)] hover:text-[var(--dx-text-primary)]" />}>
         <User className="h-4 w-4" aria-hidden="true" />
         <span className="sr-only">Account menu</span>
       </DropdownMenuTrigger>
