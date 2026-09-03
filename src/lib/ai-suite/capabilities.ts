@@ -3924,11 +3924,24 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const raw: Record<string, unknown> = aliasCamelKeysDeep(deepStripDebris({ ...rawObj }));
 
       const headline = str(raw, "headline");
-      if (!headline || headline.length > 80) {
+      // MISSING and TOO LONG are different failures and must say so. Both once
+      // returned the same "a headline (max 80 characters) is required", which
+      // reads as "you didn't send one" — so a model that HAD sent one, just an
+      // over-length one, rewrote at the same length and burned every repair
+      // hop. Whole business categories that naturally produce longer headlines
+      // (higher-ticket/consulting) could not build a page at all.
+      if (!headline) {
         return {
           ok: false,
           error:
-            "a headline (max 80 characters) is required — YOU are the copywriter: write a specific, concrete headline yourself from the business context already in this conversation and call create_funnel again with the complete arguments. Do NOT ask the user for a headline (or any other copy) — asking is a contract violation; a draft they can edit always beats a question.",
+            "a headline is required (max 80 characters) — YOU are the copywriter: write a specific, concrete headline yourself from the business context already in this conversation and call create_funnel again with the complete arguments. Do NOT ask the user for a headline (or any other copy) — asking is a contract violation; a draft they can edit always beats a question.",
+        };
+      }
+      if (headline.length > 80) {
+        return {
+          ok: false,
+          error:
+            `your headline is ${headline.length} characters; the limit is 80. Shorten THIS headline — do not start over and do not ask the user. Keep the specific promise and cut qualifiers, or move the detail into the subheadline (which has no such limit). You sent: "${headline}"`,
         };
       }
       // Accepts BOTH the LLM's original comma-separated string AND this
