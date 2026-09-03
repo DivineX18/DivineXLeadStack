@@ -261,15 +261,43 @@ export async function POST(request: Request) {
             ? `Approved brand assets (${approved.length}): ${approved.slice(0, 12).map((a) => `#${a.id} ${a.classification ?? "asset"}`).join(", ")}`
             : "No approved brand assets yet — ask for the ones that would most strengthen the page rather than using stand-ins.",
           "",
+        ];
+        // ASCEND'S DIAGNOSIS. Rendered as reasoning material, not as fields to
+        // recite: Zeno should conclude "your constraint is conversion, so
+        // build X", never read a score aloud. Absent intelligence stays
+        // absent — an undiagnosed business must not be told it was diagnosed.
+        const intel = (snap as { intelligence?: {
+          primaryConstraint?: string;
+          opportunities?: { title: string; why?: string }[];
+          recommendedFunnelType?: string; recommendedLeadMagnet?: string;
+          scoreLabel?: string; assessedAt?: string;
+        } }).intelligence;
+        if (intel && (intel.primaryConstraint || intel.opportunities?.length)) {
+          lines.push(
+            "",
+            "WHAT ASCEND HAS DIAGNOSED ABOUT THIS BUSINESS:",
+            intel.primaryConstraint ? `Biggest thing holding growth back: ${intel.primaryConstraint}` : "",
+            intel.opportunities?.length
+              ? `Best opportunities, strongest first: ${intel.opportunities.slice(0, 3).map((o) => o.title + (o.why ? ` (${o.why})` : "")).join("; ")}`
+              : "",
+            intel.recommendedFunnelType ? `Campaign shape that fits: ${intel.recommendedFunnelType}` : "",
+            intel.recommendedLeadMagnet ? `Lead magnet that fits: ${intel.recommendedLeadMagnet}` : "",
+            intel.scoreLabel ? `Overall growth stage: ${intel.scoreLabel}` : "",
+            "",
+            "REASON FROM THIS. When they ask what to do, or ask you to build something, let the constraint and the opportunities shape WHAT you recommend and WHAT you build — not just how you describe it. Do not quote scores, field names or this list back at them; speak as someone who already understands their business. Never claim a diagnosis you were not given.",
+          );
+        }
+        lines.push(
           "USE THIS: never ask the customer for anything above — you already know it. Reference offers and assets by their ids. This is DURABLE business truth; campaign-specific intent (what to promote right now, to whom, with what follow-up) is gathered per campaign and never written back here.",
-        ].filter(Boolean);
+        );
+        const body = lines.filter(Boolean).join("\n");
         cards.push({
           id: "divinex-business-profile",
           levels: ["sub-account"],
           title: "This workspace's business + brand (canonical)",
           location: "DivineX Business Profile",
           keywords: ["business", "brand", "profile", "assets", "offers"],
-          body: lines.join("\n"),
+          body,
         });
       }
     } catch {

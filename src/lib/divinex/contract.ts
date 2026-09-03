@@ -71,6 +71,30 @@ export interface DivinexProfileSnapshot {
     height?: number | null;
   }[];
   provenance: Record<string, unknown>;
+  /**
+   * ASCEND'S DIAGNOSIS — optional, additive, and the link that turns two
+   * products into one loop. Without it Flow/Zeno knows WHO the business is
+   * but not what is holding it back, so it can only give generic advice.
+   *
+   * Ascend remains the authority; this is a projection of its existing
+   * growth_scans fields, not a second intelligence model. Absent on every
+   * pre-existing snapshot, so Zeno must degrade to "no diagnosis available"
+   * rather than inventing one.
+   */
+  intelligence?: {
+    /** growth_scans.biggestBottleneck — what is most limiting growth. */
+    primaryConstraint?: string;
+    /** growth_scans.topOpportunities — prioritised, highest first. */
+    opportunities?: { title: string; why?: string }[];
+    /** growth_scans.recommendedFunnelType / recommendedLeadMagnet. */
+    recommendedFunnelType?: string;
+    recommendedLeadMagnet?: string;
+    /** growth_scans.overallScore / scoreLabel — context, not a headline. */
+    overallScore?: number;
+    scoreLabel?: string;
+    /** When the diagnosis was produced, so staleness is visible. */
+    assessedAt?: string;
+  };
 }
 
 /** Apply an incoming profile contract to the snapshot cache. Returns what
