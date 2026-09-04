@@ -7,5 +7,5 @@ import { redirect } from "next/navigation";
  * rather than 404ing.
  */
 export default function LegacySectionPage() {
-  redirect("/app/intelligence");
+  redirect("/intelligence");
 }

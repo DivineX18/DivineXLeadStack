@@ -144,7 +144,7 @@ export default async function RevealPage({
         </Link>
         {/* Assistance Recommendation — secondary by design; software first. */}
         <Link
-          href="/app/assistance?context=post_reveal"
+          href="/assistance?context=post_reveal"
           className="dx-secondary-action inline-flex items-center justify-center rounded-[var(--dx-radius)] px-5 py-3.5 text-sm"
         >
           Get launch help

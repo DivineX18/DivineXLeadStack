@@ -17,11 +17,11 @@ import { PageHeader } from "@/components/divinex/ui";
  * page component inside Ascend chrome (see grow/contacts/page.tsx).
  */
 const SECTIONS = [
-  { href: "/app/grow/contacts", label: "Contacts", description: "Search, add, and manage every contact.", icon: Users },
-  { href: "/app/grow/pipeline", label: "Pipeline", description: "Drag deals across stages.", icon: TrendingUp },
-  { href: "/app/grow/tasks", label: "Tasks", description: "Today, overdue, upcoming, done.", icon: CheckSquare },
-  { href: "/app/grow/calendar", label: "Calendar", description: "Events and bookings.", icon: Calendar },
-  { href: "/app/grow/conversations", label: "Conversations", description: "SMS, WhatsApp, and inbox threads.", icon: MessageSquare },
+  { href: "/leads/contacts", label: "Contacts", description: "Search, add, and manage every contact.", icon: Users },
+  { href: "/leads/pipeline", label: "Pipeline", description: "Drag deals across stages.", icon: TrendingUp },
+  { href: "/leads/tasks", label: "Tasks", description: "Today, overdue, upcoming, done.", icon: CheckSquare },
+  { href: "/leads/calendar", label: "Calendar", description: "Events and bookings.", icon: Calendar },
+  { href: "/leads/conversations", label: "Conversations", description: "SMS, WhatsApp, and inbox threads.", icon: MessageSquare },
 ];
 
 export default async function LeadsPage() {

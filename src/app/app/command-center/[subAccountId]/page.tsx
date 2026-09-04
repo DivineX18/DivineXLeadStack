@@ -39,7 +39,7 @@ export default async function CommandCenterWorkspaceDetailPage({
     <div className="max-w-4xl space-y-8">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Link href="/app/command-center" className="text-xs text-[var(--dx-text-muted)] hover:text-[var(--dx-text-secondary)]">
+          <Link href="/command-center" className="text-xs text-[var(--dx-text-muted)] hover:text-[var(--dx-text-secondary)]">
             ← Command Center
           </Link>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--dx-text-primary)]">{sub.name}</h1>

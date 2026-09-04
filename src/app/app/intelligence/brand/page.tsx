@@ -47,7 +47,7 @@ export default async function IntelligenceBrandPage() {
         <EmptyState
           title="We haven't captured your brand yet"
           body="Once your business profile is connected, your colors, fonts, logos and imagery appear here — and everything Zeno builds uses them automatically."
-          primary={<PrimaryAction href="/app/onboarding">Set up your business profile</PrimaryAction>}
+          primary={<PrimaryAction href="/onboarding">Set up your business profile</PrimaryAction>}
         />
       </div>
     );
@@ -70,7 +70,7 @@ export default async function IntelligenceBrandPage() {
         title="Brand & Assets"
         description="What DivineX knows about how your business looks and sounds. Everything Zeno builds uses this."
         action={
-          <PrimaryAction href="/app/onboarding">
+          <PrimaryAction href="/onboarding">
             Update brand <ArrowRight className="h-4 w-4" />
           </PrimaryAction>
         }
@@ -173,7 +173,7 @@ export default async function IntelligenceBrandPage() {
 
       <p className="text-xs" style={{ color: "var(--dx-text-muted)" }}>
         Brand data is managed in your DivineX business profile.{" "}
-        <Link href="/app/onboarding" className="underline">
+        <Link href="/onboarding" className="underline">
           Review or correct it
         </Link>
         .

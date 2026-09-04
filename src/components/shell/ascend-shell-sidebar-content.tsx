@@ -31,7 +31,7 @@ export function AscendShellSidebarContent({ branding, navigation, capabilities, 
       <nav aria-label="Account and workspace" className="mt-auto flex flex-col gap-1 border-t border-[var(--dx-border-subtle)] px-3 pt-4 text-sm">
         {capabilities.isAgencyOwner && (
           <Link
-            href="/app/command-center"
+            href="/command-center"
             className="rounded-md px-3 py-2 font-medium text-[var(--dx-text-secondary)] outline-none transition-colors hover:bg-[var(--dx-hover)] hover:text-[var(--dx-text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--dx-focus)] motion-reduce:transition-none"
           >
             Command Center

@@ -63,10 +63,10 @@ export default async function PerformancePage() {
             : "Nothing is overdue right now. Ask Zeno what would move the needle next."}
         </p>
         <div className="mt-3 flex flex-wrap gap-4">
-          <Link href="/app/leads" className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: "var(--dx-primary)" }}>
+          <Link href="/leads" className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: "var(--dx-primary)" }}>
             Go to Leads <ArrowRight className="h-3 w-3" />
           </Link>
-          <Link href="/app/intelligence" className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: "var(--dx-primary)" }}>
+          <Link href="/intelligence" className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: "var(--dx-primary)" }}>
             Why is this happening? <ArrowRight className="h-3 w-3" />
           </Link>
         </div>

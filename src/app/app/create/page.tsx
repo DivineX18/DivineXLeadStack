@@ -45,7 +45,7 @@ export default async function CreatePage() {
       websiteMaxSites={sub?.websiteMaxSites ?? null}
       title="Create"
       description="Everything you're running to win business — funnels, pages and the sites behind them. Preview any draft before it goes live."
-      funnelBaseHref="/app/create/funnel"
+      funnelBaseHref="/create/funnel"
       />
     </SubAccountProvider>
   );

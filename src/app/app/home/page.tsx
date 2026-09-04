@@ -59,7 +59,7 @@ export default async function AscendHomePage() {
           // "Try again" and the workspace picker are both tenant-neutral.
           actions={
             <>
-              <SecondaryAction href="/app/home">Try again</SecondaryAction>
+              <SecondaryAction href="/">Try again</SecondaryAction>
               <SecondaryAction href="/agency">Choose a workspace</SecondaryAction>
             </>
           }
@@ -101,7 +101,7 @@ export default async function AscendHomePage() {
         description="Where your business stands, and what to do about it."
         action={
           <Link
-            href="/app/zeno"
+            href="/zeno"
             className="dx-primary-action inline-flex items-center gap-2 rounded-[var(--dx-radius)] px-4 py-2.5 text-sm font-semibold"
           >
             <Sparkles className="h-4 w-4" />
@@ -166,7 +166,7 @@ export default async function AscendHomePage() {
             What we know about your business
           </h2>
           <Link
-            href="/app/intelligence"
+            href="/intelligence"
             className="inline-flex items-center gap-1 text-xs font-medium"
             style={{ color: "var(--dx-primary)" }}
           >
@@ -185,7 +185,7 @@ export default async function AscendHomePage() {
             </p>
             <div className="mt-3">
               <Link
-                href="/app/brand"
+                href="/brand"
                 className="inline-flex items-center gap-1 text-xs font-medium"
                 style={{ color: "var(--dx-primary)" }}
               >

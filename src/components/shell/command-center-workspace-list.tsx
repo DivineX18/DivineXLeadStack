@@ -133,7 +133,7 @@ export function CommandCenterWorkspaceList() {
                         <ExternalLink className="h-3.5 w-3.5" /> Open
                       </a>
                       <a
-                        href={`/app/command-center/${w.subAccountId}`}
+                        href={`/command-center/${w.subAccountId}`}
                         className="rounded-md border px-2 py-1 text-xs hover:bg-muted"
                         title="Provisioning + audit"
                       >

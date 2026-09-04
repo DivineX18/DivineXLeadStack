@@ -41,7 +41,7 @@ export function AscendCreateContent({
   websiteMaxSites,
   title = "Create",
   description = "Build funnels and websites — the same proven builders, native to Ascend.",
-  funnelBaseHref = "/app/create/funnels",
+  funnelBaseHref = "/create/funnels",
 }: {
   saId: string;
   isAdmin: boolean;
@@ -79,14 +79,14 @@ export function AscendCreateContent({
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[
-            { href: "/app/create/forms", label: "Forms", desc: "Build a form and embed it on any site." },
-            { href: "/app/create/booking", label: "Booking pages", desc: "Share a link people can book from." },
-            { href: "/app/create/products", label: "Products", desc: "The catalogue behind your offers." },
-            { href: "/app/create/quotes", label: "Quotes & invoices", desc: "Send, track and mark paid." },
-            { href: "/app/create/orders", label: "Orders", desc: "Payments taken through your funnels." },
-            { href: "/app/create/templates", label: "Templates", desc: "Reusable email and SMS copy." },
-            { href: "/app/launch/workflows", label: "Automations", desc: "Follow up without doing it by hand." },
-            { href: "/app/launch/broadcasts", label: "Broadcasts", desc: "Send to a segment of your list." },
+            { href: "/create/forms", label: "Forms", desc: "Build a form and embed it on any site." },
+            { href: "/create/booking", label: "Booking pages", desc: "Share a link people can book from." },
+            { href: "/create/products", label: "Products", desc: "The catalogue behind your offers." },
+            { href: "/create/quotes", label: "Quotes & invoices", desc: "Send, track and mark paid." },
+            { href: "/create/orders", label: "Orders", desc: "Payments taken through your funnels." },
+            { href: "/create/templates", label: "Templates", desc: "Reusable email and SMS copy." },
+            { href: "/create/workflows", label: "Automations", desc: "Follow up without doing it by hand." },
+            { href: "/create/broadcasts", label: "Broadcasts", desc: "Send to a segment of your list." },
           ].map((x) => (
             <a
               key={x.href}

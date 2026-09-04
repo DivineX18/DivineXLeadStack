@@ -88,7 +88,7 @@ export default async function AscendAppLayout({ children }: { children: ReactNod
   }
 
   // Zeno is native to the shell now (Phase E) — no bounce out to /sa/*.
-  const zenoHref = shell.workspace ? "/app/zeno" : null;
+  const zenoHref = shell.workspace ? "/zeno" : null;
   const email = shell.identity.session.user?.email ?? null;
   // shell.branding tracks the REAL resolved mode, which is "crm_only" for
   // a command-center-bypass render (no active full_ascend workspace) —
