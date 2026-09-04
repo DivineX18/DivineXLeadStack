@@ -52,6 +52,13 @@ const SECTION_TYPES: FunnelSectionType[] = [
   "business_footer",
 ];
 
+/** The renderer's own canvas vocabulary — mirrors SectionCanvas in
+ *  types/funnels.ts so an unknown value can never reach the renderer. */
+const SECTION_CANVASES = [
+  "clean", "warm_paper", "brand_tint", "dark_immersive", "high_contrast_cta", "photographic",
+] as const;
+type SectionCanvas = (typeof SECTION_CANVASES)[number];
+
 /** Defensive sanitize of a client-supplied sections array — authed staff,
  *  but keep the shape honest so a malformed save can't poison the renderer. */
 function sanitizeSections(raw: unknown): FunnelSection[] | null {
@@ -69,7 +76,21 @@ function sanitizeSections(raw: unknown): FunnelSection[] | null {
     ) {
       return null;
     }
-    out.push({ id: s.id, type: s.type as FunnelSectionType, config: s.config });
+    // PRESERVE THE COMPOSED PLAN. argumentRole/servesBelief are how the Sales
+    // Argument Plan is structurally consumed, and canvas is the art-direction
+    // surface that gives the page its story-fold rhythm. Dropping them here
+    // meant the FIRST human edit silently destroyed all three — generation
+    // stamped them correctly, then a save reduced the page to bare sections.
+    // Validated, not trusted: only known-shaped values survive.
+    const canvas = (SECTION_CANVASES as readonly string[]).includes(s.canvas as string) ? (s.canvas as SectionCanvas) : undefined;
+    out.push({
+      id: s.id,
+      type: s.type as FunnelSectionType,
+      config: s.config,
+      ...(typeof s.argumentRole === "string" && s.argumentRole ? { argumentRole: s.argumentRole.slice(0, 40) } : {}),
+      ...(typeof s.servesBelief === "string" && s.servesBelief ? { servesBelief: s.servesBelief.slice(0, 240) } : {}),
+      ...(canvas ? { canvas } : {}),
+    });
   }
   return out;
 }
