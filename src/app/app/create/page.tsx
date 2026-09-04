@@ -1,6 +1,7 @@
 import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-placeholder";
 import { AscendCreateContent } from "@/components/shell/ascend-create-content";
+import { SubAccountProvider } from "@/context/sub-account-context";
 import { getAdminDb } from "@/lib/firebase/admin";
 import type { SubAccountDoc } from "@/types/tenancy";
 
@@ -33,14 +34,19 @@ export default async function CreatePage() {
   const sub = subSnap.exists ? (subSnap.data() as SubAccountDoc) : null;
   const isAdmin = effectiveRole === "admin" || effectiveRole === "agencyOwner";
 
+  // Flow components mounted here (FunnelsList, WebsiteBuilder) resolve their
+  // links through saPath(); inAscendShell keeps those links inside the unified
+  // experience instead of bouncing the customer to /sa/{id}.
   return (
-    <AscendCreateContent
+    <SubAccountProvider subAccountId={saId} inAscendShell>
+      <AscendCreateContent
       saId={saId}
       isAdmin={isAdmin}
       websiteMaxSites={sub?.websiteMaxSites ?? null}
       title="Create"
       description="Everything you're running to win business — funnels, pages and the sites behind them. Preview any draft before it goes live."
       funnelBaseHref="/app/create/funnel"
-    />
+      />
+    </SubAccountProvider>
   );
 }
