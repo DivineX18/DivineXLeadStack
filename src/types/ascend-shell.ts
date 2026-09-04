@@ -50,6 +50,10 @@ export const ASCEND_LIFECYCLE_SECTIONS = [
   "home",
   "create",
   "leads",
+  // AGENTS — the approved seventh primary section. Leads are PEOPLE;
+  // agents are the systems that talk to them, so they are deliberately
+  // not nested under Leads.
+  "agents",
   "performance",
   "intelligence",
   "settings",

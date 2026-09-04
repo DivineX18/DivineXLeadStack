@@ -25,7 +25,7 @@ const STATUS_STYLES: Record<FunnelOrderDoc["status"], string> = {
 };
 
 export function FunnelOrdersList({ saId }: { saId: string }) {
-  const { subAccount } = useSubAccount();
+  const { subAccount, saPath } = useSubAccount();
   const [orders, setOrders] = useState<FunnelOrderDoc[] | null>(null);
   const [refundingId, setRefundingId] = useState<string | null>(null);
 
@@ -121,7 +121,7 @@ export function FunnelOrdersList({ saId }: { saId: string }) {
               <div className="flex items-center gap-2">
                 {o.contactId && (
                   <Link
-                    href={`/sa/${saId}/contacts/${o.contactId}`}
+                    href={saPath(`/contacts/${o.contactId}`)}
                     className="text-xs text-primary underline-offset-2 hover:underline"
                   >
                     View contact

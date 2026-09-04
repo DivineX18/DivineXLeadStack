@@ -22,15 +22,15 @@
  *  rewritten; anything deeper falls through to the legacy /sa route. */
 const EXACT_MAP: Record<string, string> = {
   "/dashboard": "/app/home",
-  "/pipeline": "/app/grow/pipeline",
-  "/tasks": "/app/grow/tasks",
-  "/calendar": "/app/grow/calendar",
-  "/conversations": "/app/grow/conversations",
-  "/reports": "/app/optimize",
   "/ai-suite": "/app/scale",
   "/website": "/app/create",
   "/funnels": "/app/create",
 };
+
+/** Step C — features that now have real /app adapters mounting the SAME Flow
+ *  page component (see components/shell/unified-feature.tsx). Registered as
+ *  prefixes below so detail routes resolve too where the Flow route tree has
+ *  them; the fallback still guarantees no 404. */
 
 /** Prefix maps: both the index AND its sub-paths have real /app routes,
  *  so the whole subtree is rewritten. `to` replaces `from`. */
@@ -40,6 +40,19 @@ const PREFIX_MAP: Array<{ from: string; to: string }> = [
   { from: "/funnels", to: "/app/create/funnels" },
   { from: "/broadcasts", to: "/app/launch/broadcasts" },
   { from: "/workflows", to: "/app/launch/workflows" },
+  // The Create -> Orders escape: this is the entry that fixes it.
+  { from: "/funnels/orders", to: "/app/create/orders" },
+  { from: "/forms", to: "/app/create/forms" },
+  { from: "/booking", to: "/app/create/booking" },
+  { from: "/products", to: "/app/create/products" },
+  { from: "/quotes", to: "/app/create/quotes" },
+  { from: "/templates", to: "/app/create/templates" },
+  { from: "/pipeline", to: "/app/grow/pipeline" },
+  { from: "/conversations", to: "/app/grow/conversations" },
+  { from: "/tasks", to: "/app/grow/tasks" },
+  { from: "/calendar", to: "/app/grow/calendar" },
+  { from: "/ai-agents", to: "/app/agents" },
+  { from: "/reports", to: "/app/performance" },
 ];
 
 /**

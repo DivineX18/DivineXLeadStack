@@ -1,5 +1,7 @@
 "use client";
 
+import { useSubAccount } from "@/context/sub-account-context";
+
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -172,6 +174,7 @@ export function FunnelBuilder({
   saId: string;
   funnelId: string;
 }) {
+  const { saPath } = useSubAccount();
   const [funnel, setFunnel] = useState<FunnelDoc | null>(null);
   const [name, setName] = useState("");
   const [status, setStatus] = useState<FunnelStatus>("draft");
@@ -2508,6 +2511,7 @@ function PostPurchaseFlowPanel({
   onLink: (funnelId: string) => void;
   onUnlink: () => void;
 }) {
+  const { saPath } = useSubAccount();
   const [creating, setCreating] = useState(false);
 
   async function createStep() {
@@ -2534,7 +2538,7 @@ function PostPurchaseFlowPanel({
       {linkedFunnelId ? (
         <div className="flex items-center gap-2">
           <a
-            href={`/sa/${saId}/funnels/${linkedFunnelId}`}
+            href={saPath(`/funnels/${linkedFunnelId}`)}
             target="_blank"
             rel="noreferrer"
             className="text-sm text-primary underline-offset-2 hover:underline"

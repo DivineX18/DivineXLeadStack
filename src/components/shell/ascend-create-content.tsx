@@ -68,6 +68,39 @@ export function AscendCreateContent({
         <AscendAssetsSection saId={saId} isAdmin={isAdmin} />
       </section>
 
+      {/* The rest of what a business builds. Each links to a unified route
+          that mounts the SAME Flow page component (components/shell/
+          unified-feature.tsx), so none of these leave the DivineX shell. */}
+      <section className="rounded-[var(--dx-radius-lg)] border p-6" style={{ backgroundColor: "var(--dx-surface-1)", borderColor: "var(--dx-border-subtle)" }}>
+        <h2 className="text-xl font-semibold text-[var(--dx-text-primary)]">Everything else you sell with</h2>
+        <p className="mt-1 text-sm text-[var(--dx-text-muted)]">
+          Forms and booking pages you can share anywhere, the products and quotes behind your offers,
+          and the orders that come in.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            { href: "/app/create/forms", label: "Forms", desc: "Build a form and embed it on any site." },
+            { href: "/app/create/booking", label: "Booking pages", desc: "Share a link people can book from." },
+            { href: "/app/create/products", label: "Products", desc: "The catalogue behind your offers." },
+            { href: "/app/create/quotes", label: "Quotes & invoices", desc: "Send, track and mark paid." },
+            { href: "/app/create/orders", label: "Orders", desc: "Payments taken through your funnels." },
+            { href: "/app/create/templates", label: "Templates", desc: "Reusable email and SMS copy." },
+            { href: "/app/launch/workflows", label: "Automations", desc: "Follow up without doing it by hand." },
+            { href: "/app/launch/broadcasts", label: "Broadcasts", desc: "Send to a segment of your list." },
+          ].map((x) => (
+            <a
+              key={x.href}
+              href={x.href}
+              className="rounded-[var(--dx-radius-md)] border p-4 transition-colors hover:bg-[var(--dx-hover)]"
+              style={{ borderColor: "var(--dx-border-subtle)" }}
+            >
+              <span className="block text-sm font-medium text-[var(--dx-text-primary)]">{x.label}</span>
+              <span className="mt-1 block text-xs text-[var(--dx-text-muted)]">{x.desc}</span>
+            </a>
+          ))}
+        </div>
+      </section>
+
       <section className="rounded-[var(--dx-radius-lg)] border p-6" style={{ backgroundColor: "var(--dx-surface-1)", borderColor: "var(--dx-border-subtle)" }}>
         {isAdmin ? (
           <AscendWebsitesSection saId={saId} websiteMaxSites={websiteMaxSites} />

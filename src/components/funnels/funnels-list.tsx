@@ -1,5 +1,7 @@
 "use client";
 
+import { useSubAccount } from "@/context/sub-account-context";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -102,6 +104,7 @@ export function FunnelsList({
    *  existing CRM-only page, which never passes this prop. */
   baseHref?: string;
 }) {
+  const { saPath } = useSubAccount();
   const router = useRouter();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [creating, setCreating] = useState(false);
@@ -182,7 +185,7 @@ export function FunnelsList({
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            render={<Link href={`/sa/${saId}/funnels/orders`} />}
+            render={<Link href={saPath("/funnels/orders")} />}
           >
             <ReceiptText className="mr-1 h-4 w-4" />
             Orders

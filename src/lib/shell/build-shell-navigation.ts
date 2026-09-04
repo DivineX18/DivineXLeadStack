@@ -35,6 +35,10 @@ export const LIFECYCLE_REQUIREMENTS: Record<
   // LEADS absorbs what was "CRM": contacts, pipeline, conversations,
   // appointments and follow-up, framed as "who should I talk to?".
   leads: { permission: "pipeline.read", module: "pipeline" },
+  // AGENTS surfaces the existing Flow AI channels (Web Chat, SMS, WhatsApp,
+  // Voice, Outbound Voice). Gated on the ai_suite module they already run
+  // on — no new module, no new permission, no new pricing.
+  agents: { permission: "workspace.read", module: "ai_suite" },
   // PERFORMANCE answers "what's happening?" — business outcomes, not GA4.
   performance: { permission: "reports.read", module: "reports" },
   intelligence: { permission: "assessments.read", module: "growth_scan" },
@@ -45,6 +49,7 @@ const LIFECYCLE_LABELS: Record<AscendLifecycleSectionId, string> = {
   home: "Home",
   create: "Create",
   leads: "Leads",
+  agents: "Agents",
   performance: "Performance",
   intelligence: "Intelligence",
   settings: "Settings",
