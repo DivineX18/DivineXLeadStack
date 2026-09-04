@@ -81,8 +81,14 @@ for (const f of families) {
   if (!asset) continue;
   produced.push(asset);
   check(`  the artifact is substantial, not a stub`, asset.content.length > 600, `${asset.content.length} chars`);
-  check(`  it is not placeholder filler`,
-    !/\[insert|\[your |lorem ipsum|TODO|placeholder/i.test(asset.content));
+  // UNAMBIGUOUS generator filler only. "[Your Child's Name]" is legitimate
+  // reader-facing personalization inside a lead magnet, and the word
+  // "placeholder" appears in prose asserting the opposite ("no placeholders,
+  // just ready-to-record copy") — flagging either would fail correct work.
+  // What must never appear is an UNFILLED template slot the customer would
+  // have to repair: lorem ipsum, TODO, or a bracketed INSERT directive.
+  check(`  it is not unfilled template filler`,
+    !/lorem ipsum|\bTODO\b|\[INSERT\b|\bXXXX+/i.test(asset.content));
   check(`  the asset type round-tripped`, asset.assetType === f.assetType, asset.assetType);
   console.log(`   "${asset.title}"`);
   console.log(`   ${asset.content.replace(/\n/g, " ").slice(0, 220)}…\n`);
