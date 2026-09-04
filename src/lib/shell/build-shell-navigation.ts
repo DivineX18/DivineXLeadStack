@@ -77,7 +77,9 @@ export function buildShellNavigation(workspace: WorkspaceIdentity | null): Ascen
     return {
       id,
       label: LIFECYCLE_LABELS[id],
-      href: `/app/${id}`,
+      // Customer-facing clean URLs; the implementation stays at /app/* behind
+      // the rewrites in next.config.ts. Home is the bare root.
+      href: id === "home" ? "/" : `/${id}`,
       requiredPermission: req.permission,
       requiredModule: req.module,
       visible,

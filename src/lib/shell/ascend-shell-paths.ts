@@ -21,10 +21,10 @@
  *  sub-paths (e.g. a detail page) do NOT — so only the exact bare path is
  *  rewritten; anything deeper falls through to the legacy /sa route. */
 const EXACT_MAP: Record<string, string> = {
-  "/dashboard": "/app/home",
-  "/ai-suite": "/app/scale",
-  "/website": "/app/create",
-  "/funnels": "/app/create",
+  "/dashboard": "/",
+  "/ai-suite": "/scale",
+  "/website": "/create",
+  "/funnels": "/create",
 };
 
 /** Step C — features that now have real /app adapters mounting the SAME Flow
@@ -35,24 +35,24 @@ const EXACT_MAP: Record<string, string> = {
 /** Prefix maps: both the index AND its sub-paths have real /app routes,
  *  so the whole subtree is rewritten. `to` replaces `from`. */
 const PREFIX_MAP: Array<{ from: string; to: string }> = [
-  { from: "/dashboard/settings", to: "/app/settings" },
-  { from: "/contacts", to: "/app/grow/contacts" },
-  { from: "/funnels", to: "/app/create/funnels" },
-  { from: "/broadcasts", to: "/app/launch/broadcasts" },
-  { from: "/workflows", to: "/app/launch/workflows" },
+  { from: "/dashboard/settings", to: "/settings" },
+  { from: "/contacts", to: "/leads/contacts" },
+  { from: "/funnels", to: "/create/funnels" },
+  { from: "/broadcasts", to: "/create/broadcasts" },
+  { from: "/workflows", to: "/create/workflows" },
   // The Create -> Orders escape: this is the entry that fixes it.
-  { from: "/funnels/orders", to: "/app/create/orders" },
-  { from: "/forms", to: "/app/create/forms" },
-  { from: "/booking", to: "/app/create/booking" },
-  { from: "/products", to: "/app/create/products" },
-  { from: "/quotes", to: "/app/create/quotes" },
-  { from: "/templates", to: "/app/create/templates" },
-  { from: "/pipeline", to: "/app/grow/pipeline" },
-  { from: "/conversations", to: "/app/grow/conversations" },
-  { from: "/tasks", to: "/app/grow/tasks" },
-  { from: "/calendar", to: "/app/grow/calendar" },
-  { from: "/ai-agents", to: "/app/agents" },
-  { from: "/reports", to: "/app/performance" },
+  { from: "/funnels/orders", to: "/create/orders" },
+  { from: "/forms", to: "/create/forms" },
+  { from: "/booking", to: "/create/booking" },
+  { from: "/products", to: "/create/products" },
+  { from: "/quotes", to: "/create/quotes" },
+  { from: "/templates", to: "/create/templates" },
+  { from: "/pipeline", to: "/leads/pipeline" },
+  { from: "/conversations", to: "/leads/conversations" },
+  { from: "/tasks", to: "/leads/tasks" },
+  { from: "/calendar", to: "/leads/calendar" },
+  { from: "/ai-agents", to: "/agents" },
+  { from: "/reports", to: "/performance" },
 ];
 
 /**

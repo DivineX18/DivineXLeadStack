@@ -258,6 +258,19 @@ const EXTRA_SAFE_HOSTNAMES = (process.env.SAFE_APP_HOSTNAMES ?? "")
   .map((h) => h.trim().toLowerCase())
   .filter(Boolean);
 
+/** The Complete app's own hostname, from the same env the shell-mode decision
+ *  uses. Absent/malformed = no clean-root rewrite, which fails safe to the
+ *  existing behaviour rather than guessing. */
+function safeAscendHostname(): string | null {
+  const raw = process.env.NEXT_PUBLIC_ASCEND_APP_URL;
+  if (!raw) return null;
+  try {
+    return normalizeHost(new URL(raw).hostname);
+  } catch {
+    return null;
+  }
+}
+
 function normalizeHost(h: string): string {
   const lower = h.toLowerCase();
   return lower.startsWith("www.") ? lower.slice(4) : lower;
@@ -393,6 +406,22 @@ export default async function middleware(request: NextRequest) {
       // every command-center route re-checks requireAgencyOwnerAny()
       // independently server-side.
       headers.set("x-pathname", request.nextUrl.pathname);
+
+      // CLEAN ROOT. An authenticated Complete customer on the Ascend host
+      // should see Home at the bare root, not /app/home. This REWRITES rather
+      // than redirects, so the address bar stays "/" and — critically — the
+      // existing entry chain that targets /app/home cannot bounce back here
+      // and loop. Every other host (crm.divinex.io, marketing) is untouched
+      // and still serves the public landing page.
+      if (request.nextUrl.pathname === "/") {
+        const ascendHost = safeAscendHostname();
+        const host = normalizeHost((request.headers.get("host") ?? "").split(":")[0]);
+        if (ascendHost && host === ascendHost) {
+          return NextResponse.rewrite(new URL("/app/home", request.url), {
+            request: { headers },
+          });
+        }
+      }
 
       return NextResponse.next({ request: { headers } });
     },
