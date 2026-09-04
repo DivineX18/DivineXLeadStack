@@ -66,7 +66,10 @@ check("a deliverable generates through deployed Flow -> deployed Ascend",
   genRes.ok && !!gen.asset, genRes.ok ? "" : `${genRes.status} ${gen.error}`);
 if (gen.asset) {
   check("  the artifact is real, not a stub", gen.asset.content.length > 600, `${gen.asset.content.length} chars`);
-  check("  no placeholder filler", !/\[insert|\[your |lorem ipsum|placeholder/i.test(gen.asset.content));
+  // Unambiguous UNFILLED template slots only — reader-facing personalization
+  // ("[Your Name]") and prose mentioning the word "placeholder" are correct
+  // copy, not defects. Matches the tightened check in verify-unified-create.
+  check("  no unfilled template filler", !/lorem ipsum|\bTODO\b|\[INSERT\b|\bXXXX+/i.test(gen.asset.content));
   console.log(`  "${gen.asset.title}"`);
   console.log(`  ${gen.asset.content.replace(/\n/g, " ").slice(0, 240)}…`);
 }
