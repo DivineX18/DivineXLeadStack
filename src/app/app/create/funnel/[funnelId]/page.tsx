@@ -1,6 +1,7 @@
 import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-placeholder";
 import { FunnelBuilder } from "@/components/funnels/funnel-builder";
+import { SubAccountProvider } from "@/context/sub-account-context";
 
 /**
  * The funnel editor inside Create. FunnelBuilder is reused as-is (the
@@ -26,5 +27,12 @@ export default async function CreateFunnelEditorPage({
     );
   }
 
-  return <FunnelBuilder saId={saId} funnelId={funnelId} />;
+  return (
+    // FunnelBuilder resolves its own links through saPath(); inAscendShell
+    // keeps them in the unified experience. Without this provider the builder
+    // throws, which is what broke Preview -> Edit.
+    <SubAccountProvider subAccountId={saId} inAscendShell>
+      <FunnelBuilder saId={saId} funnelId={funnelId} />
+    </SubAccountProvider>
+  );
 }
