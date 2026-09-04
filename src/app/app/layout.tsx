@@ -8,6 +8,7 @@ import { AscendShellSidebarContent } from "@/components/shell/ascend-shell-sideb
 import { AscendMobileNav } from "@/components/shell/ascend-mobile-nav";
 import { AscendUserMenu } from "@/components/shell/ascend-user-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ZenoLauncher } from "@/components/ai-suite/zeno-launcher";
 
 /**
  * Ascend OS Phase 2, Slice 8 (stabilized in Slice 8.5) — the Full Ascend
@@ -125,6 +126,13 @@ export default async function AscendAppLayout({ children }: { children: ReactNod
         <main id="ascend-main" className="flex-1 overflow-y-auto p-6 md:p-10">
           {children}
         </main>
+
+        {/* Zeno is the orchestration layer, so it is globally reachable rather
+            than a destination. This is the SAME launcher Flow mounts — one
+            implementation, one chat, one capability set; the unified shell
+            just has to hand it the active workspace, which isn't in the URL
+            here the way it is under /sa/:id. */}
+        <ZenoLauncher workspaceId={shell.workspace?.workspaceId ?? null} />
       </div>
     </div>
   );

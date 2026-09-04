@@ -21,12 +21,16 @@ import type { AiSuiteLevel } from "@/types/ai-suite";
  * than SubAccountContext so this can mount at the top of the dashboard
  * shell without depending on SubAccountProvider being present.
  */
-export function ZenoLauncher() {
+export function ZenoLauncher({ workspaceId }: { workspaceId?: string | null } = {}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
+  // Flow (/sa/:id, /agency) carries its scope in the URL. The unified shell
+  // (/app/*) does not — its active workspace is resolved server-side — so the
+  // layout passes it in. Same component, same chat, same capabilities; only
+  // how the scope is discovered differs.
   const saMatch = pathname.match(/^\/sa\/([^/]+)/);
-  const subAccountId = saMatch ? saMatch[1] : null;
+  const subAccountId = saMatch ? saMatch[1] : (workspaceId ?? null);
   const onAgencyPages = pathname.startsWith("/agency");
 
   const { agencyRole, loading: authLoading } = useAuth();
@@ -104,7 +108,7 @@ export function ZenoLauncher() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Close Zeno" : "Ask Zeno"}
-        className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 via-violet-500 to-pink-500 text-white shadow-lg transition-transform hover:scale-105 md:bottom-6 md:right-6"
+        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 via-violet-500 to-pink-500 text-white shadow-lg outline-none ring-offset-2 ring-offset-[var(--dx-surface-0,transparent)] transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-[var(--dx-focus,theme(colors.violet.400))] motion-reduce:transition-none md:bottom-6 md:right-6"
       >
         {open ? <X className="h-6 w-6" /> : <Sparkles className="h-6 w-6" />}
       </button>
