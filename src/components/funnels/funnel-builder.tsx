@@ -2,7 +2,7 @@
 
 import { useSubAccount } from "@/context/sub-account-context";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   ChevronDown,
@@ -11,6 +11,7 @@ import {
   Plus,
   Trash2,
   Sparkles,
+  ImagePlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ import type { LeadForm } from "@/types/forms";
 import { VisualCanvas } from "@/components/funnels/visual-canvas";
 import { MediaField, VideoField } from "@/components/funnels/media-field";
 import { AiSuiteChat } from "@/components/ai-suite/ai-suite-chat";
+import { imageryGuidance } from "@/lib/funnels/imagery-guidance";
 import type {
   FunnelStatus,
   BusinessFooterConfig,
@@ -339,6 +341,13 @@ export function FunnelBuilder({
 
   const [addAtIndex, setAddAtIndex] = useState<number | null>(null);
   const [zenoOpen, setZenoOpen] = useState(false);
+  // Guidance, not fabrication: the Image Director already decides which
+  // sections deserve a photograph. When one does and none exists, say so
+  // rather than reaching for stock. Recomputed from the live draft.
+  const imageryHints = useMemo(
+    () => imageryGuidance({ sections, heroPrefersText: (sections.find((x) => x.type === "hero")?.config as HeroConfig | undefined)?.mediaType === "none" }),
+    [sections],
+  );
 
   function insertSection(type: FunnelSectionType, index: number) {
     const id = `s${Date.now()}`;
@@ -828,6 +837,34 @@ export function FunnelBuilder({
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {view === "visual" && imageryHints.length > 0 && (
+        <div className="rounded-xl border p-3" style={{ borderColor: "var(--dx-border-subtle, hsl(var(--border)))" }}>
+          <p className="text-xs font-medium">Would strengthen this page</p>
+          <ul className="mt-2 space-y-1.5">
+            {imageryHints.map((h) => (
+              <li key={`${h.sectionType}-${h.brief}`} className="flex items-start gap-2 text-xs text-muted-foreground">
+                <ImagePlus className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>
+                  {h.message}{" "}
+                  {h.sectionId && (
+                    <button
+                      type="button"
+                      className="underline underline-offset-2 hover:text-foreground"
+                      onClick={() => setExpanded(h.sectionId)}
+                    >
+                      Open {h.sectionType.replace(/_/g, " ")}
+                    </button>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            We never add stock or generated photos on your behalf — these are yours to supply.
+          </p>
         </div>
       )}
 
