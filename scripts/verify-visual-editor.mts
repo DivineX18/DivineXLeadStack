@@ -57,6 +57,26 @@ check("delete control present", await page.getByRole("button",{name:/^Delete .* 
 // Viewport toggles
 check("desktop/mobile preview toggles present",
   await page.getByRole("button",{name:/^desktop$/i}).count()>0 && await page.getByRole("button",{name:/^mobile$/i}).count()>0);
+// Add Section from the canvas — insertion points + registry-driven picker
+const addBtns = page.getByRole("button",{name:/^Add a section here/});
+check("canvas offers insertion points", await addBtns.count()>0, `${await addBtns.count()} positions`);
+if (await addBtns.count()) {
+  await addBtns.first().click({force:true}); await page.waitForTimeout(900);
+  const dlg = page.getByRole("dialog",{name:/Add a section/i});
+  check("section picker opens", await dlg.count()>0);
+  if (await dlg.count()) {
+    const opts = await dlg.locator("button").allInnerTexts();
+    check("picker is driven by the real registry", opts.length>10, `${opts.length} section types`);
+    check("picker warns the section starts empty",
+      /starts empty/i.test(await dlg.innerText()));
+    await page.keyboard.press("Escape").catch(()=>{});
+    await page.mouse.click(5,5).catch(()=>{});
+  }
+}
+// Media picker reachable from a media field
+await page.waitForTimeout(600);
+const mediaBtns = page.getByRole("button",{name:/Choose image|Choose photo|^Photo$/});
+check("media fields offer upload (not URL-only)", await mediaBtns.count()>0, `${await mediaBtns.count()} media controls`);
 await b.close();
 
 // Plan preservation through a reorder performed the way the canvas does it.

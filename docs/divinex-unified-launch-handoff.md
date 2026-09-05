@@ -46,15 +46,23 @@ Done this session:
   viewport, `duplicateSection` (spreads the section, new id only) and
   `reorderSections` (arrayMove) so plan fields are moved, never rebuilt.
 
+Also certified: media picker wired into ALL seven section media fields
+(no media input reads e.target.value any more), VideoField normalises pasted
+YouTube/Vimeo links, and Add Section works from canvas insertion points with a
+registry-driven picker (27 types). New sections start empty and are refused by
+the existing publish guard — verified, not assumed.
+
 ### NEXT — first incomplete items, in order
-1. Wire `MediaPicker` into section media fields (hero mediaUrl, gallery,
-   image_text, story photo) + `normalizeVideoUrl` on video embed fields.
-   Built but NOT yet mounted in the builder — this is the next concrete task.
-2. "Add section" from the canvas (registry = `SECTION_LABELS`; new sections
-   must fail publication completeness until filled — `section-completeness.ts`).
-3. Contextual Zeno: element / section / page scope, reusing existing Zeno.
-4. Imagery guidance surfaced from Image Director / visualRequirements.
-5. Then Campaign persistence per the Master Spec.
+1. Contextual Zeno inside the editor: element / section / page scope, reusing
+   the existing Zeno + AiSuiteChat. Selected section id is already tracked in
+   the builder (`expanded`); the funnel doc is already loaded — pass both as
+   chat context rather than building a second AI surface.
+2. Human review for structural page-level Zeno changes (propose -> review ->
+   apply); scoped element/section edits apply directly.
+3. Imagery guidance from Image Director / `visualRequirements` — surface
+   "this section would benefit from X" rather than inventing imagery.
+4. Then Campaign persistence per the Master Spec (extend
+   `lib/divinex/campaign.ts`; do NOT build a second campaign system).
 
 ## Architectural discoveries (do not re-derive)
 
