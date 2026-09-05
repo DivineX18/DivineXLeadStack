@@ -29,6 +29,11 @@ interface AiSuiteChatProps {
    *  to the empty landing state — lets the page hide the scope banner while
    *  chatting and restore it on New chat. */
   onActiveChange?: (active: boolean) => void;
+  /** VISUAL EDITOR CONTEXT. When the chat is opened from inside a funnel
+   *  editor, the artifact + selected section travel with every message so Zeno
+   *  reasons about the customer's ACTUAL draft rather than regenerating from a
+   *  title. Re-resolved and ownership-checked server-side — never trusted. */
+  artifactRef?: { kind: "funnel"; id: string; sectionId?: string | null };
 }
 
 type ProposalStatus = "pending" | "confirmed" | "cancelled" | "failed";
@@ -171,6 +176,7 @@ export function AiSuiteChat({
   level,
   subAccountId,
   onActiveChange,
+  artifactRef,
 }: AiSuiteChatProps) {
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [input, setInput] = useState("");
@@ -269,7 +275,12 @@ export function AiSuiteChat({
           // normalizes this against the IA whitelist and decides what may be
           // known there. Never send profile, brand or artifact CONTENTS from
           // the browser: the server reads those from authority itself.
-          pageContext: { route: typeof window !== "undefined" ? window.location.pathname : undefined },
+          pageContext: {
+            route: typeof window !== "undefined" ? window.location.pathname : undefined,
+            ...(artifactRef
+              ? { artifactRef: { kind: artifactRef.kind, id: artifactRef.id, ...(artifactRef.sectionId ? { sectionId: artifactRef.sectionId } : {}) } }
+              : {}),
+          },
         }),
       });
       const data = (await res.json().catch(() => null)) as

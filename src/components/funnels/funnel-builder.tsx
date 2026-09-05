@@ -10,6 +10,7 @@ import {
   Loader2,
   Plus,
   Trash2,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ import { FunnelDesignFeedback } from "@/components/funnels/funnel-design-feedbac
 import type { LeadForm } from "@/types/forms";
 import { VisualCanvas } from "@/components/funnels/visual-canvas";
 import { MediaField, VideoField } from "@/components/funnels/media-field";
+import { AiSuiteChat } from "@/components/ai-suite/ai-suite-chat";
 import type {
   FunnelStatus,
   BusinessFooterConfig,
@@ -336,6 +338,7 @@ export function FunnelBuilder({
   }
 
   const [addAtIndex, setAddAtIndex] = useState<number | null>(null);
+  const [zenoOpen, setZenoOpen] = useState(false);
 
   function insertSection(type: FunnelSectionType, index: number) {
     const id = `s${Date.now()}`;
@@ -825,6 +828,33 @@ export function FunnelBuilder({
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {view === "visual" && funnel && (
+        <div className="flex items-center justify-between gap-2 rounded-xl border p-3">
+          <p className="text-xs text-muted-foreground">
+            {expanded
+              ? "Zeno will keep changes to the selected section unless you ask for a page-wide change."
+              : "Select a section to have Zeno change just that part, or ask about the whole page."}
+          </p>
+          <Button type="button" variant="outline" size="sm" onClick={() => setZenoOpen((v) => !v)}>
+            <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+            {zenoOpen ? "Hide Zeno" : "Ask Zeno"}
+          </Button>
+        </div>
+      )}
+
+      {view === "visual" && funnel && zenoOpen && (
+        <div className="h-[26rem] overflow-hidden rounded-xl border">
+          {/* The SAME Zeno — no second assistant. It receives the funnel and
+              the selected section, so element/section/page scope is a matter
+              of what the customer selects, not a separate mode. */}
+          <AiSuiteChat
+            level="sub-account"
+            subAccountId={saId}
+            artifactRef={{ kind: "funnel", id: funnelId, sectionId: expanded }}
+          />
         </div>
       )}
 

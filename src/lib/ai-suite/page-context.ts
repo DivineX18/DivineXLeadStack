@@ -47,15 +47,18 @@ export function normalizeSurface(route: unknown): IaSurface | null {
   return (IA_SURFACES as readonly string[]).includes(seg) ? (seg as IaSurface) : null;
 }
 
-function parseArtifactRef(raw: unknown): { kind: string; id: string } | null {
+function parseArtifactRef(raw: unknown): { kind: string; id: string; sectionId?: string } | null {
   if (!raw || typeof raw !== "object") return null;
-  const { kind, id } = raw as { kind?: unknown; id?: unknown };
+  const { kind, id, sectionId } = raw as { kind?: unknown; id?: unknown; sectionId?: unknown };
   if (typeof kind !== "string" || typeof id !== "string") return null;
   // Only funnels are resolvable today. An unknown kind resolves to nothing
   // rather than being trusted.
   if (kind !== "funnel") return null;
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(id)) return null;
-  return { kind, id };
+  // The selected section is a hint, not an authority: it only ever selects
+  // from sections already proven to belong to this workspace's funnel.
+  const sec = typeof sectionId === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(sectionId) ? sectionId : undefined;
+  return { kind, id, ...(sec ? { sectionId: sec } : {}) };
 }
 
 export interface ResolvedArtifact {
@@ -65,6 +68,12 @@ export interface ResolvedArtifact {
   /** Customer-level review state, not internal orchestration metadata. */
   outstandingPhotos: number;
   reviewed: boolean;
+  /** VISUAL EDITOR CONTEXT. The page as it stands RIGHT NOW, read from the
+   *  stored doc rather than trusted from the client, so Zeno reasons about the
+   *  customer's actual draft instead of regenerating from a title. */
+  sections?: { type: string; heading: string; role?: string }[];
+  /** The section the customer currently has selected, when any. */
+  selected?: { type: string; heading: string; role?: string } | null;
 }
 
 /**
@@ -84,11 +93,33 @@ export async function resolveArtifact(
       subAccountId?: string; name?: string; status?: string;
       visualRequirements?: { resolvedWith?: unknown }[];
       criticVerdict?: { verdict?: string } | null;
+      sections?: { id?: string; type?: string; config?: Record<string, unknown>; argumentRole?: string }[];
     };
     // THE OWNERSHIP PROOF. Everything below this line is gated on it.
     if (data.subAccountId !== subAccountId) return null;
+
+    // A compact view of the real draft. Headings only — enough for Zeno to
+    // reason about order, gaps and emphasis without pulling whole page copy
+    // into every prompt.
+    const rawSections = Array.isArray(data.sections) ? data.sections : [];
+    const describe = (sec: { type?: string; config?: Record<string, unknown>; argumentRole?: string }) => {
+      const cfg = sec.config ?? {};
+      const heading =
+        [cfg.headline, cfg.problemHeadline, cfg.byline, cfg.text]
+          .find((x) => typeof x === "string" && x.trim()) ?? "";
+      return {
+        type: String(sec.type ?? "section"),
+        heading: String(heading).slice(0, 80),
+        ...(sec.argumentRole ? { role: String(sec.argumentRole) } : {}),
+      };
+    };
+    const sections = rawSections.slice(0, 20).map(describe);
+    const selected = ref.sectionId ? (rawSections.find((x) => x.id === ref.sectionId) ?? null) : null;
+
     return {
       kind: "funnel",
+      sections,
+      selected: selected ? describe(selected as never) : null,
       name: typeof data.name === "string" ? data.name : "Untitled",
       status: typeof data.status === "string" ? data.status : "draft",
       outstandingPhotos: (data.visualRequirements ?? []).filter((r) => !r.resolvedWith).length,
@@ -122,6 +153,19 @@ export function renderPageContextCard(
   const lines: string[] = [];
   if (surface) {
     lines.push(`The customer is currently looking at ${SURFACE_MEANING[surface]}`);
+  }
+  if (artifact?.sections?.length) {
+    lines.push(
+      `THE PAGE AS IT STANDS RIGHT NOW, in order: ${artifact.sections
+        .map((x, i) => `${i + 1}. ${x.type}${x.heading ? ` — "${x.heading}"` : ""}`)
+        .join("; ")}.`,
+      "Reason about THIS draft. Do not regenerate the page from its title or from defaults — the customer's own edits are the starting point.",
+    );
+  }
+  if (artifact?.selected) {
+    lines.push(
+      `The customer has SELECTED the ${artifact.selected.type} section${artifact.selected.heading ? ` ("${artifact.selected.heading}")` : ""}. Unless they ask for a page-wide change, keep your change scoped to that section.`,
+    );
   }
   if (artifact) {
     // Customer-level state only — no ids, no internal orchestration metadata.
