@@ -25,7 +25,12 @@ Enter via `/sa/<id>/switch` then `/` — the shell needs an active workspace.
 - Funnel edit loop: preview → Edit → load → save → preview
 - Plan-survives-edit: `argumentRole` / `servesBelief` / `canvas`
 
-## In progress — VISUAL FUNNEL EDITOR
+## Completed — VISUAL FUNNEL EDITOR (canvas layer)
+
+Behaviourally certified on staging (`scripts/verify-visual-editor.mts`):
+real page canvas, section selection, reorder handle, duplicate, delete,
+desktop/mobile toggles, order persists, and argumentRole/servesBelief/canvas
+all survive reorder.
 
 Done this session:
 - `api/sub-accounts/[id]/media` — shared workspace media (GET list, POST upload).
@@ -34,9 +39,22 @@ Done this session:
   Paste link. Stock + Generate deliberately absent (no real provider).
 - `lib/funnels/video-url.ts` — YouTube/Vimeo normalisation, unit-verified.
 
-Next: visual canvas (real rendered sections, click-select, `@dnd-kit` reorder,
-add/duplicate/delete), then contextual Zeno (element/section/page), then
-imagery guidance.
+- `components/funnels/visual-canvas.tsx` — renders `PublicFunnelView` per
+  section (NOT a second renderer) with selection + `@dnd-kit` vertical reorder.
+  `@dnd-kit/modifiers` is not installed; the axis lock is inline.
+- `funnel-builder.tsx` — Visual/Fields views of ONE document, desktop/mobile
+  viewport, `duplicateSection` (spreads the section, new id only) and
+  `reorderSections` (arrayMove) so plan fields are moved, never rebuilt.
+
+### NEXT — first incomplete items, in order
+1. Wire `MediaPicker` into section media fields (hero mediaUrl, gallery,
+   image_text, story photo) + `normalizeVideoUrl` on video embed fields.
+   Built but NOT yet mounted in the builder — this is the next concrete task.
+2. "Add section" from the canvas (registry = `SECTION_LABELS`; new sections
+   must fail publication completeness until filled — `section-completeness.ts`).
+3. Contextual Zeno: element / section / page scope, reusing existing Zeno.
+4. Imagery guidance surfaced from Image Director / visualRequirements.
+5. Then Campaign persistence per the Master Spec.
 
 ## Architectural discoveries (do not re-derive)
 
