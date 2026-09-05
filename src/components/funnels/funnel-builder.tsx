@@ -335,6 +335,19 @@ export function FunnelBuilder({
     setSections(next);
   }
 
+  const [addAtIndex, setAddAtIndex] = useState<number | null>(null);
+
+  function insertSection(type: FunnelSectionType, index: number) {
+    const id = `s${Date.now()}`;
+    setSections((prev) => {
+      const next = [...prev];
+      next.splice(index, 0, { id, type, config: SECTION_DEFAULTS[type]() });
+      return next;
+    });
+    setExpanded(id);
+    setAddAtIndex(null);
+  }
+
   function addSection(type: FunnelSectionType) {
     const id = `s${Date.now()}`;
     setSections((prev) => [...prev, { id, type, config: SECTION_DEFAULTS[type]() }]);
@@ -782,6 +795,39 @@ export function FunnelBuilder({
         )}
       </div>
 
+      {addAtIndex !== null && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setAddAtIndex(null)}
+          role="presentation"
+        >
+          <div
+            className="max-h-[70vh] w-full max-w-lg overflow-auto rounded-xl border bg-card p-5"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Add a section"
+          >
+            <h3 className="text-sm font-semibold">Add a section</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              It starts empty — fill it in before publishing.
+            </p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {(Object.keys(SECTION_LABELS) as FunnelSectionType[]).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => insertSection(type, addAtIndex)}
+                  className="rounded-md border px-3 py-2 text-left text-xs transition-colors hover:bg-[var(--dx-hover,rgba(0,0,0,0.04))]"
+                >
+                  {SECTION_LABELS[type]}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {view === "visual" && funnel && (
         <div className="overflow-hidden rounded-xl border">
           <VisualCanvas
@@ -792,6 +838,7 @@ export function FunnelBuilder({
             onReorder={reorderSections}
             onDuplicate={duplicateSection}
             onDelete={removeSection}
+            onAddAt={(i) => setAddAtIndex(i)}
             viewport={viewport}
             labels={SECTION_LABELS}
           />

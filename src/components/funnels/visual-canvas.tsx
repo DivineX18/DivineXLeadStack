@@ -59,6 +59,9 @@ export interface CanvasProps {
   onReorder: (sections: FunnelSection[]) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
+  /** Insert a new section at a given index. The picker lives in the parent so
+   *  the canvas stays presentational and the section registry has ONE owner. */
+  onAddAt: (index: number) => void;
   /** Narrow the canvas to a phone width — same page, same components. */
   viewport: "desktop" | "mobile";
   labels: Record<FunnelSectionType, string>;
@@ -72,6 +75,7 @@ export function VisualCanvas({
   onReorder,
   onDuplicate,
   onDelete,
+  onAddAt,
   viewport,
   labels,
 }: CanvasProps) {
@@ -107,22 +111,43 @@ export function VisualCanvas({
           onDragEnd={handleDragEnd}
         >
           <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-            {funnel.sections.map((section) => (
-              <SortableSection
-                key={section.id}
-                section={section}
-                funnel={funnel}
-                forms={forms}
-                selected={selectedId === section.id}
-                onSelect={onSelect}
-                onDuplicate={onDuplicate}
-                onDelete={onDelete}
-                label={labels[section.type] ?? section.type}
-              />
+            {funnel.sections.map((section, i) => (
+              <div key={section.id}>
+                <AddHere index={i} onAddAt={onAddAt} />
+                <SortableSection
+                  section={section}
+                  funnel={funnel}
+                  forms={forms}
+                  selected={selectedId === section.id}
+                  onSelect={onSelect}
+                  onDuplicate={onDuplicate}
+                  onDelete={onDelete}
+                  label={labels[section.type] ?? section.type}
+                />
+              </div>
             ))}
+            <AddHere index={funnel.sections.length} onAddAt={onAddAt} last />
           </SortableContext>
         </DndContext>
       </div>
+    </div>
+  );
+}
+
+/** A quiet insertion point between sections — visible on hover/focus so it
+ *  never competes with the page being previewed. */
+function AddHere({ index, onAddAt, last = false }: { index: number; onAddAt: (i: number) => void; last?: boolean }) {
+  return (
+    <div className={`group/add relative flex h-0 items-center justify-center ${last ? "h-10" : ""}`}>
+      <button
+        type="button"
+        onClick={() => onAddAt(index)}
+        aria-label={`Add a section here (position ${index + 1})`}
+        className="z-20 -my-3 rounded-full border px-3 py-1 text-[11px] font-medium opacity-0 shadow-sm outline-none transition-opacity focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-[var(--dx-focus)] group-hover/add:opacity-100"
+        style={{ backgroundColor: "var(--dx-elevated)", borderColor: "var(--dx-border)", color: "var(--dx-text-secondary)" }}
+      >
+        + Add section
+      </button>
     </div>
   );
 }
