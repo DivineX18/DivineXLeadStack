@@ -787,7 +787,7 @@ export function FunnelBuilder({
             funnel={{ ...funnel, sections, theme, accentColor }}
             forms={Object.fromEntries(forms.map((f) => [f.id, f]))}
             selectedId={expanded}
-            onSelect={(id) => { setExpanded(id); setView("fields"); }}
+            onSelect={(id) => setExpanded(id)}
             onReorder={reorderSections}
             onDuplicate={duplicateSection}
             onDelete={removeSection}
@@ -797,8 +797,8 @@ export function FunnelBuilder({
         </div>
       )}
 
-      <div className="space-y-3" hidden={view === "visual"}>
-        {sections.map((section, i) => (
+      <div className="space-y-3">
+        {(view === "visual" ? sections.filter((s) => s.id === expanded) : sections).map((section, i) => (
           <div key={section.id} className="rounded-xl border bg-card">
             <div className="flex items-center gap-2 p-3">
               <div className="flex flex-col">
