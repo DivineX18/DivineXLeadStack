@@ -74,6 +74,11 @@ export interface ResolvedArtifact {
   sections?: { type: string; heading: string; role?: string }[];
   /** The section the customer currently has selected, when any. */
   selected?: { type: string; heading: string; role?: string } | null;
+  /** MACHINE REFERENCES for tool calls. A capability that edits this page
+   *  needs the ids, and the model has no other way to learn them — the card
+   *  is otherwise deliberately id-free. Same precedent as create_funnel
+   *  returning a funnel id for bridge linking. Never spoken to the customer. */
+  refIds?: { funnelId: string; sectionId?: string | null };
 }
 
 /**
@@ -118,6 +123,7 @@ export async function resolveArtifact(
 
     return {
       kind: "funnel",
+      refIds: { funnelId: ref.id, ...(ref.sectionId ? { sectionId: ref.sectionId } : {}) },
       sections,
       selected: selected ? describe(selected as never) : null,
       name: typeof data.name === "string" ? data.name : "Untitled",
@@ -160,6 +166,11 @@ export function renderPageContextCard(
         .map((x, i) => `${i + 1}. ${x.type}${x.heading ? ` — "${x.heading}"` : ""}`)
         .join("; ")}.`,
       "Reason about THIS draft. Do not regenerate the page from its title or from defaults — the customer's own edits are the starting point.",
+    );
+  }
+  if (artifact?.refIds) {
+    lines.push(
+      `TOOL REFERENCES for this page — use these exact values when calling a tool that edits it: funnel_id="${artifact.refIds.funnelId}"${artifact.refIds.sectionId ? `, section_id="${artifact.refIds.sectionId}"` : ""}. These are internal identifiers: never say them to the customer.`,
     );
   }
   if (artifact?.selected) {

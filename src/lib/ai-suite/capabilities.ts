@@ -6183,8 +6183,8 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     parameters: {
       type: "object",
       properties: {
-        funnel_id: { type: "string", description: "The funnel being edited (from your page context)." },
-        section_id: { type: "string", description: "The section to revise (from your page context)." },
+        funnel_id: { type: "string", description: "The funnel being edited — use the exact funnel_id given in your page context TOOL REFERENCES. Never invent one." },
+        section_id: { type: "string", description: "The section to revise — use the exact section_id from your page context TOOL REFERENCES. If none is given, the customer has not selected a section: ask which part they mean rather than guessing." },
         fields: {
           type: "object",
           description:
