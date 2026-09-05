@@ -19,6 +19,7 @@ import { FunnelDomainsSection } from "@/components/funnels/funnel-domains-sectio
 import { FunnelDesignFeedback } from "@/components/funnels/funnel-design-feedback";
 import type { LeadForm } from "@/types/forms";
 import { VisualCanvas } from "@/components/funnels/visual-canvas";
+import { MediaField, VideoField } from "@/components/funnels/media-field";
 import type {
   FunnelStatus,
   BusinessFooterConfig,
@@ -944,11 +945,19 @@ function SectionFields({
           {c.mediaType !== "none" && (
             <>
               <Field label="Media URL">
-                <Input
-                  value={c.mediaUrl ?? ""}
-                  onChange={(e) => onChange({ ...c, mediaUrl: e.target.value, mediaIsStock: false })}
-                  className="h-9"
-                />
+                {c.mediaType === "video" ? (
+                  <VideoField
+                    value={c.mediaUrl ?? ""}
+                    onChange={(url) => onChange({ ...c, mediaUrl: url, mediaIsStock: false })}
+                  />
+                ) : (
+                  <MediaField
+                    saId={saId}
+                    funnelId={funnelId}
+                    value={c.mediaUrl ?? ""}
+                    onChange={(url) => onChange({ ...c, mediaUrl: url, mediaIsStock: false })}
+                  />
+                )}
                 {c.mediaIsStock && (
                   <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
                     Stock photo (auto-selected) — replace with your real photo when you have one.
@@ -1196,11 +1205,11 @@ function SectionFields({
       return (
         <div className="space-y-3">
           <Field label="Product image URL (optional)">
-            <Input
+            <MediaField
+              saId={saId}
+              funnelId={funnelId}
               value={c.productImageUrl ?? ""}
-              onChange={(e) => onChange({ ...c, productImageUrl: e.target.value })}
-              placeholder="https://…"
-              className="h-9"
+              onChange={(url) => onChange({ ...c, productImageUrl: url })}
             />
           </Field>
           <Field label="Headline (optional)">
@@ -1417,11 +1426,12 @@ function SectionFields({
             />
           </Field>
           <Field label="Photo URL (optional)">
-            <Input
+            <MediaField
+              saId={saId}
+              funnelId={funnelId}
               value={c.photoUrl ?? ""}
-              onChange={(e) => onChange({ ...c, photoUrl: e.target.value })}
-              placeholder="https://…"
-              className="h-9"
+              onChange={(url) => onChange({ ...c, photoUrl: url })}
+              label="Choose photo"
             />
           </Field>
           {!c.photoUrl && (
@@ -2009,11 +2019,7 @@ function SectionFields({
       return (
         <div className="space-y-3">
           <Field label="Embed URL (YouTube/Vimeo/Wistia)">
-            <Input
-              value={c.embedUrl}
-              onChange={(e) => onChange({ ...c, embedUrl: e.target.value })}
-              className="h-9"
-            />
+            <VideoField value={c.embedUrl} onChange={(url) => onChange({ ...c, embedUrl: url })} />
           </Field>
           {!c.embedUrl && (
             <Field label="Placeholder label (shown until you add a real video)">
@@ -2450,11 +2456,13 @@ function SectionFields({
                     className="h-9"
                   />
                 </div>
-                <Input
-                  placeholder="Photo URL (optional — their real photo)"
+                <MediaField
+                  saId={saId}
+                  funnelId={funnelId}
                   value={m.photoUrl ?? ""}
-                  onChange={(e) => update({ ...m, photoUrl: e.target.value })}
-                  className="h-9"
+                  onChange={(url) => update({ ...m, photoUrl: url })}
+                  label="Photo"
+                  showPreview={false}
                 />
                 <Input
                   placeholder="Short bio (optional)"
@@ -2490,11 +2498,12 @@ function SectionFields({
                 value={b.text}
                 onChange={(e) => update({ ...b, text: e.target.value })}
               />
-              <Input
-                placeholder="Image URL (optional)"
+              <MediaField
+                saId={saId}
+                funnelId={funnelId}
                 value={b.imageUrl ?? ""}
-                onChange={(e) => update({ ...b, imageUrl: e.target.value })}
-                className="h-9"
+                onChange={(url) => update({ ...b, imageUrl: url })}
+                showPreview={false}
               />
               <select
                 value={b.imagePosition}
@@ -2552,11 +2561,13 @@ function SectionFields({
             empty={{ url: "", caption: "" } as PhotoGalleryConfig["images"][number]}
             renderRow={(img, update) => (
               <div className="space-y-2">
-                <Input
-                  placeholder="Photo URL"
+                <MediaField
+                  saId={saId}
+                  funnelId={funnelId}
                   value={img.url}
-                  onChange={(e) => update({ ...img, url: e.target.value })}
-                  className="h-9"
+                  onChange={(url) => update({ ...img, url })}
+                  label="Choose photo"
+                  showPreview={false}
                 />
                 <Input
                   placeholder="Caption (optional)"
