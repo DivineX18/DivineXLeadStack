@@ -18,6 +18,7 @@ import { subscribeToForms } from "@/lib/firestore/forms";
 import { FunnelDomainsSection } from "@/components/funnels/funnel-domains-section";
 import { FunnelDesignFeedback } from "@/components/funnels/funnel-design-feedback";
 import type { LeadForm } from "@/types/forms";
+import { VisualCanvas } from "@/components/funnels/visual-canvas";
 import type {
   FunnelStatus,
   BusinessFooterConfig,
@@ -174,7 +175,6 @@ export function FunnelBuilder({
   saId: string;
   funnelId: string;
 }) {
-  const { saPath } = useSubAccount();
   const [funnel, setFunnel] = useState<FunnelDoc | null>(null);
   const [name, setName] = useState("");
   const [status, setStatus] = useState<FunnelStatus>("draft");
@@ -246,6 +246,11 @@ export function FunnelBuilder({
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [forms, setForms] = useState<LeadForm[]>([]);
+  // The visual canvas and the field editor are two views of ONE funnel
+  // document — not two editors. Selecting a section on the canvas expands the
+  // same panel the form view uses.
+  const [view, setView] = useState<"visual" | "fields">("visual");
+  const [viewport, setViewport] = useState<"desktop" | "mobile">("desktop");
 
   useEffect(() => {
     let cancelled = false;
@@ -304,6 +309,29 @@ export function FunnelBuilder({
 
   function removeSection(id: string) {
     setSections((prev) => prev.filter((s) => s.id !== id));
+  }
+
+  /** Duplicate keeps every field the composed plan put on the section —
+   *  argumentRole, servesBelief, canvas — and only mints a new id. Rebuilding
+   *  the object here would silently drop the persuasion plan, which is the
+   *  exact regression fixed in d53e8f9. */
+  function duplicateSection(id: string) {
+    setSections((prev) => {
+      const i = prev.findIndex((s) => s.id === id);
+      if (i < 0) return prev;
+      const copy: FunnelSection = {
+        ...prev[i],
+        id: `s${Date.now()}`,
+        config: JSON.parse(JSON.stringify(prev[i].config)) as FunnelSection["config"],
+      };
+      return [...prev.slice(0, i + 1), copy, ...prev.slice(i + 1)];
+    });
+  }
+
+  /** Whole-array reorder from the visual canvas. Sections are moved, never
+   *  reconstructed, so plan fields travel with them. */
+  function reorderSections(next: FunnelSection[]) {
+    setSections(next);
   }
 
   function addSection(type: FunnelSectionType) {
@@ -710,7 +738,66 @@ export function FunnelBuilder({
 
       <FunnelDesignFeedback saId={saId} funnelId={funnelId} />
 
-      <div className="space-y-3">
+      {/* VIEW SWITCH — one document, two views. Visual is the default because
+          seeing the real page is the point; the field editor stays for precise
+          work and for anything the canvas cannot express. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="inline-flex rounded-md border p-0.5" style={{ borderColor: "var(--dx-border, hsl(var(--border)))" }}>
+          {(["visual", "fields"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setView(v)}
+              aria-pressed={view === v}
+              className={`rounded px-3 py-1 text-xs capitalize outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--dx-focus,theme(colors.blue.500))] ${
+                view === v ? "bg-[var(--dx-active,rgba(0,0,0,0.08))] font-medium" : "text-muted-foreground hover:bg-[var(--dx-hover,rgba(0,0,0,0.04))]"
+              }`}
+            >
+              {v === "visual" ? "Visual" : "Fields"}
+            </button>
+          ))}
+        </div>
+        {view === "visual" && (
+          <div className="inline-flex rounded-md border p-0.5" style={{ borderColor: "var(--dx-border, hsl(var(--border)))" }}>
+            {(["desktop", "mobile"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setViewport(v)}
+                aria-pressed={viewport === v}
+                className={`rounded px-3 py-1 text-xs capitalize outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--dx-focus,theme(colors.blue.500))] ${
+                  viewport === v ? "bg-[var(--dx-active,rgba(0,0,0,0.08))] font-medium" : "text-muted-foreground hover:bg-[var(--dx-hover,rgba(0,0,0,0.04))]"
+                }`}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        )}
+        {view === "visual" && (
+          <p className="text-xs text-muted-foreground">
+            Click a section to edit it. Drag the handle to reorder.
+          </p>
+        )}
+      </div>
+
+      {view === "visual" && funnel && (
+        <div className="overflow-hidden rounded-xl border">
+          <VisualCanvas
+            funnel={{ ...funnel, sections, theme, accentColor }}
+            forms={Object.fromEntries(forms.map((f) => [f.id, f]))}
+            selectedId={expanded}
+            onSelect={(id) => { setExpanded(id); setView("fields"); }}
+            onReorder={reorderSections}
+            onDuplicate={duplicateSection}
+            onDelete={removeSection}
+            viewport={viewport}
+            labels={SECTION_LABELS}
+          />
+        </div>
+      )}
+
+      <div className="space-y-3" hidden={view === "visual"}>
         {sections.map((section, i) => (
           <div key={section.id} className="rounded-xl border bg-card">
             <div className="flex items-center gap-2 p-3">
