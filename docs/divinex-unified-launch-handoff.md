@@ -52,17 +52,26 @@ YouTube/Vimeo links, and Add Section works from canvas insertion points with a
 registry-driven picker (27 types). New sections start empty and are refused by
 the existing publish guard — verified, not assumed.
 
+Contextual Zeno is DONE and certified (`scripts/verify-editor-zeno.mts`):
+`page-context.ts` now projects the real section order + selected section from
+the STORED doc (client selection is a hint, never an authority); Zeno
+recognised 6/7 sections with real headlines, scoped to the selected FAQ, and
+disclosed nothing for a foreign funnel id.
+
 ### NEXT — first incomplete items, in order
-1. Contextual Zeno inside the editor: element / section / page scope, reusing
-   the existing Zeno + AiSuiteChat. Selected section id is already tracked in
-   the builder (`expanded`); the funnel doc is already loaded — pass both as
-   chat context rather than building a second AI surface.
-2. Human review for structural page-level Zeno changes (propose -> review ->
-   apply); scoped element/section edits apply directly.
-3. Imagery guidance from Image Director / `visualRequirements` — surface
-   "this section would benefit from X" rather than inventing imagery.
-4. Then Campaign persistence per the Master Spec (extend
-   `lib/divinex/campaign.ts`; do NOT build a second campaign system).
+1. Imagery guidance: surface `visualRequirements` / Image Director advice in
+   the editor ("this section would benefit from a team photo"). Do NOT invent
+   imagery. Note: `visualRequirements` was EMPTY on a profile-less workspace,
+   so the smallest useful step may be raising requirements when a section
+   would benefit and no asset exists.
+2. Human review gate for page-level structural Zeno changes (propose -> show
+   diff -> apply). Scoped section edits already apply directly and are safe.
+3. Campaign persistence per the Master Spec — extend `lib/divinex/campaign.ts`
+   (`CampaignIntent`/`CampaignPlan`), add `offerState`, linked asset ids and
+   per-step status. Do NOT build a second campaign system, and do NOT stuff
+   social into `followUpStrategy`.
+4. Then the remaining Master Spec chain: campaign plan UI, series generation,
+   social connection, final review.
 
 ## Architectural discoveries (do not re-derive)
 
