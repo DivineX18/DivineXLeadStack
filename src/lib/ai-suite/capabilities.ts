@@ -6170,6 +6170,101 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     },
   },
   {
+    name: "revise_funnel_copy",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Rewrite copy on an existing landing page section",
+    description:
+      "REWRITE copy on a section of an EXISTING funnel page. Use when the customer asks you to change wording on a page they are looking at — 'make this headline clearer', 'make this offer easier to understand', 'tighten the FAQ'. " +
+      "You are given the page's real current sections in your context; work from THAT draft, never from the funnel's title or from defaults, and never regenerate the whole page when the customer asked about one part. " +
+      "Send ONLY the fields you are actually changing: anything you omit is left exactly as the customer has it. This is how their own edits survive. " +
+      "Change copy only. You cannot add, delete, reorder or retype sections here — the customer does that in the editor. " +
+      "The customer reviews and confirms before anything is written, so propose the real replacement text rather than describing it.",
+    parameters: {
+      type: "object",
+      properties: {
+        funnel_id: { type: "string", description: "The funnel being edited (from your page context)." },
+        section_id: { type: "string", description: "The section to revise (from your page context)." },
+        fields: {
+          type: "object",
+          description:
+            "The copy fields to replace, e.g. {\"headline\":\"…\",\"subheadline\":\"…\"}. Only these keys change. Supported: headline, subheadline, body, text, ctaLabel, problemHeadline, problemText, solutionHeadline, solutionText, byline, bodyText, subtext, heading.",
+          additionalProperties: { type: "string" },
+        },
+        why: { type: "string", description: "One short sentence on what this improves, shown to the customer on the confirm card." },
+      },
+      required: ["funnel_id", "section_id", "fields"],
+      additionalProperties: false,
+    },
+    validate: (rawIn) => {
+      const raw = aliasCamelKeysDeep(deepStripDebris({ ...((rawIn ?? {}) as Record<string, unknown>) }));
+      const funnelId = str(raw, "funnel_id");
+      const sectionId = str(raw, "section_id");
+      if (!funnelId || !sectionId) {
+        return { ok: false, error: "funnel_id and section_id are both required — take them from the page context you were given." };
+      }
+      // An allowlist, not a passthrough: a model cannot reach priceCents,
+      // formId, stripePriceId or any other field that carries money, wiring or
+      // the composed plan. Copy edits stay copy edits.
+      const ALLOWED = new Set([
+        "headline", "subheadline", "body", "text", "ctaLabel", "problemHeadline", "problemText",
+        "solutionHeadline", "solutionText", "byline", "bodyText", "subtext", "heading",
+      ]);
+      const rawFields = raw.fields;
+      if (!rawFields || typeof rawFields !== "object" || Array.isArray(rawFields)) {
+        return { ok: false, error: "fields must be an object of the copy you are replacing." };
+      }
+      const fields: Record<string, string> = {};
+      for (const [k, v] of Object.entries(rawFields as Record<string, unknown>)) {
+        if (!ALLOWED.has(k)) continue;
+        if (typeof v !== "string" || !v.trim()) continue;
+        fields[k] = fixLiteralNewlines(v).slice(0, 2000);
+      }
+      if (Object.keys(fields).length === 0) {
+        return {
+          ok: false,
+          error: `no supported copy fields were supplied. Send at least one of: ${[...ALLOWED].join(", ")} — with the real replacement text.`,
+        };
+      }
+      return { ok: true, args: { funnelId, sectionId, fields, why: str(raw, "why").slice(0, 200) } };
+    },
+    summarize: (args) => {
+      // The confirm card IS the review gate, so it must show what actually
+      // changes — a vague summary would make approval meaningless.
+      const fields = args.fields as Record<string, string>;
+      const preview = Object.entries(fields)
+        .map(([k, v]) => `${k}: \u201c${v.slice(0, 90)}${v.length > 90 ? "\u2026" : ""}\u201d`)
+        .join("  ·  ");
+      return `Rewrite copy on one section${args.why ? ` — ${args.why as string}` : ""}. New text: ${preview}`;
+    },
+    execute: async (ctx, args) => {
+      const subAccountId = ctx.subAccountId!;
+      const funnel = await getFunnel(subAccountId, args.funnelId as string);
+      if (!funnel) throw new CapabilityUserError("I couldn't find that page in this workspace.");
+      const sectionId = args.sectionId as string;
+      const idx = funnel.sections.findIndex((s) => s.id === sectionId);
+      if (idx < 0) throw new CapabilityUserError("That section isn't on the page any more — reopen it and try again.");
+
+      const fields = args.fields as Record<string, string>;
+      // SPREAD, never rebuild: argumentRole, servesBelief and canvas travel
+      // with the section, and every config key not named here is untouched —
+      // so a human edit Zeno wasn't asked about survives.
+      const next = funnel.sections.map((s, i) =>
+        i === idx ? { ...s, config: { ...(s.config as Record<string, unknown>), ...fields } } : s,
+      ) as typeof funnel.sections;
+
+      const ok = await updateFunnelServerSide({ subAccountId, funnelId: funnel.id, patch: { sections: next } });
+      if (!ok) throw new CapabilityUserError("I couldn't save that change.");
+      return {
+        resultText:
+          `Updated the ${funnel.sections[idx].type.replace(/_/g, " ")} section on \u201c${funnel.name}\u201d.\n\n` +
+          `\u2022 Only the copy you approved changed — everything else on the page is as you left it.\n` +
+          `\u2022 The page is still ${funnel.status === "published" ? "published — the change is live" : "a draft"}.`,
+        ref: { kind: "funnel", id: funnel.id },
+      };
+    },
+  },
+  {
     name: "check_funnel_status",
     level: "sub-account",
     requiredRole: "subAccountMember",
