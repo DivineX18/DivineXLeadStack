@@ -164,14 +164,20 @@ try {
   await page.goto(`${BASE}/app/performance`, { waitUntil: "domcontentloaded", timeout: 90_000 });
   await page.waitForTimeout(2500);
   const perfText = (await page.locator("body").innerText()).replace(/\s+/g, " ");
-  const inUnifiedShell = new URL(page.url()).pathname.startsWith("/app/");
+  // The unified shell serves CLEAN customer URLs (/performance), and /app/*
+  // is the internal route that rewrites to it. Either pathname means we are
+  // in the shell; what actually proves it is the Ascend chrome around the
+  // page, so that is what is checked rather than the URL alone.
+  const path = new URL(page.url()).pathname;
+  const inUnifiedShell =
+    (path === "/performance" || path.startsWith("/app/")) && /Intelligence/.test(perfText);
   if (!inUnifiedShell) {
     // The unified shell only mounts for a Complete-mode workspace on the
     // Ascend host. Reporting this as a FAIL would blame the feature for the
     // environment; reporting it as a PASS would be a lie. It is UNAVAILABLE,
     // and this run still exits non-zero.
     na("Performance reports the page's own numbers",
-      `this environment redirected /app/performance to ${new URL(page.url()).pathname} — run against a Complete-mode workspace`);
+      `this environment served /app/performance as ${path} without the unified shell — run against a Complete-mode workspace`);
   } else {
     check("Performance names the live page", perfText.includes(`[E2E ${STAMP}]`), perfText.slice(0, 200));
     check("Performance shows its visitor count", /\b4\b/.test(perfText));
