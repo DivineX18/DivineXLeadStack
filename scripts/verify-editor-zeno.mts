@@ -38,10 +38,15 @@ async function ask(prompt:string, artifactRef?:Record<string,unknown>){
     body:JSON.stringify({level:"sub-account",subAccountId:SA,
       messages:[{role:"user",content:prompt}],
       pageContext:{route:`/create/funnel/${f.id}`,...(artifactRef?{artifactRef}:{})}})});
-  const d=await res.json().catch(()=>({})) as {type?:string;text?:string;proposal?:{summary?:string}};
-  return d.type==="proposal"?(d.proposal?.summary??""):(d.text??"");
+  const d=await res.json().catch(()=>({})) as {type?:string;text?:string;error?:string;proposal?:{summary?:string}};
+  if(!res.ok||d.error) throw new Error(`MODEL_UNAVAILABLE ${res.status} ${d.error??""}`);
+  const t=d.type==="proposal"?(d.proposal?.summary??""):(d.text??"");
+  if(!t.trim()) throw new Error("MODEL_UNAVAILABLE empty reply");
+  return t;
 }
 
+// A model outage must surface as UNAVAILABLE rather than as a false failure.
+try {
 // PAGE SCOPE: does Zeno know what is actually on the page?
 const pageAnswer=await ask("What sections does my page have right now, in order? Just list them.",
   {kind:"funnel",id:f.id});
@@ -65,6 +70,14 @@ if(!foreign.empty){
   check("a foreign funnel id leaks nothing",
     !otherName || !leak.toLowerCase().includes(otherName.toLowerCase().slice(0,18)),
     `foreign funnel "${otherName.slice(0,30)}" not disclosed`);
+}
+} catch (err) {
+  if (String(err).includes("MODEL_UNAVAILABLE")) {
+    console.log(`\nEDITOR ZENO: UNAVAILABLE — the model could not be reached (${String(err).slice(0,80)}).`);
+    console.log("Not a code failure. Re-run when the provider recovers.");
+    process.exit(2);
+  }
+  throw err;
 }
 console.log(`\n${bad===0?"EDITOR ZENO: PASS":`EDITOR ZENO: ${bad} FAILURE(S)`}`);
 process.exit(bad?1:0);
