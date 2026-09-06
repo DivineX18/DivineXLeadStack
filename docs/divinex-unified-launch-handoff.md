@@ -71,15 +71,33 @@ to learn funnel_id/section_id and guessed. The card now carries a TOOL
 REFERENCES line (ids may reach the model, never customer prose). Only found by
 running the full loop — the capability passed in isolation.
 
+DONE since: **campaign persistence** (`lib/server/campaigns-service.ts`,
+`campaigns/{id}`, server-only rule deployed) extending the EXISTING
+`CampaignIntent`/`CampaignPlan` — `offerState`, `approved` decisions, per-step
+status with stable asset references, `distribution.social` (social is content,
+NOT follow-up), and change-awareness. 17 checks green against real Firestore
+including tenancy both ways and "stale steps are flagged, never rewritten".
+
+**Campaign threading** is implemented as a context CARD in the chat route
+(`divinex-active-campaign`), not a new param on every capability — generators
+untouched, and no campaign simply means no card.
+
+### BLOCKED ON EXTERNAL CONFIG (not a code defect)
+Staging model calls return 502 ("couldn't reach the model"). OpenRouter's own
+API answers 200, and these SAME suites passed earlier the same session, so the
+staging `OPENROUTER_API_KEY` is the likely cause (credits/validity). Affected
+and currently UNAVAILABLE, not failed:
+`verify-campaign-inheritance`, `verify-editor-zeno`.
+Re-run both once the key is restored — they are written to exit UNAVAILABLE
+rather than fail, so a green run is still required before claiming these.
+
 ### NEXT — first incomplete items, in order
-1. Campaign persistence per the Master Spec — extend `lib/divinex/campaign.ts`
-   (`CampaignIntent`/`CampaignPlan`), add `offerState`, linked asset ids and
-   per-step status, and persist to a `campaigns/{id}` doc. Do NOT build a
-   second campaign system. Do NOT stuff social into `followUpStrategy`.
-2. Thread the persisted plan into create_funnel / create_email / create_asset
-   so downstream assets inherit the approved offer, audience and CTA.
-3. Campaign Plan control centre UI (YES / NO / CHANGES per step).
-4. Series generation (email, SMS, social), social connection, final review.
+1. Re-run the two UNAVAILABLE suites once the staging model key works.
+2. Campaign Plan control centre UI (YES / NO / CHANGES per step) — read/write
+   via `campaigns-service`; do not add a second state model.
+3. Series generation (email, SMS, social) from the approved plan, reusing
+   `create_email` / `apply_workflow_plan` / the social publisher.
+4. Social connection + final campaign review. Meta App Review still pending.
 
 Optional polish, not blocking: page-level structural Zeno changes still have no
 diff preview. Scoped edits are safe and reviewed; a whole-page restructure
