@@ -25,9 +25,29 @@ export type CampaignObjective =
   | "donations"
   | "registrations";
 
+/**
+ * How this campaign relates to what the business ALREADY sells.
+ *
+ * The default is understand -> use -> evolve -> create, in that order. A
+ * campaign offer may wrap an existing service ("Free Storm Damage Assessment"
+ * around Roof Replacement) WITHOUT becoming a new canonical service; only
+ * `create_new` implies changing what the business actually sells, and that
+ * needs explicit human approval.
+ */
+export type OfferState =
+  | "use_existing"
+  | "evolve_existing"
+  | "select_existing"
+  | "create_campaign_offer"
+  | "create_new";
+
 export interface CampaignIntent {
   /** Canonical linkage — the plan never restates business truth. */
   businessProfileId: number;
+  /** How the offer was arrived at. Absent on plans written before this
+   *  existed — readers must treat undefined as "unclassified", never as
+   *  permission to invent an offer. */
+  offerState?: OfferState;
   subAccountId: string;
   /** Stable reference into the profile contract's offers[]. */
   offerId?: string | null;
@@ -86,9 +106,63 @@ export interface SegmentationRule {
   label: string;
 }
 
+/** The smallest state model that supports the control centre. Deliberately
+ *  not a project-management workflow. */
+export type CampaignStepStatus =
+  | "planned"
+  | "in_progress"
+  | "review"
+  | "approved"
+  | "connected"
+  | "skipped"
+  | "live"
+  | "needs_update";
+
+/** One row in the Campaign Plan. `assetId`/`assetKind` are STABLE REFERENCES
+ *  into the systems that already own those artifacts — never copies of them. */
+export interface CampaignStep {
+  id: string;
+  label: string;
+  status: CampaignStepStatus;
+  /** Why Zeno believes this belongs, shown on the step. */
+  rationale?: string;
+  assetKind?: "funnel" | "form" | "workflow" | "message_template" | "asset" | "pipeline" | "social_post";
+  assetId?: string | null;
+  /** Verbatim change requests for THIS step, so a revision keeps its own
+   *  history without re-explaining the campaign. */
+  changeRequests?: string[];
+}
+
 export interface CampaignPlan {
   planVersion: 1;
   status: "draft" | "approved";
+  /** Stable campaign identity once persisted. Absent on in-memory plans. */
+  campaignId?: string;
+  /** Load-bearing decisions downstream generators inherit rather than
+   *  re-deciding. Kept flat and small on purpose — business truth stays
+   *  canonical in Ascend and is referenced, not copied. */
+  approved?: {
+    /** The single credible promise the whole campaign makes. */
+    centralPromise?: string;
+    /** The one action every asset drives toward. Changing this is what makes
+     *  existing assets stale — see `changeAwareness`. */
+    primaryCta?: string;
+    audience?: string;
+  };
+  /** The customer-facing plan rows. */
+  steps?: CampaignStep[];
+  /** Campaign distribution — social is CONTENT, not follow-up, so it is
+   *  deliberately NOT folded into followUpStrategy just because
+   *  PlannedMessage already exists. */
+  distribution?: {
+    social?: { postCount: number; notes?: string };
+  };
+  /** Enough to answer "what still references the old CTA?" without building a
+   *  dependency graph. Recorded at approval time; compared on change. */
+  changeAwareness?: {
+    ctaAtApproval?: string;
+    promiseAtApproval?: string;
+  };
   intent: CampaignIntent;
   /** Funnel generation inputs — consumed by the FROZEN create_funnel path;
    *  this plan supplies inputs, it never re-implements generation. */

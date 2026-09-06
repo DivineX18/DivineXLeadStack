@@ -987,6 +987,17 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ---------- campaigns (Campaign Plan — durable shared memory) ----------
+    // The persisted CampaignPlan: the approved offer/CTA/audience downstream
+    // assets inherit, plus per-step status and stable references to the
+    // artifacts other systems own. Server-only, same as funnelOrders above —
+    // every read/write goes through Admin-SDK routes that re-check
+    // subAccountId, so a client can never read another tenant's campaign or
+    // mark a step approved without passing that check.
+    match /campaigns/{campaignId} {
+      allow read, write: if false;
+    }
+
     // Landing Page Calibration Engine v1 — platform-wide design-intelligence
     // learning (Knowledge Vault + per-funnel reviews + human feedback
     // queue). Deliberately server-only, same as funnelOrders above: every
