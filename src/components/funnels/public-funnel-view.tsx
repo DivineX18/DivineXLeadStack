@@ -5,6 +5,7 @@ import { Archivo, Fraunces, Inter } from "next/font/google";
 import type { ComponentType } from "react";
 import type { FunnelDoc, FunnelSectionType } from "@/types/funnels";
 import type { LeadForm } from "@/types/forms";
+import { FunnelTracker } from "./funnel-tracker";
 import { HeroSection } from "./sections/hero-section";
 import { ProofStripSection } from "./sections/proof-strip-section";
 import { OfferSection } from "./sections/offer-section";
@@ -227,6 +228,10 @@ export function PublicFunnelView({
 
   return (
     <>
+      {/* Measurement lives HERE, not in the /lp route, so the public page and
+       *  custom-domain page can never drift apart on whether they're measured
+       *  — and so previewMode suppresses it once, for both. */}
+      {!previewMode && <FunnelTracker funnelId={funnel.id} />}
       {/* Forces html/body background so next-themes' system-preference
        *  class on <html> can't leak a mismatched background through —
        *  same fix the public form page (/f/[formId]) already applies. */}

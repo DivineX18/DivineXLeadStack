@@ -12,6 +12,7 @@ import {
   readAttributionFromBrowser,
   trackLeadEvent,
 } from "@/lib/attribution";
+import { FUNNEL_SUBMIT_EVENT } from "@/lib/funnels/telemetry-events";
 
 interface PublicFormProps {
   form: LeadForm;
@@ -95,6 +96,16 @@ export function PublicForm({ form, onSuccess }: PublicFormProps) {
       trackLeadEvent({
         utmCampaign: attributionRef.current?.utmCampaign ?? null,
       });
+      // Tell any funnel page hosting this form that a capture succeeded, so
+      // it can count the conversion. Same "before any redirect" reasoning as
+      // the pixel above. A bare event rather than a prop threaded through
+      // five section layers — and it fires only on a real success, so the
+      // count can never run ahead of the leads actually created.
+      try {
+        window.dispatchEvent(new CustomEvent(FUNNEL_SUBMIT_EVENT));
+      } catch {
+        /* non-browser/odd host — never block the visitor's confirmation */
+      }
       if (data.redirectUrl) {
         window.location.href = data.redirectUrl;
         return;

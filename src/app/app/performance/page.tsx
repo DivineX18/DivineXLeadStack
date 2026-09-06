@@ -5,6 +5,7 @@ import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-plac
 import { composeBusinessHealthSummary } from "@/lib/intelligence/compose-business-health";
 import { formatCents } from "@/components/ascend/metric-card";
 import { PageHeader, Panel } from "@/components/divinex/ui";
+import { FunnelPerformancePanel } from "@/components/divinex/funnel-performance-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,8 @@ export default async function PerformancePage() {
           </div>
         ))}
       </div>
+
+      <FunnelPerformancePanel subAccountId={saId} />
 
       <Panel className="mt-8">
         <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--dx-text-muted)" }}>

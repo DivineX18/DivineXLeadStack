@@ -987,6 +987,19 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ---------- funnelStats (funnel measurement rollups) ----------
+    // Written ONLY by the server: by the public visitor beacon (which proves
+    // the funnel is published before counting) and never from a client
+    // session. Read through the authed performance route, which re-checks
+    // subAccountId — so one workspace can never read another's numbers, and
+    // nobody can inflate their own by writing directly.
+    match /funnelStats/{funnelId} {
+      allow read, write: if false;
+      match /days/{day} {
+        allow read, write: if false;
+      }
+    }
+
     // ---------- campaigns (Campaign Plan — durable shared memory) ----------
     // The persisted CampaignPlan: the approved offer/CTA/audience downstream
     // assets inherit, plus per-step status and stable references to the
