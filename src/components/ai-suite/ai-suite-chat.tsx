@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Eye, Pencil,
+import {
   ArrowRight,
   Check,
+  Eye,
+  Pencil,
   Loader2,
   RotateCcw,
   Send,
@@ -98,6 +100,42 @@ function BuildResult({ resultRef }: { resultRef: { kind: string; id: string } | 
           </Button>
           <Button size="sm" variant="ghost" render={<Link href="/app/create" />}>
             Open Create
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (resultRef.kind === "form") {
+    return (
+      <div className="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-3">
+        <p className="text-xs font-semibold">Your form is live</p>
+        <p className="mt-0.5 text-[11px] text-muted-foreground">
+          Share the link or embed it — every submission becomes a contact here.
+        </p>
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          <Button size="sm" render={<Link href={`/f/${resultRef.id}`} target="_blank" />}>
+            <Eye className="mr-1.5 h-3.5 w-3.5" /> Open form
+          </Button>
+          <Button size="sm" variant="secondary" render={<Link href="/app/create/forms" />}>
+            <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (resultRef.kind === "booking_page") {
+    return (
+      <div className="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-3">
+        <p className="text-xs font-semibold">Your booking page is ready</p>
+        <p className="mt-0.5 text-[11px] text-muted-foreground">
+          It is a draft — check the hours match when you actually take
+          appointments, then publish it.
+        </p>
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          <Button size="sm" render={<Link href="/app/create/booking" />}>
+            Review availability
           </Button>
         </div>
       </div>

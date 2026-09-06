@@ -110,6 +110,12 @@ import {
 } from "@/lib/funnels/design-strategy";
 import { planPageVisuals } from "@/lib/funnels/image-director";
 import { createFormServerSide } from "@/lib/server/forms-service";
+import type { FormField } from "@/types/forms";
+import {
+  createBookingPageServerSide,
+  BookingPageError,
+} from "@/lib/server/booking-pages-service";
+import { defaultBookingPageFormData, defaultWorkingHours } from "@/lib/booking/defaults";
 import {
   createMessageTemplateServerSide,
   MessageTemplateValidationError,
@@ -323,6 +329,15 @@ function stripToolSyntaxDebris(text: string): string {
   // subheadline; truncation keeps each field's own content only).
   const i = text.search(/<\/?(?:an[a-z_]*|parameter|invoke|function[a-z_]*)\b/i);
   return stripUngroundedOutcomeClaims(stripEmDashes(i === -1 ? text : text.slice(0, i))).trim();
+}
+
+/** Numeric arg reader — models send numbers as strings often enough that a
+ *  bare cast would silently produce NaN and fail a range check for the wrong
+ *  reason. */
+function num(raw: unknown, key: string): number {
+  const v = (raw as Record<string, unknown>)?.[key];
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v.trim()) : NaN;
+  return Number.isFinite(n) ? n : NaN;
 }
 
 function str(raw: unknown, key: string): string {
@@ -6432,6 +6447,282 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           `• It's a draft: review and edit it in Create before you use it anywhere.`,
         ref: { kind: "asset", id: String(asset.id) },
       };
+    },
+  },
+  {
+    name: "create_form",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Build a lead-capture or qualification form",
+    description:
+      "Create a real, hosted lead-capture form in this workspace. Use when the user asks for a form — a contact form, an enquiry form, a quote-request form, a qualification form ('a form to qualify leads'), a waitlist. " +
+      "YOU design the fields from what the business actually needs to know. Ask for the fewest fields that do the job: every extra field costs conversions, so include a field only if the business would act differently based on the answer. " +
+      "Name and email are almost always right; add phone when they need to call back, and add ONE qualifying question when the user wants to qualify. Do not build long questionnaires. " +
+      "Every submission becomes a real contact in this workspace, so map each field to the contact record where one fits (name/email/phone/company), and leave mapsTo null for questions that are just context — those land in the contact's notes. " +
+      "The form is live and embeddable immediately; it does not need approval, because a form does not contact anyone by itself. " +
+      "To put a form ON a landing page, use create_funnel — it builds the page AND its capture form together. Use this when the form is the deliverable.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Internal name, e.g. 'Roof quote request'. Not shown to the visitor." },
+        fields: {
+          type: "array",
+          description: "The fields, in the order the visitor sees them. Keep it short — 2 to 5 fields.",
+          items: {
+            type: "object",
+            properties: {
+              label: { type: "string", description: "What the visitor reads, e.g. 'What kind of roof do you have?'" },
+              type: { type: "string", enum: ["text", "email", "phone", "company", "textarea", "select"] },
+              required: { type: "boolean" },
+              maps_to: {
+                type: "string",
+                enum: ["name", "email", "phone", "company", "notes", "none"],
+                description: "Where the answer lands on the contact record. Use 'none' only when nothing fits — those answers still reach the contact's notes.",
+              },
+              options: { type: "array", items: { type: "string" }, description: "Choices — required for type 'select', ignored otherwise." },
+            },
+            required: ["label", "type", "required", "maps_to"],
+            additionalProperties: false,
+          },
+        },
+        thank_you_message: { type: "string", description: "What the visitor sees after submitting. Write it yourself — warm, specific, and say what happens next." },
+        tags: { type: "array", items: { type: "string" }, description: "Tags applied to every contact this form creates, so follow-up can target them. 1-2 short tags." },
+      },
+      required: ["name", "fields"],
+      additionalProperties: false,
+    },
+    validate: (rawIn) => {
+      const raw = aliasCamelKeysDeep(deepStripDebris({ ...((rawIn ?? {}) as Record<string, unknown>) }));
+      const name = str(raw, "name").slice(0, 80);
+      if (!name) return { ok: false, error: "name is required — name the form yourself (e.g. 'Roof quote request') and call again." };
+
+      const rawFields = Array.isArray(raw.fields) ? (raw.fields as Record<string, unknown>[]) : [];
+      if (rawFields.length === 0) {
+        return { ok: false, error: "fields is required — design the fields yourself from what this business needs to know, then call again. Never ask the user to specify the fields." };
+      }
+      if (rawFields.length > 8) {
+        return { ok: false, error: "That is too many fields for a form that converts. Keep it to at most 8 — cut anything the business would not act on — and call again." };
+      }
+
+      const ALLOWED = ["text", "email", "phone", "company", "textarea", "select"];
+      const fields: FormField[] = [];
+      for (const [i, f] of rawFields.entries()) {
+        const label = str(f, "label").slice(0, 120);
+        const type = str(f, "type").trim();
+        if (!label) return { ok: false, error: `Field ${i + 1} has no label. Write one yourself and call again.` };
+        if (!ALLOWED.includes(type)) {
+          return { ok: false, error: `Field "${label}" has type "${type}", which is not one of ${ALLOWED.join(", ")}. Pick one and call again.` };
+        }
+        const options = Array.isArray(f.options)
+          ? (f.options as unknown[]).map((o) => String(o).slice(0, 80)).filter(Boolean).slice(0, 12)
+          : [];
+        if (type === "select" && options.length < 2) {
+          return { ok: false, error: `Field "${label}" is a dropdown but has fewer than 2 options. Write the options yourself and call again.` };
+        }
+        const mapsToRaw = str(f, "maps_to").trim();
+        const mapsTo = ["name", "email", "phone", "company", "notes"].includes(mapsToRaw)
+          ? (mapsToRaw as FormField["mapsTo"])
+          : null;
+        fields.push({
+          // Stable, human-readable ids so a later edit in the builder reads
+          // sensibly rather than showing generated noise.
+          id: `f${i + 1}_${type}`,
+          type: type as FormField["type"],
+          label,
+          placeholder: "",
+          required: f.required === true,
+          options,
+          mapsTo,
+        });
+      }
+
+      // A form nobody can be reached from is a dead end, not a lead form.
+      if (!fields.some((f) => f.mapsTo === "email" || f.mapsTo === "phone")) {
+        return {
+          ok: false,
+          error: "This form captures no way to contact the person. Add an email field (maps_to 'email') or a phone field (maps_to 'phone') and call again.",
+        };
+      }
+
+      const tags = Array.isArray(raw.tags)
+        ? (raw.tags as unknown[]).map((t) => String(t).trim().toLowerCase().replace(/\s+/g, "-").slice(0, 40)).filter(Boolean).slice(0, 3)
+        : [];
+
+      return {
+        ok: true,
+        args: {
+          name,
+          fields,
+          thankYouMessage: str(raw, "thank_you_message").slice(0, 300),
+          tags,
+        },
+      };
+    },
+    summarize: (args) => {
+      const fields = args.fields as FormField[];
+      return (
+        `Create the form “${args.name as string}” with ${fields.length} field${fields.length === 1 ? "" : "s"}: ` +
+        `${fields.map((f) => f.label + (f.required ? "*" : "")).join(", ")}. ` +
+        `Every submission becomes a contact in this workspace.`
+      );
+    },
+    execute: async (ctx, args) => {
+      const tags = args.tags as string[];
+      const formId = await createFormServerSide({
+        subAccountId: ctx.subAccountId!,
+        createdByUid: ctx.uid,
+        name: args.name as string,
+        fields: args.fields as FormField[],
+        settings: {
+          ...(args.thankYouMessage ? { thankYouMessage: args.thankYouMessage as string } : {}),
+          ...(tags.length > 0 ? { autoTags: ["form", ...tags] } : {}),
+        },
+      });
+      return {
+        resultText:
+          `Your form “${args.name as string}” is live.\n\n` +
+          `• Share it directly, or embed it on any site.\n` +
+          `• Every submission creates a contact here${tags.length > 0 ? ` tagged ${tags.join(", ")}` : ""}, so you can follow up automatically.\n` +
+          `• Edit the fields or wording any time under Forms.`,
+        ref: { kind: "form", id: formId },
+      };
+    },
+  },
+  {
+    name: "create_booking_page",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Set up a booking page people can pick a time on",
+    description:
+      "Create a real booking page — a public link where someone picks an available time and it becomes a confirmed appointment in this workspace's calendar. " +
+      "Use when the user wants people to book them: consultations, discovery calls, quotes, appointments, viewings, or when a landing page needs somewhere for 'Book a call' to go. " +
+      "YOU choose the name, length and working hours from what the business does. A trades quote visit is not a 15-minute call; a discovery call is not a full day. Ask nothing you can decide sensibly. " +
+      "It is created as a DRAFT so the owner confirms their real availability before anyone can book — never tell the user it is live. They publish it themselves. " +
+      "The timezone must be a real IANA zone (e.g. Australia/Sydney, America/New_York). If you genuinely do not know where the business operates, ask for the city — a booking page in the wrong timezone books people at the wrong hour.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "What the visitor sees, e.g. 'Free roof inspection' or '30-minute strategy call'." },
+        description: { type: "string", description: "One or two sentences on what happens in the appointment. Write it yourself." },
+        duration_minutes: { type: "number", description: "Length in minutes. 15, 30, 45, 60, 90 or 120 are the sensible choices." },
+        timezone: { type: "string", description: "IANA timezone the hours are expressed in, e.g. 'Australia/Sydney'." },
+        slug: { type: "string", description: "URL part, lowercase words separated by hyphens, e.g. 'roof-inspection'. Derived from the name if omitted." },
+        working_hours: {
+          type: "array",
+          description: "When they take appointments. Omit for Monday-Friday 9am-5pm.",
+          items: {
+            type: "object",
+            properties: {
+              day: { type: "string", enum: ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] },
+              start_hour: { type: "number", description: "24-hour, e.g. 9" },
+              end_hour: { type: "number", description: "24-hour, e.g. 17" },
+            },
+            required: ["day", "start_hour", "end_hour"],
+            additionalProperties: false,
+          },
+        },
+        confirmation_message: { type: "string", description: "What they see after booking. Write it yourself." },
+      },
+      required: ["name", "duration_minutes", "timezone"],
+      additionalProperties: false,
+    },
+    validate: (rawIn) => {
+      const raw = aliasCamelKeysDeep(deepStripDebris({ ...((rawIn ?? {}) as Record<string, unknown>) }));
+      const name = str(raw, "name").slice(0, 80);
+      if (!name) return { ok: false, error: "name is required — name the appointment yourself (e.g. 'Free roof inspection') and call again." };
+
+      const duration = Math.round(num(raw, "duration_minutes"));
+      if (!Number.isFinite(duration) || duration < 5 || duration > 480) {
+        return { ok: false, error: "duration_minutes must be between 5 and 480. Pick a sensible length for this kind of appointment and call again." };
+      }
+
+      const timezone = str(raw, "timezone").trim();
+      if (!timezone) return { ok: false, error: "timezone is required — pass the IANA zone the business operates in (e.g. 'Australia/Sydney') and call again." };
+      try {
+        // Validated against the runtime's own zone database rather than a
+        // hand-kept list: a wrong zone books people at the wrong hour.
+        new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+      } catch {
+        return { ok: false, error: `"${timezone}" is not a real IANA timezone. Use a zone like 'Australia/Sydney' or 'America/New_York' and call again.` };
+      }
+
+      const slugSource = str(raw, "slug").trim() || name;
+      const slug = slugSource.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+      if (!slug) return { ok: false, error: "Could not build a URL from that name. Pass a slug like 'roof-inspection' and call again." };
+
+      const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+      const rawHours = Array.isArray(raw.working_hours) ? (raw.working_hours as Record<string, unknown>[]) : [];
+      const workingHours = rawHours.length > 0
+        ? rawHours.map((h) => {
+            // TWO SHAPES ON PURPOSE. The model sends day names and clock
+            // hours; validate's OWN OUTPUT is the internal minute shape. The
+            // confirm step re-validates stored args, so refusing to read back
+            // what this function just produced would silently discard the
+            // hours between proposing and confirming and quietly fall back to
+            // Mon-Fri 9-5 — the same round-trip class of bug that once
+            // dropped 16 fields of a funnel plan.
+            const alreadyInternal = typeof h.dayOfWeek === "number";
+            const day = alreadyInternal ? (h.dayOfWeek as number) : DAYS.indexOf(str(h, "day").trim().toLowerCase());
+            const startMin = alreadyInternal ? Math.round(num(h, "start_minute")) : Math.round(num(h, "start_hour")) * 60;
+            const endMin = alreadyInternal ? Math.round(num(h, "end_minute")) : Math.round(num(h, "end_hour")) * 60;
+            return day < 0 || day > 6 || !(startMin >= 0 && endMin > startMin && endMin <= 24 * 60)
+              ? null
+              : { dayOfWeek: day as 0 | 1 | 2 | 3 | 4 | 5 | 6, startMinute: startMin, endMinute: endMin };
+          }).filter((h): h is NonNullable<typeof h> => h !== null)
+        : defaultWorkingHours();
+      if (workingHours.length === 0) {
+        return { ok: false, error: "None of those working hours were valid. Give each day a start_hour before its end_hour (24-hour clock) and call again." };
+      }
+
+      return {
+        ok: true,
+        args: {
+          name, slug, timezone, durationMinutes: duration, workingHours,
+          description: str(raw, "description").slice(0, 400),
+          confirmationMessage: str(raw, "confirmation_message").slice(0, 300),
+        },
+      };
+    },
+    summarize: (args) => {
+      const hours = args.workingHours as { dayOfWeek: number; startMinute: number; endMinute: number }[];
+      const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const hrs = `${DAY_SHORT[hours[0].dayOfWeek]}-${DAY_SHORT[hours[hours.length - 1].dayOfWeek]} ` +
+        `${hours[0].startMinute / 60}:00-${hours[0].endMinute / 60}:00`;
+      return (
+        `Create a DRAFT booking page “${args.name as string}”: ${args.durationMinutes as number} minutes, ` +
+        `${hrs} (${args.timezone as string}). Nobody can book until you check the hours and publish it.`
+      );
+    },
+    execute: async (ctx, args) => {
+      try {
+        const { slug } = await createBookingPageServerSide({
+          subAccountId: ctx.subAccountId!,
+          createdByUid: ctx.uid,
+          data: {
+            ...defaultBookingPageFormData(args.slug as string, args.timezone as string),
+            name: args.name as string,
+            description: args.description as string,
+            durationMinutes: args.durationMinutes as number,
+            workingHours: args.workingHours,
+            confirmationMessage: args.confirmationMessage as string,
+            // DRAFT on purpose: real availability is something only the owner
+            // knows, and a page that books people into hours they don't work
+            // is worse than no page.
+            status: "draft",
+          },
+        });
+        return {
+          resultText:
+            `Your booking page “${args.name as string}” is ready as a draft.\n\n` +
+            `• ${args.durationMinutes as number} minutes, in ${args.timezone as string}.\n` +
+            `• Check the available hours match when you actually take appointments.\n` +
+            `• Publish it under Booking and share the link — bookings land in your calendar and the person gets a confirmation.`,
+          ref: { kind: "booking_page", id: slug },
+        };
+      } catch (err) {
+        if (err instanceof BookingPageError) throw new CapabilityUserError(err.message);
+        throw err;
+      }
     },
   },
 ];
