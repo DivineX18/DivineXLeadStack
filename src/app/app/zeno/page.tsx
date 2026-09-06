@@ -26,9 +26,9 @@ export const dynamic = "force-dynamic";
 export default async function ZenoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ funnel?: string }>;
+  searchParams: Promise<{ funnel?: string; ask?: string }>;
 }) {
-  const [{ funnel: funnelId }, shell] = await Promise.all([searchParams, resolveShellContextForPage()]);
+  const [{ funnel: funnelId, ask }, shell] = await Promise.all([searchParams, resolveShellContextForPage()]);
   const workspaceId = shell?.workspace?.workspaceId ?? null;
 
   if (!workspaceId) {
@@ -61,7 +61,16 @@ export default async function ZenoPage({
         }
       />
       <div className="min-h-[32rem] flex-1">
-        <AiSuiteChat level="sub-account" subAccountId={workspaceId} />
+        {/* HANDOFF TARGET. "Fix this with Zeno" opens the floating launcher
+            when it is available and lands here with ?ask= when it is not, so
+            the action always leads somewhere and the request survives the
+            trip. Seeded into the input exactly like the panel: read, edit or
+            ignore, and nothing is generated until the customer sends it. */}
+        <AiSuiteChat
+          level="sub-account"
+          subAccountId={workspaceId}
+          seedPrompt={typeof ask === "string" && ask.trim() ? ask.slice(0, 1200) : null}
+        />
       </div>
     </div>
   );

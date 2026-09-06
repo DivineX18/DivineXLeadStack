@@ -213,7 +213,26 @@ worst kind of integration failure because nothing anywhere reports an error.
 The client must assert the response content-type is JSON and surface a real
 integration error when it is not, rather than degrading silently.
 
-**3. Health check should cover what it implies.** `OPENROUTER_API_KEY: ok (live
+**3. Guarantees must not be recommended without evidence (HIGH — first after
+lock).** Real-business validation surfaced this: the scan recommended adding
+*"Risk-free. If you don't see measurable progress in 30 days, we'll refund your
+investment, no questions asked."* That is not a copy-taste issue. A refund
+policy changes a business's economics and its obligations, and for a dentist,
+roofer, attorney, restaurant, med spa or agency it is usually inapplicable or
+actively harmful advice. Ascend must not manufacture one.
+
+The narrow guard, which is deliberately not a prompt overhaul: recommend a
+guarantee ONLY where there is evidence the business already offers one, or the
+offer context clearly supports it. Otherwise reach for lower-risk trust
+mechanisms it can support honestly — proof, testimonials, clear expectations,
+process transparency, a consultation, case studies, credentials, plain terms.
+
+Worth recording alongside it that the surrounding output was strong: the scan
+named a real page, counted its CTAs, chose a placement and wrote specific copy.
+The mechanism is sound; a few strategic assumptions need calibration, which is
+exactly what validating against a real business is for.
+
+**4. Health check should cover what it implies.** `OPENROUTER_API_KEY: ok (live
 ping)` passed against a free endpoint while every real model call returned 402
 for insufficient credits. A check that validates a key but not the account's
 ability to serve a real request invites exactly the wrong diagnosis.

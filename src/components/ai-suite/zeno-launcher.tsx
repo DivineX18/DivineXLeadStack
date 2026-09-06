@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { doc, onSnapshot } from "firebase/firestore";
 import { Sparkles, X } from "lucide-react";
@@ -61,10 +61,19 @@ export function ZenoLauncher({ workspaceId }: { workspaceId?: string | null } = 
   // editor, Home. The panel opens with the request already typed; sending it
   // stays the customer's decision.
   const [seed, setSeed] = useState<AskZenoDetail | null>(null);
+  // Read inside the listener, which is registered once. Availability is
+  // computed further down (after the hooks), so a ref is what lets the
+  // listener know whether this launcher can actually open — without which it
+  // would acknowledge requests it cannot serve and suppress the fallback.
+  const canOpenRef = useRef(false);
   useEffect(() => {
     const onAsk = (e: Event) => {
       const detail = (e as CustomEvent<AskZenoDetail>).detail;
       if (!detail?.prompt) return;
+      // Only claim it if this launcher will render. Otherwise leave it
+      // unacknowledged so askZeno() routes to the Zeno page instead.
+      if (!canOpenRef.current) return;
+      detail.handled = true;
       // Stamped so the same recommendation clicked twice still re-seeds an
       // input the customer had cleared.
       setSeed({ ...detail, prompt: detail.prompt });
@@ -88,6 +97,7 @@ export function ZenoLauncher({ workspaceId }: { workspaceId?: string | null } = 
       agency.agencyAssistantEnabled === true;
   }
 
+  canOpenRef.current = !!level && available;
   if (!level || !available) return null;
 
   return (
