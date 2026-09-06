@@ -156,3 +156,29 @@ Meta App Review (10).
 security, reliability, customer-blocking issues, measured customer feedback,
 and clearly justified V1.1 work. "Could be improved" is not a reason to reopen
 the scope, and not a reason to withhold the lock.
+
+---
+
+## Investor / demo-quality gate (added to final certification)
+
+V1 will be demonstrated live to prospective customers and to family investors.
+So "it works" is not the bar for a full PASS. Every major customer-facing
+capability is graded against all of:
+
+technically functional · visually professional · intuitive without explanation
+· polished loading / empty / error / success states · production-ready copy ·
+intentional on desktop AND mobile · high-quality generated output · cohesive
+with the rest of Unified · no placeholders, prototype artifacts or
+developer-facing language · something we would demonstrate live without
+steering around it · something we would charge for.
+
+Grades: **PASS** · **PASS WITH NON-BLOCKING ISSUES** · **FAIL**.
+
+A capability that technically works but would undermine confidence in a live
+demo does not receive a full PASS. Final certification reports
+**INVESTOR / DEMO READINESS — PASS / FAIL** and names any specific screen or
+flow that should not be demonstrated until corrected.
+
+This is a quality gate on work already in V1 scope. It is not licence to
+expand scope, redesign certified systems, or chase perfection: the standard is
+commercial quality, stability, cohesion and differentiation.
