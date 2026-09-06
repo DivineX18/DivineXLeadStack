@@ -310,6 +310,48 @@ export async function POST(request: Request) {
       // Swallowed — same rationale as the learned-principles read above.
     }
 
+    // ACTIVE CAMPAIGN — the approved decisions downstream assets inherit.
+    //
+    // This is what stops each generator independently re-deciding the offer,
+    // audience and CTA. It is deliberately a CONTEXT CARD rather than a new
+    // parameter on every capability: the generators stay untouched, and a
+    // workspace with no campaign is simply a workspace where this card is
+    // absent — individual creation keeps working exactly as before.
+    try {
+      const { listCampaigns } = await import("@/lib/server/campaigns-service");
+      const campaigns = await listCampaigns(actionCtx.subAccountId!);
+      // The most recently touched non-archived campaign is the one the
+      // customer is working on. Nothing is inferred when there are none.
+      const active = campaigns.find((c) => c.status === "draft" || c.status === "active");
+      const approved = active?.plan.approved;
+      if (active && approved && (approved.primaryCta || approved.centralPromise || approved.audience)) {
+        const stale = (active.plan.steps ?? []).filter((x) => x.status === "needs_update");
+        cards.push({
+          id: "divinex-active-campaign",
+          levels: ["sub-account"],
+          title: "The campaign this workspace is running",
+          location: "Campaign Plan",
+          keywords: ["campaign", "offer", "cta", "audience", "series"],
+          body: [
+            `Campaign: ${active.name} (objective: ${active.plan.intent.objective}).`,
+            approved.centralPromise ? `The promise everything makes: ${approved.centralPromise}` : "",
+            approved.primaryCta ? `The action every asset drives toward: ${approved.primaryCta}` : "",
+            approved.audience ? `Who it speaks to: ${approved.audience}` : "",
+            active.plan.intent.offerState
+              ? `The offer was settled as: ${active.plan.intent.offerState.replace(/_/g, " ")}.`
+              : "",
+            "",
+            "INHERIT THESE. When you build anything for this campaign — a page, an email, an SMS, a social post, a workflow — use this offer, this audience and this CTA rather than deciding new ones. If the customer asks for something that would change them, say so plainly first: it makes the assets already built inconsistent.",
+            stale.length
+              ? `${stale.length} campaign asset(s) were built against an earlier decision and are marked as needing an update. Mention this if the customer asks what is outstanding; never quietly rewrite them.`
+              : "",
+          ].filter(Boolean).join("\n"),
+        });
+      }
+    } catch {
+      // Swallowed — a campaign is optional context, never a prerequisite.
+    }
+
     // P0.6 PHASE 2 — page + artifact context.
     //
     // The route is normalized to one of the final IA surfaces (an arbitrary
