@@ -19,27 +19,33 @@ Legend: **PASS** = exists and is certified · **FIX** = exists, needs work ·
 |---|---|---|---|
 | 1 | Stable Ascend intelligence + Growth Scan | **FIX** | Staging `OPENROUTER_API_KEY` 502s (owner action, diagnosed: the local key authenticates, staging's does not). Nothing in this repo can fix it. |
 | 2 | Business-aware Zeno | **PASS** | Intelligence reaches generation and materially changes it; page context is ownership-proofed. |
-| 3 | Recommendation → Fix/Create with Zeno | **FIX** | Shipped (ask-Zeno bridge + action on the recommendation card). Certification of the rendered path needs a Complete-mode workspace + live intelligence. |
-| 4 | Zeno orchestration of core Flow capabilities | **FIX** | Have: funnels, websites, email, assets, workflows, contacts/deals/tasks/events. **Missing: forms, booking.** Social is a judgement call — see §Zeno scope. |
+| 3 | Recommendation → Fix/Create with Zeno | **BUILT** | Shipped (ask-Zeno bridge + action on the recommendation card). Certification of the rendered path needs a Complete-mode workspace + live intelligence. |
+| 4 | Zeno orchestration of core Flow capabilities | **PASS** | Forms and booking shipped; 30/30. Social deliberately out of V1 (Meta review). |
 | 5 | High-quality landing pages/funnels | **PASS** | Sales Argument Engine + Critic + art direction; quality battery passed 3 industries. |
-| 6 | Production-quality basic multi-step funnels | **MISSING** | No step model exists. Smallest credible implementation defined below. |
-| 7 | Launch-quality template library (~20–30) | **MISSING** | No page templates. **But the raw material exists**: 7 genre frameworks (structural) × 7 design packs (visual). See §Templates. |
+| 6 | Production-quality basic multi-step funnels | **PASS** | `multi_step_form` section; 20/20 in a real browser incl. CRM, measurement and phone. |
+| 7 | Launch-quality template library (~20–30) | **PASS** | 24 templates, 7 architectures × 7 design systems; 41/41 including a distinct-structure proof. |
 | 8 | CRM | **PASS** | Mature licensed infrastructure. |
 | 9 | Email / SMS | **PASS** | Certified send path (write → draft → approve → send). |
 | 10 | Social creation + scheduling | **FIX** | Publisher works. **Meta App Review is an external blocker** — cannot be closed by code. |
 | 11 | Automation / workflows | **PASS** | Visual builder + executor + QStash. |
 | 12 | Lead magnets + marketing assets | **PASS** | Asset Studio reachable from unified Create via the machine bridge. |
-| 13 | Forms | **FIX** | Forms exist and work; **Zeno cannot create one**. |
-| 14 | Booking | **FIX** | Booking exists and works; **Zeno cannot create or wire one**. |
-| 15 | Campaign Plan / review / approve | **FIX** | Persisted + inherited + change-aware. **No control-centre UI** — the plan is invisible to the customer. |
+| 13 | Forms | **PASS** | Zeno builds real, embeddable forms with refusals that protect conversion. |
+| 14 | Booking | **PASS** | Zeno builds booking pages as drafts; creation extracted to a shared service. |
+| 15 | Campaign Plan / review / approve | **PASS** | Control centre on Create: approve, ask for changes, drop; 17/17. |
 | 16 | Funnel measurement (views, conversions, rate) | **PASS** | Shipped. Real-browser E2E: 4 visits → 1 submission → 1 real lead → 0.25, reported per page. Unvisited pages report *no data*, never 0%. |
 | 17 | Reliable publishing | **PASS** | Explicit publish boundary; approving is not publishing. |
 | 18 | Workspace isolation | **PASS** | Re-checked on every read/write; certified per feature, including the new telemetry. |
 | 19 | Billing / access control | **PASS** | Client Billing v1: plans, gates, checkout, dunning, paywall. |
 | 20 | Mobile + desktop QA of critical workflows | **MISSING** | No systematic mobile pass has been run against the customer journeys. |
 
-**Net remaining work: 6, 7, 20 to build; 3, 4, 13, 14, 15 to finish; 1 and 10
-are owner/external actions this repo cannot close.**
+**Remaining: requirement 20 (mobile/desktop QA), then journey certification
+A–E and final certification. Requirements 1 and 10 are owner/external actions
+this repo cannot close.**
+
+**Certification of 3, and of journeys A–E, needs an environment this repo does
+not control**: the unified shell mounts only for a Complete-mode workspace, and
+live recommendations need the intelligence bridge plus a working model key.
+Locally those steps report UNAVAILABLE, which is never counted as a pass.
 
 ---
 
