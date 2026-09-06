@@ -118,6 +118,18 @@ capability does not exist yet, so nothing can bypass review today.
 - `types/conversion.ts::CampaignContext` is the NARROWER funnel/conversion
   context (traffic source, temperature, device, geo). Keep it separate.
 
+## Product standard (LOCKED)
+
+`docs/divinex-unified-product-standard.md` governs implementation decisions:
+inventory, KEEP/IMPROVE/INTEGRATE/MISSING matrix, journey gaps, and the
+P0–P3 roadmap with acceptance tests. Read it before proposing any feature.
+
+Headline findings: pages are NOT the weak point (certified across 3
+industries). The real gaps are **funnel measurement** (no view/conversion
+telemetry exists anywhere), **recommendations are text not actions**, **Zeno
+has no capability for forms/booking/products/social/agents** even though Flow
+executes them, and **no multi-step qualification funnel model**.
+
 ## Do not reopen
 
 - Sales Argument Engine, Landing Page Critic, Image Director
