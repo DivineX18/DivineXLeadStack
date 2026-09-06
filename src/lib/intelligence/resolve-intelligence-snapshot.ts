@@ -2,6 +2,7 @@ import "server-only";
 
 import { getMappingBySubAccountId } from "@/lib/workspace/workspace-mappings-service";
 import { createAscendIntelligenceClient } from "@/lib/intelligence/ascend-intelligence-client";
+import { recommendationsFromGrowthScan } from "@/lib/intelligence/growth-scan-recommendations";
 import type { IntelligenceSnapshot } from "@/types/intelligence";
 
 const UNAVAILABLE_NO_PROFILE = {
@@ -52,14 +53,32 @@ export async function composeIntelligenceSnapshot(workspaceId: string): Promise<
   // (`orderBy(desc(croAudits.createdAt))`) — the newest row's
   // recommendations are the ones worth surfacing as actionable.
   const newestAudit = croAudits.data?.[0] ?? null;
+  const audited = newestAudit?.recommendations ?? null;
+
+  // A COMPLETED GROWTH SCAN IS SUFFICIENT ON ITS OWN.
+  //
+  // Recommendations used to come only from a CRO audit, so a customer who had
+  // run the primary assessment saw their score and their constraint and then
+  // "run a CRO Audit to generate some" — the entry point stopped short of the
+  // one thing it exists to answer. A specialised audit refines these; it is
+  // not a prerequisite for them.
+  //
+  // The audit still wins whenever it has produced any, because it is the
+  // deeper artifact. The scan fills the gap rather than competing with it, and
+  // each recommendation carries its own `source` so a derived item is never
+  // passed off as an audited one.
+  const derived = audited?.length ? null : recommendationsFromGrowthScan(dashboardSummary.data?.latestWebsiteScan ?? null);
+  const recommendations = audited?.length ? audited : (derived?.length ? derived : audited);
 
   return {
     businessProfileId,
     dashboardSummary,
     croAudits,
     recommendations: {
-      meta: croAudits.meta,
-      data: newestAudit?.recommendations ?? null,
+      // Meta follows whichever source actually supplied them, so a customer is
+      // never told data is unavailable while reading real recommendations.
+      meta: derived?.length ? dashboardSummary.meta : croAudits.meta,
+      data: recommendations,
     },
     growthTimeline,
     memory,

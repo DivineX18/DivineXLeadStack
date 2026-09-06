@@ -11,6 +11,7 @@ import type {
   DashboardAsset,
   DashboardSummary,
   DashboardTimelineEvent,
+  GrowthScanCategoryFinding,
   GrowthTimeline,
   GrowthTimelineBusinessEvolution,
   GrowthTimelineCategoryDelta,
@@ -350,6 +351,33 @@ function parseLatestWebsiteScan(raw: unknown): DashboardSummary["latestWebsiteSc
   ) {
     return null;
   }
+  // Both parse to empty rather than failing the whole scan: an Ascend
+  // deployment older than the projection that carries them still returns a
+  // valid scan, and a score with no findings is a real state, not a parse
+  // error. Each field is validated on its own so one malformed category can
+  // never take the rest of the scan down with it.
+  const categoryScores: GrowthScanCategoryFinding[] = Array.isArray(o.categoryScores)
+    ? (o.categoryScores as Record<string, unknown>[])
+        .filter(
+          (c) =>
+            c && typeof c.key === "string" && typeof c.label === "string" &&
+            typeof c.score === "number" &&
+            (c.tier === "green" || c.tier === "yellow" || c.tier === "red"),
+        )
+        .map((c) => ({
+          key: c.key as string,
+          label: c.label as string,
+          score: c.score as number,
+          finding: typeof c.finding === "string" ? c.finding : "",
+          tier: c.tier as GrowthScanCategoryFinding["tier"],
+          ...(typeof c.quickWin === "string" && c.quickWin.trim() ? { quickWin: c.quickWin } : {}),
+          ...(typeof c.fullFix === "string" && c.fullFix.trim() ? { fullFix: c.fullFix } : {}),
+        }))
+    : [];
+  const topOpportunities: string[] = Array.isArray(o.topOpportunities)
+    ? (o.topOpportunities as unknown[]).filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+    : [];
+
   return {
     id: o.id,
     createdAt: o.createdAt,
@@ -358,6 +386,8 @@ function parseLatestWebsiteScan(raw: unknown): DashboardSummary["latestWebsiteSc
     biggestBottleneck: o.biggestBottleneck,
     recommendedFunnelType: o.recommendedFunnelType,
     shareToken: o.shareToken,
+    categoryScores,
+    topOpportunities,
   };
 }
 

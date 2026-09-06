@@ -87,6 +87,19 @@ export interface DashboardAsset {
  *  side, always the server's own determination of which was more recent. */
 export type DashboardScoreSource = "website_scan" | "business_assessment" | null;
 
+/** One category the Growth Scan scored, with what it found and what to do
+ *  about it. `quickWin`/`fullFix` are the scan's own actionable output — the
+ *  material that makes a Growth Scan sufficient on its own. */
+export interface GrowthScanCategoryFinding {
+  key: string;
+  label: string;
+  score: number;
+  finding: string;
+  tier: "green" | "yellow" | "red";
+  quickWin?: string;
+  fullFix?: string;
+}
+
 export interface DashboardLatestWebsiteScan {
   id: number;
   createdAt: string;
@@ -95,6 +108,11 @@ export interface DashboardLatestWebsiteScan {
   biggestBottleneck: string;
   recommendedFunnelType: string;
   shareToken: string;
+  /** Per-category findings the scan produced. Empty on scans served by an
+   *  Ascend deployment older than the bridge projection that carries them. */
+  categoryScores: GrowthScanCategoryFinding[];
+  /** The scan's OWN ranking of what matters most, most-important first. */
+  topOpportunities: string[];
 }
 
 export interface DashboardSummary {
@@ -135,6 +153,12 @@ export interface CroAuditCategoryScore {
  *  (a recommendation is identified by its position within an audit, not a
  *  standalone id), and the fix text lives in `fix`/`fixWithZeno`, not `title`. */
 export interface CroAuditRecommendation {
+  /** Which intelligence artifact this came from. A Growth Scan is the entry
+   *  point and is sufficient on its own; a CRO audit refines. Additive and
+   *  optional so every stored/serialized recommendation predating it stays
+   *  valid, and so derived items are never silently passed off as audited
+   *  ones. */
+  source?: "growth_scan" | "cro_audit";
   categoryKey: string;
   categoryLabel: string;
   impact: "High" | "Medium" | "Low";
