@@ -58,20 +58,32 @@ the STORED doc (client selection is a hint, never an authority); Zeno
 recognised 6/7 sections with real headlines, scoped to the selected FAQ, and
 disclosed nothing for a foreign funnel id.
 
+DONE since: imagery guidance (`lib/funnels/imagery-guidance.ts`, reuses the
+Image Director — no second rule set; never fabricates), and `revise_funnel_copy`
+so Zeno can actually change a page it can see. The confirm card IS the review
+gate: `summarize()` prints the real replacement text. Copy fields are an
+ALLOWLIST — priceCents/formId/stripePriceId are unreachable — and the
+capability cannot add/delete/reorder/retype sections, so structural change
+stays with the human in the editor.
+
+Discovery: the page-context card was deliberately id-free, so Zeno had no way
+to learn funnel_id/section_id and guessed. The card now carries a TOOL
+REFERENCES line (ids may reach the model, never customer prose). Only found by
+running the full loop — the capability passed in isolation.
+
 ### NEXT — first incomplete items, in order
-1. Imagery guidance: surface `visualRequirements` / Image Director advice in
-   the editor ("this section would benefit from a team photo"). Do NOT invent
-   imagery. Note: `visualRequirements` was EMPTY on a profile-less workspace,
-   so the smallest useful step may be raising requirements when a section
-   would benefit and no asset exists.
-2. Human review gate for page-level structural Zeno changes (propose -> show
-   diff -> apply). Scoped section edits already apply directly and are safe.
-3. Campaign persistence per the Master Spec — extend `lib/divinex/campaign.ts`
+1. Campaign persistence per the Master Spec — extend `lib/divinex/campaign.ts`
    (`CampaignIntent`/`CampaignPlan`), add `offerState`, linked asset ids and
-   per-step status. Do NOT build a second campaign system, and do NOT stuff
-   social into `followUpStrategy`.
-4. Then the remaining Master Spec chain: campaign plan UI, series generation,
-   social connection, final review.
+   per-step status, and persist to a `campaigns/{id}` doc. Do NOT build a
+   second campaign system. Do NOT stuff social into `followUpStrategy`.
+2. Thread the persisted plan into create_funnel / create_email / create_asset
+   so downstream assets inherit the approved offer, audience and CTA.
+3. Campaign Plan control centre UI (YES / NO / CHANGES per step).
+4. Series generation (email, SMS, social), social connection, final review.
+
+Optional polish, not blocking: page-level structural Zeno changes still have no
+diff preview. Scoped edits are safe and reviewed; a whole-page restructure
+capability does not exist yet, so nothing can bypass review today.
 
 ## Architectural discoveries (do not re-derive)
 
