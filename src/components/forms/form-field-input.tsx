@@ -8,6 +8,12 @@ import { defaultSmsConsentText, type FormField } from "@/types/forms";
 /**
  * One form field, rendered the same way everywhere.
  *
+ * SIZED FOR A THUMB. These controls appear on public pages, where most
+ * visitors arrive from a phone. The dashboard's default 36px input is fine for
+ * a mouse and too small for a thumb, and a lead who mis-taps a field just
+ * leaves, with no error anywhere to tell you it happened. 44px is Apple's own
+ * minimum and the reason these carry an explicit height.
+ *
  * Extracted from PublicForm when multi-step arrived: two renderers for the
  * same field types would drift, and the first thing to drift is always the
  * thing a visitor notices — a select that looks different, a consent checkbox
@@ -33,7 +39,7 @@ export function FormFieldInput({
             type="checkbox"
             checked={value === "true"}
             onChange={(e) => onChange(e.target.checked ? "true" : "")}
-            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer"
+            className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer"
             aria-invalid={!!error}
           />
           <span>
@@ -66,7 +72,7 @@ export function FormFieldInput({
           id={field.id}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="flex h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 text-foreground dark:bg-input/30 [&_option]:bg-background [&_option]:text-foreground"
+          className="flex h-11 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 text-foreground dark:bg-input/30 [&_option]:bg-background [&_option]:text-foreground"
           aria-invalid={!!error}
         >
           <option value="">Choose one</option>
@@ -80,6 +86,7 @@ export function FormFieldInput({
         <Input
           id={field.id}
           type={field.type === "email" ? "email" : field.type === "phone" ? "tel" : "text"}
+          className="h-11"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder}

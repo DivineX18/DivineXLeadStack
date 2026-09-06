@@ -102,7 +102,7 @@ export function PublicForm({ form, onSuccess }: PublicFormProps) {
         </div>
       )}
 
-      <Button type="submit" className="w-full" disabled={submitting}>
+      <Button type="submit" className="h-11 w-full" disabled={submitting}>
         {submitting ? (
           <>
             <Loader2 className="mr-1 h-4 w-4 animate-spin" />

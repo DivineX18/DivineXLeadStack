@@ -237,7 +237,7 @@ export function PublicBookingView({ subAccountId, page, branding }: Props) {
               setActiveDay(null);
               setSelectedSlot(null);
             }}
-            className="rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="h-11 rounded-md border border-input bg-background px-2 text-xs focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-8"
           >
             <option value={viewerTz}>{viewerTz}</option>
             {pageTz !== viewerTz && <option value={pageTz}>{pageTz}</option>}
@@ -270,7 +270,7 @@ export function PublicBookingView({ subAccountId, page, branding }: Props) {
                     !activeDay ||
                     slotsByDay[0]?.dateKey === activeDay
                   }
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-input bg-background text-muted-foreground transition hover:text-foreground disabled:opacity-40"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-input bg-background text-muted-foreground transition hover:text-foreground disabled:opacity-40 sm:h-9 sm:w-9"
                   aria-label="Previous day"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -287,7 +287,7 @@ export function PublicBookingView({ subAccountId, page, branding }: Props) {
                     !activeDay ||
                     slotsByDay[slotsByDay.length - 1]?.dateKey === activeDay
                   }
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-input bg-background text-muted-foreground transition hover:text-foreground disabled:opacity-40"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-input bg-background text-muted-foreground transition hover:text-foreground disabled:opacity-40 sm:h-9 sm:w-9"
                   aria-label="Next day"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -303,7 +303,7 @@ export function PublicBookingView({ subAccountId, page, branding }: Props) {
                       key={s.startAt}
                       type="button"
                       onClick={() => setSelectedSlot(s)}
-                      className={`rounded-lg border px-2 py-2 text-sm font-medium transition ${
+                      className={`min-h-11 rounded-lg border px-2 py-2 text-sm font-medium transition sm:min-h-0 ${
                         isSelected
                           ? "text-white shadow-sm"
                           : "border-input bg-background hover:bg-muted hover:text-foreground"
@@ -327,7 +327,7 @@ export function PublicBookingView({ subAccountId, page, branding }: Props) {
                       setActiveDay(d.dateKey);
                       setSelectedSlot(null);
                     }}
-                    className={`rounded-full border px-3 py-1 text-[11px] transition ${
+                    className={`min-h-11 rounded-full border px-3 py-1 text-[11px] transition sm:min-h-0 ${
                       d.dateKey === activeDay
                         ? "border-foreground/40 bg-muted text-foreground"
                         : "border-input bg-background text-muted-foreground hover:text-foreground"
@@ -477,7 +477,7 @@ function IntakeFormSection({
             id="b-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="h-11 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-9"
             maxLength={120}
             required
           />
@@ -488,7 +488,7 @@ function IntakeFormSection({
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="h-11 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-9"
             maxLength={200}
             required
           />
@@ -499,7 +499,7 @@ function IntakeFormSection({
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="h-11 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-9"
             maxLength={40}
             required
           />
@@ -682,7 +682,7 @@ function ExtraField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           required={field.required}
-          className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="h-11 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-9"
         >
           <option value="" disabled>
             Pick one…
@@ -700,7 +700,7 @@ function ExtraField({
           onChange={(e) => onChange(e.target.value)}
           maxLength={500}
           required={field.required}
-          className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="h-11 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-9"
         />
       )}
     </Field>
