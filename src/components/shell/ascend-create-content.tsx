@@ -11,6 +11,7 @@ import { FunnelsList } from "@/components/funnels/funnels-list";
 import { WebsiteBuilder } from "@/components/website/website-builder";
 import { effectiveWebsiteCap } from "@/lib/website/limits";
 import { AscendAssetsSection } from "@/components/shell/ascend-assets-section";
+import { CampaignPlanPanel } from "@/components/divinex/campaign-plan-panel";
 import type { WebsiteDoc } from "@/types/website";
 
 /**
@@ -59,6 +60,12 @@ export function AscendCreateContent({
         <h1 className="text-2xl font-semibold tracking-tight text-[var(--dx-text-primary)]">{title}</h1>
         <p className="mt-1 text-sm text-[var(--dx-text-muted)]">{description}</p>
       </div>
+
+      {/* The plan comes first when there is one: what was agreed, and what is
+          waiting on the customer, before the library of things already built.
+          Renders nothing at all when no campaign exists, so an individual
+          build never gains an empty ceremony above it. */}
+      <CampaignPlanPanel saId={saId} isAdmin={isAdmin} />
 
       <section className="rounded-[var(--dx-radius-lg)] border p-6" style={{ backgroundColor: "var(--dx-surface-1)", borderColor: "var(--dx-border-subtle)" }}>
         <FunnelsList saId={saId} baseHref={funnelBaseHref} />
