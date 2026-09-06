@@ -6,6 +6,7 @@ import type { ComponentType } from "react";
 import type { FunnelDoc, FunnelSectionType } from "@/types/funnels";
 import type { LeadForm } from "@/types/forms";
 import { FunnelTracker } from "./funnel-tracker";
+import { MultiStepFormSection } from "./sections/multi-step-form-section";
 import { HeroSection } from "./sections/hero-section";
 import { ProofStripSection } from "./sections/proof-strip-section";
 import { OfferSection } from "./sections/offer-section";
@@ -76,6 +77,7 @@ const SECTION_COMPONENTS: Record<FunnelSectionType, ComponentType<any>> = {
   team: TeamSection,
   image_text: ImageTextSection,
   photo_gallery: PhotoGallerySection,
+  multi_step_form: MultiStepFormSection,
 };
 
 const SERIF_FONT_STACK = '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif';

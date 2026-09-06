@@ -3,16 +3,11 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { defaultSmsConsentText, type LeadForm } from "@/types/forms";
+import { FormFieldInput } from "@/components/forms/form-field-input";
+import { type LeadForm } from "@/types/forms";
 import type { ContactAttribution } from "@/types/contacts";
-import {
-  readAttributionFromBrowser,
-  trackLeadEvent,
-} from "@/lib/attribution";
-import { FUNNEL_SUBMIT_EVENT } from "@/lib/funnels/telemetry-events";
+import { readAttributionFromBrowser } from "@/lib/attribution";
+import { submitLeadForm, validateFormValues } from "@/lib/forms/submit-client";
 
 interface PublicFormProps {
   form: LeadForm;
@@ -50,77 +45,32 @@ export function PublicForm({ form, onSuccess }: PublicFormProps) {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setApiError(null);
-    const next: Record<string, string> = {};
-    for (const f of form.fields) {
-      if (f.type === "sms_consent") {
-        // Consent is opt-in: a value of "true" means checked. Only blocks
-        // submission when the operator marked the consent field required.
-        if (f.required && values[f.id] !== "true") {
-          next[f.id] = "Please tick this box to continue";
-        }
-        continue;
-      }
-      if (f.required && !values[f.id]?.trim()) {
-        next[f.id] = `${f.label} is required`;
-      } else if (f.type === "email" && values[f.id]) {
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values[f.id])) {
-          next[f.id] = "Enter a valid email";
-        }
-      }
-    }
+    const next = validateFormValues(form.fields, values);
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
     setSubmitting(true);
-    try {
-      const res = await fetch(`/api/forms/${form.id}/submit`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          values,
-          attribution: attributionRef.current,
-        }),
-      });
-      const data = (await res.json()) as {
-        ok?: boolean;
-        error?: string;
-        thankYouMessage?: string;
-        redirectUrl?: string | null;
-      };
-      if (!res.ok || !data.ok) {
-        setApiError(data.error ?? "Something went wrong. Please try again.");
-        return;
-      }
-      // Fire the Meta Pixel Lead event before any redirect — once the
-      // browser navigates, the pixel script unloads with the page.
-      trackLeadEvent({
-        utmCampaign: attributionRef.current?.utmCampaign ?? null,
-      });
-      // Tell any funnel page hosting this form that a capture succeeded, so
-      // it can count the conversion. Same "before any redirect" reasoning as
-      // the pixel above. A bare event rather than a prop threaded through
-      // five section layers — and it fires only on a real success, so the
-      // count can never run ahead of the leads actually created.
-      try {
-        window.dispatchEvent(new CustomEvent(FUNNEL_SUBMIT_EVENT));
-      } catch {
-        /* non-browser/odd host — never block the visitor's confirmation */
-      }
-      if (data.redirectUrl) {
-        window.location.href = data.redirectUrl;
-        return;
-      }
-      setSuccess({
-        message: data.thankYouMessage ?? "Thanks — we'll be in touch shortly.",
-        redirectUrl: null,
-      });
-      onSuccess?.();
-    } catch (err) {
-      console.error(err);
-      setApiError("Network error. Please try again.");
-    } finally {
-      setSubmitting(false);
+    // Shared with the multi-step form so attribution, the pixel and the
+    // conversion beacon can never drift between the two.
+    const data = await submitLeadForm({
+      formId: form.id,
+      values,
+      attribution: attributionRef.current,
+    });
+    setSubmitting(false);
+    if (!data.ok) {
+      setApiError(data.error ?? "Something went wrong. Please try again.");
+      return;
     }
+    if (data.redirectUrl) {
+      window.location.href = data.redirectUrl;
+      return;
+    }
+    setSuccess({
+      message: data.thankYouMessage ?? "Thanks, we'll be in touch shortly.",
+      redirectUrl: null,
+    });
+    onSuccess?.();
   }
 
   if (success) {
@@ -136,75 +86,14 @@ export function PublicForm({ form, onSuccess }: PublicFormProps) {
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
-      {form.fields.map((f) =>
-        f.type === "sms_consent" ? (
-          <div key={f.id} className="space-y-1.5">
-            <label className="flex cursor-pointer items-start gap-2 text-sm leading-snug text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={values[f.id] === "true"}
-                onChange={(e) => setValue(f.id, e.target.checked ? "true" : "")}
-                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer"
-                aria-invalid={!!errors[f.id]}
-              />
-              <span>
-                {f.consentText?.trim() || defaultSmsConsentText()}
-                {f.required && <span className="text-destructive"> *</span>}
-              </span>
-            </label>
-            {errors[f.id] && (
-              <p className="text-xs text-destructive">{errors[f.id]}</p>
-            )}
-          </div>
-        ) : (
-        <div key={f.id} className="space-y-1.5">
-          <Label htmlFor={f.id}>
-            {f.label}
-            {f.required && <span className="text-destructive">*</span>}
-          </Label>
-          {f.type === "textarea" ? (
-            <Textarea
-              id={f.id}
-              value={values[f.id] ?? ""}
-              onChange={(e) => setValue(f.id, e.target.value)}
-              placeholder={f.placeholder}
-              rows={4}
-              aria-invalid={!!errors[f.id]}
-            />
-          ) : f.type === "select" ? (
-            <select
-              id={f.id}
-              value={values[f.id] ?? ""}
-              onChange={(e) => setValue(f.id, e.target.value)}
-              className="flex h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 text-foreground dark:bg-input/30 [&_option]:bg-background [&_option]:text-foreground"
-            >
-              <option value="">— Choose —</option>
-              {f.options.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <Input
-              id={f.id}
-              type={
-                f.type === "email"
-                  ? "email"
-                  : f.type === "phone"
-                    ? "tel"
-                    : "text"
-              }
-              value={values[f.id] ?? ""}
-              onChange={(e) => setValue(f.id, e.target.value)}
-              placeholder={f.placeholder}
-              aria-invalid={!!errors[f.id]}
-            />
-          )}
-          {errors[f.id] && (
-            <p className="text-xs text-destructive">{errors[f.id]}</p>
-          )}
-        </div>
+      {form.fields.map((f) => (
+        <FormFieldInput
+          key={f.id}
+          field={f}
+          value={values[f.id] ?? ""}
+          error={errors[f.id]}
+          onChange={(v) => setValue(f.id, v)}
+        />
       ))}
 
       {apiError && (

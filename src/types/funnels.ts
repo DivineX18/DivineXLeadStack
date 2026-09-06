@@ -168,7 +168,8 @@ export type FunnelSectionType =
   | "team"
   | "business_footer"
   | "image_text"
-  | "photo_gallery";
+  | "photo_gallery"
+  | "multi_step_form";
 
 /**
  * Shared CTA-experience config, embedded (optional) on any section that
@@ -604,6 +605,52 @@ export interface PhotoGalleryConfig {
   placeholderBrief?: string;
 }
 
+/**
+ * MULTI-STEP CAPTURE (V1).
+ *
+ * A qualification flow rendered as ONE section, submitting ONCE at the end
+ * through the ordinary form-submission route. It is deliberately not a form
+ * engine: steps are a presentation of an existing form's fields, so CRM field
+ * mapping, automation triggers, attribution, opt-out handling and conversion
+ * tracking are all inherited rather than re-implemented.
+ *
+ * Steps are LINEAR by design. Conditional branching and scoring are V1.1 —
+ * both change what "the next step" is, which is the one property this shape
+ * keeps simple enough to trust.
+ */
+export interface MultiStepFormStep {
+  id: string;
+  /** The question or heading the visitor reads on this step. */
+  title: string;
+  /** Optional one-line reassurance under the title. */
+  subtitle?: string;
+  /** Ids of the form's fields shown on this step, in order. A field id that
+   *  no longer exists on the form is ignored at render time, so editing the
+   *  underlying form can never produce a broken step. */
+  fieldIds: string[];
+}
+
+export interface MultiStepFormConfig {
+  eyebrow?: string;
+  headline: string;
+  subheadline?: string;
+  /** The real form this flow submits to. Without it the section renders its
+   *  copy and nothing else, rather than a dead submit button. */
+  formId?: string | null;
+  steps: MultiStepFormStep[];
+  /** Label on the final step's button. */
+  submitLabel?: string;
+  /** Where the visitor lands after completing. "message" shows a confirmation
+   *  in place; "booking" sends them to one of this workspace's booking pages,
+   *  which is the highest-intent destination a qualification flow can have. */
+  completion?: {
+    mode: "message" | "booking";
+    message?: string;
+    /** Slug of a booking page in this workspace. */
+    bookingSlug?: string;
+  };
+}
+
 export type FunnelSectionConfig =
   | HeroConfig
   | ProofStripConfig
@@ -631,7 +678,8 @@ export type FunnelSectionConfig =
   | TeamConfig
   | ImageTextConfig
   | BusinessFooterConfig
-  | PhotoGalleryConfig;
+  | PhotoGalleryConfig
+  | MultiStepFormConfig;
 
 /** Per-section background "canvas" — the art-direction layer's assignable
  *  surface treatment (replaces the fixed archetype background rhythm when

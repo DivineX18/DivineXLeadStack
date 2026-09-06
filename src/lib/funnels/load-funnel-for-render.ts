@@ -3,7 +3,7 @@ import { cache } from "react";
 
 import { getAdminDb } from "@/lib/firebase/admin";
 import { isPubliclyRenderable } from "@/types/funnels";
-import type { CheckoutConfig, FunnelDoc, HeroConfig, OfferConfig, TicketTiersConfig } from "@/types/funnels";
+import type { CheckoutConfig, FunnelDoc, HeroConfig, MultiStepFormConfig, OfferConfig, TicketTiersConfig } from "@/types/funnels";
 import type { LeadForm } from "@/types/forms";
 
 export interface RenderableFunnel {
@@ -61,6 +61,10 @@ export async function loadFunnelFormsForPreview(funnel: FunnelDoc): Promise<Reco
     if (section.type === "ticket_tiers") {
       const c = section.config as TicketTiersConfig;
       for (const t of c.tiers) if (t.formId) formIds.add(t.formId);
+    }
+    if (section.type === "multi_step_form") {
+      const c = section.config as MultiStepFormConfig;
+      if (c.formId) formIds.add(c.formId);
     }
     if (section.type === "checkout") {
       const c = section.config as CheckoutConfig;

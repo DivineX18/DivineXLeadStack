@@ -47,6 +47,7 @@ import type {
   ValueStackConfig,
   OfferConfig,
   PhotoGalleryConfig,
+  MultiStepFormConfig,
   ProblemSolutionConfig,
   ProofStripConfig,
   StatsConfig,
@@ -106,6 +107,7 @@ const SECTION_LABELS: Record<FunnelSectionType, string> = {
   team: "Team",
   image_text: "Image + text",
   photo_gallery: "Photo gallery",
+  multi_step_form: "Multi-step capture",
 };
 
 const SECTION_DEFAULTS: Record<FunnelSectionType, () => FunnelSection["config"]> = {
@@ -154,6 +156,14 @@ const SECTION_DEFAULTS: Record<FunnelSectionType, () => FunnelSection["config"]>
   team: () => ({ members: [] }) satisfies TeamConfig,
   image_text: () => ({ blocks: [] }) satisfies ImageTextConfig,
   photo_gallery: () => ({ images: [], layout: "grid" }) satisfies PhotoGalleryConfig,
+  multi_step_form: () => ({
+    headline: "A few quick questions",
+    subheadline: "It takes under a minute.",
+    formId: null,
+    steps: [],
+    submitLabel: "Submit",
+    completion: { mode: "message" as const },
+  }) satisfies MultiStepFormConfig,
   business_footer: () => ({ businessName: "", email: "", phone: "" }) satisfies BusinessFooterConfig,
 };
 
@@ -2693,6 +2703,176 @@ function SectionFields({
             )}
             addLabel="Add photo"
           />
+        </div>
+      );
+    }
+    case "multi_step_form": {
+      const c = section.config as MultiStepFormConfig;
+      const form = forms.find((f) => f.id === c.formId) ?? null;
+      const steps = c.steps ?? [];
+      // A field belongs to exactly one step. Showing what is still unplaced is
+      // the whole job of this editor: a field left out is a question the
+      // visitor is never asked, and nothing else would reveal that.
+      const placed = new Set(steps.flatMap((s) => s.fieldIds ?? []));
+      const unplaced = (form?.fields ?? []).filter((f) => !placed.has(f.id));
+
+      const setSteps = (next: MultiStepFormConfig["steps"]) => onChange({ ...c, steps: next });
+
+      return (
+        <div className="space-y-3">
+          <Field label="Headline">
+            <Input value={c.headline} onChange={(e) => onChange({ ...c, headline: e.target.value })} className="h-9" />
+          </Field>
+          <Field label="Subheadline">
+            <Input value={c.subheadline ?? ""} onChange={(e) => onChange({ ...c, subheadline: e.target.value })} className="h-9" />
+          </Field>
+          <Field label="Form this flow submits to">
+            <select
+              value={c.formId ?? ""}
+              onChange={(e) => onChange({ ...c, formId: e.target.value || null, steps: [] })}
+              className={fieldClass}
+            >
+              <option value="">Choose a form</option>
+              {forms.map((f) => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              The questions come from this form, and answers land on the contact exactly as they would from a normal form.
+            </p>
+          </Field>
+
+          {!form ? (
+            <p className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
+              Pick a form above and its questions will appear here to split into steps.
+            </p>
+          ) : (
+            <>
+              <div className="space-y-2">
+                {steps.map((st, i) => (
+                  <div key={st.id} className="rounded-lg border p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-muted-foreground">Step {i + 1}</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSteps(steps.filter((x) => x.id !== st.id))}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <Input
+                      value={st.title}
+                      onChange={(e) => setSteps(steps.map((x) => (x.id === st.id ? { ...x, title: e.target.value } : x)))}
+                      placeholder="What are you asking on this step?"
+                      className="mt-2 h-9"
+                    />
+                    <div className="mt-2 space-y-1">
+                      {(st.fieldIds ?? []).map((fid) => {
+                        const f = form.fields.find((x) => x.id === fid);
+                        return (
+                          <div key={fid} className="flex items-center justify-between gap-2 rounded-md bg-muted/50 px-2 py-1 text-xs">
+                            <span>{f?.label ?? "Removed question"}</span>
+                            <button
+                              type="button"
+                              className="text-muted-foreground hover:text-foreground"
+                              onClick={() =>
+                                setSteps(steps.map((x) => (x.id === st.id ? { ...x, fieldIds: x.fieldIds.filter((y) => y !== fid) } : x)))
+                              }
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        );
+                      })}
+                      {(st.fieldIds ?? []).length === 0 && (
+                        <p className="text-xs text-muted-foreground">No questions yet, so this step will be skipped.</p>
+                      )}
+                    </div>
+                    {unplaced.length > 0 && (
+                      <select
+                        value=""
+                        className={`${fieldClass} mt-2`}
+                        onChange={(e) => {
+                          const fid = e.target.value;
+                          if (!fid) return;
+                          setSteps(steps.map((x) => (x.id === st.id ? { ...x, fieldIds: [...(x.fieldIds ?? []), fid] } : x)));
+                        }}
+                      >
+                        <option value="">Add a question to this step</option>
+                        {unplaced.map((f) => (
+                          <option key={f.id} value={f.id}>{f.label}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  setSteps([...steps, { id: `s${Date.now()}`, title: `Step ${steps.length + 1}`, fieldIds: [] }])
+                }
+              >
+                Add step
+              </Button>
+
+              {unplaced.length > 0 && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  {unplaced.length} question{unplaced.length === 1 ? " is" : "s are"} not on any step yet, so nobody will be asked
+                  {unplaced.length === 1 ? " it" : " them"}.
+                </p>
+              )}
+
+              <Field label="Final button label">
+                <Input
+                  value={c.submitLabel ?? ""}
+                  onChange={(e) => onChange({ ...c, submitLabel: e.target.value })}
+                  placeholder="Submit"
+                  className="h-9"
+                />
+              </Field>
+              <Field label="After they finish">
+                <select
+                  value={c.completion?.mode ?? "message"}
+                  onChange={(e) =>
+                    onChange({ ...c, completion: { ...(c.completion ?? {}), mode: e.target.value as "message" | "booking" } })
+                  }
+                  className={fieldClass}
+                >
+                  <option value="message">Show a thank-you message</option>
+                  <option value="booking">Send them to a booking page</option>
+                </select>
+              </Field>
+              {c.completion?.mode === "booking" ? (
+                <Field label="Booking page slug">
+                  <Input
+                    value={c.completion?.bookingSlug ?? ""}
+                    onChange={(e) =>
+                      onChange({ ...c, completion: { ...(c.completion ?? { mode: "booking" }), bookingSlug: e.target.value } })
+                    }
+                    placeholder="e.g. free-roof-inspection"
+                    className="h-9"
+                  />
+                </Field>
+              ) : (
+                <Field label="Thank-you message">
+                  <Input
+                    value={c.completion?.message ?? ""}
+                    onChange={(e) =>
+                      onChange({ ...c, completion: { ...(c.completion ?? { mode: "message" }), message: e.target.value } })
+                    }
+                    placeholder="Thanks, we have everything we need."
+                    className="h-9"
+                  />
+                </Field>
+              )}
+            </>
+          )}
         </div>
       );
     }

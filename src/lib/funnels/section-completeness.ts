@@ -219,6 +219,13 @@ const RULES: Record<FunnelSectionType, (c: Record<string, unknown>) => Verdict> 
     filled(c.images, "url") > 0 || has(c.placeholderLabel) || has(c.headline)
       ? OK
       : empty("The photo gallery has no images and no placeholder."),
+
+  // A multi-step section without steps is a headline with a dead Continue
+  // button. Copy alone is not enough here: the section's whole job is capture.
+  multi_step_form: (c) =>
+    Array.isArray(c.steps) && (c.steps as { fieldIds?: unknown[] }[]).some((s) => (s.fieldIds ?? []).length > 0)
+      ? OK
+      : empty("The multi-step form has no steps with questions."),
 };
 
 export function evaluateSection(section: FunnelSection): SectionCompleteness {

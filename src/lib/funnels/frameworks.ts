@@ -235,6 +235,17 @@ export function defaultSectionConfig(type: FunnelSectionType): FunnelSectionConf
       return { blocks: [] };
     case "photo_gallery":
       return { images: [], layout: "grid" };
+    case "multi_step_form":
+      // Steps stay empty here on purpose: they are meaningless until a real
+      // form is wired, and an invented step would ask a question nobody chose.
+      return {
+        headline: "A few quick questions",
+        subheadline: "It takes under a minute.",
+        formId: null,
+        steps: [],
+        submitLabel: "Submit",
+        completion: { mode: "message" },
+      };
   }
 }
 
