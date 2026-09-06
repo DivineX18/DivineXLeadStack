@@ -188,3 +188,32 @@ flow that should not be demonstrated until corrected.
 This is a quality gate on work already in V1 scope. It is not licence to
 expand scope, redesign certified systems, or chase perfection: the standard is
 commercial quality, stability, cohesion and differentiation.
+
+---
+
+## V1.1 engineering priorities (recorded during certification, not built)
+
+**1. Zeno tool/context routing — cost.** A single Zeno turn ships ~40,549 prompt
+tokens and costs ~$0.20 on Opus 4.8, because all 25 tool schemas are sent on
+every turn before the customer has said anything: 40k of those 40.5k tokens are
+schemas. At 1,000 turns that is ~$200, at 10,000 ~$2,000, before any other AI
+operation. The likely shape is `intent/router → relevant tool subset → capable
+model → execute`, rather than `every message → all 25 tools → Opus`. Someone
+asking for a booking page needs booking, funnel, form and business context, not
+social, quotes and products. Pair the work with a measurement of AI cost per
+active customer, because that is the gross-margin number, not the per-turn one.
+
+**2. Bridge client must reject non-JSON responses.** Certification lost three
+round trips to this: Ascend's Express server serves its SPA `index.html` as a
+catch-all, so a bridge call to a mistyped path returned **HTTP 200 with
+`text/html`** instead of 404. Flow's client took the 200, failed to parse the
+`{ok, data, error}` envelope, and degraded every intelligence resource to
+"Unavailable" — indistinguishable from "no data yet". A 200 masking a 404 is the
+worst kind of integration failure because nothing anywhere reports an error.
+The client must assert the response content-type is JSON and surface a real
+integration error when it is not, rather than degrading silently.
+
+**3. Health check should cover what it implies.** `OPENROUTER_API_KEY: ok (live
+ping)` passed against a free endpoint while every real model call returned 402
+for insufficient credits. A check that validates a key but not the account's
+ability to serve a real request invites exactly the wrong diagnosis.
