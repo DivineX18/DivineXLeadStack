@@ -54,10 +54,15 @@ export function FormFieldInput({
 
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={field.id}>
-        {field.label}
-        {field.required && <span className="text-destructive">*</span>}
-      </Label>
+      {/* An empty label is a deliberate signal from a caller whose own heading
+          already asks the question (see the multi-step section) — render no
+          label rather than an empty one that still takes vertical space. */}
+      {field.label && (
+        <Label htmlFor={field.id}>
+          {field.label}
+          {field.required && <span className="text-destructive">*</span>}
+        </Label>
+      )}
       {field.type === "textarea" ? (
         <Textarea
           id={field.id}

@@ -26,6 +26,23 @@ import type { LeadForm } from "@/types/forms";
  * qualification flow who bumps reload should not be punished for it, and a
  * lost half-finished answer is a lost lead.
  */
+/**
+ * Is the step's heading already asking this field's question?
+ *
+ * Containment rather than equality, because an operator naturally writes the
+ * heading as the fuller sentence ("What kind of roof do you have?") over a
+ * shorter field label ("What kind of roof?"). Printed together they read as a
+ * bug. Only consulted for a single-field step, where the heading sits directly
+ * above the input, so a needed label can never be hidden.
+ */
+function sameQuestion(label: string, title: string): boolean {
+  const n = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const a = n(label);
+  const b = n(title);
+  if (a.length < 12 || b.length < 12) return a === b && a.length > 0;
+  return a === b || a.includes(b) || b.includes(a);
+}
+
 export function MultiStepFormSection({
   config,
   accentColor,
@@ -219,7 +236,14 @@ export function MultiStepFormSection({
           {step.fields.map((f) => (
             <FormFieldInput
               key={f.id}
-              field={f}
+              // A one-question step usually takes its title FROM the question,
+              // so rendering both prints the same sentence twice and reads as
+              // a bug. The heading is already the label in that case.
+              field={
+                step.fields.length === 1 && sameQuestion(f.label, step.title)
+                  ? { ...f, label: "" }
+                  : f
+              }
               value={values[f.id] ?? ""}
               error={errors[f.id]}
               onChange={(v) => setValues((prev) => ({ ...prev, [f.id]: v }))}

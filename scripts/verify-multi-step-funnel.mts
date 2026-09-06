@@ -107,6 +107,11 @@ try {
   check("progress is stated in words, not only drawn",
     (await page.locator('[role="progressbar"]').count()) === 1 && /Step 1 of 3/.test(await body()));
   check("Back is not offered on the first step", (await page.getByRole("button", { name: /^Back$/ }).count()) === 0);
+  // A one-question step takes its title from the question; printing both
+  // reads as a bug to anyone watching a demo.
+  check("the question is not printed twice on a one-question step",
+    ((await body()).match(/What kind of roof/g) ?? []).length === 1,
+    String(((await body()).match(/What kind of roof/g) ?? []).length));
 
   // Validation must stop an empty required step.
   await page.getByRole("button", { name: /Continue/i }).click();
