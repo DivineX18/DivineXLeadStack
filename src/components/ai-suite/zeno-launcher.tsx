@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useAgency } from "@/hooks/use-agency";
 import { getFirebaseDb } from "@/lib/firebase/client";
 import { AiSuiteChat } from "@/components/ai-suite/ai-suite-chat";
+import { ASK_ZENO_EVENT, type AskZenoDetail } from "@/lib/divinex/ask-zeno";
 import type { AiSuiteLevel } from "@/types/ai-suite";
 
 /**
@@ -51,7 +52,27 @@ export function ZenoLauncher({ workspaceId }: { workspaceId?: string | null } = 
 
   // Collapse on navigation so a scope change (sub-account A -> B, or into
   // agency) never leaves a stale thread open under the new scope.
-  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    setOpen(false);
+    setSeed(null);
+  }, [pathname]);
+
+  // Any surface can hand work over — a recommendation's "Fix with Zeno", the
+  // editor, Home. The panel opens with the request already typed; sending it
+  // stays the customer's decision.
+  const [seed, setSeed] = useState<AskZenoDetail | null>(null);
+  useEffect(() => {
+    const onAsk = (e: Event) => {
+      const detail = (e as CustomEvent<AskZenoDetail>).detail;
+      if (!detail?.prompt) return;
+      // Stamped so the same recommendation clicked twice still re-seeds an
+      // input the customer had cleared.
+      setSeed({ ...detail, prompt: detail.prompt });
+      setOpen(true);
+    };
+    window.addEventListener(ASK_ZENO_EVENT, onAsk);
+    return () => window.removeEventListener(ASK_ZENO_EVENT, onAsk);
+  }, []);
 
   let level: AiSuiteLevel | null = null;
   let available = false;
@@ -99,7 +120,12 @@ export function ZenoLauncher({ workspaceId }: { workspaceId?: string | null } = 
             </button>
           </div>
           <div className="min-h-0 flex-1 p-2">
-            <AiSuiteChat level={level} subAccountId={subAccountId ?? undefined} />
+            <AiSuiteChat
+              level={level}
+              subAccountId={subAccountId ?? undefined}
+              seedPrompt={seed?.prompt ?? null}
+              {...(seed?.artifactRef ? { artifactRef: seed.artifactRef } : {})}
+            />
           </div>
         </div>
       )}

@@ -34,6 +34,11 @@ interface AiSuiteChatProps {
    *  reasons about the customer's ACTUAL draft rather than regenerating from a
    *  title. Re-resolved and ownership-checked server-side — never trusted. */
   artifactRef?: { kind: "funnel"; id: string; sectionId?: string | null };
+  /** Pre-fills the input when another surface hands work over (a
+   *  recommendation's "Fix with Zeno", say). SEEDS ONLY — never auto-sends,
+   *  so the customer reads and chooses. Re-seeding with the same text is a
+   *  no-op; a new request replaces an unsent draft. */
+  seedPrompt?: string | null;
 }
 
 type ProposalStatus = "pending" | "confirmed" | "cancelled" | "failed";
@@ -177,6 +182,7 @@ export function AiSuiteChat({
   subAccountId,
   onActiveChange,
   artifactRef,
+  seedPrompt,
 }: AiSuiteChatProps) {
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [input, setInput] = useState("");
@@ -240,6 +246,12 @@ export function AiSuiteChat({
   useEffect(() => {
     if (hydrated) onActiveChange?.(messages.length > 0);
   }, [hydrated, messages.length, onActiveChange]);
+
+  // Seed the input when a surface hands work over. Never sends: the customer
+  // reads it, edits it, or closes the panel and nothing has happened.
+  useEffect(() => {
+    if (seedPrompt) setInput(seedPrompt);
+  }, [seedPrompt]);
 
   function newChat() {
     if (loading || confirmingId) return;

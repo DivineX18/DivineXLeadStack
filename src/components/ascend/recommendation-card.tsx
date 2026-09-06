@@ -1,5 +1,6 @@
 import { AscendCardShell } from "@/components/ascend/card-shell";
 import { IntelligenceStatusBadge } from "@/components/ascend/intelligence-status-badge";
+import { FixWithZenoButton } from "@/components/ascend/fix-with-zeno-button";
 import type { WithMeta, CroAuditRecommendation } from "@/types/intelligence";
 
 /**
@@ -23,6 +24,8 @@ function RecommendationRow({ rec }: { rec: CroAuditRecommendation }) {
       <p className="mt-1 text-xs text-[var(--dx-text-muted)]">
         <span className={IMPACT_TONE[rec.impact]}>{rec.impact} impact</span> · {rec.difficulty} effort · {rec.categoryLabel}
       </p>
+      {/* The loop's missing edge: diagnosis you can act on without retyping it. */}
+      <FixWithZenoButton fix={rec.fix} category={rec.categoryLabel} impact={rec.impact} />
     </li>
   );
 }
