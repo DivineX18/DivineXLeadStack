@@ -17,6 +17,7 @@ import {
   Clapperboard,
   ClipboardCheck,
   Funnel,
+  LayoutTemplate,
   Loader2,
   Lock,
   Plus,
@@ -38,6 +39,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { TemplateGallery } from "@/components/funnels/template-gallery";
 import type { FunnelGenre, FunnelStatus } from "@/types/funnels";
 
 const GENRES: { id: FunnelGenre; label: string; hint: string; icon: typeof BookOpen }[] = [
@@ -108,6 +110,7 @@ export function FunnelsList({
   const router = useRouter();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [creating, setCreating] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   const [gate, setGate] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -183,8 +186,13 @@ export function FunnelsList({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setShowTemplates((v) => !v)}>
+            <LayoutTemplate className="mr-1 h-4 w-4" />
+            {showTemplates ? "Hide templates" : "Start from a template"}
+          </Button>
           <Button
             variant="outline"
+            className="hidden sm:inline-flex"
             render={<Link href={saPath("/funnels/orders")} />}
           >
             <ReceiptText className="mr-1 h-4 w-4" />
@@ -225,6 +233,22 @@ export function FunnelsList({
         </DropdownMenu>
         </div>
       </div>
+
+      {/* The gallery sits above the list rather than on its own route: someone
+          about to build a page should see the ready-made starting points
+          without leaving the place they came to build. */}
+      {showTemplates && (
+        <div className="mb-6 rounded-xl border bg-card p-4 sm:p-5">
+          <p className="text-sm font-semibold tracking-tight">Start from a template</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Each one is a different page structure, not a different colour. Picking one creates a draft you can edit
+            straight away.
+          </p>
+          <div className="mt-4">
+            <TemplateGallery saId={saId} baseHref={baseHref} />
+          </div>
+        </div>
+      )}
 
       {rows === null ? (
         <div className="flex justify-center py-16 text-muted-foreground">
