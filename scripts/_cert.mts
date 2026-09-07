@@ -48,10 +48,23 @@ if(!(await fix.isVisible().catch(()=>false))){
     seeded.length>0 && words.some(w=>seeded.includes(w.replace(/[^A-Za-z]/g,""))), seeded.slice(0,150));
   check("R3: nothing was generated merely by opening it",
     (await p.locator("text=/Approve this|Confirm this/i").count())===0);
-  await p.locator('button[aria-label="Close Zeno"]').first().click().catch(()=>{});
-  await p.waitForTimeout(900);
-  check("R3: declining closes it and creates nothing",
-    (await p.locator('textarea[placeholder*="Ask a question"]').count())===0);
+  // "Declining" means walking away without sending. Two valid shapes now: the
+  // floating panel closes, or (fallback path) the customer is on the Zeno page
+  // with the request typed and unsent. What must hold in BOTH is that nothing
+  // was created — asserting the composer disappears would only describe the
+  // panel, and would fail the fallback for being a page.
+  const closeBtn = p.locator('button[aria-label="Close Zeno"]').first();
+  if (await closeBtn.isVisible().catch(()=>false)) {
+    await closeBtn.click();
+    await p.waitForTimeout(900);
+    check("R3: declining closes the panel",
+      (await p.locator('textarea[placeholder*="Ask a question"]').count())===0);
+  } else {
+    check("R3: the request is waiting, typed and unsent",
+      (await composer.inputValue().catch(()=>"")).length>0);
+  }
+  check("R3: declining created nothing",
+    (await p.locator("text=/Approve this|Confirm this|Your funnel is ready|is saved/i").count())===0);
 }
 await b.close();
 console.log(bad===0&&na===0?"\nALL PASS":`\n${bad} FAILED · ${na} UNAVAILABLE`);
