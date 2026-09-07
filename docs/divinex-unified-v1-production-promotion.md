@@ -69,6 +69,66 @@ Stripe key/secret/webhook (the *price id* is the sole failure).
 Absent and optional: Firecrawl, Vapi, Meta. Meta absent keeps social publishing
 dark, which is the intended V1 state pending App Review.
 
+## Promotion executed
+
+Both fast-forwards pushed; production `main` is now `f680e9c` (Flow) and
+`9186e9e` (Ascend). Firestore **rules** deployed successfully. The
+`firestore:indexes` step failed on a local network fetch to `googleapis.com`
+and is a **no-op regardless**: `firestore.indexes.json` is byte-identical
+between the old and new `main`, so there is no index to create.
+
+## Production smoke test
+
+Run against the live deployment as the agency owner. Read-only except four
+draft assets, all deleted afterward. No leads created, no email or SMS sent,
+nothing published, no card charged, no customer data mutated.
+
+| # | Check | Result |
+|---|---|---|
+| 1 | Owner signs in, session issued | PASS |
+| 2 | Workspace maps to one active business (bp 3, DivineX) | PASS |
+| 3 | Intelligence renders over the production bridge, not degraded, names the same business | PASS |
+| 4 | Recommendation offers "Fix this with Zeno" and the handoff does not dead-end | PASS |
+| 5 | Asset Studio draft generation | **PARTIAL — see below** |
+| 6 | Public funnel route | SKIPPED — no published funnel; none created in production |
+| 7 | Tenant isolation (unknown workspace 404; unauthenticated 307 to login) | PASS |
+| 8 | Performance endpoint + page render | PASS |
+| 9 | Entitled workspace is not walled | PASS |
+
+### The one real finding: generation runs at its own timeout ceiling
+
+Generation **works** and produces real, business-grounded output. It is simply
+slow enough to sit on top of the timeout that bounds it.
+
+| Attempt | Path | Elapsed | Result |
+|---|---|---|---|
+| `Offer` | Flow proxy | 101 s | 201, 12,550 chars |
+| `Landing Page Copy` | Flow proxy | 111 s | 201, 11,034 chars |
+| `Offer` | Flow proxy | 120 s | **502** — aborted at the client timeout |
+| `DM Script` | Flow proxy | — | **502** |
+| `DM Script` | direct Render origin | 172 s | 201, 17,654 chars |
+
+The binding constraint is `timeoutMs: 120_000` on `generateAsset` in
+`src/lib/divinex/ascend-client.ts`. Real generations take 100–172 s, so the
+slowest asset types cannot finish inside it and surface as
+"Couldn't generate that just now." Cloudflare on `ascend.divinex.io` adds a
+second ceiling (a 125 s attempt returned 524), but it sits above the client
+timeout, so raising only the Cloudflare limit would not fix this.
+
+This is **not a regression from the promotion** — before it, the route did not
+exist on production at all (404). It is a reliability defect that belongs with
+the mock-content fallback at the top of the V1.1 reliability list. Fixing it
+means changing certified code (a longer timeout, or making generation
+asynchronous with a job the UI polls), so it is reported rather than patched.
+
+## Staging artifacts visible in production
+
+Because both stores are shared, production's workspace list includes test
+workspaces created during certification, e.g. two named
+`[P0.2 PROBE …] workspace B`. They were not copied here by this promotion —
+they were always the same records. Removing them deletes production data, so
+that decision is left to the owner rather than taken here.
+
 ## Why the Ascend promotion is load-bearing
 
 Production Ascend serves the intelligence bridge
