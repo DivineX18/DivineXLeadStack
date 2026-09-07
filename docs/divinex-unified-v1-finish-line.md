@@ -239,9 +239,38 @@ ability to serve a real request invites exactly the wrong diagnosis.
 
 ---
 
-## OPEN V1 BLOCKER — evidence safety (hand-off spec)
+## FINAL CERTIFICATION — V1 LOCKED
 
-**Status: FAIL. No GO.** Everything else in this document's checklist stands.
+Evidence safety closed and the full §1–16 gap closure completed. Every result
+below is from a fresh run against staging with real data; nothing historical is
+reused.
+
+**Deployment composition required for production**
+
+| Repo | Branch | SHA | Relationship to main |
+|---|---|---|---|
+| Flow | `dev` | `f098b2a` | 103 ahead, 0 behind — clean fast-forward |
+| Ascend | `ascend-staging` | `9186e9e` | 20 ahead, 0 behind — strict superset of main |
+
+Both are strict supersets: promoting is a fast-forward with no divergence to
+reconcile. Every certified fix — funnel measurement, forms/booking capabilities,
+multi-step, templates, Campaign Plan, ask-Zeno handoff and fallback,
+external-site honesty, growth-scan recommendations, context normalization, live
+failure honesty, the evidence boundary — is contained in those two commits.
+
+**Deferred to V1.1, unchanged:** Zeno tool/context cost routing; bridge
+non-JSON rejection; health checks that cover what they imply; the guarantee
+recommendation guard in Ascend's scan engine; workspace/business mapping
+consolidation to one store; branch consolidation.
+
+**Known non-blocking:** two stale Ascend-only test mappings; Flow stores the
+profile id as a string where Ascend stores an integer (values agree, the
+coherence guard normalizes); mock content is still emitted on a transiently
+missing provider key rather than an explicit provider-free deployment.
+
+## CLOSED — evidence safety (historical record)
+
+**Status: CLOSED.** Retained as the record of how it was diagnosed and fixed.
 
 ### Why the obvious implementation is wrong
 
