@@ -26,7 +26,8 @@ const SA = process.env.EDIT_SA ?? "gXQ6oH73xtvv7LsV1sQT";
 const OWNER = "irkY5HKIzxb64l5qCyHroTrudJa2";
 
 const { getCapability } = await import("../src/lib/ai-suite/capabilities.ts");
-const { ascendIntelligenceConfigured } = await import("../src/lib/intelligence/ascend-intelligence-config.ts");
+const { chromium } = await import("@playwright/test");
+const { getAdminAuth } = await import("../src/lib/firebase/admin.ts");
 const campaigns = await import("../src/lib/server/campaigns-service.ts");
 const tel = await import("../src/lib/funnels/telemetry.ts");
 const { getAdminDb } = await import("../src/lib/firebase/admin.ts");
@@ -43,14 +44,55 @@ const STAMP = Date.now();
 const trash: { path: string }[] = [];
 const track = (path: string) => trash.push({ path });
 
-const intelligenceUp = ascendIntelligenceConfigured();
+/**
+ * Intelligence must be certified where it RUNS, not where this script runs.
+ * The earlier version gated these stages on the local process's own config, so
+ * a fully working staging deployment reported UNAVAILABLE six times. This
+ * loads the real Intelligence page as the customer sees it.
+ */
+async function readStagingIntelligence() {
+  try {
+    const ct = await getAdminAuth().createCustomToken(OWNER);
+    const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${process.env.NEXT_PUBLIC_FIREBASE_API_KEY}`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: ct, returnSecureToken: true }) });
+    const { idToken } = (await r.json()) as { idToken?: string };
+    const login = await fetch(`${BASE}/api/login`, { headers: { Authorization: `Bearer ${idToken}` }, redirect: "manual" });
+    const host = new URL(BASE).hostname;
+    const cookies = (login.headers.getSetCookie?.() ?? []).map((c) => {
+      const [pair] = c.split(";"); const i = pair.indexOf("=");
+      return { name: pair.slice(0, i), value: pair.slice(i + 1), domain: host, path: "/" };
+    });
+    cookies.push({ name: "active_workspace_id", value: SA, domain: host, path: "/" });
+    const b = await chromium.launch();
+    const ctxB = await b.newContext({ viewport: { width: 1440, height: 900 } });
+    await ctxB.addCookies(cookies);
+    const page = await ctxB.newPage();
+    await page.goto(`${BASE}/app/intelligence`, { waitUntil: "domcontentloaded", timeout: 120_000 });
+    await page.waitForTimeout(13_000);
+    const text = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+    const actions = await page.getByRole("button", { name: /Fix this with Zeno|Get the fix from Zeno/i }).count();
+    const score = /GROWTH SCORE[^0-9]*(\d{1,3})\s*\/\s*100/.exec(text)?.[1] ?? null;
+    const constraint = /Primary constraint:\s*([A-Za-z &]+?)\s+(?:From|ASSESSMENT|GROWTH|RECOMMEND)/.exec(text)?.[1]?.trim() ?? null;
+    await b.close();
+    return { ok: !!score, score, constraint, actions, text };
+  } catch (err) {
+    return { ok: false, score: null, constraint: null, actions: 0, text: String(err) };
+  }
+}
+const intel = await readStagingIntelligence();
+const intelligenceUp = intel.ok;
+console.log(`staging intelligence: score=${intel.score} constraint=${intel.constraint} actionButtons=${intel.actions}\n`);
 
 try {
   // ══════════════════════════════════ A. "I need more leads."
   journey('A · "I need more leads."');
   if (!intelligenceUp) {
-    na("UNDERSTAND: the diagnosis reaches the request", "the Ascend intelligence bridge is not configured here");
+    na("UNDERSTAND: the diagnosis reaches the request", "staging intelligence did not render a score");
     na("RECOMMEND: a ranked next step exists", "no diagnosis to rank");
+  } else {
+    check("UNDERSTAND: the diagnosis reaches the request", !!intel.score && !!intel.constraint,
+      `score ${intel.score}/100, constraint ${intel.constraint}`);
+    check("RECOMMEND: a ranked next step exists, with an action", intel.actions > 0, `${intel.actions} actionable`);
   }
 
   // CREATE — a real capture form, then a real page that uses it.
@@ -112,9 +154,8 @@ try {
 
   // ══════════════════════════════════ B. "Leads aren't converting."
   journey('B · "I\'m getting leads but they aren\'t converting."');
-  if (!intelligenceUp) {
-    na("UNDERSTAND: where the drop-off is", "the Ascend intelligence bridge is not configured here");
-  }
+  if (!intelligenceUp) na("UNDERSTAND: where the drop-off is", "staging intelligence did not render");
+  else check("UNDERSTAND: the constraint names where the drop-off is", !!intel.constraint, String(intel.constraint));
   // Measurement is what makes this journey answerable at all.
   check("UNDERSTAND: conversion rate is available per page, from real traffic",
     perfA?.conversionRate !== null && perfA?.views !== undefined && perfA.views > 0);
@@ -209,9 +250,13 @@ try {
   // ══════════════════════════════════ E. "Why isn't my funnel converting?"
   journey('E · "Why isn\'t my website/funnel generating leads?"');
   if (!intelligenceUp) {
-    na("UNDERSTAND: the audit says what is wrong", "the Ascend intelligence bridge is not configured here");
+    na("UNDERSTAND: the audit says what is wrong", "staging intelligence did not render");
     na("RECOMMEND: a specific fix is offered", "no audit to recommend from");
     na("EXPLAIN: the recommendation is actionable in one click", "no rendered recommendation to act on");
+  } else {
+    check("UNDERSTAND: the audit says what is wrong", !!intel.constraint, String(intel.constraint));
+    check("RECOMMEND: a specific fix is offered", /TODAY|Add |Fix |Rewrite |Improve/i.test(intel.text));
+    check("EXPLAIN: the recommendation is actionable in one click", intel.actions > 0, `${intel.actions} actions`);
   }
   check("MEASURE: the question is answerable at all, per page",
     perfA !== null && perfA.views > 0 && perfA.conversionRate !== null,
