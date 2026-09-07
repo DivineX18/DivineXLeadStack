@@ -236,3 +236,75 @@ exactly what validating against a real business is for.
 ping)` passed against a free endpoint while every real model call returned 402
 for insufficient credits. A check that validates a key but not the account's
 ability to serve a real request invites exactly the wrong diagnosis.
+
+---
+
+## OPEN V1 BLOCKER — evidence safety (hand-off spec)
+
+**Status: FAIL. No GO.** Everything else in this document's checklist stands.
+
+### Why the obvious implementation is wrong
+
+Do NOT validate a generated claim by searching the assembled context for a
+matching number. Proven unsafe: bp 3's context is ~195,642 chars, and `85%`,
+`90%` and `80%` all appear in it — as Zeno **calibration-rule confidence
+scores** (`[General | Full Blueprint Scope | 85%] Rule: …`). A substring check
+would have grounded "85% of video is watched without sound" on internal
+metadata. Presence in the prompt is not evidence about the customer.
+
+### The evidence classes to separate first
+
+| Class | May ground a factual claim? |
+|---|---|
+| **A. Customer facts** — profile fields, verified website content, offer/pricing, stated ICP, real location/credentials, explicit policies | **Yes** |
+| **B. Hard constraints** — brand voice, `wordsToAvoid`, `brandVoiceDetail.avoid`, prohibited positioning | **No — they GOVERN generation** |
+| **C. Derived intelligence** — scan/CRO findings, constraints, scores | Only the finding itself ("the scan found weak lead capture"), never an invented statistic |
+| **D. Internal material** — calibration rules, confidence scores, frameworks, KB text, prompt instructions | **Never** |
+
+### Authority order for generation
+
+Customer hard constraints **override** verified customer evidence, which
+**grounds** strategy/intelligence, which **guides** generic marketing knowledge.
+Generic knowledge may structure and persuade; it may never manufacture
+customer-specific proof.
+
+### The finding that matters most
+
+bp 3's `brandVoiceDetail.avoid` literally reads **`"guarentee, refund, money
+back etc"`** — and the generator produced four guarantees anyway, including a
+refund promise. The evidence was already in context and was ignored. Treating
+explicit customer avoidance rules as hard constraints (normalising obvious typo
+variants) is the cheapest, highest-leverage fix and should land before any
+validator.
+
+### Verified classification of bp 3 claims (against structured sources)
+
+- **SUPPORTED:** `$2,000–$5,000/month` (real Growth Partnership retainers)
+- **AMBIGUOUS:** `$5,000` exists as "Growth Partner — Starting at $5,000/month",
+  but was reused as an invented *average contract value* inside a fabricated
+  close-rate calculation. Same number, different meaning: not grounded.
+- **UNSUPPORTED:** `$250k–$3M` ICP · `97% of visitors` · `20% convert` ·
+  `40% close` · `$10,000/month` · `200+ websites` · years in business
+
+### Two regression tests that must exist
+
+1. Calibration material contains `85%`, customer evidence does not → a generated
+   "85% of customers…" must NOT be grounded.
+2. Context contains "Starting at $5,000/month" → "$5,000 average customer
+   value" must NOT pass. Semantic reuse is not grounding.
+
+### Then
+
+Repair loop (finite attempts, narrow rewrite preserving persuasion), hard-fail
+without saving for guarantees / testimonials / credentials / customer counts /
+results, applied at the narrowest layer shared by VSL, lead magnet, headline
+set, email sequence and social posts. Regenerate all five for bp 3 and read them
+manually — regex identifies candidates, it does not certify.
+
+Only when that passes: resume the finite §1–16 gap-closure work.
+
+### Current certified state
+
+Flow `dev` **7fbbf1d** · Ascend `ascend-staging` **5c3f75a** (216/216) ·
+workspace mapping coherent at bp 3 in **both** Firestore and Ascend Postgres ·
+live generation, mock-failure honesty and external-site Zeno honesty all PASS.
