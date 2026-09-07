@@ -80,10 +80,33 @@ The real customer path is `/api/public/checkout` → `public-signup-service` →
 production key is confirmed **live** (Stripe's own error said a live-mode key
 was used), so a plan created on production gets live prices automatically.
 
-**The actual blocker is that production has no purchasable plan.** Both plans
-are `status: "archived"` with `publicSelfServeEnabled: false`, and
-`GET /api/public/plans` returns an empty list. No one can buy anything today,
+**The actual blocker was that production had no purchasable plan.** Both plans
+were `status: "archived"` with `publicSelfServeEnabled: false`, and
+`GET /api/public/plans` returned an empty list — no one could buy anything,
 whatever the price mode.
+
+### Resolved
+
+`Growth Operations` ($97/mo, plan `s5M7Ba…`) was activated with self-serve
+enabled through the normal owner API. That plan was chosen because both real
+client workspaces are already assigned to it, so the public offer and the
+assigned plan stay the same product. Only `status` and
+`publicSelfServeEnabled` were sent — no price field — so no Stripe price was
+re-minted and existing subscribers are untouched.
+
+Verified on production:
+
+- `GET /api/public/plans` returns exactly that one plan.
+- A Checkout Session created through the real public path returned
+  **`cs_live_…`** — live mode, confirming the plan's stored price is a live
+  price. No charge was completed, and the path creates nothing in Firestore
+  (the workspace is provisioned only after payment clears).
+- The still-archived duplicate plan is refused publicly with 404, "This plan
+  isn't available for self-serve signup."
+
+`STRIPE_PRO_PRICE_ID` remains a test-mode id, so the health check still reports
+Stripe as red. That is health-check cleanup, not billing truth — nothing on a
+purchase path reads it.
 
 ---
 
