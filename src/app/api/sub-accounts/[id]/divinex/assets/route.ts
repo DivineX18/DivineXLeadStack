@@ -42,7 +42,20 @@ export async function GET(
   return NextResponse.json({ assets: res.data?.assets ?? [] });
 }
 
-/** Generate a new deliverable through Ascend's Asset Studio. */
+/**
+ * START generating a deliverable. Returns a job id, not an asset.
+ *
+ * This used to wait for generation inline and return the finished asset. It
+ * cannot: real generations take 100–172s, and every ceiling on the path sits
+ * below that — this route's own client timeout, and the CDN in front of both
+ * this app and Ascend. A correct asset that took 130s reached the customer as
+ * "Couldn't generate that just now", which is the worst kind of failure because
+ * nothing was actually wrong.
+ *
+ * Raising a timeout would only relocate the failure to the CDN, which we do not
+ * control, so the wait is removed rather than extended. The browser polls
+ * ./assets/jobs/[jobId] and the asset appears when it exists.
+ */
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -71,13 +84,13 @@ export async function POST(
     );
   }
 
-  const res = await ascend.generateAsset({
+  const res = await ascend.startAssetGeneration({
     flowSubAccountId: subAccountId,
     assetType,
     ...(prompt ? { prompt } : {}),
   });
 
-  if (!res.ok || !res.data?.asset) {
+  if (!res.ok || typeof res.data?.jobId !== "number") {
     if (res.error === "ascend_403") {
       return NextResponse.json(
         {
@@ -87,8 +100,9 @@ export async function POST(
         { status: 409 },
       );
     }
-    return NextResponse.json({ error: "Couldn't generate that just now. Try again in a moment." }, { status: 502 });
+    return NextResponse.json({ error: "Couldn't start that just now. Try again in a moment." }, { status: 502 });
   }
 
-  return NextResponse.json({ asset: res.data.asset }, { status: 201 });
+  // 202, not 201: nothing has been created yet.
+  return NextResponse.json({ jobId: res.data.jobId, status: "processing" }, { status: 202 });
 }

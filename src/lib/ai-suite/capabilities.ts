@@ -6424,28 +6424,60 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           "The DivineX intelligence engine isn't configured on this deployment yet, so I can't generate that here.",
         );
       }
-      const res = await ascend.generateAsset({
+      // Generation is a detached job because it takes 100–172s and a single
+      // synchronous call is cut short by ceilings below that. Zeno starts it,
+      // then waits a BOUNDED amount of time so a quick asset still comes back
+      // inside the conversation. The bound is well under the ceilings on the
+      // chat request itself — exceeding it must not turn a running job into a
+      // reported failure, so the slow case hands off honestly instead.
+      const started = await ascend.startAssetGeneration({
         flowSubAccountId: ctx.subAccountId!,
         assetType: args.assetType as string,
         ...(args.prompt ? { prompt: args.prompt as string } : {}),
       });
-      if (!res.ok || !res.data?.asset) {
+      if (!started.ok || typeof started.data?.jobId !== "number") {
         // workspace_not_linked is the fail-closed tenancy answer, not a bug.
-        const detail = (res.data as { error?: string } | undefined)?.error ?? res.error ?? "";
-        if (detail.includes("workspace_not_linked") || res.error === "ascend_403") {
+        const detail = (started.data as { error?: string } | undefined)?.error ?? started.error ?? "";
+        if (detail.includes("workspace_not_linked") || started.error === "ascend_403") {
           throw new CapabilityUserError(
             "This workspace isn't linked to a DivineX business profile yet, so I don't have the business and brand context these need. Finish onboarding first and I'll write it properly.",
           );
         }
-        throw new CapabilityUserError("I couldn't generate that just now. Try again in a moment.");
+        throw new CapabilityUserError("I couldn't start that just now. Try again in a moment.");
       }
-      const asset = res.data.asset;
+
+      const jobId = started.data.jobId;
+      const deadline = Date.now() + 60_000;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const poll = await ascend.getAssetGenerationJob(ctx.subAccountId!, jobId);
+        if (!poll.ok || !poll.data) continue; // a failed status read is not a failed job
+        if (poll.data.status === "failed") {
+          throw new CapabilityUserError(
+            poll.data.errorMessage
+              ? `I couldn't write that: ${poll.data.errorMessage}`
+              : "I couldn't generate that just now. Try again in a moment.",
+          );
+        }
+        if (poll.data.status === "completed" && poll.data.asset) {
+          const asset = poll.data.asset;
+          return {
+            resultText:
+              `Your ${asset.assetType} is ready — “${asset.title}”.\n\n` +
+              `• Written from this workspace's saved business and brand, not a generic template.\n` +
+              `• It's a draft: review and edit it in Create before you use it anywhere.`,
+            ref: { kind: "asset", id: String(asset.id) },
+          };
+        }
+      }
+
+      // Still running, and still fine. Telling the customer it failed here
+      // would be false — the asset usually lands a minute or two later.
       return {
         resultText:
-          `Your ${asset.assetType} is ready — “${asset.title}”.\n\n` +
-          `• Written from this workspace's saved business and brand, not a generic template.\n` +
-          `• It's a draft: review and edit it in Create before you use it anywhere.`,
-        ref: { kind: "asset", id: String(asset.id) },
+          `I've started writing your ${args.assetType as string} — the longer pieces take a couple of minutes.\n\n` +
+          `• It'll appear under Create → Assets when it's done; you don't need to ask again.\n` +
+          `• It's written from this workspace's saved business and brand, and arrives as a draft to review.`,
       };
     },
   },

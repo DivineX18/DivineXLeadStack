@@ -59,22 +59,68 @@ export function AscendAssetsSection({ saId, isAdmin }: { saId: string; isAdmin: 
     void load();
   }, [load]);
 
+  /**
+   * Start generation, then poll until the asset exists.
+   *
+   * This waits minutes, deliberately. Writing one of these against a real
+   * business profile takes 100–172 seconds; the previous single request was
+   * cut short by timeouts below that, so correct work was reported to
+   * customers as failure. Nothing here is faster — it just stops lying about
+   * slow.
+   *
+   * The ceiling is generous but finite: a job that genuinely dies is reported
+   * as failed by the server, and if even that never arrives we stop rather
+   * than spin forever.
+   */
   async function generate(assetType: string) {
     setGenerating(assetType);
     try {
-      const res = await fetch(`/api/sub-accounts/${saId}/divinex/assets`, {
+      const start = await fetch(`/api/sub-accounts/${saId}/divinex/assets`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ assetType }),
       });
-      const data = (await res.json()) as { asset?: AssetRow; error?: string };
-      if (!res.ok || !data.asset) {
-        toast.error(data.error ?? "Couldn't generate that just now.");
+      const started = (await start.json()) as { jobId?: number; error?: string };
+      if (!start.ok || typeof started.jobId !== "number") {
+        toast.error(started.error ?? "Couldn't start that just now.");
         return;
       }
-      toast.success(`${assetType} ready — written from your business and brand.`);
-      setAssets((prev) => [data.asset!, ...prev]);
-      setOpen(data.asset);
+
+      const deadline = Date.now() + 6 * 60 * 1000;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 4000));
+        let res: Response;
+        try {
+          res = await fetch(`/api/sub-accounts/${saId}/divinex/assets/jobs/${started.jobId}`, {
+            cache: "no-store",
+          });
+        } catch {
+          continue; // a dropped poll says nothing about the job; ask again
+        }
+        // 503 here means the status check failed, not the generation.
+        if (res.status === 503) continue;
+        const data = (await res.json()) as {
+          status?: string;
+          asset?: AssetRow | null;
+          errorMessage?: string | null;
+          error?: string;
+        };
+        if (!res.ok) {
+          toast.error(data.error ?? "Couldn't generate that just now.");
+          return;
+        }
+        if (data.status === "failed") {
+          toast.error(data.errorMessage ?? "That didn't generate. Try again.");
+          return;
+        }
+        if (data.status === "completed" && data.asset) {
+          toast.success(`${assetType} ready — written from your business and brand.`);
+          setAssets((prev) => [data.asset!, ...prev]);
+          setOpen(data.asset);
+          return;
+        }
+      }
+      toast.error("That's taking longer than expected. Check your assets shortly — it may still arrive.");
     } catch {
       toast.error("Couldn't reach the generator. Try again in a moment.");
     } finally {
@@ -130,6 +176,16 @@ export function AscendAssetsSection({ saId, isAdmin }: { saId: string; isAdmin: 
                 </div>
               </div>
             ))}
+            {generating && (
+              // Two to three minutes of silence reads as broken. Say what is
+              // happening and roughly how long, so waiting is a choice rather
+              // than a guess.
+              <p className="flex items-center gap-2 text-sm text-[var(--dx-text-muted)]">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Writing your {generating} from this workspace&apos;s business and brand. This usually
+                takes one to three minutes — you can leave this page, it&apos;ll be saved to your assets.
+              </p>
+            )}
           </div>
         )
       )}

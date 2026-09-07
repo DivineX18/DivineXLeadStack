@@ -150,6 +150,46 @@ export const ascend = {
       };
     }>("/api/divinex/generate-asset", { method: "POST", body: input, timeoutMs: 120_000 }),
 
+  /**
+   * START generation and return a job id — the reliable path, and the one every
+   * customer-facing surface uses.
+   *
+   * generateAsset above is the synchronous call this replaces. It is kept only
+   * because removing it would break a caller mid-deploy; nothing customer-facing
+   * should use it. Measured on production: real generations take 100–172s, while
+   * that call's own 120s timeout AND the CDN in front of both hosts both cut
+   * below it, so a correct asset that took 130s surfaced as "couldn't generate".
+   * Raising the timeout would only move the failure to the CDN, which we don't
+   * control — so the work is detached instead of the wait being extended.
+   *
+   * Short timeout on purpose: this call only records a row and returns.
+   */
+  startAssetGeneration: (input: { flowSubAccountId: string; assetType: string; prompt?: string }) =>
+    call<{ ok: boolean; jobId: number; status: string; reused?: boolean }>(
+      "/api/divinex/generate-asset/jobs",
+      { method: "POST", body: input, timeoutMs: 30_000 },
+    ),
+
+  /** Job state, and the finished asset once there is one. */
+  getAssetGenerationJob: (flowSubAccountId: string, jobId: number) =>
+    call<{
+      ok: boolean;
+      jobId: number;
+      status: "processing" | "completed" | "failed";
+      errorMessage: string | null;
+      asset: {
+        id: number;
+        assetType: string;
+        title: string;
+        content: string;
+        businessProfileId: number | null;
+        createdAt: string;
+      } | null;
+    }>(
+      `/api/divinex/generate-asset/jobs/${encodeURIComponent(flowSubAccountId)}/${jobId}`,
+      { timeoutMs: 20_000 },
+    ),
+
   /** The workspace's generated-asset library, for unified Create. Ascend
    *  enforces the same workspace-linkage rule as generation. */
   listAssets: (flowSubAccountId: string) =>
