@@ -2,6 +2,8 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { requireSubAccountAdmin, requireSubAccountMember } from "@/lib/auth/require-tenancy";
 import { ascend, ascendConfigured, ASCEND_ASSET_TYPES } from "@/lib/divinex/ascend-client";
+import { checkPlanLimit, recordPlanUsage } from "@/lib/billing/plan-limits";
+import { getAdminDb } from "@/lib/firebase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +86,21 @@ export async function POST(
     );
   }
 
+  // The plan's monthly generation allowance. Checked before the job is
+  // started, so a customer at their ceiling is told immediately rather than
+  // watching a spinner for a job that will bill and then be refused.
+  const agencyId =
+    ((await getAdminDb().doc(`subAccounts/${subAccountId}`).get()).data()?.agencyId as
+      | string
+      | undefined) ?? null;
+  const allowance = await checkPlanLimit({ agencyId, kind: "aiGenerations" });
+  if (!allowance.allowed) {
+    return NextResponse.json(
+      { error: allowance.message, code: "plan_limit_reached" },
+      { status: 402 },
+    );
+  }
+
   const res = await ascend.startAssetGeneration({
     flowSubAccountId: subAccountId,
     assetType,
@@ -102,6 +119,11 @@ export async function POST(
     }
     return NextResponse.json({ error: "Couldn't start that just now. Try again in a moment." }, { status: 502 });
   }
+
+  // Counted on a successful START, and only when the job is genuinely new:
+  // a `reused` response means the caller double-clicked into the job already
+  // running, which must not consume a second unit of their allowance.
+  if (res.data.reused !== true) await recordPlanUsage(agencyId, "aiGenerations");
 
   // 202, not 201: nothing has been created yet.
   return NextResponse.json({ jobId: res.data.jobId, status: "processing" }, { status: 202 });

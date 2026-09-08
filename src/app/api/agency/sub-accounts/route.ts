@@ -2,7 +2,10 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
-import { createSubAccountForAgency } from "@/lib/server/sub-accounts-service";
+import {
+  createSubAccountForAgency,
+  SubAccountLimitError,
+} from "@/lib/server/sub-accounts-service";
 import type { MemberStatus, Role } from "@/types";
 
 interface CreateBody {
@@ -146,8 +149,9 @@ export async function POST(request: Request) {
   const accountContact = contactCheck.value;
   const { agencyId, uid } = access;
 
-  const { subAccountId, accountNumber, billingStatus, checkoutUrl } =
-    await createSubAccountForAgency({
+  let created;
+  try {
+    created = await createSubAccountForAgency({
       agencyId,
       uid,
       email: access.email,
@@ -158,6 +162,15 @@ export async function POST(request: Request) {
       accountContact,
       skipDefaultPlanAssign: body.skipDefaultPlanAssign === true,
     });
+  } catch (err) {
+    // A plan ceiling is a billing answer, not a server fault: 402 with the
+    // message the customer needs, rather than a generic failure.
+    if (err instanceof SubAccountLimitError) {
+      return NextResponse.json({ error: err.message, code: err.code }, { status: 402 });
+    }
+    throw err;
+  }
+  const { subAccountId, accountNumber, billingStatus, checkoutUrl } = created;
 
   return NextResponse.json({
     subAccountId,

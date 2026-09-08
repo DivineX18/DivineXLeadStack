@@ -23,11 +23,22 @@ export const UNLIMITED_WEBSITE_SITES = -1;
  */
 export function effectiveWebsiteCap(
   data: { websiteMaxSites?: number | null } | null | undefined,
+  /**
+   * The plan's ceiling, used only when this workspace carries no explicit
+   * override. `null`/omitted keeps the historical default, so callers that
+   * don't know about plans (and every plan created before limits existed)
+   * behave exactly as before.
+   */
+  planMaxWebsites?: number | null,
 ): number {
   const override = data?.websiteMaxSites;
   if (typeof override === "number" && Number.isFinite(override)) {
     if (override === UNLIMITED_WEBSITE_SITES) return Infinity;
     if (override > 0) return Math.floor(override);
+  }
+  if (typeof planMaxWebsites === "number" && Number.isFinite(planMaxWebsites)) {
+    if (planMaxWebsites === UNLIMITED_WEBSITE_SITES) return Infinity;
+    if (planMaxWebsites > 0) return Math.floor(planMaxWebsites);
   }
   return MAX_WEBSITES_PER_SUBACCOUNT;
 }

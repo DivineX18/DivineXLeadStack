@@ -9,6 +9,7 @@ import { emailIsConfigured } from "@/lib/comms/resend";
 import { publishCallback, qstashIsConfigured } from "@/lib/automations/qstash";
 import { resolveMergeTags, validateEmailBody } from "@/lib/automations/merge-tags";
 import { resolveAudience } from "@/lib/broadcasts/audience";
+import { checkPlanLimit, recordPlanUsage } from "@/lib/billing/plan-limits";
 import type {
   BroadcastAudienceFilter,
   BroadcastDoc,
@@ -178,6 +179,29 @@ export async function POST(request: Request) {
     .slice(0, 200);
 
   const agencyId = templateSnap.data()?.agencyId as string;
+
+  // The plan's monthly email allowance, checked HERE rather than at the send
+  // wrapper. Broadcasts are where list volume actually lives, and the whole
+  // audience is known before a single message goes out — so the customer is
+  // told up front instead of discovering a half-sent batch. Transactional mail
+  // (booking confirmations, quotes, escalations) is deliberately NOT capped:
+  // silently withholding someone's booking confirmation because a marketing
+  // quota ran out would be a far worse failure than refusing the broadcast.
+  const emailAllowance = await checkPlanLimit({
+    agencyId,
+    kind: "emails",
+    amount: audience.recipients.length,
+  });
+  if (!emailAllowance.allowed) {
+    return NextResponse.json(
+      {
+        error: `${emailAllowance.message} This broadcast needs ${audience.recipients.length} emails.`,
+        code: "plan_limit_reached",
+      },
+      { status: 402 },
+    );
+  }
+
   const broadcastRef = db.collection("broadcasts").doc();
 
   const broadcast: Omit<BroadcastDoc, "id"> = {
@@ -309,6 +333,11 @@ export async function POST(request: Request) {
       { status: 502 },
     );
   }
+
+  // Count what was actually QUEUED, not the audience size — a publish failure
+  // means that email never goes out, so charging it against the allowance
+  // would bill the customer for our own outage.
+  await recordPlanUsage(agencyId, "emails", queuedCount);
 
   return NextResponse.json({
     ok: true,

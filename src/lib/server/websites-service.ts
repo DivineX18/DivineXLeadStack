@@ -3,6 +3,7 @@ import "server-only";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { effectiveWebsiteCap } from "@/lib/website/limits";
+import { resolvePlanLimits } from "@/lib/billing/plan-limits";
 import {
   validateWebsiteConfig,
   type ValidationErrors,
@@ -82,11 +83,15 @@ async function requireWebsiteEnabledSub(subAccountId: string): Promise<{
   if (!agencyId) {
     throw new WebsiteServiceError("Sub-account is missing agencyId.", 500);
   }
+  // The plan's website ceiling, with the per-workspace override still winning.
+  // Order matters: an owner who granted one client extra sites did so
+  // deliberately, and a plan default must not silently revoke that grant.
+  const planLimits = await resolvePlanLimits(agencyId);
   return {
     agencyId,
     name: data.name as string | undefined,
     data,
-    maxSites: effectiveWebsiteCap(data),
+    maxSites: effectiveWebsiteCap(data, planLimits.maxWebsites),
   };
 }
 

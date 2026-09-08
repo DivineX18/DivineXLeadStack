@@ -111,8 +111,43 @@ export interface BillingPlanDoc {
   publicSelfServeEnabled: boolean;
   stripeProductId: string | null;
   stripePriceId: string | null;
+  /**
+   * Usage ceilings. `null` means "no limit recorded" — every plan created
+   * before limits existed reads that way, and is deliberately treated as
+   * unlimited so this change can never retroactively wall an existing
+   * customer out of something they already paid for.
+   *
+   * WHY THESE FIVE. They are the only cost drivers that scale with use:
+   * workspaces and AI generations drive model spend, email drives Resend
+   * spend, websites drive the shared gitpage build quota. SMS and voice are
+   * deliberately absent — those run on the customer's own Twilio, so they
+   * cost the agency nothing and need no ceiling.
+   *
+   * Counted POOLED AT THE AGENCY, not per workspace: a per-workspace cap
+   * protects nothing when the plan also allows many workspaces.
+   */
+  limits?: PlanLimits;
   createdAt: Timestamp | FieldValue | Date | null;
   updatedAt: Timestamp | FieldValue | Date | null;
+}
+
+/**
+ * A plan's usage ceilings. Every field is nullable and null means unlimited,
+ * so a legacy plan document (which has none of them) behaves exactly as it
+ * did before limits shipped.
+ */
+export interface PlanLimits {
+  /** Client workspaces the agency may have at once. */
+  maxSubAccounts: number | null;
+  /** gitpage sites per workspace. Overridden per workspace by
+   *  `SubAccountDoc.websiteMaxSites` when an owner grants an exception. */
+  maxWebsites: number | null;
+  /** Emails per calendar month, pooled across every workspace. */
+  maxEmailsPerMonth: number | null;
+  /** Asset/copy generations per calendar month, pooled. */
+  maxAiGenerationsPerMonth: number | null;
+  /** Growth Scans per calendar month, pooled. Unified + Ascend only. */
+  maxGrowthScansPerMonth: number | null;
 }
 
 /** Wire shape returned by /api/agency/plans (timestamps → ISO strings). */

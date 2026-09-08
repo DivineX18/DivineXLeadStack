@@ -7,7 +7,17 @@ import {
   assignPlanToSubAccount,
   getDefaultPlanForAgency,
 } from "@/lib/server/billing-service";
+import { checkSubAccountLimit } from "@/lib/billing/plan-limits";
 import { GLOBAL_TERRITORY_ID } from "@/types";
+
+/**
+ * The plan's workspace ceiling was reached. A distinct type so the route can
+ * answer 402 with the customer-facing upgrade message rather than a generic
+ * 500 — a limit is a billing answer, not a failure.
+ */
+export class SubAccountLimitError extends Error {
+  readonly code = "plan_limit_reached" as const;
+}
 
 /**
  * Server-side sub-account creation — the single write path shared by the
@@ -181,6 +191,14 @@ export async function createSubAccountForAgency(
 ): Promise<CreateSubAccountResult> {
   const { agencyId, uid, email, displayName, name, slug, timezone, accountContact } =
     input;
+
+  // Plan ceiling, checked BEFORE the account-number counter is incremented so
+  // a refused create doesn't burn a number and leave a gap in the sequence.
+  // Unlimited plans and legacy plans without limits pass straight through.
+  const seat = await checkSubAccountLimit(agencyId);
+  if (!seat.allowed) {
+    throw new SubAccountLimitError(seat.message ?? "Workspace limit reached.");
+  }
 
   const db = getAdminDb();
   const subRef = db.collection("subAccounts").doc();
