@@ -2,6 +2,8 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import { requireSubAccountMember } from "@/lib/auth/require-tenancy";
+import { checkPlanLimit, recordPlanUsage } from "@/lib/billing/plan-limits";
+import { getAdminDb } from "@/lib/firebase/admin";
 import { evaluateWorkspaceEntitlements } from "@/lib/entitlements/evaluate-workspace-entitlements";
 import { getMappingBySubAccountId } from "@/lib/workspace/workspace-mappings-service";
 import { createAscendIntelligenceClient } from "@/lib/intelligence/ascend-intelligence-client";
@@ -51,6 +53,21 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   }
 
   const client = createAscendIntelligenceClient();
+  // The plan's monthly Growth Scan allowance. Checked before the scan is
+  // triggered so a customer at their ceiling is told now, rather than after a
+  // multi-minute scan has already run and been billed.
+  const agencyId =
+    ((await getAdminDb().doc(`subAccounts/${subAccountId}`).get()).data()?.agencyId as
+      | string
+      | undefined) ?? null;
+  const allowance = await checkPlanLimit({ agencyId, kind: "growthScans" });
+  if (!allowance.allowed) {
+    return NextResponse.json(
+      { error: allowance.message, code: "plan_limit_reached" },
+      { status: 402 },
+    );
+  }
+
   const result = await client.triggerGrowthScan(String(mapping.primaryAscendBusinessProfileId), websiteUrl);
 
   if (!result.ok) {
@@ -63,6 +80,10 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
       502;
     return NextResponse.json({ error: result.message, code: result.code }, { status });
   }
+
+  // Counted once the scan is genuinely running — a refused or failed trigger
+  // must not consume the customer's allowance.
+  await recordPlanUsage(agencyId, "growthScans");
 
   return NextResponse.json({ jobId: result.jobId, status: "processing" }, { status: 202 });
 }

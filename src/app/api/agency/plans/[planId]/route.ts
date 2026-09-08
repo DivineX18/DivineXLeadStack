@@ -5,6 +5,7 @@ import { requireAgencyOwnerAny } from "@/lib/auth/require-tenancy";
 import {
   BillingError,
   normalizePlanGates,
+  normalizePlanLimits,
   setDefaultPlanForAgency,
   updatePlanForAgency,
   validatePlanPricing,
@@ -75,6 +76,9 @@ export async function PATCH(
   }
   if (body.gates !== undefined) {
     patch.gates = normalizePlanGates(body.gates);
+  }
+  if (body.limits !== undefined) {
+    patch.limits = normalizePlanLimits(body.limits);
   }
   if (body.status === "active" || body.status === "archived") {
     patch.status = body.status;

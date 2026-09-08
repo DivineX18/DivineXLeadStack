@@ -8,6 +8,7 @@ import {
   createPlanForAgency,
   listPlansForAgency,
   normalizePlanGates,
+  normalizePlanLimits,
   validatePlanPricing,
 } from "@/lib/server/billing-service";
 
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
       priceMonthlyCents,
       currency,
       gates: normalizePlanGates(body.gates),
+      ...(body.limits !== undefined ? { limits: normalizePlanLimits(body.limits) } : {}),
     });
     return NextResponse.json({ plan }, { status: 201 });
   } catch (err) {

@@ -13,6 +13,7 @@ import {
   type BillingPlanDoc,
   type BillingPlanResponse,
   type PlanGates,
+  type PlanLimits,
   type SubAccountBilling,
   type SubAccountBillingStatus,
 } from "@/types/billing";
@@ -127,6 +128,33 @@ export function normalizePlanGates(input: unknown): PlanGates {
   return gates;
 }
 
+const LIMIT_KEYS = [
+  "maxSubAccounts",
+  "maxWebsites",
+  "maxEmailsPerMonth",
+  "maxAiGenerationsPerMonth",
+  "maxGrowthScansPerMonth",
+] as const;
+
+/**
+ * Normalize an untrusted limits payload.
+ *
+ * Anything that isn't a positive whole number becomes `null` — which means
+ * unlimited. That is the safe direction to round: a malformed payload gives a
+ * customer more than intended (recoverable, and visible in the cost data)
+ * rather than walling a paying customer out on a parse error.
+ */
+export function normalizePlanLimits(input: unknown): PlanLimits {
+  const source = (input ?? {}) as Record<string, unknown>;
+  const limits = {} as PlanLimits;
+  for (const key of LIMIT_KEYS) {
+    const raw = source[key];
+    limits[key] =
+      typeof raw === "number" && Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : null;
+  }
+  return limits;
+}
+
 export function validatePlanPricing(
   priceMonthlyCents: unknown,
   currency: unknown,
@@ -170,6 +198,9 @@ export async function createPlanForAgency(input: {
   priceMonthlyCents: number;
   currency: string;
   gates: PlanGates;
+  /** Usage ceilings. Omitted = no limits recorded = unlimited, which is what
+   *  every plan created before limits existed reads as. */
+  limits?: PlanLimits;
 }): Promise<BillingPlanResponse> {
   if (!billingStripeIsConfigured()) {
     throw new BillingError(
@@ -205,6 +236,7 @@ export async function createPlanForAgency(input: {
     priceMonthlyCents: input.priceMonthlyCents,
     currency: input.currency,
     gates: input.gates,
+    ...(input.limits ? { limits: input.limits } : {}),
     status: "active",
     isDefault: false,
     publicSelfServeEnabled: false,
@@ -225,6 +257,7 @@ export async function updatePlanForAgency(input: {
   description?: string | null;
   priceMonthlyCents?: number;
   gates?: PlanGates;
+  limits?: PlanLimits;
   status?: "active" | "archived";
   publicSelfServeEnabled?: boolean;
 }): Promise<BillingPlanResponse> {
@@ -239,6 +272,9 @@ export async function updatePlanForAgency(input: {
   if (typeof input.name === "string") updates.name = input.name;
   if (input.description !== undefined) updates.description = input.description;
   if (input.gates) updates.gates = input.gates;
+  // Limits are replaced wholesale, not merged: a partial merge would leave a
+  // stale ceiling from a previous tier silently in force on the new one.
+  if (input.limits) updates.limits = input.limits;
   if (input.status) updates.status = input.status;
   if (typeof input.publicSelfServeEnabled === "boolean") {
     updates.publicSelfServeEnabled = input.publicSelfServeEnabled;
