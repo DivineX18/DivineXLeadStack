@@ -80,6 +80,12 @@ export async function PATCH(
   if (body.limits !== undefined) {
     patch.limits = normalizePlanLimits(body.limits);
   }
+  if (body.trialDays !== undefined) {
+    patch.trialDays =
+      typeof body.trialDays === "number" && body.trialDays > 0
+        ? Math.floor(body.trialDays)
+        : null;
+  }
   if (body.status === "active" || body.status === "archived") {
     patch.status = body.status;
   }

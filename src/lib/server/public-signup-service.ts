@@ -89,6 +89,7 @@ export async function getPublicPlans(): Promise<{
       const features = PLAN_GATE_KEYS.filter((k) => gates[k] === true).map(
         (k) => PLAN_GATE_LABELS[k],
       );
+      const trialRaw = data.trialDays;
       const summary: PublicPlanSummary = {
         id: d.id,
         name: String(data.name ?? ""),
@@ -96,6 +97,10 @@ export async function getPublicPlans(): Promise<{
         priceMonthlyCents: Number(data.priceMonthlyCents ?? 0),
         currency: String(data.currency ?? "usd"),
         features,
+        trialDays:
+          typeof trialRaw === "number" && Number.isFinite(trialRaw) && trialRaw > 0
+            ? Math.floor(trialRaw)
+            : null,
       };
       return summary;
     })
@@ -144,6 +149,16 @@ export async function createPublicSignupCheckoutSession(input: {
     agencyId,
     planId: input.planId,
   };
+  // A trial starts the subscription in Stripe's `trialing` state at $0 while
+  // still collecting the card, so conversion at day 14 is automatic and there
+  // is no second "now add a card" step to lose people at. Stripe remains
+  // authoritative for the transition — the webhook already maps `trialing` and
+  // `active` through the same subscription-status path.
+  const trialDays =
+    typeof plan.trialDays === "number" && plan.trialDays > 0
+      ? Math.floor(plan.trialDays)
+      : null;
+
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     line_items: [{ price: plan.stripePriceId, quantity: 1 }],
@@ -158,7 +173,22 @@ export async function createPublicSignupCheckoutSession(input: {
       },
     ],
     metadata,
-    subscription_data: { metadata },
+    // ONE subscription_data. The trial fields are merged in here rather than
+    // spread separately, because a second `subscription_data` key would
+    // silently overwrite the first and drop the trial.
+    subscription_data: {
+      metadata,
+      ...(trialDays
+        ? {
+            trial_period_days: trialDays,
+            // If the card is gone by the time the trial ends, cancel rather
+            // than leaving an unpayable subscription open.
+            trial_settings: {
+              end_behavior: { missing_payment_method: "cancel" as const },
+            },
+          }
+        : {}),
+    },
   });
   if (!session.url) {
     throw new BillingError("Stripe did not return a checkout URL.", 502);

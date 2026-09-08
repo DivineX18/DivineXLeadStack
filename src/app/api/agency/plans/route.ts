@@ -76,6 +76,9 @@ export async function POST(request: Request) {
       currency,
       gates: normalizePlanGates(body.gates),
       ...(body.limits !== undefined ? { limits: normalizePlanLimits(body.limits) } : {}),
+      ...(typeof body.trialDays === "number" && body.trialDays > 0
+        ? { trialDays: Math.floor(body.trialDays) }
+        : {}),
     });
     return NextResponse.json({ plan }, { status: 201 });
   } catch (err) {

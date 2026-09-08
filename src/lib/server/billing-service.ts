@@ -201,6 +201,8 @@ export async function createPlanForAgency(input: {
   /** Usage ceilings. Omitted = no limits recorded = unlimited, which is what
    *  every plan created before limits existed reads as. */
   limits?: PlanLimits;
+  /** Free-trial days for self-serve signup. Omitted = no trial. */
+  trialDays?: number | null;
 }): Promise<BillingPlanResponse> {
   if (!billingStripeIsConfigured()) {
     throw new BillingError(
@@ -237,6 +239,7 @@ export async function createPlanForAgency(input: {
     currency: input.currency,
     gates: input.gates,
     ...(input.limits ? { limits: input.limits } : {}),
+    ...(typeof input.trialDays === "number" ? { trialDays: input.trialDays } : {}),
     status: "active",
     isDefault: false,
     publicSelfServeEnabled: false,
@@ -258,6 +261,7 @@ export async function updatePlanForAgency(input: {
   priceMonthlyCents?: number;
   gates?: PlanGates;
   limits?: PlanLimits;
+  trialDays?: number | null;
   status?: "active" | "archived";
   publicSelfServeEnabled?: boolean;
 }): Promise<BillingPlanResponse> {
@@ -275,6 +279,7 @@ export async function updatePlanForAgency(input: {
   // Limits are replaced wholesale, not merged: a partial merge would leave a
   // stale ceiling from a previous tier silently in force on the new one.
   if (input.limits) updates.limits = input.limits;
+  if (input.trialDays !== undefined) updates.trialDays = input.trialDays;
   if (input.status) updates.status = input.status;
   if (typeof input.publicSelfServeEnabled === "boolean") {
     updates.publicSelfServeEnabled = input.publicSelfServeEnabled;

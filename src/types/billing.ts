@@ -127,6 +127,16 @@ export interface BillingPlanDoc {
    * protects nothing when the plan also allows many workspaces.
    */
   limits?: PlanLimits;
+  /**
+   * Free-trial length in days for self-serve signup. `null`/absent = no trial,
+   * which is what every existing plan reads as.
+   *
+   * The card IS collected at signup and the subscription simply starts in
+   * Stripe's `trialing` state at $0 — so conversion is automatic at day 14 and
+   * there is no second "now add a card" step to lose people at. Cancelling
+   * during the trial prevents the first charge.
+   */
+  trialDays?: number | null;
   createdAt: Timestamp | FieldValue | Date | null;
   updatedAt: Timestamp | FieldValue | Date | null;
 }
@@ -178,6 +188,13 @@ export interface PublicPlanSummary {
   currency: string;
   /** Human-readable feature list, derived from PLAN_GATE_LABELS. */
   features: string[];
+  /**
+   * Free-trial days, or null when the plan has none. Public because the
+   * pricing page must disclose the trial AND the price that begins after it
+   * BEFORE checkout — a trial the customer only discovers on the Stripe page
+   * is the kind of surprise that produces chargebacks.
+   */
+  trialDays: number | null;
 }
 
 /**

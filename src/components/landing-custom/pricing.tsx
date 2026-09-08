@@ -134,8 +134,14 @@ export function Pricing({
                       )}
                     </div>
                     {!isFree && (
+                      // The trial and the price that begins after it are
+                      // disclosed HERE, before checkout — a customer who only
+                      // discovers the auto-conversion on the Stripe page is the
+                      // kind of surprise that turns into a chargeback.
                       <p className="text-xs text-muted-foreground">
-                        Billed monthly · cancel anytime
+                        {plan.trialDays
+                          ? `${plan.trialDays} days free, then ${price}/mo. Cancel anytime during the trial and you won't be charged.`
+                          : "Billed monthly · cancel anytime"}
                       </p>
                     )}
                   </CardHeader>
@@ -174,6 +180,8 @@ export function Pricing({
                           <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
                           Starting checkout…
                         </>
+                      ) : plan.trialDays ? (
+                        `Start ${plan.trialDays}-day free trial`
                       ) : (
                         "Get started"
                       )}
