@@ -28,6 +28,7 @@ import {
   type PlanGates,
   type PublicPlanSummary,
   type SubAccountBillingStatus,
+  type PlanProduct,
 } from "@/types/billing";
 
 /**
@@ -69,7 +70,7 @@ async function resolveSingleAgencyId(): Promise<string | null> {
  * Deliberately returns a public-safe shape — no raw gate keys, no Stripe
  * ids.
  */
-export async function getPublicPlans(): Promise<{
+export async function getPublicPlans(product: PlanProduct = "flow"): Promise<{
   agencyId: string | null;
   plans: PublicPlanSummary[];
 }> {
@@ -83,6 +84,10 @@ export async function getPublicPlans(): Promise<{
     .get();
 
   const plans = snap.docs
+    // A plan with no `product` is a Flow plan — that is what every plan
+    // predating the Unified surface actually is, so filtering this way never
+    // moves an existing plan off the page it already sells on.
+    .filter((d) => ((d.data().product as PlanProduct | undefined) ?? "flow") === product)
     .map((d) => {
       const data = d.data();
       const gates = (data.gates ?? {}) as Record<string, boolean>;

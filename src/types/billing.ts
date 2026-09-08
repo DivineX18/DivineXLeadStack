@@ -137,9 +137,24 @@ export interface BillingPlanDoc {
    * during the trial prevents the first charge.
    */
   trialDays?: number | null;
+  /**
+   * Which product's pricing page sells this plan.
+   *
+   * One agency owns one plan collection, but this deployment sells two
+   * products from it (Flow on crm.divinex.io, Unified on app.divinex.io).
+   * Without this, every pricing page would list every plan and a Flow visitor
+   * would be offered Unified tiers.
+   *
+   * Absent reads as "flow", which is what every plan created before this
+   * existed actually is — so no existing plan changes where it appears.
+   */
+  product?: PlanProduct;
   createdAt: Timestamp | FieldValue | Date | null;
   updatedAt: Timestamp | FieldValue | Date | null;
 }
+
+/** The product surface a plan is sold on. */
+export type PlanProduct = "flow" | "unified";
 
 /**
  * A plan's usage ceilings. Every field is nullable and null means unlimited,

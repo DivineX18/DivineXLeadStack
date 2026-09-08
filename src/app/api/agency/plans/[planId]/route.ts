@@ -80,6 +80,9 @@ export async function PATCH(
   if (body.limits !== undefined) {
     patch.limits = normalizePlanLimits(body.limits);
   }
+  if (body.product === "unified" || body.product === "flow") {
+    patch.product = body.product;
+  }
   if (body.trialDays !== undefined) {
     patch.trialDays =
       typeof body.trialDays === "number" && body.trialDays > 0

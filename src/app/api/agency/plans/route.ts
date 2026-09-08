@@ -79,6 +79,9 @@ export async function POST(request: Request) {
       ...(typeof body.trialDays === "number" && body.trialDays > 0
         ? { trialDays: Math.floor(body.trialDays) }
         : {}),
+      ...(body.product === "unified" || body.product === "flow"
+        ? { product: body.product }
+        : {}),
     });
     return NextResponse.json({ plan }, { status: 201 });
   } catch (err) {

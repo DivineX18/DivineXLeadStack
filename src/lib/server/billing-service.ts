@@ -14,6 +14,7 @@ import {
   type BillingPlanResponse,
   type PlanGates,
   type PlanLimits,
+  type PlanProduct,
   type SubAccountBilling,
   type SubAccountBillingStatus,
 } from "@/types/billing";
@@ -203,6 +204,8 @@ export async function createPlanForAgency(input: {
   limits?: PlanLimits;
   /** Free-trial days for self-serve signup. Omitted = no trial. */
   trialDays?: number | null;
+  /** Which pricing page sells it. Omitted = "flow". */
+  product?: PlanProduct;
 }): Promise<BillingPlanResponse> {
   if (!billingStripeIsConfigured()) {
     throw new BillingError(
@@ -240,6 +243,7 @@ export async function createPlanForAgency(input: {
     gates: input.gates,
     ...(input.limits ? { limits: input.limits } : {}),
     ...(typeof input.trialDays === "number" ? { trialDays: input.trialDays } : {}),
+    ...(input.product ? { product: input.product } : {}),
     status: "active",
     isDefault: false,
     publicSelfServeEnabled: false,
@@ -262,6 +266,7 @@ export async function updatePlanForAgency(input: {
   gates?: PlanGates;
   limits?: PlanLimits;
   trialDays?: number | null;
+  product?: PlanProduct;
   status?: "active" | "archived";
   publicSelfServeEnabled?: boolean;
 }): Promise<BillingPlanResponse> {
@@ -280,6 +285,7 @@ export async function updatePlanForAgency(input: {
   // stale ceiling from a previous tier silently in force on the new one.
   if (input.limits) updates.limits = input.limits;
   if (input.trialDays !== undefined) updates.trialDays = input.trialDays;
+  if (input.product) updates.product = input.product;
   if (input.status) updates.status = input.status;
   if (typeof input.publicSelfServeEnabled === "boolean") {
     updates.publicSelfServeEnabled = input.publicSelfServeEnabled;

@@ -4,6 +4,7 @@ import { LANDING_VARIANT } from "@/config/landing";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import { resolveHeroVariant } from "@/lib/hero-variant-server";
 import { getPublicPlans } from "@/lib/server/public-signup-service";
+import { resolveProductSurface } from "@/lib/landing/resolve-product-surface";
 import { billingStripeIsConfigured } from "@/lib/server/billing-service";
 
 import { AnnouncementBar } from "@/components/landing/announcement-bar";
@@ -90,7 +91,7 @@ export default async function HomePage() {
   if (LANDING_VARIANT === "custom") {
     const [brand, { plans }] = await Promise.all([
       resolveCustomBrand(),
-      getPublicPlans(),
+      getPublicPlans(await resolveProductSurface()),
     ]);
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
     return (

@@ -1,5 +1,6 @@
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import { getPublicPlans } from "@/lib/server/public-signup-service";
+import { resolveProductSurface } from "@/lib/landing/resolve-product-surface";
 import { billingStripeIsConfigured } from "@/lib/server/billing-service";
 import { OrganizationSchema, ProductSchema } from "@/components/landing-custom/site-schema";
 import { FaqAccordion, type FaqItem } from "@/components/landing-custom/faq-accordion";
@@ -107,7 +108,7 @@ const CONSOLIDATES = [
 export default async function PricingPage() {
   const [brand, { plans }] = await Promise.all([
     resolveCustomBrand(),
-    getPublicPlans(),
+    getPublicPlans(await resolveProductSurface()),
   ]);
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
   const faqSchema = {
