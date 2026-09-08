@@ -89,11 +89,7 @@ export async function POST(
   // The plan's monthly generation allowance. Checked before the job is
   // started, so a customer at their ceiling is told immediately rather than
   // watching a spinner for a job that will bill and then be refused.
-  const agencyId =
-    ((await getAdminDb().doc(`subAccounts/${subAccountId}`).get()).data()?.agencyId as
-      | string
-      | undefined) ?? null;
-  const allowance = await checkPlanLimit({ agencyId, kind: "aiGenerations" });
+  const allowance = await checkPlanLimit({ subAccountId, kind: "aiGenerations" });
   if (!allowance.allowed) {
     return NextResponse.json(
       { error: allowance.message, code: "plan_limit_reached" },
@@ -123,7 +119,7 @@ export async function POST(
   // Counted on a successful START, and only when the job is genuinely new:
   // a `reused` response means the caller double-clicked into the job already
   // running, which must not consume a second unit of their allowance.
-  if (res.data.reused !== true) await recordPlanUsage(agencyId, "aiGenerations");
+  if (res.data.reused !== true) await recordPlanUsage(subAccountId, "aiGenerations");
 
   // 202, not 201: nothing has been created yet.
   return NextResponse.json({ jobId: res.data.jobId, status: "processing" }, { status: 202 });

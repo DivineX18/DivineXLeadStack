@@ -56,11 +56,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   // The plan's monthly Growth Scan allowance. Checked before the scan is
   // triggered so a customer at their ceiling is told now, rather than after a
   // multi-minute scan has already run and been billed.
-  const agencyId =
-    ((await getAdminDb().doc(`subAccounts/${subAccountId}`).get()).data()?.agencyId as
-      | string
-      | undefined) ?? null;
-  const allowance = await checkPlanLimit({ agencyId, kind: "growthScans" });
+  const allowance = await checkPlanLimit({ subAccountId, kind: "growthScans" });
   if (!allowance.allowed) {
     return NextResponse.json(
       { error: allowance.message, code: "plan_limit_reached" },
@@ -83,7 +79,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
 
   // Counted once the scan is genuinely running — a refused or failed trigger
   // must not consume the customer's allowance.
-  await recordPlanUsage(agencyId, "growthScans");
+  await recordPlanUsage(subAccountId, "growthScans");
 
   return NextResponse.json({ jobId: result.jobId, status: "processing" }, { status: 202 });
 }

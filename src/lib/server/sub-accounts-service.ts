@@ -61,6 +61,15 @@ export interface CreateSubAccountInput {
    *     for before the client has agreed to anything.
    */
   skipDefaultPlanAssign?: boolean;
+  /**
+   * Skip the workspace SEAT ceiling.
+   *
+   * Set only where the workspace has already been paid for — the self-serve
+   * checkout webhook. There the purchase itself is the authorization, and
+   * refusing on a seat count would take the customer's money and then leave
+   * them without the workspace they bought.
+   */
+  skipSeatCheck?: boolean;
 }
 
 export interface CreateSubAccountResult {
@@ -195,9 +204,15 @@ export async function createSubAccountForAgency(
   // Plan ceiling, checked BEFORE the account-number counter is incremented so
   // a refused create doesn't burn a number and leave a gap in the sequence.
   // Unlimited plans and legacy plans without limits pass straight through.
-  const seat = await checkSubAccountLimit(agencyId);
-  if (!seat.allowed) {
-    throw new SubAccountLimitError(seat.message ?? "Workspace limit reached.");
+  // Skipped on the self-serve purchase path: the customer just paid for THIS
+  // workspace, so the purchase is the authorization. Without this a repeat
+  // buyer's second subscription would clear Stripe and then fail provisioning
+  // against the seat ceiling of the plan they already hold.
+  if (!input.skipSeatCheck) {
+    const seat = await checkSubAccountLimit({ agencyId, creatorUid: uid });
+    if (!seat.allowed) {
+      throw new SubAccountLimitError(seat.message ?? "Workspace limit reached.");
+    }
   }
 
   const db = getAdminDb();

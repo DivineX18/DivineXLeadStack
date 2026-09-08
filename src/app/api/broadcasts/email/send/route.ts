@@ -188,7 +188,7 @@ export async function POST(request: Request) {
   // silently withholding someone's booking confirmation because a marketing
   // quota ran out would be a far worse failure than refusing the broadcast.
   const emailAllowance = await checkPlanLimit({
-    agencyId,
+    subAccountId,
     kind: "emails",
     amount: audience.recipients.length,
   });
@@ -337,7 +337,7 @@ export async function POST(request: Request) {
   // Count what was actually QUEUED, not the audience size — a publish failure
   // means that email never goes out, so charging it against the allowance
   // would bill the customer for our own outage.
-  await recordPlanUsage(agencyId, "emails", queuedCount);
+  await recordPlanUsage(subAccountId, "emails", queuedCount);
 
   return NextResponse.json({
     ok: true,

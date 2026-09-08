@@ -86,7 +86,8 @@ async function requireWebsiteEnabledSub(subAccountId: string): Promise<{
   // The plan's website ceiling, with the per-workspace override still winning.
   // Order matters: an owner who granted one client extra sites did so
   // deliberately, and a plan default must not silently revoke that grant.
-  const planLimits = await resolvePlanLimits(agencyId);
+  // Resolved from THIS workspace's own plan; `data` is already loaded above.
+  const planLimits = await resolvePlanLimits(subAccountId, data);
   return {
     agencyId,
     name: data.name as string | undefined,

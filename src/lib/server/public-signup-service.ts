@@ -323,6 +323,9 @@ export async function handlePublicSelfServeSignupCheckoutCompleted(
       timezone: "UTC",
       accountContact: { name: null, email, phone: null },
       skipDefaultPlanAssign: true,
+      // The buyer has already paid for this workspace; the purchase is the
+      // authorization, not a seat count.
+      skipSeatCheck: true,
     });
     const subAccountId = createResult.subAccountId;
 
