@@ -43,9 +43,7 @@ export function BeforeAfterFlow({
           <p className="text-sm font-semibold uppercase tracking-wide text-primary">Before vs. After</p>
           <h2 className="mt-2 text-3xl font-semibold tracking-tighter sm:text-5xl">
             What actually changes{" "}
-            <span className="font-serif font-normal italic">
-              with {unified ? "Ascend + Flow" : brand.name}
-            </span>
+            <span className="font-serif font-normal italic">with {brand.name}</span>
           </h2>
         </div>
 

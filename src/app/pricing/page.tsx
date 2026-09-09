@@ -1,6 +1,6 @@
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import { getPublicPlans } from "@/lib/server/public-signup-service";
-import { resolveProductSurface } from "@/lib/landing/resolve-product-surface";
+import { resolveProductSurface, brandForProduct } from "@/lib/landing/resolve-product-surface";
 import { billingStripeIsConfigured } from "@/lib/server/billing-service";
 import { OrganizationSchema, ProductSchema } from "@/components/landing-custom/site-schema";
 import { FaqAccordion, type FaqItem } from "@/components/landing-custom/faq-accordion";
@@ -106,10 +106,13 @@ const CONSOLIDATES = [
  * page without a top-level heading at all).
  */
 export default async function PricingPage() {
-  const [brand, { plans }] = await Promise.all([
+  const product = await resolveProductSurface();
+  const [rawBrand, { plans }] = await Promise.all([
     resolveCustomBrand(),
-    getPublicPlans(await resolveProductSurface()),
+    getPublicPlans(product),
   ]);
+  // The Unified site must call itself Unified, not Flow. Logo untouched.
+  const brand = brandForProduct(rawBrand, product);
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
   const faqSchema = {
     "@context": "https://schema.org",

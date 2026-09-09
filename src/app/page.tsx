@@ -4,7 +4,7 @@ import { LANDING_VARIANT } from "@/config/landing";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import { resolveHeroVariant } from "@/lib/hero-variant-server";
 import { getPublicPlans } from "@/lib/server/public-signup-service";
-import { resolveProductSurface } from "@/lib/landing/resolve-product-surface";
+import { resolveProductSurface, brandForProduct } from "@/lib/landing/resolve-product-surface";
 import { billingStripeIsConfigured } from "@/lib/server/billing-service";
 
 import { AnnouncementBar } from "@/components/landing/announcement-bar";
@@ -90,10 +90,12 @@ export default async function HomePage() {
 
   if (LANDING_VARIANT === "custom") {
     const product = await resolveProductSurface();
-    const [brand, { plans }] = await Promise.all([
+    const [rawBrand, { plans }] = await Promise.all([
       resolveCustomBrand(),
       getPublicPlans(product),
     ]);
+    // The Unified site must call itself Unified, not Flow. Logo untouched.
+    const brand = brandForProduct(rawBrand, product);
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
     return (
       <div className="marketing-accent flex min-h-screen flex-col">
