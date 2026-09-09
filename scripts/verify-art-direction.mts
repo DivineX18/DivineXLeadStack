@@ -192,6 +192,16 @@ const dentalOut = applyArtDirection(sampleSections(), deriveArtDirection({ trans
   check("9a. calm page: NO two adjacent beats share a surface", !adjacentClash, surfaces.join(" | "));
   check("9b. calm page: every rendered beat has an explicit surface", !surfaces.includes("UNASSIGNED"));
   check("9c. calm page: the alternator never introduces dark/high-contrast", calmOut.every((x) => x.canvas !== "dark_immersive" && x.canvas !== "high_contrast_cta"));
+  // REGRESSION GUARD. The alternator used to `find` the first surface differing
+  // from the previous beat, which oscillated between exactly two surfaces and
+  // left the third unreachable at any page length — the two-tone pulse that
+  // made long pages read as generated. A rotating cursor must actually spend
+  // all three.
+  check(
+    "9c-2. the alternator ROTATES: a 5-beat page uses 3 distinct surfaces, not 2",
+    new Set(surfaces.filter((s) => s !== "accent:self")).size >= 3,
+    surfaces.join(" | "),
+  );
 
   // Urgent register: explicit register decisions (dark band) preserved.
   const urgent = deriveArtDirection({ transformation: "panic_to_relief" });

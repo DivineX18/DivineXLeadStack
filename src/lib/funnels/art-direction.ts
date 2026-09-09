@@ -491,11 +491,38 @@ export function applySalesArgument(
  * distinct surfaces. Null-rendered sections are skipped entirely so they never
  * break the alternation chain.
  */
+/**
+ * Soft surface ROTATIONS, ordered per register.
+ *
+ * All three registers use the same three surfaces — the alternator must never
+ * introduce a dark or high-contrast band on its own (that stays an explicit
+ * register decision in `applyArtDirection`, so a calm brand can never be handed
+ * an urgent surface by the fallback). Only the ORDER differs, which is what
+ * makes the sequencing profile-aware: an urgent page opens its unassigned beats
+ * on the tinted surface, a calm page opens on the plainest one.
+ */
+const SOFT_ROTATION: Record<CampaignEnergy, SectionCanvas[]> = {
+  calm: ["clean", "warm_paper", "brand_tint"],
+  balanced: ["warm_paper", "clean", "brand_tint"],
+  urgent: ["brand_tint", "clean", "warm_paper"],
+};
+
 export function enforceFoldDifferentiation(
   sections: FunnelSection[],
   profile: ArtDirectionProfile,
 ): FunnelSection[] {
-  const soft: SectionCanvas[] = ["warm_paper", "clean", "brand_tint"];
+  // A ROTATING CURSOR, not a search.
+  //
+  // This previously read `soft.find((c) => c !== prev)`, which returns the
+  // FIRST surface differing from the previous beat — so it oscillated between
+  // exactly two surfaces (warm_paper, clean, warm_paper, clean…) and the third
+  // was unreachable no matter how long the page got. Every long page therefore
+  // pulsed between two nearly identical tones, which is the "sequence of
+  // similarly composed sections" that made generated pages read as generated.
+  // A cursor that advances every assignment uses the whole rotation, so a
+  // six-beat page moves through three distinct surfaces instead of two.
+  const rotation = SOFT_ROTATION[profile.energy] ?? SOFT_ROTATION.balanced;
+  let cursor = 0;
   let prev: string | null = null; // previous rendered beat's surface signature
   return sections.map((s) => {
     if (!sectionHasRenderableContent(s)) return s;
@@ -503,8 +530,16 @@ export function enforceFoldDifferentiation(
     if (s.type === "hero") { prev = "hero:self"; return s; }
     if ((s.config as { variant?: string }).variant === "full_bleed_close") { prev = "accent:self"; return s; }
     if (s.canvas) { prev = s.canvas; return s; } // explicit register decision wins
-    // Assign the first soft surface that differs from the previous beat.
-    const next = soft.find((c) => c !== prev) ?? "clean";
+    // Advance to the next surface in the rotation, skipping one if it would
+    // repeat the previous beat (an explicit register decision can leave the
+    // cursor pointing at the surface just used). The rotation has three
+    // entries, so at most one skip is ever needed and the law always holds.
+    let next = rotation[cursor % rotation.length];
+    if (next === prev) {
+      cursor += 1;
+      next = rotation[cursor % rotation.length];
+    }
+    cursor += 1;
     prev = next;
     return { ...s, canvas: next };
   });
