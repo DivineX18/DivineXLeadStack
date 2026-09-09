@@ -338,6 +338,27 @@ const DECISION_SUPPORT_STAGES: { minComplexity: "high" | "enterprise"; stage: Fr
 ];
 
 /**
+ * Hero layout precedence — extracted so it is testable, because getting it
+ * wrong is invisible until a page renders.
+ *
+ * An archetype's generic default silently overwrote the framework's
+ * offer-aware decision (a lead magnet pairs its asset with the capture via
+ * `split`), so the composed layout never reached Firestore and the cover
+ * stacked above the form. Order: an EXPLICIT choice wins (deliberate intent),
+ * then the framework's composed decision, then the archetype/genre default.
+ */
+export function resolveHeroLayout(input: {
+  /** Explicit hero_layout from the model/operator. */
+  explicit?: string | null;
+  /** Layout the framework composed for this offer shape. */
+  composed?: string | null;
+  /** Archetype/genre default. */
+  fallback?: string | null;
+}): string | null {
+  return input.explicit || input.composed || input.fallback || null;
+}
+
+/**
  * OFFER SHAPE — what is actually being sold, as opposed to which funnel genre
  * was picked. Two lead_gen pages can be a done-for-you service and a $19 ebook;
  * they need different conversion architecture, and nothing downstream knew the

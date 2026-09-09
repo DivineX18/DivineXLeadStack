@@ -128,5 +128,28 @@ check("3d. a LEAN page is never re-inflated by offer shape",
   check("4b. a non-lead-magnet build is untouched", plain.layout === undefined);
 }
 
+// ── 5. Hero layout precedence (regression for the persisted-layout P1) ─────
+// The archetype default used to overwrite the framework's offer-aware choice,
+// so a lead magnet persisted `centered` and its cover stacked above the form.
+{
+  const { resolveHeroLayout } = await import("../src/lib/funnels/frameworks.ts");
+  const composedLM = (buildFrameworkSections("lead_magnet", undefined, "standard", "low", "lead_magnet")[0]
+    .config as { layout?: string }).layout ?? null;
+
+  check("5a. lead_magnet composed split SURVIVES the archetype default",
+    resolveHeroLayout({ explicit: null, composed: composedLM, fallback: "centered" }) === "split",
+    `composed=${composedLM}`);
+
+  check("5b. an EXPLICIT hero_layout still overrides the composed choice",
+    resolveHeroLayout({ explicit: "background_image", composed: "split", fallback: "centered" }) === "background_image");
+
+  check("5c. non-lead-magnet composes nothing, so the fallback is unchanged",
+    (buildFrameworkSections("lead_gen")[0].config as { layout?: string }).layout === undefined &&
+      resolveHeroLayout({ explicit: null, composed: null, fallback: "centered" }) === "centered");
+
+  check("5d. nothing anywhere yields null (caller omits layout entirely)",
+    resolveHeroLayout({ explicit: null, composed: null, fallback: null }) === null);
+}
+
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);

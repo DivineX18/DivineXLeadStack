@@ -79,7 +79,7 @@ import type { OfferConfig, IncludedConfig, BenefitsGridConfig, CtaBannerConfig, 
 import { imageryConfigured, searchSubjectImages } from "@/lib/funnels/imagery";
 import { inferAuthenticityCategory, stockAllowedFor, assetManifest, TRUST_QUESTIONS } from "@/lib/funnels/authenticity";
 import type { DesignPackId } from "@/lib/funnels/design-packs";
-import { FUNNEL_FRAMEWORKS, computeDecisionComplexity, computePersuasionDepth, type DecisionComplexity } from "@/lib/funnels/frameworks";
+import { FUNNEL_FRAMEWORKS, computeDecisionComplexity, computePersuasionDepth, resolveHeroLayout, type DecisionComplexity } from "@/lib/funnels/frameworks";
 import {
   EMOTIONAL_TRANSFORMATIONS,
   applyArtDirection,
@@ -4758,8 +4758,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               // intent), then the framework's composed decision, then the
               // archetype/genre default.
               ...(() => {
-                const composed = (section.config as HeroConfig).layout;
-                const effective = (args.heroLayout as string) || composed || heroLayout;
+                const effective = resolveHeroLayout({
+                  explicit: args.heroLayout as string | null,
+                  composed: (section.config as HeroConfig).layout ?? null,
+                  fallback: heroLayout,
+                });
                 return effective ? { layout: effective as HeroConfig["layout"] } : {};
               })(),
               // One-fold genres (e.g. lead_magnet) carry the offer directly
