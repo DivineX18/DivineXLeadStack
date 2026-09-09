@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
+import { brandForProduct, resolveProductSurface } from "@/lib/landing/resolve-product-surface";
 
 export const metadata = {
   title: "Privacy Policy",
@@ -17,7 +18,10 @@ export const metadata = {
  * asserted — see Section 14 — pending confirmation from DivineX.
  */
 export default async function PrivacyPage() {
-  const brand = await resolveCustomBrand();
+  // Host-aware: the policy named itself Flow on BOTH hosts, so an Ascend
+  // customer clicked Privacy from an Ascend page and read about a different
+  // product. Carriers reconcile the opt-in page against this document.
+  const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   const supportMailto = `mailto:${brand.supportEmail}`;
 
   return (
@@ -133,6 +137,27 @@ export default async function PrivacyPage() {
           where you&rsquo;ve enabled AI features; provide customer support;
           maintain security and prevent abuse; and communicate with you
           about the Service. We do not sell your personal information.
+        </p>
+
+        {/* Carrier / CTIA requirement for toll-free and 10DLC messaging
+            verification. Reviewers look for this clause verbatim-ish on the
+            privacy policy linked from the SMS opt-in, so it lives in its own
+            heading rather than buried in a paragraph. */}
+        <h2>3a. Mobile Information and SMS</h2>
+        <p>
+          No mobile information will be shared with third parties or affiliates
+          for marketing or promotional purposes. Text messaging originator
+          opt-in data and consent will not be shared with any third parties.
+          Mobile opt-in information is used solely to deliver the messages you
+          consented to receive.
+        </p>
+        <p>
+          If you opt in to receive SMS text messages from us, we collect the
+          mobile number you provide, the date and time of your consent, and the
+          exact disclosure shown to you at the time. Message frequency varies
+          and message and data rates may apply. You can reply STOP at any time
+          to opt out, or HELP for assistance. Opting out of SMS does not affect
+          your access to the Service.
         </p>
 
         <h2>4. Cookies</h2>

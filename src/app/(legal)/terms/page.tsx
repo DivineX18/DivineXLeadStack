@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
+import { brandForProduct, resolveProductSurface } from "@/lib/landing/resolve-product-surface";
 
 export const metadata = {
   title: "Terms of Service",
@@ -17,7 +18,7 @@ export const metadata = {
  * verified, current product behavior.
  */
 export default async function TermsPage() {
-  const brand = await resolveCustomBrand();
+  const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   const supportMailto = `mailto:${brand.supportEmail}`;
 
   return (
