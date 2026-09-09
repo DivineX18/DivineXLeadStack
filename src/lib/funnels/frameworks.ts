@@ -3,6 +3,7 @@ import type {
   FunnelSection,
   FunnelSectionConfig,
   FunnelSectionType,
+  HeroConfig,
 } from "@/types/funnels";
 import type { AwarenessLevel, TrafficTemperature } from "@/types/conversion";
 
@@ -336,6 +337,113 @@ const DECISION_SUPPORT_STAGES: { minComplexity: "high" | "enterprise"; stage: Fr
   { minComplexity: "enterprise", stage: { id: "evaluation", label: "Comparison / Evaluation", section: "comparison" } },
 ];
 
+/**
+ * OFFER SHAPE — what is actually being sold, as opposed to which funnel genre
+ * was picked. Two lead_gen pages can be a done-for-you service and a $19 ebook;
+ * they need different conversion architecture, and nothing downstream knew the
+ * difference.
+ *
+ * Deliberately NOT a new persisted field and NOT a classifier subsystem: it is
+ * derived at composition time from signals the generator already has.
+ */
+export type OfferShape =
+  | "lead_magnet"
+  | "paid_digital"
+  | "experience"
+  | "service"
+  | "booking"
+  | "general";
+
+/**
+ * Soft hints from the canonical business profile's `offers[].kind`, which is a
+ * free-form string an upstream product writes — never a trusted enum. It only
+ * ever REFINES a decision the typed signals could not make on their own.
+ */
+const OFFER_KIND_HINTS: { shape: OfferShape; terms: string[] }[] = [
+  { shape: "experience", terms: ["meditation", "audio", "soundscape", "hypnosis", "breathwork", "guided"] },
+  { shape: "paid_digital", terms: ["ebook", "e-book", "course", "download", "digital product", "template", "workbook", "masterclass", "membership"] },
+  { shape: "lead_magnet", terms: ["lead magnet", "free guide", "checklist", "cheat sheet", "free download"] },
+  { shape: "booking", terms: ["appointment", "booking", "consultation", "discovery call", "strategy call"] },
+  { shape: "service", terms: ["service", "consulting", "done-for-you", "done for you", "agency", "coaching", "retainer", "installation", "repair"] },
+];
+
+function matchOfferKindHint(kinds?: string[] | null): OfferShape | null {
+  if (!kinds?.length) return null;
+  const hay = kinds.join(" ").toLowerCase();
+  for (const { shape, terms } of OFFER_KIND_HINTS) {
+    if (terms.some((t) => hay.includes(t))) return shape;
+  }
+  return null;
+}
+
+/**
+ * Derive the offer shape. TYPED SIGNALS WIN: genre, objective and price are
+ * structural facts the operator or the model actually committed to, so a
+ * free-form profile string can never override them — it only breaks ties.
+ */
+export function computeOfferShape(s: {
+  genre: FunnelGenre;
+  objective?: string | null;
+  priceCents?: number | null;
+  offerKinds?: string[] | null;
+}): OfferShape {
+  // The one-fold genre IS the offer shape; nothing overrides it.
+  if (s.genre === "lead_magnet") return "lead_magnet";
+  // An application/consultation funnel is a booking funnel by construction.
+  if (s.genre === "application" || s.objective === "application" || s.objective === "consultation") {
+    return "booking";
+  }
+
+  const hint = matchOfferKindHint(s.offerKinds);
+  const priced = (s.priceCents ?? 0) > 0;
+
+  if (priced) {
+    // A real price means something is being SOLD. The hint only decides WHICH
+    // kind of purchase architecture, never whether there is one.
+    if (hint === "experience") return "experience";
+    if (hint === "service") return "service";
+    if (hint === "paid_digital") return "paid_digital";
+    return s.genre === "tripwire" || s.genre === "vsl" ? "paid_digital" : "general";
+  }
+
+  // Unpriced. A "paid_digital" hint with no price would mean composing a
+  // purchase page around a price we do not have — the fabrication rules forbid
+  // inventing one, so it degrades to the general architecture instead.
+  if (hint === "paid_digital") return "general";
+  return hint ?? "general";
+}
+
+/**
+ * Stages an offer shape adds when the genre's framework lacks them. Small and
+ * additive by design — this REFINES a framework, it never replaces one, and it
+ * reuses existing section types only.
+ *
+ * `after_hero` is for beats that must land before the ask (show the product,
+ * name the problem, say what to expect); `before_close` is for detail that
+ * earns the ask (what's included).
+ */
+const OFFER_SHAPE_STAGES: Partial<
+  Record<OfferShape, { stage: FrameworkStage; position: "after_hero" | "before_close" }[]>
+> = {
+  paid_digital: [
+    { stage: { id: "product_showcase", label: "The Product", section: "image_text" }, position: "after_hero" },
+    { stage: { id: "offer_detail", label: "What's Included", section: "included" }, position: "before_close" },
+  ],
+  experience: [
+    { stage: { id: "product_showcase", label: "The Experience", section: "image_text" }, position: "after_hero" },
+    { stage: { id: "offer_detail", label: "What You Receive", section: "included" }, position: "before_close" },
+  ],
+  service: [
+    { stage: { id: "problem", label: "Problem / Solution", section: "problem_solution" }, position: "after_hero" },
+    { stage: { id: "process_rollout", label: "How It Works", section: "agenda" }, position: "before_close" },
+  ],
+  // Booking gets ONE beat, placed early: a visitor who came to book should not
+  // be persuaded at length before being told what to expect and how to book.
+  booking: [
+    { stage: { id: "process_rollout", label: "What to Expect", section: "agenda" }, position: "after_hero" },
+  ],
+};
+
 /** Stages DEEP adds per genre — old-way/new-way (comparison) + mechanism/
  *  authority (story) where the genre lacks them. Architecture change, not
  *  copy inflation; skipped where the section type already exists, and the
@@ -398,6 +506,7 @@ export function buildFrameworkSections(
   sectionOverrides?: Record<string, FunnelSectionType>,
   depth: FunnelDepth = "standard",
   complexity: DecisionComplexity = "low",
+  offerShape: OfferShape = "general",
 ): FunnelSection[] {
   // Lean pages drop education/persuasion stages a high-intent visitor doesn't
   // need — but always keep the capture stage (so the page still converts) and
@@ -433,14 +542,44 @@ export function buildFrameworkSections(
       present.add(stage.section);
     }
   }
+  // Offer-shape refinement. Never for the one-fold lead_magnet (its whole
+  // architecture is the hero) and never for a LEAN page (a most-aware or hot
+  // visitor earned a shorter path, and offer shape does not undo that).
+  // Deduped by section type, so it can only ADD a beat the framework lacks —
+  // it can never produce offer → included → offer.
+  if (offerShape !== "general" && genre !== "lead_magnet" && depth !== "lean") {
+    const present = new Set(framework.map((s) => s.section));
+    for (const { stage, position } of OFFER_SHAPE_STAGES[offerShape] ?? []) {
+      if (present.has(stage.section)) continue;
+      let at: number;
+      if (position === "after_hero") {
+        const hero = framework.findIndex((s) => s.section === "hero");
+        at = hero === -1 ? 0 : hero + 1;
+      } else {
+        at = framework.findIndex((s) => s.section === "faq");
+        if (at === -1) at = framework.map((s) => s.section).lastIndexOf("cta_banner");
+        if (at === -1) at = framework.length;
+      }
+      framework = [...framework.slice(0, at), stage, ...framework.slice(at)];
+      present.add(stage.section);
+    }
+  }
+
   return framework.map((stage, i) => {
     const requested = sectionOverrides?.[stage.section];
     const allowed = stageAllowedLayouts(stage);
     const resolved = requested && allowed.includes(requested) ? requested : stage.section;
-    return {
-      id: `s${i + 1}`,
-      type: resolved,
-      config: defaultSectionConfig(resolved),
-    };
+    const config = defaultSectionConfig(resolved);
+    // LEAD MAGNET, one fold: pair the asset with the capture instead of
+    // stacking centered text above a form. `split` renders the offer visual
+    // beside the headline/benefits/form as a single conversion unit, and
+    // falls back to centered on its own when no media is set — so a page with
+    // no authentic cover image degrades cleanly rather than reserving a slot
+    // for a picture we would have had to invent.
+    if (offerShape === "lead_magnet" && resolved === "hero") {
+      const hero: HeroConfig = { ...(config as HeroConfig), layout: "split" };
+      return { id: `s${i + 1}`, type: resolved, config: hero };
+    }
+    return { id: `s${i + 1}`, type: resolved, config };
   });
 }

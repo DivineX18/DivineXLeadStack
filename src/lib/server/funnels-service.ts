@@ -4,7 +4,13 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { getStripeForTenant } from "@/lib/stripe/tenant-server";
 import { materializeCheckoutPrice } from "@/lib/funnels/materialize-price";
-import { buildFrameworkSections, type DecisionComplexity, type FunnelDepth } from "@/lib/funnels/frameworks";
+import {
+  buildFrameworkSections,
+  computeOfferShape,
+  type DecisionComplexity,
+  type FunnelDepth,
+  type OfferShape,
+} from "@/lib/funnels/frameworks";
 import { resolveDesignPack, type DesignPackId } from "@/lib/funnels/design-packs";
 import { pruneEmptySections, evaluateSections } from "@/lib/funnels/section-completeness";
 import { resolveEffectiveDesignTokens, type DesignStrategy } from "@/lib/funnels/design-strategy";
@@ -109,6 +115,19 @@ export async function createFunnelServerSide(opts: {
    *  decision-SUPPORT stages (what's included, process/rollout, evaluation)
    *  at any persuasion depth. Default low = no injection. */
   complexity?: DecisionComplexity;
+  /** WHAT is being sold, as opposed to which genre was chosen. Derived by the
+   *  caller via computeOfferShape() from typed signals (genre/objective/price)
+   *  with the profile's free-form offer kind as a soft hint. Default "general"
+   *  = no offer-shape refinement, i.e. exactly today's composition. */
+  offerShape?: OfferShape;
+  /** Free-form `offers[].kind` from the canonical profile, used ONLY as a tie
+   *  breaker when the typed signals cannot decide the offer shape. */
+  offerKinds?: string[] | null;
+  /** Price in cents when the offer is genuinely priced — a real price is what
+   *  distinguishes a purchase architecture from a lead architecture. */
+  offerPriceCents?: number | null;
+  /** The model's stated conversion objective, when supplied. */
+  objective?: string | null;
   /** Landing Page Design System (RC 1.1) pack — when set, its
    *  defaultAccentColor/defaultTheme take priority over the genre's plain
    *  DEFAULT_ACCENT/DEFAULT_THEME (a design pack's whole point is a
@@ -153,7 +172,22 @@ export async function createFunnelServerSide(opts: {
           },
         ],
       }
-    : { sections: buildFrameworkSections(opts.genre, opts.stageOverrides, opts.depth, opts.complexity) };
+    : {
+        sections: buildFrameworkSections(
+          opts.genre,
+          opts.stageOverrides,
+          opts.depth,
+          opts.complexity,
+          // Explicit shape wins; otherwise derive from whatever signals exist.
+          opts.offerShape ??
+            computeOfferShape({
+              genre: opts.genre,
+              objective: opts.objective,
+              priceCents: opts.offerPriceCents,
+              offerKinds: opts.offerKinds,
+            }),
+        ),
+      };
 
   const ref = db.collection("funnels").doc();
   const doc: Omit<FunnelDoc, "id"> = {
