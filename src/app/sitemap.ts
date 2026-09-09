@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
 import { LANDING_VARIANT } from "@/config/landing";
-import { COMPARISON_SLUGS } from "@/data/comparisons";
 import { INDUSTRIES } from "@/data/industries";
 import { RESOURCE_POSTS } from "@/data/resources-posts";
 
@@ -61,12 +60,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${baseUrl}/docs/architecture`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${baseUrl}/docs/updating`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
     { url: `${baseUrl}/affiliate-program`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
-    ...COMPARISON_SLUGS.map((slug) => ({
-      url: `${baseUrl}/leadstack-vs-${slug}`,
-      lastModified: now,
-      changeFrequency: "monthly" as const,
-      priority: 0.8,
-    })),
+    // The /leadstack-vs-* comparison pages 404 in production while carrying a
+    // retired brand name. Listing a 404 in the sitemap is a crawl error we are
+    // asking Google to find, so they are delisted until the route is genuinely
+    // restored. Removing the entry, not the pages — no route is deleted here.
   ];
 
   return [...sharedEntries, ...leadstackOnly];
