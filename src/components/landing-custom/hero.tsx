@@ -11,10 +11,10 @@ import type { PlanProduct } from "@/types/billing";
  * is trying to buy. No performance claims, because none are substantiated.
  */
 const UNIFIED_COPY = {
-  eyebrow: "Ascend intelligence, Flow execution",
+  eyebrow: "Zeno intelligence, Flow execution",
   headLead: "Know what to do next.",
   headAccent: "Get it done",
-  sub: "Most platforms start with whatever you feel like building. Ascend starts with what your business actually needs — it scans your site, names the constraint costing you leads, and ranks the fix. Zeno turns that into the pages, campaigns and follow-up, and Flow runs them.",
+  sub: "Most platforms start with whatever you feel like building. Ascend starts with what your business actually needs — Zeno scans your site, names the constraint costing you leads, and ranks the fix, then builds the pages, campaigns and follow-up that Flow runs for you.",
 } as const;
 
 export function Hero({

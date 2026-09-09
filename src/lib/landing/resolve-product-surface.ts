@@ -24,7 +24,7 @@ import type { PlanProduct } from "@/types/billing";
  * the DivineX mark stays exactly where it is.
  */
 export function brandForProduct<T extends { name: string }>(brand: T, product: PlanProduct): T {
-  return product === "unified" ? { ...brand, name: "Unified" } : brand;
+  return product === "unified" ? { ...brand, name: "Ascend" } : brand;
 }
 
 export async function resolveProductSurface(): Promise<PlanProduct> {

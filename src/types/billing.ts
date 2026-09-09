@@ -62,7 +62,7 @@ export const PLAN_GATE_LABELS: Record<PlanGateKey, string> = {
   funnelsEnabledByAgency: "Funnels",
   customDomainsEnabledByAgency: "Custom domains",
   funnelCheckoutEnabledByAgency: "Funnel checkout (Stripe)",
-  ascendIntelligenceEnabledByAgency: "Ascend Growth Intelligence",
+  ascendIntelligenceEnabledByAgency: "Zeno Growth Intelligence",
 };
 
 /** Full gate bundle a plan carries — every key present, true = enabled. */
@@ -123,8 +123,9 @@ export interface BillingPlanDoc {
    * deliberately absent — those run on the customer's own Twilio, so they
    * cost the agency nothing and need no ceiling.
    *
-   * Counted POOLED AT THE AGENCY, not per workspace: a per-workspace cap
-   * protects nothing when the plan also allows many workspaces.
+   * Resolved and counted PER WORKSPACE, from the plan that workspace bought
+   * (`billing.planId`). It was previously pooled at the agency, which is wrong
+   * for self-serve, where every customer is a workspace under one agency.
    */
   limits?: PlanLimits;
   /**
@@ -167,9 +168,9 @@ export interface PlanLimits {
   /** gitpage sites per workspace. Overridden per workspace by
    *  `SubAccountDoc.websiteMaxSites` when an owner grants an exception. */
   maxWebsites: number | null;
-  /** Emails per calendar month, pooled across every workspace. */
+  /** Emails per calendar month, counted on this workspace. */
   maxEmailsPerMonth: number | null;
-  /** Asset/copy generations per calendar month, pooled. */
+  /** Asset/copy generations per calendar month, counted on this workspace. */
   maxAiGenerationsPerMonth: number | null;
   /** Growth Scans per calendar month, pooled. Unified + Ascend only. */
   maxGrowthScansPerMonth: number | null;

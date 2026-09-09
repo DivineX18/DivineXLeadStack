@@ -29,7 +29,7 @@ export function ascendDarkBranding(): AscendBrandingContext {
     // as the product name told a Unified customer they were in a different
     // product than the one on their invoice. The shell mode is still called
     // full_ascend internally; that name never reaches a screen.
-    productName: "Unified",
+    productName: "Ascend",
     tagline: "Know what to do next. Get it done.",
     theme: "ascend_dark",
     tokens: {

@@ -40,7 +40,7 @@ const FLOW_PRIMARY: FeatureEntry[] = [
 
 /** Intelligence first, then the execution it feeds. */
 const UNIFIED_PRIMARY: FeatureEntry[] = [
-  { label: "Ascend Growth Intelligence", gate: "ascendIntelligenceEnabledByAgency" },
+  { label: "Zeno Growth Intelligence", gate: "ascendIntelligenceEnabledByAgency" },
   { label: "Zeno — business-aware AI assistant", gate: "aiSuiteEnabledByAgency" },
   {
     label: "Growth Scans & prioritized recommendations",
