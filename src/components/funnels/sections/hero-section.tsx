@@ -28,7 +28,9 @@ const FOLD_SECTION = "flex min-h-[100svh] flex-col justify-center px-4 py-12 sm:
  *  short screen instead of pushing the CTA under the fold. */
 const FOLD_HEADLINE = "clamp(1.875rem, min(5.5vw, 7.2svh), 3.5rem)";
 /** Hero media is capped in viewport height and contained, never cropped to a
- *  fixed box — it gives up space first. */
+ *  fixed box — it gives up space first. The wrapper centers it: a contained
+ *  image shorter than the aspect-video box used to sit top-aligned and leave a
+ *  blank band beneath it, which read as a broken image on a generated page. */
 const FOLD_MEDIA = "max-h-[32svh] w-auto object-contain";
 import { DeviceFrame } from "./device-frame";
 import { MediaPlaceholder } from "./media-placeholder";
@@ -45,7 +47,7 @@ function MediaBlock({
   const hasMedia = config.mediaType !== "none" && config.mediaUrl;
   return (
     <div
-      className={`group relative overflow-hidden rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.35)] ring-1 ring-black/5 dark:ring-white/10 ${className}`}
+      className={`group relative flex items-center justify-center overflow-hidden rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.35)] ring-1 ring-black/5 dark:ring-white/10 ${className}`}
       style={
         !hasMedia
           ? { background: `linear-gradient(135deg, ${accentColor}33, ${accentColor}0d)` }
@@ -62,7 +64,7 @@ function MediaBlock({
           />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={config.mediaUrl} alt="" className={`h-full w-full object-cover ${FOLD_MEDIA}`} />
+          <img src={config.mediaUrl} alt="" className={FOLD_MEDIA} />
         )
       ) : config.mediaPlaceholderLabel ? (
         <MediaPlaceholder label={config.mediaPlaceholderLabel} accentColor={accentColor} className="h-full w-full" />

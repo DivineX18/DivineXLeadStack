@@ -4746,7 +4746,22 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               ...(args.eyebrow ? { eyebrow: args.eyebrow as string } : {}),
               headline: args.headline as string,
               ...(args.subheadline ? { subheadline: args.subheadline as string } : {}),
-              ...(heroLayout ? { layout: heroLayout as HeroConfig["layout"] } : {}),
+              // LAYOUT PRECEDENCE. The framework may already have made an
+              // OFFER-AWARE composition decision (a lead magnet pairs the
+              // asset with the capture via `split`). An archetype's generic
+              // default must not silently undo it — that is exactly what
+              // shipped: `heroLayout` resolves to designStrategy's archetype
+              // default for every genre except webinar, so the composed
+              // `split` was replaced by `centered` before persistence and the
+              // offer visual stacked above the form, pushing the CTA below
+              // the fold. Order: an EXPLICIT model choice wins (deliberate
+              // intent), then the framework's composed decision, then the
+              // archetype/genre default.
+              ...(() => {
+                const composed = (section.config as HeroConfig).layout;
+                const effective = (args.heroLayout as string) || composed || heroLayout;
+                return effective ? { layout: effective as HeroConfig["layout"] } : {};
+              })(),
               // One-fold genres (e.g. lead_magnet) carry the offer directly
               // on the hero — same bullets/CTA every other genre puts on
               // its offer section, since there's no separate offer stage
