@@ -89,9 +89,10 @@ export default async function HomePage() {
   }
 
   if (LANDING_VARIANT === "custom") {
+    const product = await resolveProductSurface();
     const [brand, { plans }] = await Promise.all([
       resolveCustomBrand(),
-      getPublicPlans(await resolveProductSurface()),
+      getPublicPlans(product),
     ]);
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
     return (
@@ -100,8 +101,8 @@ export default async function HomePage() {
         <ProductSchema brand={brand} baseUrl={baseUrl} plans={plans} />
         <CustomNavbar brand={brand} />
         <main className="flex-1">
-          <CustomHero brand={brand} />
-          <BeforeAfterFlow brand={brand} />
+          <CustomHero brand={brand} product={product} />
+          <BeforeAfterFlow brand={brand} product={product} />
           <BusinessOperatingSystem />
           <CustomPricing plans={plans} configured={billingStripeIsConfigured()} />
           <CustomFAQ brand={brand} />
