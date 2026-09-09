@@ -73,14 +73,14 @@ export default async function TermsPage() {
           to run yourself.
         </p>
 
-        <h3>2.1 Agencies and Sub-accounts</h3>
+        <h3>2.1 Agencies and Client workspaces</h3>
         <p>
           {brand.name} uses a two-level workspace model. An
           &ldquo;Agency&rdquo; is the top-level account (the entity that
-          signs up and manages billing); a &ldquo;Sub-account&rdquo; is an
+          signs up and manages billing); a &ldquo;Client workspace&rdquo; is an
           individual workspace within an Agency (for example, a specific
           business or client). Agency owners can invite members to
-          sub-accounts and assign roles. If you are a sub-account member
+          client workspaces and assign roles. If you are a client workspace member
           invited by an Agency owner, your use of the Service may also be
           subject to that Agency&rsquo;s own policies, and the Agency owner
           &mdash; not DivineX &mdash; controls your access, role, and
