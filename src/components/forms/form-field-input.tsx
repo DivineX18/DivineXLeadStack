@@ -47,6 +47,33 @@ export function FormFieldInput({
             {field.required && <span className="text-destructive"> *</span>}
           </span>
         </label>
+        {/* Carriers require the Privacy Policy and Terms to be VISIBLE on the
+            same page as the SMS consent — not only in a global footer, and not
+            only in the page source. Rendered here, immediately under the
+            disclosure, so the opt-in area is self-contained evidence for
+            toll-free verification. Relative hrefs resolve on whichever host
+            serves the form, so Flow and Ascend each link to their own copy. */}
+        <p className="pl-7 text-xs leading-snug text-muted-foreground">
+          See our{" "}
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium underline underline-offset-2 hover:text-foreground"
+          >
+            Privacy Policy
+          </a>{" "}
+          and{" "}
+          <a
+            href="/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium underline underline-offset-2 hover:text-foreground"
+          >
+            Terms &amp; Conditions
+          </a>
+          .
+        </p>
         {error && <p className="text-xs text-destructive">{error}</p>}
       </div>
     );

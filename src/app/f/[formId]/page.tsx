@@ -4,6 +4,7 @@ import type { LeadForm } from "@/types/forms";
 import { PublicForm } from "@/components/forms/public-form";
 import { appearanceStyle, resolveAppearance } from "@/lib/forms/appearance";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
+import { brandForProduct, resolveProductSurface } from "@/lib/landing/resolve-product-surface";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,10 @@ export default async function PublicFormPage({
 }) {
   const { formId } = await params;
   const sp = await searchParams;
-  const brand = await resolveCustomBrand();
+  // Host-aware identity: the form page named itself "Flow" on BOTH hosts, so
+  // an Ascend customer's opt-in page identified the wrong product. Carriers
+  // match the page against the business on the verification submission.
+  const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
 
   const db = getAdminDb();
   const snap = await db.collection("forms").doc(formId).get();
