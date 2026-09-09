@@ -23,13 +23,14 @@ import {
 } from "@/lib/auth/activation-token";
 import {
   PLAN_GATE_KEYS,
-  PLAN_GATE_LABELS,
   type BillingPlanDoc,
   type PlanGates,
+  type PlanLimits,
   type PublicPlanSummary,
   type SubAccountBillingStatus,
   type PlanProduct,
 } from "@/types/billing";
+import { buildPlanPresentation } from "@/lib/billing/plan-presentation";
 
 /**
  * Public self-serve signup (pay → get your own workspace, no agency-owner
@@ -91,8 +92,12 @@ export async function getPublicPlans(product: PlanProduct = "flow"): Promise<{
     .map((d) => {
       const data = d.data();
       const gates = (data.gates ?? {}) as Record<string, boolean>;
-      const features = PLAN_GATE_KEYS.filter((k) => gates[k] === true).map(
-        (k) => PLAN_GATE_LABELS[k],
+      // Presentation, not entitlement: customer-value order and customer
+      // language, still driven entirely by which gates this plan carries.
+      const presentation = buildPlanPresentation(
+        product,
+        gates,
+        data.limits as PlanLimits | undefined,
       );
       const trialRaw = data.trialDays;
       const summary: PublicPlanSummary = {
@@ -101,7 +106,9 @@ export async function getPublicPlans(product: PlanProduct = "flow"): Promise<{
         description: (data.description as string | null) ?? null,
         priceMonthlyCents: Number(data.priceMonthlyCents ?? 0),
         currency: String(data.currency ?? "usd"),
-        features,
+        highlights: presentation.highlights,
+        alsoIncluded: presentation.alsoIncluded,
+        allowances: presentation.allowances,
         trialDays:
           typeof trialRaw === "number" && Number.isFinite(trialRaw) && trialRaw > 0
             ? Math.floor(trialRaw)

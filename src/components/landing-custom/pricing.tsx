@@ -145,9 +145,26 @@ export function Pricing({
                       </p>
                     )}
                   </CardHeader>
-                  <CardContent className="flex-1">
+                  <CardContent className="flex-1 space-y-5">
+                    {/* "How much can I use?" sits ABOVE the feature list,
+                        because between two tiers that share a capability set
+                        the allowances are the entire reason to move up. */}
+                    {plan.allowances.length > 0 && (
+                      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg bg-muted/50 p-3">
+                        {plan.allowances.map((a) => (
+                          <div key={a.label} className="flex flex-col">
+                            <dt className="text-[11px] leading-tight text-muted-foreground">
+                              {a.label}
+                            </dt>
+                            <dd className="text-sm font-semibold tabular-nums">
+                              {a.value}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    )}
                     <ul className="space-y-3">
-                      {plan.features.map((feature) => (
+                      {plan.highlights.map((feature) => (
                         <li
                           key={feature}
                           className="flex items-start gap-2 text-sm"
@@ -166,6 +183,14 @@ export function Pricing({
                         </li>
                       ))}
                     </ul>
+                    {plan.alsoIncluded.length > 0 && (
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        <span className="font-medium text-foreground">
+                          Also included:{" "}
+                        </span>
+                        {plan.alsoIncluded.join(" · ")}
+                      </p>
+                    )}
                   </CardContent>
                   <CardFooter>
                     <Button

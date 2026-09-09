@@ -62,7 +62,7 @@ export const PLAN_GATE_LABELS: Record<PlanGateKey, string> = {
   funnelsEnabledByAgency: "Funnels",
   customDomainsEnabledByAgency: "Custom domains",
   funnelCheckoutEnabledByAgency: "Funnel checkout (Stripe)",
-  ascendIntelligenceEnabledByAgency: "Ascend Intelligence (Full Ascend shell)",
+  ascendIntelligenceEnabledByAgency: "Ascend Growth Intelligence",
 };
 
 /** Full gate bundle a plan carries — every key present, true = enabled. */
@@ -201,8 +201,16 @@ export interface PublicPlanSummary {
   description: string | null;
   priceMonthlyCents: number;
   currency: string;
-  /** Human-readable feature list, derived from PLAN_GATE_LABELS. */
-  features: string[];
+  /**
+   * Customer-facing capability highlights, in customer-value order — see
+   * `lib/billing/plan-presentation.ts`. NOT gate order, and not gate labels;
+   * a buyer should never be reading our internal entitlement list.
+   */
+  highlights: string[];
+  /** Real supporting capabilities, condensed into one line on the card. */
+  alsoIncluded: string[];
+  /** "How much can I use?" — the reason to move up a tier. */
+  allowances: { label: string; value: string }[];
   /**
    * Free-trial days, or null when the plan has none. Public because the
    * pricing page must disclose the trial AND the price that begins after it
