@@ -40,20 +40,26 @@ const FLOW_PRIMARY: FeatureEntry[] = [
 
 /** Intelligence first, then the execution it feeds. */
 const UNIFIED_PRIMARY: FeatureEntry[] = [
-  { label: "Zeno Growth Intelligence", gate: "ascendIntelligenceEnabledByAgency" },
-  { label: "Zeno — business-aware AI assistant", gate: "aiSuiteEnabledByAgency" },
+  // Ordered by what a buyer is paying to GET, not by what makes Ascend
+  // architecturally interesting. The things that earn revenue lead; the
+  // diagnosis that decides what to build sits mid-list as the differentiator;
+  // the scan itself sits near the bottom, because it is how the work gets
+  // aimed rather than the work. "Zeno" appears exactly once — repeating a
+  // product name in a feature list reads as two entries for one thing.
+  { label: "Funnels & landing pages", gate: "funnelsEnabledByAgency" },
+  { label: "Automated lead follow-up", gate: null },
+  { label: "CRM & sales pipelines", gate: null },
+  { label: "Forms & lead capture", gate: null },
+  { label: "Booking & scheduling", gate: null },
+  { label: "Zeno growth intelligence", gate: "ascendIntelligenceEnabledByAgency" },
+  { label: "AI-generated marketing & conversion assets", gate: "aiSuiteEnabledByAgency" },
+  { label: "Business-aware AI assistant", gate: "aiSuiteEnabledByAgency" },
+  { label: "Workflows & automations", gate: null },
+  { label: "Email broadcasts", gate: "broadcastsEnabledByAgency" },
   {
     label: "Growth Scans & prioritized recommendations",
     gate: "ascendIntelligenceEnabledByAgency",
   },
-  { label: "AI-generated marketing & conversion assets", gate: "aiSuiteEnabledByAgency" },
-  { label: "Funnels & landing pages", gate: "funnelsEnabledByAgency" },
-  { label: "CRM & sales pipelines", gate: null },
-  { label: "Automated lead follow-up", gate: null },
-  { label: "Forms & lead capture", gate: null },
-  { label: "Booking & scheduling", gate: null },
-  { label: "Workflows & automations", gate: null },
-  { label: "Email broadcasts", gate: "broadcastsEnabledByAgency" },
   { label: "Website builder", gate: "websiteEnabledByAgency" },
   { label: "Reporting & conversion measurement", gate: null },
 ];
