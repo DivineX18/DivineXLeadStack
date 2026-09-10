@@ -38,7 +38,10 @@ export async function POST(
     return NextResponse.json({ error: "Only JPEG, PNG, WebP images and PDF files are supported" }, { status: 400 });
   }
   if (file.size > MAX_ASSET_BYTES) {
-    return NextResponse.json({ error: "File exceeds the 10MB limit" }, { status: 400 });
+    return NextResponse.json(
+      { error: `File exceeds the ${Math.round(MAX_ASSET_BYTES / 1024 / 1024)}MB limit` },
+      { status: 400 },
+    );
   }
 
   const bytes = Buffer.from(await file.arrayBuffer());

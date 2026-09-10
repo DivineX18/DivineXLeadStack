@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Camera, ImageIcon, Loader2 } from "lucide-react";
 import type { VisualRequirement } from "@/types/funnels";
+import { uploadFunnelAsset } from "@/lib/funnels/upload-client";
 
 /**
  * The missing-media resolution loop, shown in preview — P0.5.
@@ -76,13 +77,12 @@ export function VisualRequirementsPanel({
   async function onFileChosen(requirementId: string, file: File) {
     setBusy(requirementId);
     setError(null);
-    const body = new FormData();
-    body.append("file", file);
-    const res = await fetch(`/api/sub-accounts/${subAccountId}/funnels/${funnelId}/assets`, { method: "POST", body });
-    const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
-    if (!res.ok || !data.url) {
+    let data: { url: string };
+    try {
+      data = await uploadFunnelAsset(subAccountId, funnelId, file);
+    } catch (e) {
       setBusy(null);
-      setError(data.error ?? "That file couldn't be uploaded.");
+      setError(e instanceof Error ? e.message : "That file couldn't be uploaded.");
       return;
     }
     // The upload is stored; now bind it to THIS slot. Provenance is verified

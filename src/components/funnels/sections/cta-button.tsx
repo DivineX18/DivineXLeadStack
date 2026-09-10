@@ -206,11 +206,22 @@ export function CtaButton({
         </a>
       );
     }
-    return (
-      <button type="button" className={btnClass} style={buttonStyle}>
-        {label}
-      </button>
-    );
+    // NO ACTION AT ALL.
+    //
+    // This used to render `<button type="button">` with no onClick: a
+    // full-size, accent-coloured, hover-animated button that did absolutely
+    // nothing when clicked. VA testing found live pages whose every CTA was
+    // one of these ("Schedule Now", "Get the Starter Kit"), because the
+    // section carried a popup_form style with no form behind it. The comment
+    // above this branch always claimed it degraded rather than shipping a
+    // dead button; this is the branch that broke that promise.
+    //
+    // A button a visitor cannot use is worse than no button: it spends their
+    // intent and returns nothing. Render nothing instead, so the gap is
+    // visible to the operator rather than silently absorbed by the visitor.
+    // Publishing this state is now refused outright (lib/funnels/cta-integrity.ts),
+    // so this can only be reached by a page published before that guard.
+    return null;
   };
 
   const secondaryButton = style === "dual" && cta?.secondaryLabel && cta?.secondaryHref && (
@@ -316,11 +327,7 @@ export function CtaButton({
             <a href={href} className={btnClass} style={buttonStyle}>
               {label}
             </a>
-          ) : (
-            <button type="button" className={btnClass} style={buttonStyle}>
-              {label}
-            </button>
-          )}
+          ) : null}
         </div>
       )}
       {style === "floating_mobile" && (
@@ -336,7 +343,7 @@ export function CtaButton({
             >
               {label}
             </a>
-          ) : (
+          ) : hasPopupTarget ? (
             <button
               type="button"
               onClick={openModal}
@@ -345,7 +352,15 @@ export function CtaButton({
             >
               {label}
             </button>
-          )}
+          ) : href ? (
+            <a
+              href={href}
+              className="block w-full rounded-xl px-6 py-4 text-center text-base font-bold text-white shadow-[0_8px_24px_-6px_var(--accent-shadow)]"
+              style={buttonStyle}
+            >
+              {label}
+            </a>
+          ) : null}
         </div>
       )}
 

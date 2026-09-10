@@ -61,6 +61,7 @@ import type {
 } from "@/types/funnels";
 import { DESIGN_PACKS, type DesignPackId } from "@/lib/funnels/design-packs";
 import { isChainOnlySection, isChainStepFunnel } from "@/lib/funnels/commercial-structure";
+import { uploadFunnelAsset } from "@/lib/funnels/upload-client";
 import {
   VISUAL_ARCHETYPES,
   VISUAL_ARCHETYPE_IDS,
@@ -226,11 +227,7 @@ export function FunnelBuilder({
   async function handleAssetUpload(file: File) {
     setUploading(true);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch(`/api/sub-accounts/${saId}/funnels/${funnelId}/assets`, { method: "POST", body: fd });
-      const json = (await res.json()) as { url?: string; kind?: string; error?: string };
-      if (!res.ok || !json.url) throw new Error(json.error ?? "Upload failed");
+      const json = await uploadFunnelAsset(saId, funnelId, file);
       if (json.kind === "pdf") setLeadMagnetName(file.name);
       else {
         setUploadedImageUrl(json.url);

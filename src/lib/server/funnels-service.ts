@@ -18,6 +18,12 @@ import {
   invalidChainSections,
   isChainOnlySection,
 } from "@/lib/funnels/commercial-structure";
+import {
+  ctaRejection,
+  deliveryRejection,
+  findBrokenCtas,
+  findDeliveryGaps,
+} from "@/lib/funnels/cta-integrity";
 import { resolveEffectiveDesignTokens, type DesignStrategy } from "@/lib/funnels/design-strategy";
 import type { VisualRequirement, VisualDecision } from "@/types/funnels";
 import type {
@@ -216,6 +222,51 @@ export async function createFunnelServerSide(opts: {
   };
   await ref.set({ id: ref.id, ...doc });
   return ref.id;
+}
+
+/** Capture forms referenced by any CTA-bearing section on the page. */
+function collectFormIds(sections: FunnelSection[]): Set<string> {
+  const ids = new Set<string>();
+  for (const s of sections) {
+    const fid = (s.config as { formId?: string | null }).formId;
+    if (typeof fid === "string" && fid) ids.add(fid);
+  }
+  return ids;
+}
+
+/** Which of those forms actually exist IN THIS WORKSPACE. A formId pointing
+ *  at a deleted or foreign form is exactly as dead to a visitor as no formId,
+ *  and the renderer treats it identically, so presence is not enough. */
+async function resolveExistingFormIds(
+  subAccountId: string,
+  formIds: ReadonlySet<string>,
+): Promise<Set<string>> {
+  if (formIds.size === 0) return new Set();
+  const db = getAdminDb();
+  const snaps = await Promise.all([...formIds].map((id) => db.doc(`forms/${id}`).get()));
+  return new Set(
+    snaps.filter((s) => s.exists && s.data()?.subAccountId === subAccountId).map((s) => s.id),
+  );
+}
+
+/** Follow-up workflows built for this funnel's capture forms, with their live
+ *  status. The engine only ever runs `status == "active"` ones. */
+async function loadFunnelWorkflows(
+  subAccountId: string,
+  formIds: ReadonlySet<string>,
+): Promise<{ id: string; name: string; status: string }[]> {
+  if (formIds.size === 0) return [];
+  const snap = await getAdminDb()
+    .collection("workflows")
+    .where("subAccountId", "==", subAccountId)
+    .get();
+  return snap.docs
+    .map((d) => {
+      const w = d.data() as { name?: string; status?: string; trigger?: { formId?: string } };
+      return { id: d.id, name: w.name ?? "Follow-up", status: w.status ?? "draft", formId: w.trigger?.formId };
+    })
+    .filter((w) => !!w.formId && formIds.has(w.formId))
+    .map(({ id, name, status }) => ({ id, name, status }));
 }
 
 export interface FunnelPatch {
@@ -502,6 +553,31 @@ export async function updateFunnelServerSide(opts: {
           .map((b) => `${b.sectionType} — ${b.reason}`)
           .join(" ")}`,
       );
+    }
+
+    // ── THE ACTION CONTRACT ───────────────────────────────────────────────
+    // Content being present is not the same as the page working. A section
+    // can be completely filled in and still offer a button that does nothing,
+    // which is what VA testing found on live pages. See cta-integrity.ts.
+    const formIds = collectFormIds(finalSections);
+    const availableFormIds = await resolveExistingFormIds(opts.subAccountId, formIds);
+    const brokenCtas = findBrokenCtas(finalSections, availableFormIds);
+    if (brokenCtas.length > 0) {
+      throw new FunnelValidationError(ctaRejection(brokenCtas));
+    }
+
+    // ── THE DELIVERY CONTRACT ─────────────────────────────────────────────
+    // And a working button is not the same as a kept promise: the form can
+    // submit perfectly and still deliver nothing, forever, because the
+    // follow-up that was built for it is sitting in draft.
+    const gaps = findDeliveryGaps({
+      formIds: [...formIds],
+      workflows: await loadFunnelWorkflows(opts.subAccountId, formIds),
+      hasLeadMagnetAsset: !!oldData.leadMagnetAsset,
+      genre: oldData.genre,
+    });
+    if (gaps.length > 0) {
+      throw new FunnelValidationError(deliveryRejection(gaps));
     }
   }
 

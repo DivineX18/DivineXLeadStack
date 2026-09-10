@@ -25,7 +25,27 @@ import { getAdminDb } from "@/lib/firebase/admin";
  */
 
 const CHUNK_BYTES = 700_000; // base64 of this stays under the 1MB doc limit
-export const MAX_ASSET_BYTES = 10 * 1024 * 1024; // 10MB
+
+/**
+ * 5MB, and it is a MEASURED limit, not a chosen one.
+ *
+ * This was 10MB, which the platform in front of this app does not accept. A
+ * PDF upload was reproduced against the real deployment at increasing sizes:
+ * 8MB succeeded (in 18.6s), 8.4MB came back 502 with an HTML error page, 9MB
+ * had the connection terminated mid-body, 10MB came back 502 HTML. The body
+ * is rejected before the route ever runs, so nothing in this file could have
+ * caught it and returned a real error.
+ *
+ * That HTML is what the operator actually saw: the builder posted the file,
+ * got `<!DOCTYPE html>` back, called response.json() on it, and surfaced
+ * "Unexpected token '<', "<!DOCTYPE "... is not valid JSON" as the upload
+ * error message.
+ *
+ * 5MB sits well clear of the ~8.4MB cliff and uploads in about 11s server
+ * side, leaving room for a slow connection. Raising it again means measuring
+ * again, not editing this number. See scripts/verify-funnel-runtime.mts.
+ */
+export const MAX_ASSET_BYTES = 5 * 1024 * 1024;
 
 export const ALLOWED_ASSET_TYPES: Record<string, "image" | "pdf"> = {
   "image/jpeg": "image",
