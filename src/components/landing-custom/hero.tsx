@@ -1,7 +1,9 @@
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ResolvedBrand } from "@/config/landing";
-import type { PlanProduct } from "@/types/billing";
+import type { PlanProduct, PublicPlanSummary } from "@/types/billing";
+import { HeroCtas } from "./hero-ctas";
+import { AscendHeroDemo } from "./ascend-hero-demo";
 
 /**
  * Unified is not Flow with an extra feature. It is bought for a different
@@ -11,20 +13,31 @@ import type { PlanProduct } from "@/types/billing";
  * is trying to buy. No performance claims, because none are substantiated.
  */
 const UNIFIED_COPY = {
-  eyebrow: "Zeno intelligence, Flow execution",
-  headLead: "Know what to do next.",
-  headAccent: "Get it done",
-  sub: "Most platforms start with whatever you feel like building. Ascend starts with what your business actually needs — Zeno scans your site, names the constraint costing you leads, and ranks the fix, then builds the pages, campaigns and follow-up that Flow runs for you.",
+  headLead: "Turn more of your traffic",
+  headAccent: "into leads",
+  sub: "Ascend finds what's costing you leads, helps create the fix, and gives you the tools to turn more opportunities into customers.",
+  trust: "14 days free. Card required. Cancel anytime.",
+  authority:
+    "Built and calibrated using insights from 150+ real-world website analyses and established CRO/UX principles.",
 } as const;
 
 export function Hero({
   brand,
   product = "flow",
+  plans = [],
+  scanHref = "/growth-scanner",
 }: {
   brand: ResolvedBrand;
   product?: PlanProduct;
+  plans?: PublicPlanSummary[];
+  scanHref?: string;
 }) {
   const unified = product === "unified";
+  // The trial tier is whichever plan actually carries trial days. Reading it
+  // from the live plan data rather than hardcoding an id keeps the hero honest
+  // if the trial ever moves tiers, and makes the button disappear rather than
+  // promise a trial that no plan offers.
+  const trialPlanId = plans.find((p) => (p.trialDays ?? 0) > 0)?.id ?? null;
   return (
     <section className="relative overflow-hidden py-20 md:py-28">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,oklch(0.72_0.16_165)_/_18%,transparent_55%)]" />
@@ -42,12 +55,18 @@ export function Hero({
 
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-3xl text-center">
-          <div className="mx-auto mb-8 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 text-xs font-medium">
-            <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
-            <span className="bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-300 bg-clip-text text-transparent">
-              {unified ? UNIFIED_COPY.eyebrow : brand.tagline}
-            </span>
-          </div>
+          {/* No eyebrow on Ascend. A category label above the headline (an
+              "AI ..." one especially) makes the visitor learn what we are
+              before they learn what they get, and the technology will change
+              long before the promise does. Flow keeps its tagline. */}
+          {!unified && (
+            <div className="mx-auto mb-8 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 text-xs font-medium">
+              <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+              <span className="bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-300 bg-clip-text text-transparent">
+                {brand.tagline}
+              </span>
+            </div>
+          )}
 
           <h1 className="text-balance text-4xl font-semibold tracking-tighter sm:text-5xl md:text-6xl lg:text-[5rem] lg:leading-[1.04]">
             {unified ? UNIFIED_COPY.headLead : "Run your business."}{" "}
@@ -61,31 +80,35 @@ export function Hero({
             {unified ? UNIFIED_COPY.sub : brand.shortDescription}
           </p>
 
-          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            {/* Primary CTA is the self-serve path (jumps straight to the
-                actual pricing/checkout decision) — previously the hero's
-                only CTA was the sales-assisted mailto, competing for
-                attention with the pricing section's own "Get started"
-                buttons and the navbar's "Sign Up" further down the same
-                page. One clear primary action; "Talk to us" stays as the
-                secondary path for anyone who wants to ask before buying. */}
-            <Button
-              render={<a href="#pricing" />}
-              size="lg"
-              className="px-6 text-base"
-            >
-              Get started
-            </Button>
-            <Button
-              render={<a href={`mailto:${brand.supportEmail}`} />}
-              variant="outline"
-              size="lg"
-              className="px-6 text-base"
-            >
-              Talk to us
-            </Button>
-          </div>
+          {unified ? (
+            <>
+              <HeroCtas trialPlanId={trialPlanId} scanHref={scanHref} />
+              {/* The card is the friction, so it is named here rather than
+                  discovered on the Stripe page. Saying it plainly is what
+                  lets the scan read as a real alternative. */}
+              <p className="mt-4 text-sm text-muted-foreground">{UNIFIED_COPY.trust}</p>
+              <p className="mx-auto mt-6 max-w-xl text-xs leading-relaxed text-muted-foreground/80">
+                {UNIFIED_COPY.authority}
+              </p>
+            </>
+          ) : (
+            <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Button render={<a href="#pricing" />} size="lg" className="px-6 text-base">
+                Get started
+              </Button>
+              <Button
+                render={<a href={`mailto:${brand.supportEmail}`} />}
+                variant="outline"
+                size="lg"
+                className="px-6 text-base"
+              >
+                Talk to us
+              </Button>
+            </div>
+          )}
         </div>
+
+        {unified && <AscendHeroDemo />}
       </div>
     </section>
   );

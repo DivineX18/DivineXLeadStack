@@ -18,20 +18,40 @@ export interface FlowStep {
  * mobile. The final step gets a filled "outcome" treatment (solid primary
  * fill + check) so the eye lands on where the process actually ends.
  */
-export function StepFlow({ steps, className }: { steps: FlowStep[]; className?: string }) {
+export function StepFlow({
+  steps,
+  className,
+  /** Index of a step to visually emphasise mid-chain. Ascend's lifecycle needs
+   *  this: "Understand" is the step every other tool skips, and marking it is
+   *  the entire positioning argument made visual. Absent = today's behaviour,
+   *  where only the final outcome step is highlighted. */
+  emphasizeIndex,
+}: {
+  steps: FlowStep[];
+  className?: string;
+  emphasizeIndex?: number;
+}) {
   return (
     <div className={cn("flex flex-col items-stretch gap-0 md:flex-row md:items-center md:justify-center md:gap-0", className)}>
       {steps.map((step, i) => {
         const isLast = i === steps.length - 1;
+        const isEmphasized = emphasizeIndex === i && !isLast;
         return (
           <div key={step.label} className="flex flex-col items-center md:flex-row">
-            <div className="flex w-full flex-col items-center gap-2 rounded-xl border bg-card px-4 py-4 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md md:w-36">
+            <div
+              className={cn(
+                "flex w-full flex-col items-center gap-2 rounded-xl border bg-card px-4 py-4 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md md:w-36",
+                isEmphasized && "border-primary/60 bg-primary/5 shadow-md ring-1 ring-primary/20",
+              )}
+            >
               <span
                 className={cn(
                   "flex h-11 w-11 items-center justify-center rounded-full border-2",
                   isLast
                     ? "border-primary bg-primary text-primary-foreground"
-                    : "border-primary/30 bg-primary/5 text-primary",
+                    : isEmphasized
+                      ? "border-primary bg-primary/15 text-primary"
+                      : "border-primary/30 bg-primary/5 text-primary",
                 )}
               >
                 {isLast ? <Check className="h-5 w-5" /> : <step.icon className="h-5 w-5" />}

@@ -32,6 +32,8 @@ import { OrganizationSchema, ProductSchema } from "@/components/landing-custom/s
 import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { Hero as CustomHero } from "@/components/landing-custom/hero";
 import { BeforeAfterFlow } from "@/components/landing-custom/before-after-flow";
+import { AscendLifecycle } from "@/components/landing-custom/ascend-lifecycle";
+import { AscendFind, AscendCreate, AscendFollowUp } from "@/components/landing-custom/ascend-mechanism";
 import { BusinessOperatingSystem } from "@/components/landing-custom/business-operating-system";
 import { Pricing as CustomPricing } from "@/components/landing-custom/pricing";
 import { FAQ as CustomFAQ } from "@/components/landing-custom/faq";
@@ -103,12 +105,20 @@ export default async function HomePage() {
         <ProductSchema brand={brand} baseUrl={baseUrl} plans={plans} />
         <CustomNavbar brand={brand} />
         <main className="flex-1">
-          <CustomHero brand={brand} product={product} />
+          <CustomHero brand={brand} product={product} plans={plans} />
+          {product === "unified" && <AscendLifecycle />}
           <BeforeAfterFlow brand={brand} product={product} />
+          {product === "unified" && (
+            <>
+              <AscendFind />
+              <AscendCreate />
+            </>
+          )}
           <BusinessOperatingSystem />
+          {product === "unified" && <AscendFollowUp />}
           <CustomPricing plans={plans} configured={billingStripeIsConfigured()} />
           <CustomFAQ brand={brand} />
-          <CustomCTA brand={brand} pricingHref="#pricing" />
+          <CustomCTA brand={brand} pricingHref="#pricing" product={product} />
         </main>
         <CustomFooter brand={brand} />
       </div>
