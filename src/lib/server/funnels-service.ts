@@ -13,6 +13,11 @@ import {
 } from "@/lib/funnels/frameworks";
 import { resolveDesignPack, type DesignPackId } from "@/lib/funnels/design-packs";
 import { pruneEmptySections, evaluateSections } from "@/lib/funnels/section-completeness";
+import {
+  chainSectionRejection,
+  invalidChainSections,
+  isChainOnlySection,
+} from "@/lib/funnels/commercial-structure";
 import { resolveEffectiveDesignTokens, type DesignStrategy } from "@/lib/funnels/design-strategy";
 import type { VisualRequirement, VisualDecision } from "@/types/funnels";
 import type {
@@ -458,12 +463,38 @@ export async function updateFunnelServerSide(opts: {
     sectionsToWrite = pruned.sections;
   }
 
+  // ── COMMERCIAL STRUCTURE ────────────────────────────────────────────────
+  // A post-purchase section may only exist on a post-purchase page. See
+  // lib/funnels/commercial-structure.ts for why this is a correctness rule
+  // and not a style preference.
+  //
+  // Scoped to sections being ADDED by this save (matched by section id), so a
+  // legacy page that already carries one stays editable, which is what an
+  // operator needs in order to fix it. Going live is guarded unconditionally
+  // just below, exactly like the empty-section rule, so a page carrying a
+  // dead upsell can be repaired but never re-published as-is.
+  if (sectionsToWrite !== undefined) {
+    const alreadyPresent = new Set(
+      (oldData.sections ?? []).filter((s) => isChainOnlySection(s.type)).map((s) => s.id),
+    );
+    const added = invalidChainSections(sectionsToWrite, oldData.chainRole).filter(
+      (s) => !alreadyPresent.has(s.id),
+    );
+    if (added.length > 0) {
+      throw new FunnelValidationError(chainSectionRejection(added));
+    }
+  }
+
   // Publication is guarded unconditionally, for every author. Going live is
   // the moment a shell stops being an internal draft artifact and starts
   // being what a paying customer's traffic lands on. Nothing is deleted here
   // — the operator is told exactly what to fill or remove.
   if (patch.status === "published") {
     const finalSections = sectionsToWrite ?? oldData.sections ?? [];
+    const strays = invalidChainSections(finalSections, oldData.chainRole);
+    if (strays.length > 0) {
+      throw new FunnelValidationError(chainSectionRejection(strays));
+    }
     const blanks = evaluateSections(finalSections).filter((e) => e.state === "empty");
     if (blanks.length > 0) {
       throw new FunnelValidationError(

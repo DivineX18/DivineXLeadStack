@@ -53,7 +53,58 @@ export async function resolveShellContextForLayout(options?: {
  */
 export async function resolveShellContextForPage(): Promise<AscendShellContext | null> {
   const activeWorkspaceId = (await cookies()).get("active_workspace_id")?.value;
-  return resolveShellContextForLayout(activeWorkspaceId ? { explicitWorkspaceId: activeWorkspaceId } : undefined);
+  if (activeWorkspaceId) {
+    return resolveShellContextForLayout({ explicitWorkspaceId: activeWorkspaceId });
+  }
+
+  // FRESH LOGIN, NO COOKIE YET.
+  //
+  // decideWorkspaceSelection() deliberately refuses to guess between several
+  // candidate workspaces, and it is right to: no "last active" signal exists
+  // in the schema, and inventing one at the identity layer would be a real
+  // correctness bug. But that returned workspace: null on a fresh login for
+  // any multi-membership caller, so the server could not tell WHICH product
+  // this person had bought, decideShellMode() fell through to crm_only, and
+  // /dashboard rendered Flow while the client-side redirect worked out where
+  // the visitor actually belonged. That is the visible "Flow for a few
+  // seconds, then Ascend" flash.
+  //
+  // The tie-break lives here, in the shell wrapper, rather than in the pure
+  // resolver: which workspace to OPEN when the customer has not said is a
+  // presentation choice, not an identity fact. It reproduces exactly what the
+  // client-side redirect already does today (LegacyRedirect sorts memberships
+  // by accountNumber and takes the lowest, conventionally the Main/original
+  // workspace) so the server and the client can never pick differently.
+  //
+  // This never grants access: the second resolve runs the full membership +
+  // entitlement path for the chosen workspace, so a workspace the caller is
+  // not really a member of resolves to inactive and falls back to crm_only.
+  const shell = await resolveShellContextForLayout();
+  if (!shell || shell.workspaceSelection.reason !== "multiple_available") return shell;
+
+  const pick = await pickLowestAccountNumber(shell.workspaceSelection.candidates);
+  if (!pick) return shell;
+  return resolveShellContextForLayout({ explicitWorkspaceId: pick });
+}
+
+/** Lowest `accountNumber` among the caller's candidate workspaces, id as a
+ *  stable tie-break so the choice is deterministic across renders. Returns
+ *  null if nothing could be read, in which case the caller keeps the honest
+ *  "no workspace selected" state rather than guessing. */
+async function pickLowestAccountNumber(candidates: string[]): Promise<string | null> {
+  if (candidates.length === 0) return null;
+  try {
+    const { getAdminDb } = await import("@/lib/firebase/admin");
+    const db = getAdminDb();
+    const snaps = await Promise.all(candidates.map((id) => db.doc(`subAccounts/${id}`).get()));
+    const ranked = snaps
+      .filter((s) => s.exists)
+      .map((s) => ({ id: s.id, accountNumber: Number(s.data()?.accountNumber ?? Number.MAX_SAFE_INTEGER) }))
+      .sort((a, b) => a.accountNumber - b.accountNumber || a.id.localeCompare(b.id));
+    return ranked[0]?.id ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // ── 2. Server Action / explicit uid already known ────────────────────────

@@ -60,6 +60,7 @@ import type {
   VideoConfig,
 } from "@/types/funnels";
 import { DESIGN_PACKS, type DesignPackId } from "@/lib/funnels/design-packs";
+import { isChainOnlySection, isChainStepFunnel } from "@/lib/funnels/commercial-structure";
 import {
   VISUAL_ARCHETYPES,
   VISUAL_ARCHETYPE_IDS,
@@ -980,18 +981,24 @@ export function FunnelBuilder({
         ))}
       </div>
 
+      {/* The palette offers exactly what the write path will accept. A
+          post-purchase section on a page with no order behind it renders a
+          price and a button that can only fail, so it is offered only on a
+          real chain step. See lib/funnels/commercial-structure.ts. */}
       <div className="flex flex-wrap gap-2">
-        {(Object.keys(SECTION_LABELS) as FunnelSectionType[]).map((type) => (
-          <Button
-            key={type}
-            variant="outline"
-            size="sm"
-            onClick={() => addSection(type)}
-          >
-            <Plus className="mr-1 h-3.5 w-3.5" />
-            {SECTION_LABELS[type]}
-          </Button>
-        ))}
+        {(Object.keys(SECTION_LABELS) as FunnelSectionType[])
+          .filter((type) => isChainStepFunnel(funnel?.chainRole) || !isChainOnlySection(type))
+          .map((type) => (
+            <Button
+              key={type}
+              variant="outline"
+              size="sm"
+              onClick={() => addSection(type)}
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              {SECTION_LABELS[type]}
+            </Button>
+          ))}
       </div>
     </div>
   );

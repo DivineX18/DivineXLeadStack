@@ -3959,6 +3959,40 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             `your headline is ${headline.length} characters; the limit is 80. Shorten THIS headline — do not start over and do not ask the user. Keep the specific promise and cut qualifiers, or move the detail into the subheadline (which has no such limit). You sent: "${headline}"`,
         };
       }
+      // NEVER SILENTLY CLIP CUSTOMER-FACING COPY.
+      //
+      // These fields used to be passed through truncateAtWord() alone, which
+      // cuts at the last word boundary under the cap and stores the result.
+      // Word-safe is not sentence-safe: a live page shipped the subheadline
+      // "...limiting your leads, plus a roadmap for increasing", which just
+      // stops mid-thought and reads as a broken page (found on funnel
+      // EcKaDdB6Px5G0jF1CIBc during the pre-beta review).
+      //
+      // The model is the copywriter, so an over-length field is its problem to
+      // fix, not ours to hide. This mirrors the headline rule above exactly:
+      // report the real length and the real limit, quote what was sent, and
+      // tell it to shorten THIS text rather than start over. truncateAtWord
+      // stays in place below as a last-resort backstop so nothing can overflow
+      // if a future caller ever reaches normalization without validating.
+      const LENGTH_CAPPED_COPY: { key: string; label: string; max: number }[] = [
+        { key: "eyebrow", label: "eyebrow", max: 100 },
+        { key: "subheadline", label: "subheadline", max: 140 },
+        { key: "cta_banner_subtext", label: "cta_banner_subtext", max: 140 },
+        { key: "confirmation_email_subject", label: "confirmation_email_subject", max: 120 },
+      ];
+      for (const field of LENGTH_CAPPED_COPY) {
+        const value = str(raw, field.key);
+        if (value.length > field.max) {
+          return {
+            ok: false,
+            error:
+              `your ${field.label} is ${value.length} characters; the limit is ${field.max}. ` +
+              `Rewrite THIS text so it is a complete sentence within the limit, then call create_funnel again. ` +
+              `Do not start over and do not ask the user. You sent: "${value}"`,
+          };
+        }
+      }
+
       // Accepts BOTH the LLM's original comma-separated string AND this
       // validate()'s own previously-normalized array output.
       const bulletsIn = raw.bullets;
@@ -5547,10 +5581,6 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         }
       }
 
-      // STORY-FOLD LAW: every rendered beat gets a distinct surface — no two
-      // adjacent sections share a background, so each story beat reads as its
-      // own frame (register-appropriate: calm pages alternate soft surfaces).
-      sectionsToSave = enforceFoldDifferentiation(sectionsToSave, artProfile);
       // Above-the-fold VERIFIED social proof: when the user supplied their
       // real rating, the strip renders directly under the hero (linked to the
       // live profile when given). Reuses the existing proof_strip; inserts one
@@ -5594,6 +5624,20 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           sectionsToSave = [...sectionsToSave.slice(0, afterRating), strip, ...sectionsToSave.slice(afterRating)];
         }
       }
+
+      // STORY-FOLD LAW: every rendered beat gets a distinct surface, so no two
+      // adjacent sections share a background and each story beat reads as its
+      // own frame (register-appropriate: calm pages alternate soft surfaces).
+      //
+      // MUST run AFTER the rating/evidence strips are spliced in, not before.
+      // It used to run first, so a strip inserted afterwards shipped with no
+      // canvas at all and fell back to the renderer's index rhythm, which can
+      // land the same surface as the beat above it. That is exactly the "two
+      // proof strips, one of them a dead band" shape that showed up in the
+      // pre-beta review. The pass preserves any canvas already assigned (an
+      // explicit register decision always wins), so running it here assigns
+      // the new strips and leaves every earlier decision untouched.
+      sectionsToSave = enforceFoldDifferentiation(sectionsToSave, artProfile);
 
       // CONSUME the profile's density (it must never be unused metadata): it
       // overrides the archetype's spacing token, so an information-rich
