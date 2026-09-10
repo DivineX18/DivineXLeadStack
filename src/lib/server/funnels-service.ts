@@ -566,6 +566,29 @@ export async function updateFunnelServerSide(opts: {
       throw new FunnelValidationError(ctaRejection(brokenCtas));
     }
 
+    // ── INTERNAL STEPS MUST RESOLVE ───────────────────────────────────────
+    // A chain pointer (a checkout's upsellFunnelId, an upsell's accept/decline
+    // target, the thank-you page's next offer) that names a funnel which no
+    // longer exists in this workspace strands a customer mid-purchase on a
+    // dead end. assertNoChainCycle already refuses a LOOP on every save; this
+    // refuses a BROKEN LINK at the point it would go live.
+    const targets = new Set([
+      ...outboundChainTargets(finalSections),
+      ...(oldData.bridge?.nextFunnelId ? [oldData.bridge.nextFunnelId] : []),
+    ]);
+    if (targets.size > 0) {
+      const resolved = await Promise.all(
+        [...targets].map(async (t) => ({ id: t, ok: !!(await getFunnel(opts.subAccountId, t)) })),
+      );
+      const missing = resolved.filter((r) => !r.ok).map((r) => r.id);
+      if (missing.length > 0) {
+        throw new FunnelValidationError(
+          `This page links on to ${missing.length === 1 ? "a step" : "steps"} that no longer exist in this workspace (${missing.join(", ")}). ` +
+            `A customer following that link would hit a dead end. Point it at a real step, or clear the link, then publish again.`,
+        );
+      }
+    }
+
     // ── THE DELIVERY CONTRACT ─────────────────────────────────────────────
     // And a working button is not the same as a kept promise: the form can
     // submit perfectly and still deliver nothing, forever, because the
