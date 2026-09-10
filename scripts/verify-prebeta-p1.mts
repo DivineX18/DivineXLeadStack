@@ -22,7 +22,7 @@ import {
   isChainStepFunnel,
   chainSectionRejection,
 } from "../src/lib/funnels/commercial-structure";
-import { enforceFoldDifferentiation, deriveArtDirection } from "../src/lib/funnels/art-direction";
+import { enforceFoldDifferentiation, deriveArtDirection, fitCompleteThought } from "../src/lib/funnels/art-direction";
 import { decideShellMode } from "../src/lib/shell/decide-shell-mode";
 import { decideWorkspaceSelection } from "../src/lib/identity/workspace-selection";
 
@@ -120,6 +120,30 @@ for (let i = 1; i < rendered.length; i++) {
   if (rendered[i].canvas && rendered[i].canvas === rendered[i - 1].canvas) adjacentClash = true;
 }
 check("no two adjacent rendered beats share a surface", !adjacentClash);
+
+// ── P1-A.3 copy is never cut mid-thought ───────────────────────────────────
+console.log("\n── P1-A: copy integrity ──");
+
+const LONG = "Get a free, professional inspection and a detailed report that protects your insurance claim, no obligation.";
+check("text that fits is returned whole", fitCompleteThought("Short enough", 80) === "Short enough");
+{
+  const fitted = fitCompleteThought(LONG, 80);
+  check("an over-length promise is cut at a clause, never mid-thought", fitted !== null && !/ (your|that|and|the|a|to|of)$/i.test(fitted), JSON.stringify(fitted));
+  check("the clause-fitted result respects the cap", (fitted?.length ?? 0) <= 80, `len=${fitted?.length}`);
+}
+{
+  const twoSentences = "Storm damage claims have tight windows. The sooner you have a documented report, the stronger your position.";
+  const fitted = fitCompleteThought(twoSentences, 60);
+  check("whole sentences are preferred over clauses", fitted === "Storm damage claims have tight windows.", JSON.stringify(fitted));
+}
+check("an unfittable single word gives up rather than shipping a fragment", fitCompleteThought("Supercalifragilisticexpialidocious", 10) === null);
+{
+  // The exact live symptoms this replaced.
+  const midWord = "…the sooner you have a documen";
+  const midThought = "Get a free, professional inspection and a detailed report that protects your";
+  check("the mid-word symptom can no longer be produced", !(fitCompleteThought(LONG, 180) ?? "").endsWith("documen") && !midWord.includes(fitCompleteThought(LONG, 80) ?? "\0"));
+  check("the mid-thought symptom can no longer be produced", fitCompleteThought(LONG, 80) !== midThought);
+}
 
 // ── P1-B shell mode ────────────────────────────────────────────────────────
 console.log("\n── P1-B: shell mode ──");

@@ -338,6 +338,38 @@ const CARRIER_ROLE_PRIORITY: Record<string, number> = {
   promise: 3,
 };
 
+/**
+ * Fit text into `maxLen` WITHOUT ending mid-thought, or give up and say so.
+ *
+ * A hard slice cuts mid-word ("...you have a documen"). Backing off to the
+ * last space fixes the word and not the sentence ("...a detailed report that
+ * protects your"), which still reads as a page that broke rather than a page
+ * that was written. Both shipped live, on the same page, and both are the
+ * failure the pre-beta review reported.
+ *
+ * So: keep whole units. Whole sentences first, then whole comma/semicolon/
+ * colon clauses, and if not even the first unit fits, return null so the
+ * caller can choose something honest instead of publishing a fragment.
+ */
+export function fitCompleteThought(text: string, maxLen: number): string | null {
+  const clean = text.trim();
+  if (!clean) return null;
+  if (clean.length <= maxLen) return clean;
+
+  const take = (units: string[]): string | null => {
+    let out = "";
+    for (const unit of units) {
+      const next = out ? `${out} ${unit}` : unit;
+      if (next.trim().length > maxLen) break;
+      out = next;
+    }
+    out = out.trim().replace(/[\s,;:]+$/, "");
+    return out.length > 0 ? out : null;
+  };
+
+  return take(clean.split(/(?<=[.!?])\s+/)) ?? take(clean.split(/(?<=[,;:])\s+/));
+}
+
 export function applySalesArgument(
   sections: FunnelSection[],
   plan: SalesArgumentPlanLike,
@@ -389,18 +421,14 @@ export function applySalesArgument(
     if (c.headline?.trim()) return s;
     const promise = plan.corePromise?.trim();
     if (!promise) return s;
-    // A hard character slice cuts mid-word and reads as a rendering bug. Take
-    // the first sentence/clause when there is one, then fall back to trimming
-    // at a word boundary — never mid-word.
-    const firstClause = promise.split(/(?<=[.!?])\s+/)[0].trim();
-    const base = firstClause.length >= 20 && firstClause.length <= 80 ? firstClause : promise;
-    let headline = base.replace(/[.,;:]\s*$/, "");
-    if (headline.length > 80) {
-      headline = headline.slice(0, 80);
-      const lastSpace = headline.lastIndexOf(" ");
-      if (lastSpace > 40) headline = headline.slice(0, lastSpace);
-      headline = headline.replace(/[\s,;:]+$/, "");
-    }
+    // Whole thoughts only. Trimming at a word boundary still shipped
+    // "...a detailed report that protects your" as a live offer heading.
+    // If not even the first clause fits, leave the headline alone rather
+    // than head the offer with a fragment: an unheaded offer is a known,
+    // recoverable state that the completeness rules already describe, and a
+    // sentence that stops mid-thought is not.
+    const headline = fitCompleteThought(promise, 80)?.replace(/[.,;:]\s*$/, "");
+    if (!headline) return s;
     return { ...s, config: { ...s.config, headline } };
   });
 
@@ -470,8 +498,18 @@ export function applySalesArgument(
     if (role === "close" && s.type === "cta_banner") {
       const cfg = next.config as CtaBannerConfig;
       if (!cfg.subtext && (plan.corePromise || plan.closeReason)) {
-        const subtext = [plan.corePromise, plan.closeReason].filter(Boolean).join(" — ").slice(0, 180);
-        next = { ...next, config: { ...cfg, subtext } };
+        // Was: join with an em dash, then slice(0, 180). That shipped
+        // "...the sooner you have a documen" onto a live closing banner, and
+        // put an em dash into page copy the copy rules explicitly ban. Join
+        // as sentences and keep only whole ones: the close reason is dropped
+        // entirely rather than half-said.
+        const joined = [plan.corePromise, plan.closeReason]
+          .map((p) => p?.trim())
+          .filter(Boolean)
+          .map((p) => (/[.!?]$/.test(p!) ? p! : `${p!}.`))
+          .join(" ");
+        const subtext = fitCompleteThought(joined, 180);
+        if (subtext) next = { ...next, config: { ...cfg, subtext } };
       }
     }
 
