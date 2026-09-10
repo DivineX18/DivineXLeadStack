@@ -89,7 +89,7 @@ export default async function PublicFunnelPage({
           )}
         </div>
       )}
-      <PublicFunnelView funnel={data.funnel} forms={data.forms} />
+      <PublicFunnelView funnel={data.funnel} forms={data.forms} deliveryLive={data.deliveryLive} />
     </>
   );
 }

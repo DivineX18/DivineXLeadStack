@@ -195,10 +195,16 @@ const RADIUS_TO_PX: Record<string, string> = {
 export function PublicFunnelView({
   funnel,
   forms,
+  deliveryLive = false,
   previewMode = false,
 }: {
   funnel: FunnelDoc;
   forms: Record<string, LeadForm>;
+  /** Whether an active workflow can actually email someone who submits this
+   *  page. Decides whether the confirmation is allowed to say "check your
+   *  inbox". Defaults false so a caller that hasn't resolved it never makes
+   *  a promise on the page's behalf. See RenderableFunnel.deliveryLive. */
+  deliveryLive?: boolean;
   /** Authenticated draft preview (Production Experience 2.0): renders the
    *  page exactly as it will publish, but suppresses every side-effecting
    *  action — no real leads, no automation firing, no production
@@ -306,9 +312,22 @@ export function PublicFunnelView({
                   captureSuccess={
                     funnel.status === "published" && !funnel.bridge?.nextFunnelId
                       ? {
+                          // NEVER PROMISE AN EMAIL THAT CANNOT SEND. This said
+                          // "check your inbox" on every published funnel, and
+                          // on the ones whose follow-up sat in draft that was
+                          // simply untrue: the lead was captured and nothing
+                          // ever arrived. deliveryLive is the renderer's
+                          // answer to "can anything actually reach them?".
+                          // The file, when there is one, is handed over on the
+                          // page either way, so a visitor never leaves with
+                          // less than before.
                           message: funnel.leadMagnetAsset
-                            ? "Check your inbox — your download is on its way to your email. You can also grab it right here:"
-                            : "Check your inbox — everything you need is on its way to your email.",
+                            ? deliveryLive
+                              ? "Check your inbox — your download is on its way to your email. You can also grab it right here:"
+                              : "Your download is ready right here:"
+                            : deliveryLive
+                              ? "Check your inbox — everything you need is on its way to your email."
+                              : "Thanks — we've got your details and someone will be in touch.",
                           downloadUrl: funnel.leadMagnetAsset?.url,
                           downloadName: funnel.leadMagnetAsset?.filename,
                         }

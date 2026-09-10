@@ -11,6 +11,23 @@ export interface RenderableFunnel {
   /** formId -> serialized LeadForm, for any hero/offer/ticket_tiers/checkout
    *  sections referencing an embedded lead-capture form. */
   forms: Record<string, LeadForm>;
+  /**
+   * Whether an email can actually reach someone who submits this page: at
+   * least one ACTIVE workflow is triggered by one of its capture forms.
+   *
+   * The confirmation a visitor sees used to say "Check your inbox, everything
+   * you need is on its way to your email" whenever a funnel was published,
+   * with nothing checking that anything could send. A hundred and three
+   * published funnels had only draft workflows behind them, so that sentence
+   * was false on every one of them: the lead was captured, the inbox stayed
+   * empty, and nobody was told.
+   *
+   * Publishing now refuses that state, but pages published BEFORE that guard
+   * are still live and still collecting. This is what lets the renderer stop
+   * promising an email it knows cannot arrive, without changing what the page
+   * captures, sending anything, or touching stored data.
+   */
+  deliveryLive: boolean;
 }
 
 /** Shared by /lp/[funnelId] and the custom-domain resolver so both entry
@@ -37,7 +54,27 @@ async function loadFunnelForRenderUncached(
   const funnel: FunnelDoc = { id: snap.id, ...data, createdAt: null, updatedAt: null };
 
   const forms = await loadFunnelFormsForPreview(funnel);
-  return { funnel, forms };
+  return { funnel, forms, deliveryLive: await resolveDeliveryLive(funnel, Object.keys(forms)) };
+}
+
+/** One equality query per render, deduped by the React cache above. Fails
+ *  CLOSED: if the lookup throws, the page simply stops claiming an email is
+ *  coming, which is the safe direction to be wrong in. */
+async function resolveDeliveryLive(funnel: FunnelDoc, formIds: string[]): Promise<boolean> {
+  if (formIds.length === 0) return false;
+  try {
+    const snap = await getAdminDb()
+      .collection("workflows")
+      .where("subAccountId", "==", funnel.subAccountId)
+      .where("status", "==", "active")
+      .get();
+    return snap.docs.some((d) => {
+      const t = (d.data() as { trigger?: { formId?: string } }).trigger;
+      return !!t?.formId && formIds.includes(t.formId);
+    });
+  } catch {
+    return false;
+  }
 }
 
 /**

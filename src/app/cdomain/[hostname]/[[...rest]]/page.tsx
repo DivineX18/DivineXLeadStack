@@ -30,5 +30,5 @@ export default async function CustomDomainResolverPage({
   const data = await loadFunnelForRender(domainDoc.funnelId);
   if (!data) notFound();
 
-  return <PublicFunnelView funnel={data.funnel} forms={data.forms} />;
+  return <PublicFunnelView funnel={data.funnel} forms={data.forms} deliveryLive={data.deliveryLive} />;
 }
