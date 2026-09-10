@@ -184,12 +184,23 @@ for (const [device, width, height] of [["desktop", 1440, 900], ["mobile", 390, 8
     check(`${device}: clicking the CTA actually opens the capture form`, opened);
 
     if (opened && device === "desktop") {
-      const nameInput = page.locator('input[name="name"], input[placeholder*="ame"]').first();
-      if ((await nameInput.count()) > 0) await nameInput.fill("Funnel QA");
-      await emailInput.fill(testEmail);
-      const phone = page.locator('input[type="tel"], input[name="phone"]').first();
-      if ((await phone.count()) > 0) await phone.fill("+15551230000");
-      await page.locator('form button[type="submit"], form button').last().click();
+      // Fill EVERY visible field in the form. The rendered inputs carry no
+      // `name` attribute, so selecting by name silently matches nothing and
+      // leaves a required field blank; the form then correctly refuses to
+      // submit and the test looks like a product failure when it is a
+      // harness one. Filling by position is what a person actually does.
+      const inputs = page.locator("form input:visible, form textarea:visible");
+      for (let i = 0; i < (await inputs.count()); i++) {
+        const el = inputs.nth(i);
+        const type = (await el.getAttribute("type")) ?? (await el.evaluate((n) => n.tagName.toLowerCase()));
+        await el.fill(
+          type === "email" ? testEmail
+            : type === "tel" ? "+15551230000"
+            : type === "textarea" ? "Automated end-to-end check."
+            : "Funnel QA",
+        );
+      }
+      await page.locator('form button[type="submit"]').first().click();
       await page.waitForTimeout(6000);
       const body = (await page.locator("body").innerText()).replace(/\s+/g, " ");
       check("desktop: the page confirms the submission to the visitor", /you'?re in|thank|check your|on the way|success/i.test(body), body.slice(0, 160));
@@ -213,12 +224,13 @@ check("the follow-up workflow actually ran", runs.size > 0, `${runs.size} run(s)
 let sentOk = false;
 let sendLog = "(no send_email step reached)";
 runs.forEach((d) => {
-  const r = d.data() as { history?: { nodeId?: string; nodeType?: string; log?: string }[]; status?: string };
+  const r = d.data() as { history?: { nodeId?: string; type?: string; result?: string }[]; status?: string };
   for (const h of r.history ?? []) {
-    if (h.nodeType === "send_email" || /email/.test(h.nodeId ?? "")) {
-      sendLog = `${h.nodeId}:${h.log}`;
-      if (h.log === "ok") sentOk = true;
-    }
+    if (h.type !== "send_email") continue;
+    sendLog = `${h.nodeId}:${h.result}`;
+    // execSendEmail records "ok" only after sendEmail() returns without
+    // throwing, i.e. after the provider accepted the message.
+    if (h.result === "ok") sentOk = true;
   }
 });
 check("the confirmation email was accepted by the email provider", sentOk, sendLog);
