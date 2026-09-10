@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { resolveShellContextForLayout } from "@/lib/shell/shell-context-wrappers";
+import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 import { decideShellFallbackRoute } from "@/lib/shell/resolve-shell-fallback-route";
 import { ascendDarkBranding } from "@/lib/shell/resolve-shell-branding";
 import { AscendShellSidebarContent } from "@/components/shell/ascend-shell-sidebar-content";
@@ -37,19 +37,24 @@ import { ZenoLauncher } from "@/components/ai-suite/zeno-launcher";
  * not the Zeno execution bridge, not a builder rewrite.
  */
 export default async function AscendAppLayout({ children }: { children: ReactNode }) {
-  // /app/* carries no [subAccountId] URL segment, unlike /sa/[id]/... — the
-  // "active_workspace_id" cookie (set by middleware.ts whenever a /sa/[id]/
-  // request is made) is the only signal this layout has for which workspace
-  // to resolve when the caller belongs to more than one. This is NEVER
-  // trusted as authorization: resolveShellContextForLayout ->
-  // resolveWorkspaceIdentity -> resolveSubAccountAccess independently
-  // re-verifies real membership regardless of where the id came from, so a
-  // forged/stale cookie can at worst cause a harmless redirect below, never
-  // real access to a workspace the caller isn't really in.
-  const activeWorkspaceId = (await cookies()).get("active_workspace_id")?.value;
-  const shell = await resolveShellContextForLayout(
-    activeWorkspaceId ? { explicitWorkspaceId: activeWorkspaceId } : undefined,
-  );
+  // /app/* carries no [subAccountId] URL segment, unlike /sa/[id]/..., so the
+  // "active_workspace_id" cookie (set by middleware.ts on any /sa/[id]/
+  // request) is this layout's signal for which workspace to open when the
+  // caller belongs to more than one, with resolveShellContextForPage()'s
+  // fresh-login fallback behind it for the login that hasn't set one yet.
+  //
+  // Sharing that ONE resolver with the routes that send people here is the
+  // point. /dashboard and /sa/{id}/dashboard decide to redirect into this
+  // shell using it, so a layout that resolved differently would bounce the
+  // visitor straight back out. It did, before this: a fresh login with
+  // several memberships went /dashboard -> /app/home -> /agency, because the
+  // sender could see a workspace and the receiver could not.
+  //
+  // None of it is authorization. resolveWorkspaceIdentity ->
+  // resolveSubAccountAccess re-verifies real membership regardless of where
+  // the workspace id came from, so a forged or stale cookie can at worst
+  // cause a harmless redirect below, never real access.
+  const shell = await resolveShellContextForPage();
 
   if (!shell) {
     redirect("/login");

@@ -2,7 +2,7 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import { headers, cookies } from "next/headers";
-import { resolveShellContextForLayout } from "@/lib/shell/shell-context-wrappers";
+import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 
 /**
  * TEMPORARY diagnostic route — not part of the plan. Exposes the exact
@@ -34,9 +34,11 @@ export async function GET() {
 
   const uid = hdrs.get("x-user-uid");
 
-  const shell = await resolveShellContextForLayout(
-    explicitWorkspaceId ? { explicitWorkspaceId } : undefined,
-  );
+  // Must be the SAME resolver app/layout.tsx uses, or this route reports a
+  // shell nobody actually gets. It follows the layout onto
+  // resolveShellContextForPage(), which reads the cookie itself and adds the
+  // fresh-login fallback for a caller who has not selected a workspace yet.
+  const shell = await resolveShellContextForPage();
 
   return NextResponse.json({
     // Raw signals, computed the same way resolve-shell-context.ts does
