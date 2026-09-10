@@ -211,7 +211,11 @@ export interface PublicPlanSummary {
   /** Real supporting capabilities, condensed into one line on the card. */
   alsoIncluded: string[];
   /** "How much can I use?" — the reason to move up a tier. */
-  allowances: { label: string; value: string }[];
+  /** `note` is an optional one-line descriptor shown under the value. It
+   *  exists for allowances whose unit is not self-explanatory: "creations"
+   *  means nothing until a buyer knows what can be created. Entries carrying
+   *  one span the full card width so the line stays readable. */
+  allowances: { label: string; value: string; note?: string }[];
   /**
    * Free-trial days, or null when the plan has none. Public because the
    * pricing page must disclose the trial AND the price that begins after it

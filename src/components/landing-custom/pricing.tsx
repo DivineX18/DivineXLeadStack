@@ -152,13 +152,21 @@ export function Pricing({
                     {plan.allowances.length > 0 && (
                       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg bg-muted/50 p-3">
                         {plan.allowances.map((a) => (
-                          <div key={a.label} className="flex flex-col">
+                          <div
+                            key={a.label}
+                            className={`flex flex-col${a.note ? " col-span-2" : ""}`}
+                          >
                             <dt className="text-[11px] leading-tight text-muted-foreground">
                               {a.label}
                             </dt>
                             <dd className="text-sm font-semibold tabular-nums">
                               {a.value}
                             </dd>
+                            {a.note && (
+                              <p className="mt-0.5 text-[11px] font-normal leading-snug text-muted-foreground">
+                                {a.note}
+                              </p>
+                            )}
                           </div>
                         ))}
                       </dl>

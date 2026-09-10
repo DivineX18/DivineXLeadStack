@@ -84,6 +84,9 @@ const HIGHLIGHT_COUNT = 8;
 export interface PlanAllowance {
   label: string;
   value: string;
+  /** Optional one-line descriptor under the value, for units that mean
+   *  nothing on their own. "Creations" is the case this exists for. */
+  note?: string;
 }
 
 export interface PlanPresentation {
@@ -116,7 +119,14 @@ export function buildAllowances(limits: PlanLimits | undefined): PlanAllowance[]
     out.push({ label: "Websites & funnels", value: n(l.maxWebsites) });
   }
   if (l.maxAiGenerationsPerMonth !== null && l.maxAiGenerationsPerMonth !== undefined) {
-    out.push({ label: "Marketing Content & Assets", value: `${n(l.maxAiGenerationsPerMonth)} creations/mo` });
+    out.push({
+      label: "Marketing Content & Assets",
+      value: `${n(l.maxAiGenerationsPerMonth)} creations/mo`,
+      // Deliberately excludes emails, blogs, ads and social content: those are
+      // real capabilities, but they do not decrement THIS counter, and a
+      // metered allowance has to list only what it actually meters.
+      note: "Lead magnets, page copy, VSLs, scripts, proposals, content plans & more.",
+    });
   }
   if (l.maxEmailsPerMonth !== null && l.maxEmailsPerMonth !== undefined) {
     out.push({ label: "Broadcast emails / month", value: n(l.maxEmailsPerMonth) });
