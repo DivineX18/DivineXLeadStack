@@ -26,7 +26,7 @@ interface FeatureEntry {
 
 /** Capture → follow up → convert → automate → measure. */
 const FLOW_PRIMARY: FeatureEntry[] = [
-  { label: "Zeno AI assistant", gate: "aiSuiteEnabledByAgency" },
+  { label: "Zeno Growth Strategist", gate: "aiSuiteEnabledByAgency" },
   { label: "CRM & sales pipelines", gate: null },
   { label: "Funnels & landing pages", gate: "funnelsEnabledByAgency" },
   { label: "Automated lead follow-up", gate: null },
@@ -51,9 +51,9 @@ const UNIFIED_PRIMARY: FeatureEntry[] = [
   { label: "CRM & sales pipelines", gate: null },
   { label: "Forms & lead capture", gate: null },
   { label: "Booking & scheduling", gate: null },
-  { label: "Zeno growth intelligence", gate: "ascendIntelligenceEnabledByAgency" },
-  { label: "AI-generated marketing & conversion assets", gate: "aiSuiteEnabledByAgency" },
-  { label: "Business-aware AI assistant", gate: "aiSuiteEnabledByAgency" },
+  { label: "Growth Intelligence", gate: "ascendIntelligenceEnabledByAgency" },
+  { label: "Marketing Content & Assets", gate: "aiSuiteEnabledByAgency" },
+  { label: "Zeno Growth Strategist", gate: "aiSuiteEnabledByAgency" },
   { label: "Workflows & automations", gate: null },
   { label: "Email broadcasts", gate: "broadcastsEnabledByAgency" },
   {
@@ -72,7 +72,7 @@ const SECONDARY: FeatureEntry[] = [
   { label: "Funnel checkout", gate: "funnelCheckoutEnabledByAgency" },
   { label: "Missed-call text back", gate: "missedCallTextBackEnabledByAgency" },
   { label: "WhatsApp channel", gate: "whatsappEnabledByAgency" },
-  { label: "Outbound AI voice calls", gate: "outboundVoiceEnabledByAgency" },
+  { label: "Automated outbound calling", gate: "outboundVoiceEnabledByAgency" },
   { label: "Community & courses", gate: "communityEnabledByAgency" },
   { label: "Dedicated sending domain", gate: "emailDomainEnabledByAgency" },
   { label: "API access", gate: "apiAccessEnabledByAgency" },
@@ -116,7 +116,7 @@ export function buildAllowances(limits: PlanLimits | undefined): PlanAllowance[]
     out.push({ label: "Websites & funnels", value: n(l.maxWebsites) });
   }
   if (l.maxAiGenerationsPerMonth !== null && l.maxAiGenerationsPerMonth !== undefined) {
-    out.push({ label: "AI generations / month", value: n(l.maxAiGenerationsPerMonth) });
+    out.push({ label: "Marketing Content & Assets", value: `${n(l.maxAiGenerationsPerMonth)} creations/mo` });
   }
   if (l.maxEmailsPerMonth !== null && l.maxEmailsPerMonth !== undefined) {
     out.push({ label: "Broadcast emails / month", value: n(l.maxEmailsPerMonth) });
