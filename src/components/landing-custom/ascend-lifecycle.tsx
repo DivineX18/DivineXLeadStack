@@ -43,7 +43,7 @@ export function AscendLifecycle() {
         </div>
 
         <p className="mx-auto mt-10 max-w-xl text-center text-sm text-muted-foreground">
-          Every tool on the market starts at <span className="font-medium text-foreground">Create</span>.
+          Most marketing tools start at <span className="font-medium text-foreground">Create</span>.
           Ascend starts one step earlier.
         </p>
       </div>

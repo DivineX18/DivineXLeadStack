@@ -49,11 +49,11 @@ export function HeroCtas({
   return (
     <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
       {trialPlanId ? (
-        <Button size="lg" className="px-6 text-base" onClick={startTrial} disabled={starting}>
-          {starting ? "Starting…" : "Start My 14-Day Free Trial"}
+        <Button render={<a href="/start" />} size="lg" className="h-11 px-6 text-base">
+          Start My 14-Day Free Trial
         </Button>
       ) : (
-        <Button render={<a href="#pricing" />} size="lg" className="px-6 text-base">
+        <Button render={<a href="#pricing" />} size="lg" className="h-11 px-6 text-base">
           See plans
         </Button>
       )}
@@ -61,7 +61,7 @@ export function HeroCtas({
         render={<a href={scanHref} />}
         variant="outline"
         size="lg"
-        className="px-6 text-base"
+        className="h-11 px-6 text-base"
       >
         Run a Free Growth Scan
       </Button>

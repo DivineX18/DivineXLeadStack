@@ -4,6 +4,11 @@ import { authMiddleware } from "next-firebase-auth-edge/lib/next/middleware";
 
 const PUBLIC_PATHS = [
   "/",
+  // Step 1 of the two-step trial. Public by necessity: it runs before any
+  // account exists, and creates none — it records a lead and forwards to the
+  // same Stripe Checkout the pricing card uses.
+  "/start",
+  "/api/public/trial-signup",
   // P0.1/U3 — deployment provenance (branch + commit). Public and
   // secret-free on purpose: verifying which build a service is running must
   // not require a session, since the deployment drift this prevents was
