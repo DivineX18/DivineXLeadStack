@@ -1,21 +1,21 @@
-"use client";
-
-import { useState } from "react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 /**
- * The hero's two acquisition paths.
+ * The hero's acquisition paths — one primary, one quiet.
  *
- * The trial button starts the SAME certified checkout the pricing section
- * uses (`/api/public/checkout` with a plan id) rather than a second billing
- * path — one endpoint, one set of billing semantics, nothing new on Stripe's
- * side. It is a client component only because starting checkout is a fetch;
- * the hero around it stays a server component.
+ * Both destinations are plain links to EXISTING certified surfaces: the public
+ * Growth Scanner, and `/start`, which is the first step of the trial and is
+ * host-aware (resolveProductSurface picks Ascend Solo here, Flow's plan on
+ * crm). No checkout is initiated from this component — `/start` owns that, so
+ * there is exactly one place where a trial can begin.
  *
- * When no plan carries a trial (Stripe unconfigured, or plans not yet
- * created), the trial button degrades to the pricing section rather than
- * offering a trial that cannot start.
+ * (It previously carried a client-side fetch to `/api/public/checkout` that
+ * nothing ever called — the button was already a link. Removed rather than
+ * left as a second, dormant billing path.)
+ *
+ * When no plan carries a trial (Stripe unconfigured, or plans not yet created),
+ * the trial link degrades to the pricing section rather than offering a trial
+ * that cannot start.
  */
 export function HeroCtas({
   trialPlanId,
@@ -24,47 +24,39 @@ export function HeroCtas({
   trialPlanId: string | null;
   scanHref: string;
 }) {
-  const [starting, setStarting] = useState(false);
-
-  async function startTrial() {
-    if (!trialPlanId) return;
-    setStarting(true);
-    try {
-      const res = await fetch("/api/public/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId: trialPlanId }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.url) {
-        throw new Error(data.error ?? "Could not start your trial.");
-      }
-      window.location.href = data.url;
-    } catch (err) {
-      setStarting(false);
-      toast.error(err instanceof Error ? err.message : "Could not start your trial.");
-    }
-  }
-
   return (
-    <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-      {trialPlanId ? (
-        <Button render={<a href="/start" />} size="lg" className="h-11 px-6 text-base">
-          Start My 14-Day Free Trial
-        </Button>
-      ) : (
-        <Button render={<a href="#pricing" />} size="lg" className="h-11 px-6 text-base">
-          See plans
-        </Button>
-      )}
-      <Button
-        render={<a href={scanHref} />}
-        variant="outline"
-        size="lg"
-        className="h-11 px-6 text-base"
-      >
-        Run a Free Growth Scan
+    <div className="mt-10 flex flex-col items-center justify-center gap-3">
+      {/* THE SCAN IS THE OFFER ABOVE THE FOLD, AND IT IS THE ONLY ONE.
+          Ascend's argument is that it starts with the diagnosis, so the first
+          thing asked of a cold visitor has to BE the diagnosis. Leading with
+          the trial inverted that: it asked for a card before the product had
+          shown a visitor anything about their own business, and it put a
+          paid decision in direct competition with the free proof of the
+          claim the headline just made. One primary action, and it is the
+          one the headline earns. */}
+      <Button render={<a href={scanHref} />} size="lg" className="h-11 px-6 text-base">
+        Run My Free Growth Scan
       </Button>
+
+      {/* The trial stays reachable — a visitor who already knows they want it
+          should never have to hunt — but as a quiet text link, not a second
+          button competing for the same click. Its own terms travel with it so
+          the card requirement is never something discovered later. */}
+      {trialPlanId ? (
+        <a
+          href="/start"
+          className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+        >
+          Or start your 14-day free trial
+        </a>
+      ) : (
+        <a
+          href="#pricing"
+          className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+        >
+          Or see plans
+        </a>
+      )}
     </div>
   );
 }

@@ -21,7 +21,11 @@ const UNIFIED_COPY = {
   headLead: "Find what's costing you leads.",
   headAccent: "Then fix it",
   sub: "Ascend analyzes your website and marketing to identify the biggest constraint holding back conversions, shows you what to fix first, and helps you put the fix into action.",
-  trust: "14 days free. Card required. Cancel anytime.",
+  // Describes the PRIMARY action, which is now the scan. The old line named the
+  // trial's card requirement while sitting under a scan button — true of the
+  // wrong thing, which is the most expensive kind of accurate copy. The trial's
+  // own terms travel with the trial link instead.
+  trust: "Free. No credit card, no software setup.",
   authority:
     "Built and calibrated using insights from 150+ real-world website analyses and established CRO/UX principles.",
 } as const;
