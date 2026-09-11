@@ -313,8 +313,15 @@ function Results({ report }: { report: Report }) {
           Ascend helps you create the fix, publish it, capture the leads it brings in, follow up
           automatically, and measure what changed.
         </p>
+        {/* /start, not /pricing. After a personalized diagnosis, a full pricing
+            table asks the visitor to re-choose something the scan has already
+            earned the right to assume. /start is the EXISTING certified first
+            step of the trial: host-aware (resolveProductSurface picks Ascend
+            Solo on this host, Flow's plan on crm), and it hands off to the
+            same Stripe Checkout that has always been the only thing able to
+            create a customer. No new checkout architecture. */}
         <a
-          href="/pricing"
+          href="/start"
           className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-white px-6 py-4 text-base font-bold text-[#0b0d12] transition hover:bg-white/90 sm:w-auto"
         >
           Start My 14-Day Free Trial
