@@ -23,8 +23,26 @@ import type { PlanProduct } from "@/types/billing";
  * swapped: the logo, colours and every other branding field carry through, so
  * the DivineX mark stays exactly where it is.
  */
-export function brandForProduct<T extends { name: string }>(brand: T, product: PlanProduct): T {
-  return product === "unified" ? { ...brand, name: "Ascend" } : brand;
+export function brandForProduct<T extends { name: string; tagline?: string; shortDescription?: string }>(
+  brand: T,
+  product: PlanProduct,
+): T {
+  if (product !== "unified") return brand;
+  // The NAME was swapped here from the start, but the tagline was not, so the
+  // Ascend host still signed its footer "The Growth Operating System for
+  // Purpose-Driven Businesses" — Flow's line, and an ICP Ascend no longer
+  // leads with. Ascend's own positioning goes with its own name.
+  return {
+    ...brand,
+    name: "Ascend",
+    ...(brand.tagline !== undefined ? { tagline: "Find what's costing you leads. Then fix it." } : {}),
+    ...(brand.shortDescription !== undefined
+      ? {
+          shortDescription:
+            "Ascend analyzes your website and marketing to identify the biggest constraint holding back conversions, shows you what to fix first, and helps you put the fix into action.",
+        }
+      : {}),
+  };
 }
 
 export async function resolveProductSurface(): Promise<PlanProduct> {

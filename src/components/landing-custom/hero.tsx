@@ -13,9 +13,14 @@ import { AscendHeroDemo } from "./ascend-hero-demo";
  * is trying to buy. No performance claims, because none are substantiated.
  */
 const UNIFIED_COPY = {
-  headLead: "Turn more of your traffic",
-  headAccent: "into leads",
-  sub: "Ascend finds what's costing you leads, helps create the fix, and gives you the tools to turn more opportunities into customers.",
+  // "Turn more of your traffic into leads" named a good outcome that every
+  // marketing tool also claims, so it explained nothing about why Ascend is
+  // different. The difference is the order: it starts before execution, with
+  // the diagnosis. The headline says that, and the Growth Scan below it is
+  // the proof rather than a promise.
+  headLead: "Find what's costing you leads.",
+  headAccent: "Then fix it",
+  sub: "Ascend analyzes your website and marketing to identify the biggest constraint holding back conversions, shows you what to fix first, and helps you put the fix into action.",
   trust: "14 days free. Card required. Cancel anytime.",
   authority:
     "Built and calibrated using insights from 150+ real-world website analyses and established CRO/UX principles.",
