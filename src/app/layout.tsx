@@ -6,6 +6,7 @@ import { AnalyticsScripts } from "@/components/analytics-scripts";
 import { SwRegister } from "@/components/pwa/sw-register";
 import { PwaLinks } from "@/components/pwa/pwa-links";
 import { CUSTOM_BRAND, LANDING_VARIANT } from "@/config/landing";
+import { resolveProductSurface } from "@/lib/landing/resolve-product-surface";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -40,7 +41,38 @@ const instrumentSerif = Instrument_Serif({
 // static-source-of-truth tradeoff the title/description above already make.
 const siteUrl = `https://${CUSTOM_BRAND.primaryDomain}`;
 
-export const metadata: Metadata = {
+/**
+ * HOST-AWARE PUBLIC IDENTITY.
+ *
+ * This was a static `metadata` export, which cannot see the request, so both
+ * hostnames emitted the same brand: app.divinex.io answered every public page
+ * with "Flow — The Growth Operating System for Purpose-Driven Businesses",
+ * including its own login and its own root. An Ascend customer's first
+ * impression, and every link they shared, was the other product's name and a
+ * positioning line Ascend no longer uses.
+ *
+ * generateMetadata() runs on the server per request, so the correct identity
+ * is in the HTML that ships. Nothing is detected client-side and nothing
+ * repaints: there is no Flow flash to remove because Flow is never rendered
+ * here in the first place.
+ *
+ * PRESENTATION ONLY. resolveProductSurface reads the hostname and decides what
+ * this surface is CALLED. It grants nothing: access is still decided by
+ * entitlements and the session, and decide-shell-mode.ts still requires a real
+ * full_ascend workspace tier before any Ascend product surface opens.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const product = await resolveProductSurface();
+  const isAscend = product === "unified";
+
+  // Ascend leads with the diagnosis, which is the whole positioning: it starts
+  // before execution. Flow keeps its own line untouched — it is a standalone
+  // product and this pass is not about restating it.
+  const ascendTitle = "Ascend — Find what's costing you leads. Then fix it.";
+  const ascendDescription =
+    "Ascend analyzes your website and marketing to identify the biggest constraint holding back conversions, shows you what to fix first, and helps you put the fix into action.";
+
+  const base: Metadata = {
   metadataBase: new URL(siteUrl),
   ...(LANDING_VARIANT === "custom"
     ? {
@@ -108,6 +140,25 @@ export const metadata: Metadata = {
     : {
         icons: { icon: "/leadstack-mark.svg" },
       }),
+  };
+
+  if (!isAscend) return base;
+  return {
+    ...base,
+    title: ascendTitle,
+    description: ascendDescription,
+    openGraph: {
+      ...(base.openGraph ?? {}),
+      title: "Ascend",
+      description: ascendDescription,
+      siteName: "Ascend",
+    },
+    twitter: { ...(base.twitter ?? {}), title: "Ascend", description: ascendDescription },
+    appleWebApp:
+      typeof base.appleWebApp === "object" && base.appleWebApp
+        ? { ...base.appleWebApp, title: "Ascend" }
+        : base.appleWebApp,
+  };
 };
 
 export const viewport: Viewport = {
