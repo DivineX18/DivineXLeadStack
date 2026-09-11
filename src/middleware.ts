@@ -30,6 +30,14 @@ const PUBLIC_PATHS = [
   // guide linked from /thank-you and shareable as a stable URL).
   "/docs",
   "/f",
+  // PUBLIC ASCEND GROWTH SCAN — the cold-traffic front door. A visitor must
+  // reach the diagnosis with no account, no workspace and no card, so the
+  // page and its two proxy endpoints are public. The proxy is deliberately
+  // narrow (start + read only) and the upstream scan endpoint it forwards to
+  // is itself already public; no authenticated workspace API becomes
+  // reachable through it. See lib/intelligence/public-growth-scan.ts.
+  "/growth-scanner",
+  "/api/public/growth-scan",
   "/api/forms",
   "/api/auth/signup",
   // Public self-serve activation — sets the password on a Firebase Auth
