@@ -121,7 +121,15 @@ export async function pollPublicGrowthScan(shareToken: string): Promise<ScanPoll
     return { state: "running" }; // a blip mid-scan is not a failure
   }
 
-  if (res.status === 404) return { state: "failed", error: "That scan link has expired or doesn't exist." };
+  // A 404 is the NORMAL in-progress signal, not a dead link: the scan is not
+  // readable by share token until the engine has finished with it. Verified
+  // against both BI environments — a token returned seconds earlier by a
+  // successful 202 answers 404 here until the report exists, then starts
+  // returning it. Treating 404 as terminal made every scan "fail" instantly
+  // while it was in fact running perfectly.
+  //
+  // The caller bounds the wait, so a genuinely bad token costs a bounded poll
+  // rather than being mistaken for a broken product.
   if (!res.ok) return { state: "running" };
 
   const text = await res.text();

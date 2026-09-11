@@ -20,6 +20,20 @@ export const metadata: Metadata = {
   description:
     "Enter your website and Ascend will analyze your marketing, identify your biggest growth constraint, and show you what to fix first. Free growth assessment, no software setup required.",
   robots: { index: true, follow: true },
+  // The root layout stamps Flow's social identity (og:title, og:site_name,
+  // apple-mobile-web-app-title) from CUSTOM_BRAND onto every page. On an
+  // Ascend acquisition page that is the wrong brand: a shared link previewed
+  // as "Flow". Overriding here fixes THIS page; the host-aware fix for every
+  // public surface is the separate branding pass.
+  openGraph: {
+    title: "Free Growth Scan — find what's costing you leads",
+    siteName: "Ascend",
+    description:
+      "Ascend analyzes your website and marketing, identifies your biggest growth constraint, and shows you what to fix first.",
+    type: "website",
+  },
+  twitter: { card: "summary_large_image", title: "Free Growth Scan | Ascend" },
+  appleWebApp: { title: "Ascend" },
 };
 
 export default function GrowthScannerPage() {
