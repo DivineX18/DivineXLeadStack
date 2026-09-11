@@ -160,6 +160,11 @@ async function handleSubmit(
     return jsonWithCors({ error: "Form not found" }, { status: 404 });
   }
   const form = { id: formSnap.id, ...(formSnap.data() as Omit<LeadForm, "id">) };
+  // `settings` is read with `?.` throughout below. Every form the product
+  // creates has one, but this is a PUBLIC, unauthenticated endpoint on the
+  // revenue path: a document missing the block (an older doc, an import, an
+  // integration write) previously threw a TypeError mid-submit and lost the
+  // lead. Optional access costs nothing and cannot lose one.
   if (!form.enabled) {
     return jsonWithCors({ error: "Form is paused" }, { status: 410 });
   }
@@ -285,7 +290,7 @@ async function handleSubmit(
     if (mapped.phone && !data.phone) patch.phone = mapped.phone;
     if (matchEmail && !data.email) patch.email = matchEmail;
     if (mapped.company && !data.company) patch.company = mapped.company;
-    const newTags = form.settings.autoTags ?? [];
+    const newTags = form.settings?.autoTags ?? [];
     if (newTags.length > 0) {
       const existingTags = Array.isArray(data.tags) ? data.tags : [];
       const mergedTags = Array.from(new Set([...existingTags, ...newTags]));
@@ -314,8 +319,8 @@ async function handleSubmit(
       // manually-created website contacts. UTM source still wins when
       // present so paid-traffic attribution flows through unchanged.
       source: attribution?.utmSource || "website-form",
-      tags: form.settings.autoTags ?? [],
-      pipelineStage: form.settings.pipelineStageId ?? null,
+      tags: form.settings?.autoTags ?? [],
+      pipelineStage: form.settings?.pipelineStageId ?? null,
       attribution,
       agencyId,
       subAccountId,
@@ -368,15 +373,15 @@ async function handleSubmit(
 
   // Optional: open a deal in the configured pipeline stage.
   let dealId: string | null = null;
-  if (form.settings.createDeal) {
-    const stageId = form.settings.pipelineStageId ?? "new";
+  if (form.settings?.createDeal) {
+    const stageId = form.settings?.pipelineStageId ?? "new";
     const title =
-      interpolate(form.settings.dealTitleTemplate || "New lead", bag) ||
+      interpolate(form.settings?.dealTitleTemplate || "New lead", bag) ||
       "New lead";
     const dealRef = await db.collection("deals").add({
       title,
-      value: form.settings.dealValue || 0,
-      currency: form.settings.dealCurrency || "USD",
+      value: form.settings?.dealValue || 0,
+      currency: form.settings?.dealCurrency || "USD",
       contactId: contactRef.id,
       stageId,
       priority: "medium",
@@ -485,7 +490,7 @@ async function handleSubmit(
     ok: true,
     contactId: contactRef.id,
     dealId,
-    thankYouMessage: form.settings.thankYouMessage,
-    redirectUrl: form.settings.redirectUrl || null,
+    thankYouMessage: form.settings?.thankYouMessage,
+    redirectUrl: form.settings?.redirectUrl || null,
   });
 }
