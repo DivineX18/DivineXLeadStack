@@ -6542,10 +6542,18 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         if (poll.data.status === "completed" && poll.data.asset) {
           const asset = poll.data.asset;
           return {
+            // HONEST ABOUT WHERE THIS ENDS. The old line said "review and edit
+            // it in Create before you use it anywhere" — Create → Assets has no
+            // editor, and "use it anywhere" named a handoff that does not
+            // exist: a written asset is read-only text you copy out. Saying so
+            // is what keeps this surface truthful, and it points at the paths
+            // that DO build something (create_funnel, apply_workflow_plan)
+            // rather than implying this one does.
             resultText:
               `Your ${asset.assetType} is ready — “${asset.title}”.\n\n` +
               `• Written from this workspace's saved business and brand, not a generic template.\n` +
-              `• It's a draft: review and edit it in Create before you use it anywhere.`,
+              `• Read it under Create → Assets, where you can copy or download it.\n` +
+              `• Want it live rather than written? Ask me to build the page or the follow-up sequence and I'll create it as a real draft you publish.`,
             ref: { kind: "asset", id: String(asset.id) },
           };
         }
@@ -6557,7 +6565,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         resultText:
           `I've started writing your ${args.assetType as string} — the longer pieces take a couple of minutes.\n\n` +
           `• It'll appear under Create → Assets when it's done; you don't need to ask again.\n` +
-          `• It's written from this workspace's saved business and brand, and arrives as a draft to review.`,
+          `• It's written from this workspace's saved business and brand, and arrives as text you can copy or download.`,
       };
     },
   },

@@ -1,4 +1,7 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
+import { trackFunnelEvent } from "@/lib/analytics/track";
 
 /**
  * The hero's acquisition paths — one primary, one quiet.
@@ -34,7 +37,12 @@ export function HeroCtas({
           paid decision in direct competition with the free proof of the
           claim the headline just made. One primary action, and it is the
           one the headline earns. */}
-      <Button render={<a href={scanHref} />} size="lg" className="h-11 px-6 text-base">
+      <Button
+        render={<a href={scanHref} />}
+        size="lg"
+        className="h-11 px-6 text-base"
+        onClick={() => trackFunnelEvent("growth_scan_cta_clicked", { product: "ascend", source: "hero" })}
+      >
         Run My Free Growth Scan
       </Button>
 
@@ -45,6 +53,7 @@ export function HeroCtas({
       {trialPlanId ? (
         <a
           href="/start"
+          onClick={() => trackFunnelEvent("trial_cta_clicked", { product: "ascend", source: "hero" })}
           className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
         >
           Or start your 14-day free trial

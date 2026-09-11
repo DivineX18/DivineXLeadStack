@@ -3,6 +3,7 @@ import { getPublicPlans } from "@/lib/server/public-signup-service";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import { brandForProduct, resolveProductSurface } from "@/lib/landing/resolve-product-surface";
 import { TrialSignupForm } from "@/components/landing-custom/trial-signup-form";
+import { FunnelPageView } from "@/components/analytics/funnel-page-view";
 
 export const metadata = {
   title: "Start your 14-day free trial",
@@ -48,6 +49,11 @@ export default async function StartTrialPage() {
           {trialPlan.name} · {price}/month after your trial
         </p>
 
+        <FunnelPageView
+          event="start_page_viewed"
+          product={product === "unified" ? "ascend" : "flow"}
+          plan={trialPlan.id}
+        />
         <div className="mt-8 rounded-2xl border bg-card p-6 shadow-sm">
           <TrialSignupForm planId={trialPlan.id} />
         </div>

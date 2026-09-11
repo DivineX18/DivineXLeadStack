@@ -254,6 +254,16 @@ export function AscendAssetsSection({ saId, isAdmin }: { saId: string; isAdmin: 
                 </Button>
               </div>
             </div>
+            {/* SAYS WHAT THIS IS, SO IT ISN'T MISTAKEN FOR SOMETHING LIVE.
+                A written asset is text: it is copied out, not published from
+                here. The paths that actually build something in Flow (a funnel
+                page, a follow-up sequence) run through Zeno, so this points
+                there rather than leaving the reader to work out why there is no
+                publish button. */}
+            <p className="mb-4 rounded-lg border border-[var(--dx-border-subtle)] px-3 py-2 text-xs text-[var(--dx-text-muted)]">
+              This is written copy to use wherever you need it. To build something live in Flow instead
+              (a page, a form, a follow-up sequence), ask Zeno to create it and you&apos;ll get a draft to publish.
+            </p>
             <pre className="whitespace-pre-wrap break-words font-sans text-sm text-[var(--dx-text-primary)]">
               {open.content}
             </pre>

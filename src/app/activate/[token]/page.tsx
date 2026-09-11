@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { LogoMark } from "@/components/brand/logo-mark";
+import { trackFunnelEvent } from "@/lib/analytics/track";
 
 /**
  * Public — where the "Set your password" email from a self-serve signup
@@ -64,6 +65,12 @@ export default function ActivatePage({
       if (!res.ok || !payload.email) {
         throw new Error(payload.error ?? "Could not activate your account.");
       }
+
+      // I. The trial is live from Stripe's side at checkout, but this is the
+      // first moment the CUSTOMER has an account they can use — the honest
+      // client-side activation point, and the last step of the funnel that
+      // happens in a browser we control.
+      trackFunnelEvent("trial_activated", { product: "ascend", source: "activation" });
 
       await signInWithEmail(payload.email, password);
 

@@ -39,6 +39,7 @@ import { Pricing as CustomPricing } from "@/components/landing-custom/pricing";
 import { FAQ as CustomFAQ } from "@/components/landing-custom/faq";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
+import { FunnelPageView } from "@/components/analytics/funnel-page-view";
 
 /**
  * Renders one of two landing pages based on src/config/landing.ts.
@@ -105,6 +106,9 @@ export default async function HomePage() {
         <ProductSchema brand={brand} baseUrl={baseUrl} plans={plans} />
         <CustomNavbar brand={brand} />
         <main className="flex-1">
+          {/* A. Only on the Ascend surface: the Flow homepage is a different
+              funnel and mixing the two would make neither readable. */}
+          {product === "unified" && <FunnelPageView event="ascend_home_viewed" product="ascend" />}
           <CustomHero brand={brand} product={product} plans={plans} />
           {product === "unified" && <AscendLifecycle />}
           <BeforeAfterFlow brand={brand} product={product} />

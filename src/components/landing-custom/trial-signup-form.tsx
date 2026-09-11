@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { trackFunnelEvent } from "@/lib/analytics/track";
 
 /**
  * Step 1: who you are. No card, and no password.
@@ -29,6 +30,10 @@ export function TrialSignupForm({ planId }: { planId: string }) {
     setError(null);
     setSubmitting(true);
     try {
+      // Fired at the moment the customer commits, before the network call, so
+      // a Stripe/network failure still shows up as an attempted checkout
+      // rather than vanishing from the funnel entirely.
+      trackFunnelEvent("checkout_started", { product: "ascend", source: "start_page", plan: planId });
       const res = await fetch("/api/public/trial-signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

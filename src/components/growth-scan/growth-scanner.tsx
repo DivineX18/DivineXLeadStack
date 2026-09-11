@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { trackFunnelEvent } from "@/lib/analytics/track";
 
 /**
  * The public Growth Scan experience: form, the wait, and the result.
@@ -94,9 +95,12 @@ export function GrowthScanner() {
       const data = (await res.json().catch(() => null)) as { state?: string; report?: Report; error?: string } | null;
       if (data?.state === "ready" && data.report) {
         stopPolling();
+        trackFunnelEvent("growth_scan_completed", { product: "ascend", source: "scanner", scan_status: "completed" });
+        trackFunnelEvent("growth_scan_results_viewed", { product: "ascend", source: "scanner" });
         setPhase({ s: "ready", report: data.report });
       } else if (data?.state === "failed") {
         stopPolling();
+        trackFunnelEvent("growth_scan_completed", { product: "ascend", source: "scanner", scan_status: "failed" });
         setPhase({ s: "error", message: data.error ?? "We couldn't complete that scan." });
       }
     }, 6_000);
@@ -122,6 +126,7 @@ export function GrowthScanner() {
       setPhase({ s: "error", message: data?.error ?? "We couldn't start that scan. Please try again." });
       return;
     }
+    trackFunnelEvent("growth_scan_started", { product: "ascend", source: "scanner", scan_status: "started" });
     setPhase({ s: "running", token: data.shareToken, since: Date.now() });
   }
 
@@ -322,6 +327,7 @@ function Results({ report }: { report: Report }) {
             create a customer. No new checkout architecture. */}
         <a
           href="/start"
+          onClick={() => trackFunnelEvent("trial_cta_clicked", { product: "ascend", source: "scan_results" })}
           className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-white px-6 py-4 text-base font-bold text-[#0b0d12] transition hover:bg-white/90 sm:w-auto"
         >
           Start My 14-Day Free Trial
