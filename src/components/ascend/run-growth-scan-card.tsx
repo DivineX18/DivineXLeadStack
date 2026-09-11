@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, PlayCircle, CheckCircle2, XCircle, RotateCcw } from "lucide-react";
 import { AscendCardShell } from "@/components/ascend/card-shell";
@@ -123,9 +124,17 @@ export function RunGrowthScanCard({
   if (!hasBusinessProfile) {
     return (
       <AscendCardShell title="Growth Scan">
+        {/* The old copy promised this "links automatically the next time you
+            sign in through Ascend". It never did — the SSO callback writes a
+            null profile id — so a customer was told to wait for something that
+            was never going to happen. Setup is what creates and links the
+            profile, so that is what this now points at. */}
         <p className="text-sm text-[var(--dx-text-muted)]">
-          This workspace isn&apos;t linked to an Ascend business profile yet, so a scan can&apos;t run. This links automatically the next time you sign in
-          through Ascend — check back shortly, or contact support if it persists.
+          Your business profile isn&apos;t set up yet, so there&apos;s nothing to scan against.{" "}
+          <Link href="/app/onboarding" className="underline underline-offset-2 hover:text-[var(--dx-text-primary)]">
+            Finish setup
+          </Link>{" "}
+          and your first Growth Scan can run right here.
         </p>
       </AscendCardShell>
     );

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireSubAccountMember } from "@/lib/auth/require-tenancy";
 import { ascend } from "@/lib/divinex/ascend-client";
 import { getDivinexProfileSnapshot } from "@/lib/divinex/contract";
+import { linkAscendBusinessProfile } from "@/lib/workspace/link-ascend-business-profile";
 
 /**
  * Unified onboarding API (Slice 4) — the ONE server endpoint the /app
@@ -47,6 +48,18 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
     businessProfileId = resolved.data.businessProfileId;
   }
+
+  // The id above is what the intelligence layer needs and never had. Writing it
+  // to the workspace mapping is what turns Home's Growth Score, the Recommended
+  // Next Step and the in-app Growth Scan on for this customer; without it they
+  // all resolve to "no_linked_business_profile". Deliberately awaited but never
+  // checked: a bookkeeping write must not be able to fail onboarding.
+  await linkAscendBusinessProfile({
+    subAccountId,
+    businessProfileId,
+    actingAsUid: access.uid,
+    agencyId: access.agencyId,
+  });
 
   switch (body.action) {
     case "start": {

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AscendCardShell } from "@/components/ascend/card-shell";
 import { IntelligenceStatusBadge } from "@/components/ascend/intelligence-status-badge";
 import type { WithMeta, DashboardSummary, IntelligenceReportSummary } from "@/types/intelligence";
@@ -22,14 +23,12 @@ export function LatestAssessmentCard({ dashboardSummary }: { dashboardSummary: W
       ) : (
         <p className="text-sm text-[var(--dx-text-muted)]">
           No assessment run yet.{" "}
-          <a
-            href="https://ascend.divinex.io/growth-scanner"
-            target="_blank"
-            rel="noreferrer"
+          <Link
+            href="/app/intelligence"
             className="underline decoration-[var(--dx-border)] underline-offset-2 hover:text-[var(--dx-text-primary)] hover:decoration-[var(--dx-text-secondary)]"
           >
             Run a Growth Audit
-          </a>
+          </Link>
           .
         </p>
       )}
@@ -55,14 +54,12 @@ export function AssessmentHistoryCard({ dashboardSummary }: { dashboardSummary: 
       ) : (
         <p className="text-sm text-[var(--dx-text-muted)]">
           No assessments recorded yet.{" "}
-          <a
-            href="https://ascend.divinex.io/growth-scanner"
-            target="_blank"
-            rel="noreferrer"
+          <Link
+            href="/app/intelligence"
             className="underline decoration-[var(--dx-border)] underline-offset-2 hover:text-[var(--dx-text-primary)] hover:decoration-[var(--dx-text-secondary)]"
           >
             Run a Growth Scan
-          </a>{" "}
+          </Link>{" "}
           to start your history.
         </p>
       )}

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AscendCardShell } from "@/components/ascend/card-shell";
 import { IntelligenceStatusBadge } from "@/components/ascend/intelligence-status-badge";
 import type { WithMeta, MemoryActionItem } from "@/types/intelligence";
@@ -47,14 +48,12 @@ export function BusinessMemoryCard({ memory }: { memory: WithMeta<MemoryActionIt
         <p className="text-sm text-[var(--dx-text-muted)]">
           {memory.meta.reasonCode === "no_linked_business_profile" ? (
             <>
-              <a
-                href="https://ascend.divinex.io/dashboard"
-                target="_blank"
-                rel="noreferrer"
+              <Link
+                href="/app/onboarding"
                 className="underline decoration-[var(--dx-border)] underline-offset-2 hover:text-[var(--dx-text-primary)] hover:decoration-[var(--dx-text-secondary)]"
               >
-                Link a business profile
-              </a>{" "}
+                Finish setup
+              </Link>{" "}
               to build Business Memory here.
             </>
           ) : (
