@@ -24,6 +24,10 @@ export const FIXTURES = [
     // warranties, insurance, awards, customer counts) are UNKNOWN and must not
     // appear on the generated page.
     id: "summit-roofing",
+    // THE REAL-PATH INPUT: what a customer would actually type. Contains ONLY
+    // facts already present in `args` below — no trust claims, no ratings, no
+    // tenure, nothing the fixture does not already assert.
+    ask: "Build a landing page for Summit Roofing & Exteriors, a roofing company in Houston. We offer homeowners a free 25-point roof inspection: we photograph any damage we find and give a written recommendation before any work begins. People usually come to us worried after a storm, unsure whether the roof is actually damaged, and convinced that anyone they call will just try to sell them a whole new roof. The inspection is free and ends with a written recommendation, not a quote.",
     label: "Summit Roofing (local service lead-gen)",
     args: {
       funnel_name: "Summit Roofing & Exteriors",
@@ -57,6 +61,10 @@ export const FIXTURES = [
   },
   {
     id: "consultant",
+    // THE REAL-PATH INPUT: what a customer would actually type. Contains ONLY
+    // facts already present in `args` below — no trust claims, no ratings, no
+    // tenure, nothing the fixture does not already assert.
+    ask: "Build a landing page for an Operations Strategy Review. I run a structured review of where delivery breaks when volume doubles, for services businesses past the founder-led stage. Written findings in ten working days, fixed scope and fixed fee. My buyers are services founders whose delivery is straining at higher volume and who think they need to hire their way out of it. They are skeptical because consultants usually produce a deck and disappear. It is an application, not a purchase.",
     label: "Consultant / professional service",
     args: {
       funnel_name: "Operations Strategy Review",
@@ -89,6 +97,10 @@ export const FIXTURES = [
   },
   {
     id: "lead-magnet",
+    // THE REAL-PATH INPUT: what a customer would actually type. Contains ONLY
+    // facts already present in `args` below — no trust claims, no ratings, no
+    // tenure, nothing the fixture does not already assert.
+    ask: "Build a landing page offering The First 30 Nights Guide, a free 18-page guide for parents of 1 to 3 year olds, readable in a single sitting. It is built around wake windows rather than sleep training, there is nothing to buy to use it, and it was written by a paediatric sleep consultant. The parents reading it have not slept through in months, are searching at 2am after another broken night, and believe every method has failed so something must be wrong with their child.",
     label: "Lead magnet",
     args: {
       funnel_name: "The First 30 Nights Guide",
@@ -121,6 +133,10 @@ export const FIXTURES = [
   },
   {
     id: "booking",
+    // THE REAL-PATH INPUT: what a customer would actually type. Contains ONLY
+    // facts already present in `args` below — no trust claims, no ratings, no
+    // tenure, nothing the fixture does not already assert.
+    ask: "Build a landing page for a dental practice taking new patients who dread the dentist. The first visit is assessment only with no treatment on the day. Patients can tell us their worries before they arrive, sedation is available for any treatment, and we have evening appointments twice a week. The people booking have avoided the dentist for years out of anxiety, are finally looking because something now hurts, and expect to be judged for how long they left it.",
     label: "Appointment / booking",
     args: {
       funnel_name: "New Patient Consultation",
@@ -153,6 +169,10 @@ export const FIXTURES = [
   },
   {
     id: "paid-offer",
+    // THE REAL-PATH INPUT: what a customer would actually type. Contains ONLY
+    // facts already present in `args` below — no trust claims, no ratings, no
+    // tenure, nothing the fixture does not already assert.
+    ask: "Build a landing page for a Pricing Teardown, a 49 dollar recorded teardown of a founder's own pricing page with the three changes to make first, delivered within five working days. Buyers are founders whose traffic converts worse than it should, who know the page is the weak link, and who believe they need more traffic before pricing matters. Their main worry is getting generic advice they could have found themselves.",
     label: "Paid offer",
     args: {
       funnel_name: "Pricing Teardown",
