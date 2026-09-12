@@ -193,7 +193,12 @@ export function planMediaIntents(
       subject: `${core} being carried out by a specialist`,
       subjectCore: core,
       aspect: "landscape",
-      altPrefix: `${ctx.businessName ?? "The team"} carrying out ${core}`,
+      // ILLUSTRATIVE, NEVER ATTRIBUTED. This read "<Business> carrying out
+      // <work>", which tells a screen reader that the people in a stock
+      // photograph are that company's staff — an identity claim the business
+      // never made, in the one place nobody proof-reads. A contextual image
+      // may show the KIND of work; it may not say whose hands these are.
+      altPrefix: `${core}`,
     });
   }
 
@@ -201,9 +206,11 @@ export function planMediaIntents(
   // not repeat one photograph four times. Deliberately few: three angles is the
   // honest limit before the variations become arbitrary.
   const angles: { suffix: string; purpose: MediaPurpose; alt: string }[] = [
+    // Alt text describes what the picture SHOWS, not who is in it — see the
+    // hero's altPrefix. "…with a customer" named a customer nobody has.
     { suffix: "close up detail", purpose: "show_the_work", alt: `Detail of ${core}` },
     { suffix: "specialist inspecting and documenting", purpose: "show_the_deliverable", alt: `Documenting findings during ${core}` },
-    { suffix: "with a homeowner or client present", purpose: "humanise", alt: `Discussing ${core} with a customer` },
+    { suffix: "with a homeowner or client present", purpose: "humanise", alt: `${core}, discussed in person` },
   ];
   for (let i = 0; i < Math.min(slots.benefitCount, angles.length); i++) {
     const a = angles[i];

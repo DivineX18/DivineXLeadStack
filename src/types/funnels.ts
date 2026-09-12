@@ -597,7 +597,19 @@ export interface TeamConfig {
 /** Alternating (or single) image+text blocks — a versatile layout reused
  *  across genres for "how it works in detail," feature deep-dives, etc. */
 export interface ImageTextConfig {
-  blocks: { headline: string; text: string; imageUrl?: string; imagePosition: "left" | "right" }[];
+  blocks: {
+    headline: string;
+    text: string;
+    imageUrl?: string;
+    /** What the photograph shows. Was absent, so the renderer emitted
+     *  `alt=""` on a content image — an accessibility defect, and the reason
+     *  a composed media beat failed the alt-text check. */
+    imageAlt?: string;
+    /** Flagged like every other non-first-party image so the builder can
+     *  label it, matching `HeroConfig.mediaIsStock`. */
+    imageIsStock?: boolean;
+    imagePosition: "left" | "right";
+  }[];
 }
 
 /** Phase 3 — multiple real photos, distinct from ImageTextConfig's

@@ -126,8 +126,23 @@ export const AUTHENTICITY_MODELS: Record<AuthenticityCategory, EvidenceAsset[]> 
   ],
 };
 
-/** Genre + archetype → category inference (deterministic floor; the model
- *  can override via the authenticity_category param when it knows better). */
+/**
+ * WHAT THE BUSINESS IS, NOT HOW THE PAGE CONVERTS.
+ *
+ * These are two different questions and this function used to answer the first
+ * with the second. An `application` genre returned `coaching`, so Northstar —
+ * a B2B operations consultancy — was told a photograph of people working would
+ * be counterfeit evidence, purely because it books a call rather than a sale.
+ * An application funnel belongs just as naturally to an agency, an accountant,
+ * an attorney, a contractor or a clinic. A conversion mechanic cannot establish
+ * an evidence model.
+ *
+ * So genre no longer names a category on its own. The ladder runs from the
+ * strongest business signal to the weakest, and stops naming one when the input
+ * carries no business information at all rather than guessing from the funnel's
+ * shape. The model's explicit `authenticity_category` still overrides
+ * everything — see the caller.
+ */
 export function inferAuthenticityCategory(input: {
   genre: string;
   archetype?: string | null;
@@ -139,16 +154,26 @@ export function inferAuthenticityCategory(input: {
   if (a.includes("enterprise") || a.includes("saas") || a.includes("tech")) return "enterprise_software";
   if (a.includes("b2b") || a.includes("professional") || a.includes("corporate")) return "b2b_services";
   if (a.includes("nonprofit") || a.includes("charity")) return "nonprofit";
-  if (a.includes("coach") || a.includes("consult")) return "coaching";
+  // COACHING IS A PERSON, CONSULTING IS A FIRM. "Consult" alone used to mean
+  // coaching, which put every management, operations and strategy consultancy
+  // under the evidence model written for "can this specific person get me the
+  // outcome" — where a stock portrait would imply it depicts the coach. A
+  // consultancy's contextual photograph of work being done implies no such
+  // thing, so the word only carries coaching when a coaching signal is present
+  // with it.
+  if (a.includes("coach") || a.includes("mentor") || a.includes("transformation") || a.includes("program")) return "coaching";
+  if (a.includes("consult") || a.includes("advisor") || a.includes("agency")) return "b2b_services";
   switch (input.genre) {
+    // These two DO describe the thing being delivered, not just the mechanic:
+    // a lead magnet and a webinar registration are an information product by
+    // construction, whatever business publishes them.
     case "lead_magnet":
     case "webinar":
       return "info_product";
     case "tripwire":
       return "physical_product";
-    case "application":
-    case "vsl":
-      return "coaching";
+    // `application` and `vsl` deliberately fall through. They say how the page
+    // converts and nothing about who is behind it.
     default:
       return "local_service_trade";
   }

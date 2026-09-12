@@ -3685,7 +3685,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           type: "array",
           description:
             "Content for the funnel's other conversion-framework stages (Video, Benefits Grid, Problem/Solution, Before/After, What's Included, Comparison, Testimonials, Callout) — write ONE entry per stage the genre's framework actually includes (see the genre descriptions above), keyed by section_type = that stage's resolved section type. If a genre's framework lists BOTH benefits_grid and included (e.g. lead_magnet: 'What You'll Learn' AND 'What's Included'), write TWO separate entries, not one — they answer different questions (benefits_grid = the outcomes/knowledge the reader gains; included = the concrete deliverables/assets they receive) and skipping either leaves that section visibly blank on the page. Each entry's fields are used differently depending on section_type: " +
-            "\"video\" — video_url (required), headline/text optional. " +
+            "\"video\" — video_url (required), headline/text optional. Unlike the other stages here, a video entry may be written for ANY genre, not only one whose framework lists a Video stage: when the user gave you a REAL video/embed URL (a recorded walkthrough, explainer, founder message, demo) and watching it would move this page's argument forward, write the entry and the section is composed for you, placed after the hero. Only ever with a real URL they actually supplied — never invent one, and never write this entry to reserve an empty video frame. " +
             "\"benefits_grid\" — headline optional, items[].title + items[].description (3-6 items, each a specific outcome the reader gets, never a vague adjective). " +
             "\"included\" — headline optional, items[].title + items[].description (3-6 concrete deliverables — what's literally in the box/download/program, OR for application genre's 'Who This Isn't For' stage, real disqualifying criteria). " +
             "\"problem_solution\" — headline+text describe the problem, secondary_headline+secondary_text describe the solution. " +
@@ -5098,6 +5098,36 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
 
       let sectionsToSave = nextSections;
 
+      // A REAL VIDEO IS ADMISSIBLE ON ANY PAGE, NOT JUST A VSL.
+      //
+      // `video` is a first-class section type with its own editor field, but
+      // the only way one ever reached a page was the `vsl` genre framework
+      // seeding a Video stage — the stage-content pass above fills
+      // `section.type === "video"` and can only fill a section that already
+      // exists. So an operator whose lead-gen or application page would be
+      // carried by a two-minute explainer had nowhere to put it, and Zeno
+      // supplying `video_url` on any other genre did nothing at all.
+      //
+      // Composed only for a REAL url the model was given — never a placeholder
+      // frame, which is the same rule the composed photo beat follows.
+      const strayVideo = stageContent.find(
+        (c) => c.sectionType === "video" && /^https?:\/\//i.test((c.videoUrl ?? "").trim()),
+      );
+      if (strayVideo && !sectionsToSave.some((s) => s.type === "video")) {
+        const heroIdx = sectionsToSave.findIndex((s) => s.type === "hero");
+        const videoSection: FunnelSection = {
+          id: `s_video_${Date.now()}`,
+          type: "video",
+          config: {
+            embedUrl: strayVideo.videoUrl.trim(),
+            ...(strayVideo.headline ? { headline: strayVideo.headline } : {}),
+            ...(strayVideo.text ? { subtext: strayVideo.text } : {}),
+          } as FunnelSection["config"],
+        };
+        const at = Math.max(heroIdx + 1, 1);
+        sectionsToSave = [...sectionsToSave.slice(0, at), videoSection, ...sectionsToSave.slice(at)];
+      }
+
       // "More than one photo" — when the archetype's media strategy is one
       // of the multi-photo kinds (service_photo/team_photo/community_photo)
       // Zeno adds a real, independently-growable Photo Gallery section
@@ -5544,7 +5574,18 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             authenticityCategory,
           },
           {
-            hero: sectionsToSave.some((s) => s.type === "hero" && !(s.config as HeroConfig).mediaUrl && (s.config as HeroConfig).mediaType !== "none"),
+            // THE FOLD EARNS ITS PICTURE, IT DOES NOT INHERIT ONE.
+            //
+            // This used to require `mediaType !== "none"` — that the hero
+            // ALREADY carry a media slot. But "none" is what
+            // `defaultSectionConfig("hero")` returns; a slot only ever opened
+            // when some upstream design strategy happened to name a media
+            // strategy. So whether a page could have a photograph was decided
+            // by a field nobody sets on most generations, never by whether a
+            // photograph would help. A hero with no asset yet is ELIGIBLE; if
+            // nothing relevant resolves, nothing is placed and the published
+            // renderer strips the empty slot exactly as before.
+            hero: sectionsToSave.some((s) => s.type === "hero" && !(s.config as HeroConfig).mediaUrl),
             benefitCount: artProfile.energy === "urgent" ? 0 : benefitRowCount,
           },
         );
@@ -5581,7 +5622,9 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           sectionsToSave = sectionsToSave.map((s) => {
             if (s.type === "hero" && heroHit?.photo) {
               const c = s.config as HeroConfig;
-              if (!c.mediaUrl && c.mediaType !== "none") {
+              // Matches the eligibility rule above: a hero with no asset takes
+              // the photograph whether or not a slot had been opened for it.
+              if (!c.mediaUrl) {
                 used.add(heroHit.photo.url);
                 return {
                   ...s,
@@ -5622,6 +5665,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             }
             return s;
           });
+
         }
       } catch {
         // Imagery is always best-effort — never blocks funnel creation.

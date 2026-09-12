@@ -207,5 +207,92 @@ console.log("\n══ the brief describes the work, not the strategy ══");
   );
 }
 
+// ── BUSINESS CATEGORY IS NOT FUNNEL GENRE ───────────────────────────────────
+console.log("\n══ what the business is, not how the page converts ══");
+{
+  const { inferAuthenticityCategory } = await import("../src/lib/funnels/authenticity.ts");
+
+  // THE NORTHSTAR MISCLASSIFICATION. A B2B operations consultancy was told a
+  // photograph of work would be counterfeit evidence because its funnel books
+  // a call. The genre describes the mechanic, never the business.
+  check(
+    "an application funnel does not by itself mean coaching",
+    inferAuthenticityCategory({ genre: "application", archetype: null }) !== "coaching",
+    inferAuthenticityCategory({ genre: "application", archetype: null }),
+  );
+  check(
+    "a consultancy is professional services, not coaching",
+    inferAuthenticityCategory({ genre: "application", archetype: "operations_consulting" }) === "b2b_services",
+    inferAuthenticityCategory({ genre: "application", archetype: "operations_consulting" }),
+  );
+  check(
+    "so is an agency, and an advisor",
+    inferAuthenticityCategory({ genre: "vsl", archetype: "creative_agency" }) === "b2b_services" &&
+      inferAuthenticityCategory({ genre: "lead_gen", archetype: "financial_advisor" }) === "b2b_services",
+  );
+
+  // ... AND ACTUAL COACHING IS STILL COACHING. The strict model is unchanged
+  // for the businesses it was written for.
+  for (const arch of ["life_coach", "executive_mentor", "transformation_program", "coaching_program"]) {
+    check(`still coaching: ${arch}`, inferAuthenticityCategory({ genre: "application", archetype: arch }) === "coaching");
+  }
+  // Genres that DO describe the delivered thing keep deciding it.
+  check("a lead magnet is still an information product", inferAuthenticityCategory({ genre: "lead_magnet", archetype: null }) === "info_product");
+  check("a webinar is still an information product", inferAuthenticityCategory({ genre: "webinar", archetype: null }) === "info_product");
+  check("a clinic is still health", inferAuthenticityCategory({ genre: "application", archetype: "dental_practice" }) === "local_service_health");
+  check("a platform is still enterprise software", inferAuthenticityCategory({ genre: "application", archetype: "saas_enterprise" }) === "enterprise_software");
+}
+
+// ── ILLUSTRATIVE, NEVER ATTRIBUTED ──────────────────────────────────────────
+console.log("\n══ a contextual photograph is not evidence ══");
+{
+  const { planMediaIntents } = await import("../src/lib/funnels/media-intent.ts");
+  const ctx = {
+    businessName: "Northstar",
+    whatTheyDo: "operations review for growing service businesses",
+    offer: "Find the bottleneck before it costs you another quarter",
+    explicitSubject: null,
+    mechanism: "A 30-minute review that traces where delivery stalls",
+    authenticityCategory: "b2b_services" as const,
+  };
+  const intents = planMediaIntents(ctx, { hero: true, benefitCount: 3 });
+  check("a B2B consultancy may plan contextual media", intents.length === 4, `${intents.length} intents`);
+  // The alt text is the one place an identity claim slips through unread.
+  check(
+    "no alt text claims the pictured people are this business",
+    !intents.some((i) => i.altPrefix.includes("Northstar")),
+    intents.map((i) => i.altPrefix).join(" / "),
+  );
+  check(
+    "and none of it names a customer nobody has",
+    !intents.some((i) => /\bwith a customer\b|\bour (team|client)/i.test(i.altPrefix)),
+    intents.map((i) => i.altPrefix).join(" / "),
+  );
+
+  // STRICT CATEGORIES ARE UNCHANGED. Where a photograph would be fabricated
+  // evidence there is still no intent at all, so the structured non-photo beat
+  // remains the answer.
+  for (const cat of ["coaching", "info_product", "physical_product", "enterprise_software"] as const) {
+    check(`${cat} still plans no ambient photography`, planMediaIntents({ ...ctx, authenticityCategory: cat }, { hero: true, benefitCount: 3 }).length === 0);
+  }
+
+  // A page with nothing true to search on asks for nothing.
+  const noSubject = planMediaIntents(
+    { ...ctx, whatTheyDo: null, offer: null, explicitSubject: null, mechanism: null },
+    { hero: true, benefitCount: 2 },
+  );
+  check("no honest subject means no intents at all", noSubject.length === 0, `${noSubject.length} intents`);
+
+  // AND THE RELEVANCE GATE IS NOT WEAKENED TO GET NORTHSTAR A PICTURE.
+  const beat = intents[0];
+  for (const wrong of [
+    "Detailed shot of a person applying green face paint meticulously with a brush.",
+    "Real estate agent greeting a client at the entrance of a new home.",
+    "Close-up of a plate of pasta on a restaurant table.",
+  ]) {
+    check(`still rejected for Northstar: "${wrong.slice(0, 40)}…"`, !mediaIsRelevant({ subject: beat.subjectCore }, wrong));
+  }
+}
+
 console.log(failures === 0 ? "\nMEDIA RELEVANCE: ALL CHECKS PASSED\n" : `\nMEDIA RELEVANCE: ${failures} FAILED\n`);
 process.exit(failures === 0 ? 0 : 1);
