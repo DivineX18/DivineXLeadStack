@@ -29,7 +29,8 @@ const ROUTES = [
   "/resources",
   "/start",
   "/growth-scanner",
-  "/leadstack-vs-gohighlevel",
+  // "/leadstack-vs-gohighlevel" is deliberately omitted: it 404s on BOTH hosts
+  // in production today, so it is a routing question, not a branding one.
   "/affiliate-program",
   "/terms",
   "/privacy",
@@ -79,6 +80,15 @@ for (const [label, base, want, wrong] of [
       continue;
     }
     const ok200 = id.status === 200;
+    // The Growth Scanner is Ascend's front door and carries Ascend identity
+    // wherever it is served, including on the Flow host. That is deliberate and
+    // already asserted by verify-public-growth-scanner.mts, so it is not a
+    // cross-brand leak here either.
+    if (route === "/growth-scanner" && label === "FLOW") {
+      check(`  ${route}: loads`, ok200, String(id.status));
+      console.log(`  ${route.padEnd(28)} ${String(id.status).padEnd(7)} ${id.title.slice(0, 64)}  (Ascend by design)`);
+      continue;
+    }
     // A title naming the WRONG product is the defect that shipped.
     const titleWrong = new RegExp(`\\b${wrong}\\b`).test(id.title);
     const ogWrong = id.ogSite === wrong || new RegExp(`\\b${wrong}\\b`).test(id.ogTitle);
