@@ -477,10 +477,23 @@ console.log("\n══ a service area is not an organisation ══");
   // straight back as a staffing claim on the next generation of the same
   // business, from the same single fact — that it serves Houston.
   check("the staffing badge that shipped next is caught", isUnsupportedTrustClaim("Local Houston crew"));
+  // ... and then, on PRODUCTION, as a trade noun. Enumerating people nouns was
+  // itself the defect: trades are productive, so the list loses to English.
+  // These are recognised by agent MORPHOLOGY, which is why none of them appears
+  // anywhere in the rule.
+  check("the trade noun that shipped on production is caught", isUnsupportedTrustClaim("Local Houston roofers"));
   for (const claim of [
-    "Local crew", "Local team you can call", "Locally based",
-    "Local Brisbane technicians", "Locally staffed", "Our local installers",
-    "Crew based locally", "Team that lives locally", "Local workforce",
+    // The named class, in every shape the model writes it.
+    "Local Houston plumbers", "Local Brisbane electricians", "Local dentists",
+    "Houston-based crew", "Local team", "Locally owned", "Family-owned", "Founder-led",
+    // Trades never named in the rule — the point of the morphology.
+    "Local glaziers", "Local locksmiths", "local conveyancers", "Local surveyors",
+    "Local physiotherapists", "Local Perth landscapers", "local arborists",
+    // Case, punctuation, number, and geography on either side.
+    "LOCAL CREW", "local crew.", "Local Crew", "Local technician",
+    "Local Houston Roofers", "Crew based locally", "Team that lives locally",
+    "Roofers local to Houston", "Locally staffed", "Our local installers",
+    "Local workforce", "Local experts", "Local professionals", "Local specialist",
   ]) {
     check(`caught: "${claim}"`, isUnsupportedTrustClaim(claim));
   }
@@ -493,10 +506,19 @@ console.log("\n══ a service area is not an organisation ══");
     "We own the outcome", "Family bathroom refits", "Licensed and insured",
     "No credit card required", "Evening appointments twice a week",
     // A SERVICE IS NOT A STAFFING CLAIM. These describe what the business
-    // DOES; deleting them would be the rule doing the damage it exists to
-    // prevent.
-    "Local SEO experts", "Local search specialists", "Local delivery available",
-    "We know the local market", "Local pickup in 2 hours",
+    // DOES, or who it sells TO; deleting them would be the rule doing the
+    // damage it exists to prevent. The separator is the claim's TARGET:
+    // market and service survive, people and ownership do not.
+    "Local SEO experts", "Local search specialists", "Local search strategy",
+    "Local delivery available", "Local delivery", "We know the local market",
+    "Local market knowledge", "Local pickup in 2 hours", "Local service area",
+    "Locally sourced materials", "Serving Houston homeowners",
+    "Houston roofing services", "Roofing inspections in Houston",
+    "Serving local homeowners", "Serving the Houston area",
+    "Helping local businesses grow", "Local offers this month",
+    "Houston roofing inspections", "Same-day local delivery",
+    // The same words used attributively, where the head noun is the service.
+    "Local expert advice", "Local professional service", "Local specialist care",
   ]) {
     check(`kept: "${fine}"`, !isUnsupportedTrustClaim(fine));
   }
