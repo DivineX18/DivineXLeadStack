@@ -14,9 +14,20 @@
  *
  * DETERMINISTIC vs JUDGEMENT. The checks below are the half a machine can
  * honestly own: overflow, broken media, distorted aspect ratios, clipped or
- * empty sections, actionless CTAs, and whether the page is six identical card
- * grids in a row. Taste is not asserted here — the screenshots exist so a human
- * makes that call, which is the only honest division.
+ * empty sections, actionless CTAs, a heading printed twice, a call to action
+ * that drifts out of the page's own language, a section that is mostly empty
+ * band, and whether the page is one layout repeated. Taste is not asserted
+ * here — the screenshots exist so a human makes that call, which is the only
+ * honest division.
+ *
+ * Each fixture also prints the SHAPE it composed to (the layout family of each
+ * section, in order) before rendering, because a browser can see that a page
+ * looks repetitive but only the stored sections say which decision made it so.
+ *
+ * Four captures per fixture per viewport: the fold, the whole page, a
+ * representative middle, and the section that asks for the decision. The middle
+ * and the close get their own viewport-sized shots because a full-page capture
+ * of a 2,800px page is scaled too far down to judge spacing or crops.
  *
  * Everything is created in a throwaway workspace and deleted at the end,
  * including the published pages.
@@ -37,6 +48,7 @@ mkdirSync(OUT, { recursive: true });
 const { getCapability } = await import("../src/lib/ai-suite/capabilities.ts");
 const { getAdminDb } = await import("../src/lib/firebase/admin.ts");
 const { updateFunnelServerSide } = await import("../src/lib/server/funnels-service.ts");
+const { describePageRhythm } = await import("../src/lib/funnels/page-composition.ts");
 const db = getAdminDb();
 
 let failures = 0;
@@ -45,142 +57,8 @@ const check = (label: string, ok: boolean, detail = "") => {
   if (!ok) failures++;
 };
 
-/** The five fixtures. Deterministic inputs, so a page can always be rebuilt. */
-const FIXTURES = [
-  {
-    // FIXTURE #1 — Summit Roofing & Exteriors, the owner's exact business facts.
-    // Deliberately specifies NO layout, section order, media subject, image
-    // count or hero treatment: those are the decisions under test.
-    // Trust facts (years in business, ratings, review counts, certifications,
-    // warranties, insurance, awards, customer counts) are UNKNOWN and must not
-    // appear on the generated page.
-    id: "summit-roofing",
-    label: "Summit Roofing (local service lead-gen)",
-    args: {
-      funnel_name: "Summit Roofing & Exteriors",
-      genre: "lead_gen",
-      headline: "Find out what condition your roof is actually in",
-      subheadline: "A free 25-point inspection for Houston homeowners, with photos of what we find and a written recommendation before any work begins.",
-      bullets: "Free 25-point roof inspection, Photo documentation of any damage we find, Written recommendations before any work begins",
-      cta_label: "Schedule My Free Roof Inspection",
-      media_subject: "residential roof inspection in Houston",
-      emotional_transformation: "uncertainty_to_confidence",
-      awareness: "problem_aware",
-      traffic_temperature: "warm",
-      sales_argument: {
-        prospect: "A Houston homeowner with an aging roof or possible storm damage",
-        arrival_context: "Worried after a storm, unsure whether the roof is actually damaged",
-        current_belief: "Anyone I call will just try to sell me a whole new roof",
-        belief_chain: "You cannot decide about a roof you have never seen the condition of",
-        mechanism: "A 25-point inspection that documents the actual condition with photos",
-        core_promise: "Know exactly what condition your roof is in before spending anything",
-        primary_objection: "I do not know if I need a new roof and do not want to be sold one",
-        close_reason: "The inspection is free and ends with a written recommendation, not a quote",
-      },
-    },
-  },
-  {
-    id: "consultant",
-    label: "Consultant / professional service",
-    args: {
-      funnel_name: "Operations Strategy Review",
-      genre: "application",
-      headline: "Your revenue grew. Your operations did not.",
-      subheadline: "A structured review of where delivery breaks when volume doubles.",
-      bullets: "For services businesses past the founder-led stage, Written findings in ten working days, Fixed scope and fixed fee",
-      cta_label: "Apply for a review",
-      emotional_transformation: "stagnation_to_clarity",
-      awareness: "solution_aware",
-      traffic_temperature: "warm",
-      sales_argument: {
-        prospect: "A services founder whose delivery is straining at higher volume",
-        arrival_context: "Reading after another week of firefighting",
-        current_belief: "We need to hire our way out of this",
-        belief_chain: "Headcount multiplies an unclear process rather than fixing it",
-        mechanism: "A delivery-path map that finds where the work actually stalls",
-        core_promise: "Know what to fix before you hire again",
-        primary_objection: "Consultants produce a deck and disappear",
-        close_reason: "Fixed scope, written findings, no retainer attached",
-      },
-    },
-  },
-  {
-    id: "lead-magnet",
-    label: "Lead magnet",
-    args: {
-      funnel_name: "The First 30 Nights Guide",
-      genre: "lead_magnet",
-      headline: "The one schedule change that ends most toddler night waking",
-      subheadline: "An 18-page guide written for 1 to 3 year olds, readable in a single sitting.",
-      bullets: "Built around wake windows rather than sleep training, Nothing to buy to use it, Written by a paediatric sleep consultant",
-      cta_label: "Send me the guide",
-      emotional_transformation: "discouragement_to_possibility",
-      awareness: "problem_aware",
-      traffic_temperature: "cold",
-      sales_argument: {
-        prospect: "A parent of a toddler who has not slept through in months",
-        arrival_context: "Searching at 2am after another broken night",
-        current_belief: "Every method has failed so something is wrong with my child",
-        belief_chain: "The method was never the problem, the schedule underneath it was",
-        mechanism: "A wake-window audit that finds the one mistimed nap",
-        core_promise: "Know the single change to make tonight",
-        primary_objection: "I have tried everything already",
-        close_reason: "It is free, and it takes one evening to test",
-      },
-    },
-  },
-  {
-    id: "booking",
-    label: "Appointment / booking",
-    args: {
-      funnel_name: "New Patient Consultation",
-      genre: "lead_gen",
-      headline: "Dental care designed for people who dread the dentist",
-      subheadline: "Longer appointments, sedation options, and no lecture about flossing.",
-      bullets: "Tell us your worries before you arrive, Sedation available for any treatment, Evening appointments twice a week",
-      cta_label: "Book my first visit",
-      emotional_transformation: "fear_to_safety",
-      awareness: "problem_aware",
-      traffic_temperature: "warm",
-      sales_argument: {
-        prospect: "An adult who has avoided the dentist for years out of anxiety",
-        arrival_context: "Finally looking because something now hurts",
-        current_belief: "I will be judged for how long I left it",
-        belief_chain: "Avoidance is a treatment-design problem, not a character flaw",
-        mechanism: "A first visit that is assessment only, with no treatment on the day",
-        core_promise: "Get seen without being lectured or surprised",
-        primary_objection: "They will start drilling on the first visit",
-        close_reason: "The first appointment is a conversation and an exam, nothing else",
-      },
-    },
-  },
-  {
-    id: "paid-offer",
-    label: "Paid offer",
-    args: {
-      funnel_name: "Pricing Teardown",
-      genre: "tripwire",
-      headline: "Your pricing page is costing you more than your ad budget",
-      subheadline: "A recorded teardown of your pricing page with the three changes to make first.",
-      bullets: "Recorded walkthrough of your own page, Three prioritised changes with the reasoning, Delivered within five working days",
-      cta_label: "Get my teardown",
-      price_cents: 4900,
-      emotional_transformation: "confusion_to_clarity",
-      awareness: "solution_aware",
-      traffic_temperature: "warm",
-      sales_argument: {
-        prospect: "A founder whose traffic converts worse than it should",
-        arrival_context: "Has traffic and knows the page is the weak link",
-        current_belief: "I need more traffic before pricing matters",
-        belief_chain: "Pricing decides what the traffic you already have is worth",
-        mechanism: "A teardown against how buyers actually compare options",
-        core_promise: "Know the three changes to make first",
-        primary_objection: "Generic advice I could have found myself",
-        close_reason: "It is your page, recorded, not a checklist",
-      },
-    },
-  },
-] as const;
+/** The five fixtures — one shared definition (scripts/fixtures). */
+const { FIXTURES } = await import("./fixtures/landing-page-fixtures.mts");
 
 const RUN = `lpq${Date.now()}`;
 const AGENCY = `test-agency-${RUN}`;
@@ -230,6 +108,19 @@ try {
     } catch (e) {
       check(`${fx.label}: publishes (completeness guards)`, false, String(e).slice(0, 120));
     }
+
+    // WHAT WAS COMPOSED, before anything is rendered. The browser can see that
+    // a page looks repetitive; only the stored sections say WHICH decisions
+    // produced it, and reading them back is how a composition regression gets
+    // diagnosed instead of just noticed. Printed, not asserted — the rendered
+    // checks below are the ones that fail the run.
+    const doc = await db.doc(`funnels/${funnelId}`).get();
+    const stored = (doc.data() as { sections?: { type: string; config: Record<string, unknown> }[] } | undefined)?.sections ?? [];
+    const rhythm = describePageRhythm(stored as never);
+    console.log(`     shape: ${rhythm.families.join(" → ")}`);
+    console.log(`     longest run of one shape: ${rhythm.longestRun}, distinct shapes: ${rhythm.distinctFamilies}`);
+    if (rhythm.repeatedHeadings.length) console.log(`     repeated headings: ${rhythm.repeatedHeadings.join(" | ")}`);
+    console.log(`     CTAs: ${[...new Set(rhythm.ctaLabels)].join(" | ")}`);
   }
 
   // ── Look at them ────────────────────────────────────────────────────────
@@ -263,6 +154,35 @@ try {
       await page.screenshot({ path: `${OUT}/${tag}-fold.png` });
       await page.screenshot({ path: `${OUT}/${tag}-full.png`, fullPage: true });
 
+      // THE MIDDLE AND THE CLOSE, at reading size. A full-page capture of a
+      // 2,800px page is scaled down far enough that spacing, crops and the
+      // balance of a split row stop being legible — which is exactly where the
+      // composition work has to be judged. So the two folds a visitor actually
+      // deliberates in get their own viewport-sized shot: a representative
+      // middle, and the section that asks for the decision.
+      // Locators, not page.evaluate: this script is run through tsx, whose
+      // esbuild transform names arrow functions and injects a `__name` helper
+      // into them. That helper does not exist in the browser, so a closure
+      // passed to page.evaluate throws "__name is not defined" the moment it
+      // is serialised across. The locator API does the same work entirely on
+      // the Node side.
+      const allSections = page.locator("section");
+      const total = await allSections.count();
+      if (total > 0) {
+        await allSections.nth(Math.floor(total / 2)).scrollIntoViewIfNeeded().catch(() => {});
+        await page.waitForTimeout(400);
+        await page.screenshot({ path: `${OUT}/${tag}-middle.png` });
+        // The conversion beat: the last section that asks for anything.
+        const asking = page.locator("section:has(a), section:has(button)").last();
+        if (await asking.count()) {
+          await asking.scrollIntoViewIfNeeded().catch(() => {});
+          await page.waitForTimeout(400);
+          await page.screenshot({ path: `${OUT}/${tag}-conversion.png` });
+        }
+      }
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.waitForTimeout(300);
+
       check(`${tag}: renders`, (res?.status() ?? 0) === 200, String(res?.status()));
       check(`${tag}: no JS errors`, errs.length === 0, errs[0]?.slice(0, 90) ?? "");
       check(`${tag}: no horizontal overflow`, !(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2)));
@@ -283,14 +203,35 @@ try {
         const srcs = imgs.map((i) => i.currentSrc).filter(Boolean);
         const repeated = srcs.length - new Set(srcs).size;
 
-        const sections = Array.from(document.querySelectorAll("section"));
-        const empty = sections.filter((s) => (s.textContent ?? "").trim().length === 0 && !s.querySelector("img,video,svg")).length;
+        // SCOPE EVERYTHING TO THE PAGE ITSELF. `document.querySelectorAll`
+        // also returns the app shell's toast portal — Sonner renders an empty
+        // <section aria-live="polite"> as the last element in the body — so
+        // this check reported "1 empty section" on every page ever run, and
+        // because the count named nothing, the false positive was never
+        // investigated and a real empty section would have been invisible
+        // inside it. The funnel renders inside .flow-funnel-root; nothing
+        // outside it is the page under test.
+        const root = document.querySelector(".flow-funnel-root") ?? document.body;
+        const sections = Array.from(root.querySelectorAll("section"));
+        const emptyEls = sections.filter((s) => (s.textContent ?? "").trim().length === 0 && !s.querySelector("img,video,svg"));
+        const empty = emptyEls.length;
+        // A COUNT IS NOT ACTIONABLE. "1 empty section" was reported on every
+        // page for as long as this check has existed without ever saying which
+        // one, so it was never fixed. Identify each by its position, its own
+        // classes and its parent's, which is enough to find the component.
+        const emptyDetail = emptyEls.map((s) => {
+          const idx = sections.indexOf(s);
+          const own = (s.getAttribute("class") ?? "").slice(0, 60);
+          const parent = (s.parentElement?.getAttribute("class") ?? "").slice(0, 40);
+          const h = Math.round(s.getBoundingClientRect().height);
+          return `#${idx + 1}/${sections.length} h=${h}px class="${own}" parent="${parent}"`;
+        });
         // A section still transparent after the page has been walked is a real
         // reveal bug, not a capture artifact.
         const invisible = sections.filter((s) => Number(getComputedStyle(s).opacity) < 0.9).length;
 
         // CTAs that go nowhere.
-        const ctas = Array.from(document.querySelectorAll("a,button")) as HTMLElement[];
+        const ctas = Array.from(root.querySelectorAll("a,button")) as HTMLElement[];
         const actionless = ctas.filter((el) => {
           const t = (el.textContent ?? "").trim();
           if (t.length < 3 || t.length > 40) return false;
@@ -306,7 +247,7 @@ try {
         const placeholders = (body.match(/\[[A-Z_ ]{3,}\]|lorem ipsum|TODO|XXXX/gi) ?? []).length;
 
         // Line length: a measure of whether text is readable or a wall.
-        const paras = Array.from(document.querySelectorAll("p")).filter((p) => (p.textContent ?? "").length > 120);
+        const paras = Array.from(root.querySelectorAll("p")).filter((p) => (p.textContent ?? "").length > 120);
         const tooWide = paras.filter((p) => p.getBoundingClientRect().width > 900).length;
 
         // Section rhythm: if every section is the same height-to-content shape
@@ -316,6 +257,47 @@ try {
           return !!el;
         }).length;
 
+        // HEADINGS AND BUTTON LABELS, RAW. Both are analysed on the Node side
+        // rather than here: this script runs through tsx, and esbuild renames
+        // any function declared inside this block and injects a `__name` helper
+        // into it. That helper does not exist in the page, so a normaliser
+        // declared here throws "__name is not defined" the instant the function
+        // is serialised into the browser. Only anonymous inline callbacks in
+        // array methods are safe in this scope.
+        const headings = sections
+          .map((s) => (s.querySelector("h1,h2,h3")?.textContent ?? "").trim())
+          .filter((t) => t.length > 8);
+        const buttonLabels = (Array.from(root.querySelectorAll("a,button")) as HTMLElement[])
+          .map((el) => (el.textContent ?? "").trim())
+          .filter((t) => t.length >= 3 && t.length <= 40);
+
+        // EXCESSIVE WHITESPACE / DEAD BANDS. A section far taller than the
+        // content inside it renders as an empty band the reader scrolls
+        // through. Measured as the section's own height against the union of
+        // its visible children, so a deliberately airy section with real
+        // content in it is not penalised.
+        const deadBandEls = sections.filter((s) => {
+          const h = s.getBoundingClientRect().height;
+          if (h < 400) return false;
+          const kids = Array.from(s.querySelectorAll("*")).filter((el) => {
+            const r = el.getBoundingClientRect();
+            return r.height > 0 && r.width > 0;
+          });
+          if (kids.length === 0) return true;
+          const top = Math.min(...kids.map((k) => k.getBoundingClientRect().top));
+          const bottom = Math.max(...kids.map((k) => k.getBoundingClientRect().bottom));
+          const filled = bottom - top;
+          return filled / h < 0.4;
+        });
+        const deadBands = deadBandEls.length;
+        // Named for the same reason the empty-section check is — a bare count
+        // is not something anyone can act on.
+        const deadBandDetail = deadBandEls.map((s) => {
+          const idx = sections.indexOf(s);
+          const text = (s.textContent ?? "").trim().replace(/\s+/g, " ").slice(0, 40);
+          return `#${idx + 1}/${sections.length} h=${Math.round(s.getBoundingClientRect().height)}px "${text}"`;
+        });
+
         return {
           images: imgs.length,
           broken,
@@ -323,11 +305,16 @@ try {
           repeated,
           sections: sections.length,
           empty,
+          emptyDetail,
           invisible,
           actionless,
           placeholders,
           tooWide,
           gridy,
+          headings,
+          buttonLabels,
+          deadBands,
+          deadBandDetail,
           imagesWithoutAlt: imgs.filter((i) => !i.getAttribute("alt")).length,
           height: document.body.scrollHeight,
         };
@@ -339,11 +326,31 @@ try {
       check(`${tag}: every section is visible after scrolling`, audit.invisible === 0, `${audit.invisible} still at opacity 0`);
       check(`${tag}: no broken media`, audit.broken === 0, `${audit.broken}`);
       check(`${tag}: no distorted media`, audit.distorted === 0, `${audit.distorted}`);
-      check(`${tag}: no empty sections`, audit.empty === 0, `${audit.empty}`);
+      check(`${tag}: no empty sections`, audit.empty === 0, audit.emptyDetail.join(" ;; "));
       check(`${tag}: no actionless CTA`, audit.actionless === 0, `${audit.actionless}`);
       check(`${tag}: no placeholder text`, audit.placeholders === 0, `${audit.placeholders}`);
       check(`${tag}: images carry alt text`, audit.imagesWithoutAlt === 0, `${audit.imagesWithoutAlt} without alt`);
       check(`${tag}: no photograph is used twice`, audit.repeated === 0, `${audit.repeated} repeats`);
+      // Analysed here rather than in the page — see the note in the audit.
+      const norm = (t: string) => t.trim().toLowerCase().replace(/[.!?,:;'"]+/g, "").replace(/\s+/g, " ");
+      const seenH = new Set<string>();
+      const repeatedHeadings = audit.headings.filter((h) => {
+        const k = norm(h);
+        if (seenH.has(k)) return true;
+        seenH.add(k);
+        return false;
+      });
+      // The page's own ask is whichever label appears most; a generic starter
+      // that is not that label is the seeded default leaking through.
+      const GENERIC = ["get started", "submit", "continue", "click here", "learn more"];
+      const counts = new Map<string, number>();
+      for (const l of audit.buttonLabels) counts.set(norm(l), (counts.get(norm(l)) ?? 0) + 1);
+      const dominant = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
+      const genericCtas = audit.buttonLabels.filter((l) => GENERIC.includes(norm(l)) && norm(l) !== dominant);
+
+      check(`${tag}: no heading is printed twice`, repeatedHeadings.length === 0, repeatedHeadings.map((h) => `"${h.slice(0, 44)}"`).join(", "));
+      check(`${tag}: every CTA asks in the page's own words`, genericCtas.length === 0, genericCtas.map((c) => `"${c}"`).join(", "));
+      check(`${tag}: no dead bands`, audit.deadBands === 0, audit.deadBandDetail.join(" ;; "));
       if (device === "desktop") {
         check(`${tag}: no wall-of-text line lengths`, audit.tooWide === 0, `${audit.tooWide} paragraphs >900px`);
         // The headline finding: is the page one pattern repeated?

@@ -94,6 +94,7 @@ import {
   type CampaignHumanity,
   type EmotionalTransformation,
 } from "@/lib/funnels/art-direction";
+import { composePage } from "@/lib/funnels/page-composition";
 import {
   VISUAL_ARCHETYPE_IDS,
   VISUAL_ARCHETYPES,
@@ -4290,12 +4291,36 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             if (!saRaw || typeof saRaw !== "object" || Array.isArray(saRaw)) return null;
             const sa = saRaw as Record<string, unknown>;
             const sstr = (k: string, cap: number) => (typeof sa[k] === "string" ? (sa[k] as string).trim().slice(0, cap) : "");
-            const chain = Array.isArray(sa.belief_chain)
-              ? (sa.belief_chain as unknown[])
-                  .filter((b): b is string => typeof b === "string" && b.trim().length > 0)
-                  .slice(0, 6)
-                  .map((b) => b.trim().slice(0, 220))
-              : [];
+            // SALVAGE A MISSHAPEN CHAIN RATHER THAN DISCARD THE ARGUMENT.
+            //
+            // This read `Array.isArray(...) ? ... : []`, so a chain delivered as
+            // ONE STRING — a single belief, or several separated by newlines or
+            // semicolons, which is a completely ordinary way for a model to
+            // answer "the ordered chain of beliefs" — produced an empty array.
+            // The length check below then rejected the ENTIRE plan, and every
+            // other field the model got right (prospect, currentBelief,
+            // mechanism, corePromise, closeReason) was thrown away with it.
+            //
+            // The page paid for that twice. `applySalesArgument` returns early
+            // on a short chain, so the belief-shift beat was never written and
+            // was pruned as an empty shell; and the synthesized floor stamped
+            // the HERO HEADLINE onto the offer heading and the close, which is
+            // the verbatim triplication seen on every generated page.
+            //
+            // A model that gets nine fields right should not lose all ten to
+            // the tenth's container. Split a string chain on the separators a
+            // model actually uses; keep everything else regardless.
+            const rawChain = sa.belief_chain;
+            const chainSource: unknown[] = Array.isArray(rawChain)
+              ? rawChain
+              : typeof rawChain === "string"
+                ? rawChain.split(/\n+|\s*;\s*|\s*\|\s*/)
+                : [];
+            const chain = chainSource
+              .filter((b): b is string => typeof b === "string" && b.trim().length > 0)
+              .slice(0, 6)
+              .map((b) => b.trim().replace(/^\s*(?:\d+[.)]|[-*•])\s*/, "").slice(0, 220))
+              .filter((b) => b.length > 0);
             const plan = {
               prospect: sstr("prospect", 220),
               arrivalContext: sstr("arrival_context", 300),
@@ -4309,7 +4334,16 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               riskReversal: sstr("risk_reversal", 220),
               closeReason: sstr("close_reason", 220),
             };
-            return plan.prospect && plan.beliefChain.length >= 2 ? plan : null;
+            // A plan is worth keeping when it can DO something, which is not the
+            // same as having a long chain. The belief chain drives one step
+            // (assigning beliefs to carrier sections); the belief-shift beat,
+            // the offer heading and the close are written from currentBelief /
+            // mechanism / corePromise / closeReason and need no chain at all.
+            // Gating the whole object on the chain therefore discarded material
+            // the page had a use for. Keep the plan if it names who is being
+            // persuaded AND carries at least one field a section is built from.
+            const usable = plan.currentBelief || plan.whyOldWayFails || plan.mechanism || plan.corePromise || plan.beliefChain.length >= 2;
+            return plan.prospect && usable ? plan : null;
           })(),
           // Campaign Art Direction inputs — validated against the module's own
           // enum; invalid/absent = null (baseline profile, zero visual change).
@@ -5417,24 +5451,29 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         return inferAuthenticityCategory({ genre, archetype: (args.visualArchetype as string) || effectiveArchetype });
       })();
 
+      // Whether a photograph could be honest evidence for this business at all.
+      // Declared HERE rather than inside the imagery block below because two
+      // different decisions turn on it: whether to place stock photography, and
+      // — since a page that cannot use photographs still needs a proof beat —
+      // whether to present the deliverable instead (see further down).
+      //
+      // Product-led categories (physical_product, enterprise_software) need the
+      // PRODUCT; stock "products" would be counterfeit evidence, so those pages
+      // compose without hero/benefit stock and the manifest requests the real
+      // asset instead.
+      const categoryBlocksAmbient =
+        authenticityCategory === "physical_product" ||
+        authenticityCategory === "enterprise_software" ||
+        authenticityCategory === "nonprofit" ||
+        authenticityCategory === "info_product" ||
+        authenticityCategory === "coaching";
+
       try {
-        // Slice C — IMAGERY AS EVIDENCE: ambient stock only where the
-        // category says ambience IS honest evidence. Product-led categories
-        // (physical_product, enterprise_software) need the PRODUCT — stock
-        // "products" would be counterfeit evidence, so those pages compose
-        // without hero/benefit stock and the manifest requests the real
-        // asset instead.
         const ambientStockOk =
           stockAllowedFor(authenticityCategory, "office_photo") ||
           stockAllowedFor(authenticityCategory, "job_photo") ||
           stockAllowedFor(authenticityCategory, "facility_photo") ||
           stockAllowedFor(authenticityCategory, "texture_photo");
-        const categoryBlocksAmbient =
-          authenticityCategory === "physical_product" ||
-          authenticityCategory === "enterprise_software" ||
-          authenticityCategory === "nonprofit" ||
-          authenticityCategory === "info_product" ||
-          authenticityCategory === "coaching";
         // MEDIA IS PLANNED PER SLOT, NOT SEARCHED ONCE FOR THE PAGE.
         //
         // This used to be a single `searchSubjectImages(imageryBrief, 4)` whose
@@ -5563,7 +5602,23 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           });
         }
       }
-      if (authenticityCategory === "enterprise_software" || authenticityCategory === "b2b_services") {
+      // PROOF WHERE A PHOTOGRAPH WOULD BE COUNTERFEIT.
+      //
+      // The categories listed in `categoryBlocksAmbient` above correctly get no
+      // stock photography: a stock "product" for a product nobody has seen, or
+      // a stock "coach" for a coach we cannot picture, is invented evidence.
+      // But blocking the photo was the whole intervention, so those pages ended
+      // up with no proof beat of any kind — three of the five fixtures rendered
+      // with zero images and nothing in their place, which is not honesty, it
+      // is an absence.
+      //
+      // The honest substitute is the thing that IS verifiable: what the buyer
+      // actually receives. `deliverable_preview` frames the section's REAL
+      // items as a visibly-labelled example of the contents — presentation of
+      // facts the page already asserts, never dressed as customer evidence.
+      // So it applies to the same set that cannot use a photograph, not just
+      // the two categories it started with.
+      if (categoryBlocksAmbient || authenticityCategory === "b2b_services") {
         sectionsToSave = sectionsToSave.map((s2) =>
           s2.type === "included"
             ? { ...s2, config: { ...(s2.config as IncludedConfig), variant: "deliverable_preview" as const } }
@@ -5601,6 +5656,18 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           ctaLabel: (args.ctaLabel as string) || undefined,
         });
       sectionsToSave = applySalesArgument(sectionsToSave, effectivePlan);
+      // PAGE-LEVEL COMPOSITION: the first pass that reads the page top to
+      // bottom rather than one section at a time. It closes the page in the
+      // page's own CTA language (the seeded "Ready?" / "Get started" default
+      // shipped on every fixture), moves a closing banner that landed above the
+      // offer, clears headings that repeat an earlier one, and breaks a run of
+      // three sections sharing one layout shape. Writes no copy — see the
+      // module header.
+      sectionsToSave = composePage(sectionsToSave, {
+        primaryCtaLabel: (args.ctaLabel as string) || null,
+        corePromise: effectivePlan.corePromise || null,
+        closeReason: effectivePlan.closeReason || null,
+      });
       // BUSINESS REALITY ENGINE (slice B) — the identity layer. Every page
       // ends grounded in the real organization: business name (agent
       // profile > workspace name), contact email/phone (accountContact),

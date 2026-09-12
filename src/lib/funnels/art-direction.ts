@@ -375,7 +375,15 @@ export function applySalesArgument(
   plan: SalesArgumentPlanLike,
 ): FunnelSection[] {
   const chain = plan.beliefChain.filter((b) => b.trim().length > 0);
-  if (chain.length < 2) return sections;
+  // A SHORT CHAIN DISABLES ONE STEP, NOT THE WHOLE PASS.
+  //
+  // This returned early on `chain.length < 2`, which meant a plan with one
+  // belief (or none) also lost the belief-shift beat, the offer heading and
+  // the close — none of which read the chain at all. They are written from
+  // currentBelief / mechanism / corePromise / closeReason. Only the belief
+  // ASSIGNMENT below genuinely needs two or more steps, so only that is
+  // skipped now; everything the plan can still say gets said.
+  const canAssignBeliefs = chain.length >= 2;
 
   // 0. THE BELIEF-SHIFT BEAT MUST CARRY THE ARGUMENT'S OWN WORDS.
   //
@@ -443,7 +451,7 @@ export function applySalesArgument(
   );
 
   // Role-priority belief assignment across CONTENT-BEARING carriers only.
-  const carrierIdxs = sections
+  const carrierIdxs = (canAssignBeliefs ? sections : [])
     .map((s, idx) => ({ s, idx }))
     .filter(({ s }) => s.argumentRole !== undefined && s.argumentRole in CARRIER_ROLE_PRIORITY && sectionHasRenderableContent(s));
   carrierIdxs.sort(
@@ -470,8 +478,11 @@ export function applySalesArgument(
     const role = s.argumentRole;
     const renders = sectionHasRenderableContent(s);
 
-    // 1. Belief assignment (only sections that will actually render).
-    if (role === "hook" && renders) next = { ...next, servesBelief: first };
+    // 1. Belief assignment (only sections that will actually render, and only
+    //    when the chain has enough steps to assign — see canAssignBeliefs).
+    if (!canAssignBeliefs) {
+      // nothing to assign; the copy-seeding steps below still run
+    } else if (role === "hook" && renders) next = { ...next, servesBelief: first };
     else if (beliefByIdx.has(idx)) next = { ...next, servesBelief: beliefByIdx.get(idx)! };
     else if ((role === "offer" || role === "action" || role === "close") && renders) {
       next = { ...next, servesBelief: last };
