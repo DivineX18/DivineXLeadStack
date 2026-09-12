@@ -65,7 +65,7 @@ const AGENCY = `test-agency-${RUN}`;
 const SA = `test-sa-${RUN}`;
 const UID = `test-uid-${RUN}`;
 const ctx = { uid: UID, subAccountId: SA } as never;
-const made: { funnelId: string; id: string; label: string }[] = [];
+const made: { funnelId: string; id: string; label: string; rhythm?: ReturnType<typeof describePageRhythm> }[] = [];
 
 await db.doc(`agencies/${AGENCY}`).set({ name: "LPQ Verify", createdAt: new Date() });
 await db.doc(`subAccounts/${SA}`).set({
@@ -117,6 +117,8 @@ try {
     const doc = await db.doc(`funnels/${funnelId}`).get();
     const stored = (doc.data() as { sections?: { type: string; config: Record<string, unknown> }[] } | undefined)?.sections ?? [];
     const rhythm = describePageRhythm(stored as never);
+    const entry = made.find((x) => x.funnelId === funnelId);
+    if (entry) entry.rhythm = rhythm;
     console.log(`     shape: ${rhythm.families.join(" → ")}`);
     console.log(`     longest run of one shape: ${rhythm.longestRun}, distinct shapes: ${rhythm.distinctFamilies}`);
     if (rhythm.repeatedHeadings.length) console.log(`     repeated headings: ${rhythm.repeatedHeadings.join(" | ")}`);
@@ -271,6 +273,15 @@ try {
           .map((el) => (el.textContent ?? "").trim())
           .filter((t) => t.length >= 3 && t.length <= 40);
 
+        // COMPOSED PROOF VISUALS. A page whose category makes stock photography
+        // counterfeit evidence carries no <img> by design and is not thereby
+        // visually bare: it renders the deliverable as a labelled example
+        // document, or the verified mechanism as a sequence. Counting those is
+        // how "does this page have a visual beat" gets asked correctly — the
+        // check used to ask "are there images", which is a different question
+        // and one three fixtures were right to answer no to.
+        const proofVisuals = root.querySelectorAll("[data-proof-visual]").length;
+
         // EXCESSIVE WHITESPACE / DEAD BANDS. A section far taller than the
         // content inside it renders as an empty band the reader scrolls
         // through. Measured as the section's own height against the union of
@@ -315,13 +326,14 @@ try {
           buttonLabels,
           deadBands,
           deadBandDetail,
+          proofVisuals,
           imagesWithoutAlt: imgs.filter((i) => !i.getAttribute("alt")).length,
           height: document.body.scrollHeight,
         };
       });
 
       console.log(
-        `     ${tag}: ${audit.sections} sections, ${audit.images} imgs, ${audit.gridy} grid-sections, ${audit.height}px`,
+        `     ${tag}: ${audit.sections} sections, ${audit.images} imgs, ${audit.proofVisuals} proof-visuals, ${audit.gridy} grid-sections, ${audit.height}px`,
       );
       check(`${tag}: every section is visible after scrolling`, audit.invisible === 0, `${audit.invisible} still at opacity 0`);
       check(`${tag}: no broken media`, audit.broken === 0, `${audit.broken}`);
@@ -353,13 +365,30 @@ try {
       check(`${tag}: no dead bands`, audit.deadBands === 0, audit.deadBandDetail.join(" ;; "));
       if (device === "desktop") {
         check(`${tag}: no wall-of-text line lengths`, audit.tooWide === 0, `${audit.tooWide} paragraphs >900px`);
-        // The headline finding: is the page one pattern repeated?
+        // THE HEADLINE FINDING: is the page one pattern repeated?
+        //
+        // Measured from the layout families the page actually composed to, not
+        // from a CSS-class proxy. The proxy counted any section containing an
+        // element whose class mentions "grid", which is both too broad (a split
+        // fold is a grid, and a split fold is good composition) and meaningless
+        // on a one-fold page, where the ratio can only ever be 0/1 or 1/1. It
+        // failed the lead magnet for having a well-composed single section.
+        //
+        // A page needs at least three rendered beats before repetition is a
+        // thing it can do, and the real fault is a RUN of the same shape.
+        const fam = m.rhythm;
+        if (fam && fam.families.length >= 3) {
+          check(
+            `${tag}: the page is not one layout repeated`,
+            fam.longestRun < 3 && fam.distinctFamilies >= 3,
+            `${fam.families.join(" → ")} (longest run ${fam.longestRun}, ${fam.distinctFamilies} distinct)`,
+          );
+        }
         check(
-          `${tag}: the page is not one layout repeated`,
-          audit.sections === 0 || audit.gridy / audit.sections < 0.6,
-          `${audit.gridy}/${audit.sections} sections are card grids`,
+          `${tag}: the page carries a visual beat`,
+          audit.images > 0 || audit.proofVisuals > 0,
+          `${audit.images} images, ${audit.proofVisuals} proof visuals`,
         );
-        check(`${tag}: the page carries media at all`, audit.images > 0, `${audit.images} images`);
       }
       await c.close();
     }

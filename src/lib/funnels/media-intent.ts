@@ -80,6 +80,13 @@ export interface MediaPlanningContext {
  */
 const AMBIENT_HONEST: AuthenticityCategory[] = ["local_service_health", "local_service_trade", "b2b_services"];
 
+/** Words that carry no subject meaning, so they must not earn a match. */
+const STOPWORDS = new Set([
+  "a", "an", "the", "and", "or", "of", "in", "on", "at", "for", "with", "to", "from", "by",
+  "professional", "work", "progress", "close", "up", "detail", "during", "present", "person",
+  "people", "someone", "photo", "image", "picture", "view", "shot", "background", "modern",
+]);
+
 /** Strip marketing scaffolding so the query is a subject, not a sentence. */
 function toSubject(text: string): string {
   return text
@@ -104,16 +111,40 @@ function coreSubject(ctx: MediaPlanningContext): string | null {
     ctx.explicitSubject,
     ctx.whatTheyDo,
     ctx.industry,
-    // The sales argument's mechanism names the actual work being done, which is
-    // exactly what a photograph of this business should show.
-    ctx.mechanism,
+    // The offer line names WHAT THE BUSINESS IS ABOUT, in its own words, and a
+    // photograph of this business should be of that. It sits above the
+    // mechanism now because the mechanism is a sentence describing a PROCESS
+    // ("a first visit that is assessment only, with no treatment on the day"),
+    // which makes a poor photo brief — the dental page searched on it and got
+    // nothing recognisably dental, because the sentence never says so.
     ctx.offer,
+    ctx.mechanism,
   ];
   for (const candidate of ladder) {
     const t = candidate?.trim();
-    if (t && t.length > 3) return toSubject(t);
+    if (t && t.length > 3) return asPhotoSubject(toSubject(t));
   }
   return null;
+}
+
+/**
+ * A photo brief is a NOUN PHRASE, not a sentence.
+ *
+ * Whatever the ladder above returns may be a full line of marketing copy, and
+ * both things downstream suffer for it: the provider searches on a sentence and
+ * matches its least important words, and the relevance test ends up comparing a
+ * short caption against a dozen terms. Keeping the first few meaningful words
+ * gives a subject that a photograph can actually be OF.
+ */
+function asPhotoSubject(text: string): string {
+  const words = text
+    .split(/\s+/)
+    .filter((w) => {
+      const c = w.toLowerCase().replace(/[^a-z0-9]/g, "");
+      return c.length > 2 && !STOPWORDS.has(c);
+    })
+    .slice(0, 5);
+  return words.length > 0 ? words.join(" ") : text;
 }
 
 /**
@@ -166,4 +197,107 @@ export function planMediaIntents(
   }
 
   return intents;
+}
+
+/**
+ * IS THIS ACTUALLY A PICTURE OF WHAT THE SLOT ASKED FOR?
+ *
+ * The provider returns whatever it considers a match and the resolver took the
+ * first result, so a roof-inspection hero shipped a photograph of two people in
+ * hard hats standing indoors next to a window. That is semantically adjacent to
+ * "construction" and it is not a roof, and a visibly wrong photograph costs more
+ * trust than no photograph costs interest.
+ *
+ * So a candidate is scored against the SLOT'S OWN SUBJECT rather than the
+ * business's industry. The score is the share of the subject's meaningful words
+ * that appear in the candidate's own description — deliberately crude, because
+ * the decision it drives is only accept-or-reject and a crude measure that
+ * rejects honestly beats a clever one that rationalises.
+ *
+ * Nothing here is specific to any industry: the vocabulary comes from the
+ * intent, which came from the business's own facts.
+ */
+
+
+
+function meaningfulWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !STOPWORDS.has(w));
+}
+
+/**
+ * Do two words name the same thing? A shared four-character opening is enough:
+ * it makes roof/roofer/roofing, inspect/inspection/inspecting and
+ * dental/dentist the same subject without pulling in a stemmer, and it is short
+ * enough to be forgiving of the tense and number differences between a query
+ * and a caption.
+ */
+function sameSubject(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (a.length >= 4 && b.length >= 4 && a.slice(0, 4) === b.slice(0, 4)) return true;
+  return a.length > 4 && b.length > 4 && (a.includes(b) || b.includes(a));
+}
+
+/**
+ * HOW MANY OF THE SLOT'S SUBJECT TERMS THIS CANDIDATE ACTUALLY DEPICTS.
+ *
+ * A count, not a coverage ratio, and that is a correction to a first attempt.
+ * Scoring as "share of the subject's words present" sounds right and punishes
+ * candidates for the length of the QUERY rather than their own relevance: a
+ * genuinely good dental photograph captioned "Dentist examining a patient"
+ * covers one word of a five-word brief, scores 0.2, and is thrown away. That
+ * version rejected every photograph on all five fixtures, including four
+ * perfectly good ones, which is a worse failure than the one it was fixing.
+ *
+ * Sharing two real subject words is the test. It is hard to do by accident and
+ * easy to do when the photograph is actually of the thing.
+ */
+export function countMediaMatches(intent: Pick<MediaIntent, "subject">, candidateDescription: string): number {
+  const wanted = new Set(meaningfulWords(intent.subject));
+  const got = new Set(meaningfulWords(candidateDescription));
+  // An unlabelled photograph is not evidence that it depicts the right thing.
+  if (wanted.size === 0 || got.size === 0) return 0;
+  let hits = 0;
+  for (const w of wanted) {
+    for (const g of got) {
+      if (sameSubject(w, g)) {
+        hits++;
+        break;
+      }
+    }
+  }
+  return hits;
+}
+
+/**
+ * The bar a candidate must clear to be placed.
+ *
+ * Two shared subject terms, or one when the brief only has one or two to give.
+ * Set here because of what the two mistakes cost: below it the page composes
+ * from verified content instead, which is always defensible; above it the page
+ * shows a photograph that is genuinely about its subject. Rejecting a usable
+ * photo costs a little warmth. Placing a wrong one costs the visitor's belief
+ * in everything around it.
+ */
+export function mediaIsRelevant(intent: Pick<MediaIntent, "subject">, candidateDescription: string): boolean {
+  const wanted = new Set(meaningfulWords(intent.subject)).size;
+  const hits = countMediaMatches(intent, candidateDescription);
+  return wanted <= 2 ? hits >= 1 : hits >= 2;
+}
+
+/** Pick the candidate that depicts the subject best, or nothing. */
+export function selectRelevantMedia<T extends { alt: string }>(
+  intent: Pick<MediaIntent, "subject">,
+  candidates: T[],
+): { pick: T; matches: number } | null {
+  let best: { pick: T; matches: number } | null = null;
+  for (const c of candidates) {
+    if (!mediaIsRelevant(intent, c.alt)) continue;
+    const matches = countMediaMatches(intent, c.alt);
+    if (!best || matches > best.matches) best = { pick: c, matches };
+  }
+  return best;
 }

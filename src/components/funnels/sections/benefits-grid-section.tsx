@@ -9,6 +9,7 @@ import {
   Star,
 } from "lucide-react";
 import type { BenefitIconType, BenefitsGridConfig } from "@/types/funnels";
+import { DocumentShowcase, ProcessFlow, SectionShell } from "./composition";
 import { MediaPlaceholder } from "./media-placeholder";
 
 const ICONS: Record<BenefitIconType, typeof Check> = {
@@ -60,6 +61,33 @@ export function BenefitsGridSection({
     config.variant === "alternating_image" && published && realImageCount === 0
       ? undefined
       : config.variant;
+
+  // PROOF WITHOUT A PHOTOGRAPH. For a business whose category makes stock
+  // imagery counterfeit evidence, these two variants are the page's visual
+  // proof: the deliverable shown as a labelled example document, or the
+  // verified mechanism drawn as a sequence. Both render the section's OWN
+  // items — nothing is invented, and neither needs an asset that does not
+  // exist. See the composition module for why the example label is load-
+  // bearing rather than decorative.
+  if (effectiveVariant === "document_showcase" || effectiveVariant === "process_flow") {
+    return (
+      <SectionShell width={effectiveVariant === "process_flow" ? "wide" : "content"}>
+        {config.headline && (
+          <h2
+            className="mb-10 text-balance text-center font-extrabold tracking-tight"
+            style={{ fontSize: "clamp(1.7rem, 4.5vw, 2.6rem)", lineHeight: 1.1 }}
+          >
+            {config.headline}
+          </h2>
+        )}
+        {effectiveVariant === "process_flow" ? (
+          <ProcessFlow steps={config.items} accentColor={accentColor} />
+        ) : (
+          <DocumentShowcase items={config.items} accentColor={accentColor} />
+        )}
+      </SectionShell>
+    );
+  }
 
   if (effectiveVariant === "alternating_image") {
     return (

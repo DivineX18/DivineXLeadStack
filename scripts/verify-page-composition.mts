@@ -186,7 +186,155 @@ console.log("\n══ a real photograph earns the fold's width ══");
   check("an explicit hero layout is never overridden", (out[0].config as { layout: string }).layout === "background_image");
 }
 
-// ── 6. Purity ───────────────────────────────────────────────────────────────
+// ── 6. Proof composes when a photograph would be counterfeit ────────────────
+console.log("\n══ proof actually composes ══");
+{
+  // The consultant/lead-magnet/paid-offer shape: no image anywhere on the page.
+  const out = composePage([hero(), benefits(true), offer("What you get"), footer()], {
+    primaryCtaLabel: "Book it",
+    proofVisual: "process_flow",
+  });
+  check("a page with no image is given a composed proof beat", layoutFamilyOf(out[1]) === "process", layoutFamilyOf(out[1]));
+}
+{
+  const out = composePage([hero(), benefits(true), footer()], { primaryCtaLabel: "Book it", proofVisual: "document_showcase" });
+  check("a deliverable offer is shown as a labelled example document", layoutFamilyOf(out[1]) === "showcase", layoutFamilyOf(out[1]));
+}
+{
+  // A page that already has real photography does not need a substitute.
+  const withPhoto = sec("s1", "hero", { headline: "H", ctaLabel: "Book it", mediaType: "image", mediaUrl: "https://example.test/a.jpg" });
+  const out = composePage([withPhoto, benefits(true), footer()], { primaryCtaLabel: "Book it", proofVisual: "process_flow" });
+  check("a page that carries a real photograph keeps its ordinary benefits beat", layoutFamilyOf(out[1]) === "alternating" || layoutFamilyOf(out[1]) === "centered_column", layoutFamilyOf(out[1]));
+}
+{
+  // One item is a diagram of nothing.
+  const thin = sec("s2", "benefits_grid", { items: [{ title: "One thing", description: "Only one." }] });
+  const out = composePage([hero(), thin, footer()], { primaryCtaLabel: "Book it", proofVisual: "process_flow" });
+  check("a single item is not drawn as a process", layoutFamilyOf(out[1]) !== "process", layoutFamilyOf(out[1]));
+}
+{
+  // An explicit register decision still wins over the proof allocation.
+  const urgent = sec("s2", "benefits_grid", { variant: "flowing_checklist", items: [{ title: "A", description: "a" }, { title: "B", description: "b" }] });
+  const out = composePage([hero(), urgent, footer()], { primaryCtaLabel: "Book it", proofVisual: "process_flow" });
+  check("an explicit variant is not replaced by the proof beat", layoutFamilyOf(out[1]) === "centered_column", layoutFamilyOf(out[1]));
+}
+
+{
+  // A ONE-FOLD PAGE HAS NO MID-PAGE BEAT. The lead-magnet fixture is a single
+  // hero, so with no benefits section and no honest photography it rendered
+  // with no visual anywhere on the page.
+  const oneFold = sec("s1", "hero", {
+    headline: "The one schedule change that ends most toddler night waking",
+    ctaLabel: "Send me the guide",
+    mediaType: "none",
+    bullets: ["Built around wake windows", "Nothing to buy to use it", "Written by a sleep consultant"],
+  });
+  const out = composePage([oneFold, footer()], { primaryCtaLabel: "Send me the guide", proofVisual: "document_showcase" });
+  const cfg = out[0].config as { proofShowcase?: { items: { title: string }[] } };
+  check("a one-fold page carries the deliverable in its fold", (cfg.proofShowcase?.items.length ?? 0) === 3, `${cfg.proofShowcase?.items.length ?? 0} items`);
+  check("the fold showcase uses the page's own bullets", cfg.proofShowcase?.items[0].title === "Built around wake windows");
+  check(
+    "the inline checklist is not printed beside its own showcase",
+    ((out[0].config as { bullets?: string[] }).bullets ?? []).length === 0,
+    `${((out[0].config as { bullets?: string[] }).bullets ?? []).length} bullets left`,
+  );
+}
+{
+  // A page that DOES have a mid-page beat must use that, not the fold.
+  const out = composePage([hero(), benefits(true), footer()], { primaryCtaLabel: "Book it", proofVisual: "document_showcase" });
+  check("a page with a mid-page beat does not also load the fold", (out[0].config as { proofShowcase?: unknown }).proofShowcase === undefined);
+}
+{
+  // A real photograph always wins the fold.
+  const withPhoto = sec("s1", "hero", { headline: "H", ctaLabel: "Go", mediaType: "image", mediaUrl: "https://example.test/a.jpg", bullets: ["One", "Two"] });
+  const out = composePage([withPhoto, footer()], { primaryCtaLabel: "Go", proofVisual: "document_showcase" });
+  check("a fold with a real photograph is left alone", (out[0].config as { proofShowcase?: unknown }).proofShowcase === undefined);
+}
+
+{
+  // A zigzag-image decision that has no images cannot be honoured; the renderer
+  // downgrades it to a bare checklist, and a composed proof beat is better.
+  const wants = sec("s2", "benefits_grid", { variant: "alternating_image", items: [{ title: "A", description: "a" }, { title: "B", description: "b" }] });
+  const out = composePage([hero(), wants, footer()], { primaryCtaLabel: "Book it", proofVisual: "process_flow" });
+  check("an image variant with no images yields to the proof beat", layoutFamilyOf(out[1]) === "process", layoutFamilyOf(out[1]));
+}
+{
+  // ...but one that DOES have images keeps its rows.
+  const has = sec("s2", "benefits_grid", { variant: "alternating_image", items: [{ title: "A", imageUrl: "https://x.test/a.jpg" }, { title: "B", description: "b" }] });
+  const out = composePage([hero(), has, footer()], { primaryCtaLabel: "Book it", proofVisual: "process_flow" });
+  check("an image variant that has images is untouched", layoutFamilyOf(out[1]) === "alternating", layoutFamilyOf(out[1]));
+}
+
+// ── 7. Reinforcement vs accidental repetition ───────────────────────────────
+console.log("\n══ reinforcement vs accidental repetition ══");
+{
+  // The Summit shape: the offer card restates the three deliverables above its
+  // button. That is direct response, not a defect.
+  const out = composePage([hero(), benefits(false), offer("Know the condition"), footer()], { primaryCtaLabel: "Book it" });
+  const offerOut = out.find((s) => s.type === "offer")!.config as { bullets: string[] };
+  check("the offer keeps a repeated list because it asks for the decision", offerOut.bullets.length > 0, `${offerOut.bullets.length} bullets`);
+}
+{
+  // The same list again in a block that asks for nothing is an echo.
+  const inert = sec("s7", "included", { headline: "Also included", items: [{ title: "Free 25-point roof inspection" }, { title: "Photo documentation" }, { title: "Written recommendations" }] });
+  const bg = sec("s2", "benefits_grid", { items: [{ title: "Free 25-point roof inspection" }, { title: "Photo documentation" }, { title: "Written recommendations" }] });
+  const out = composePage([hero(), bg, inert, footer()], { primaryCtaLabel: "Book it" });
+  const inertOut = out.find((s) => s.type === "included")!.config as { items: unknown[] };
+  check("an inert repeat of the same list is dropped", inertOut.items.length === 0, `${inertOut.items.length} items`);
+}
+{
+  // A section with its own content is never touched.
+  const bg = sec("s2", "benefits_grid", { items: [{ title: "One" }, { title: "Two" }] });
+  const other = sec("s7", "included", { items: [{ title: "Something else entirely" }] });
+  const out = composePage([hero(), bg, other, footer()], { primaryCtaLabel: "Book it" });
+  check("a section with different content is untouched", ((out.find((s) => s.type === "included")!.config as { items: unknown[] }).items.length) === 1);
+}
+
+// ── 8. A malformed optional field cannot discard a valid argument ───────────
+console.log("\n══ a malformed field cannot discard the argument ══");
+{
+  const { getCapability } = await import("../src/lib/ai-suite/capabilities.ts");
+  const validate = getCapability("create_funnel")!.validate!;
+  const base = {
+    funnel_name: "Summit Roofing", genre: "lead_gen",
+    headline: "Find out what condition your roof is actually in",
+    bullets: "A, B, C", cta_label: "Book it",
+  };
+  const argOf = (sa: Record<string, unknown>) =>
+    (validate({ ...base, sales_argument: sa } as never) as { ok: boolean; args: Record<string, unknown> }).args
+      .salesArgument as { beliefChain: string[]; corePromise: string; mechanism: string } | null;
+
+  // The exact shape that discarded the whole plan: a chain as one string.
+  const oneString = argOf({
+    prospect: "A Houston homeowner", current_belief: "I will be upsold",
+    belief_chain: "You cannot decide about a roof you have not seen",
+    mechanism: "A documented 25-point inspection", core_promise: "Know the condition first",
+    primary_objection: "I do not want to be sold", close_reason: "It is free",
+  });
+  check("a chain given as a string does not discard the plan", oneString !== null);
+  check("the other nine fields survive", oneString?.mechanism === "A documented 25-point inspection", oneString?.mechanism ?? "lost");
+
+  // Several beliefs in one string, the way a model actually writes them.
+  const separated = argOf({
+    prospect: "A homeowner",
+    belief_chain: "First belief; second belief; third belief",
+    core_promise: "Know the condition",
+  });
+  check("a semicolon-separated chain is split into steps", (separated?.beliefChain.length ?? 0) === 3, `${separated?.beliefChain.length ?? 0} steps`);
+
+  const numbered = argOf({ prospect: "A homeowner", belief_chain: "1. First\n2. Second", core_promise: "X" });
+  check("list markers are stripped from a numbered chain", numbered?.beliefChain[0] === "First", numbered?.beliefChain[0] ?? "");
+
+  // A properly-formed array is unchanged.
+  const array = argOf({ prospect: "A homeowner", belief_chain: ["One", "Two", "Three"], core_promise: "X" });
+  check("a well-formed array still works exactly as before", (array?.beliefChain.length ?? 0) === 3);
+
+  // A plan with nothing usable in it is still rejected.
+  const empty = argOf({ prospect: "A homeowner" });
+  check("a plan carrying no usable material is still rejected", empty === null);
+}
+
+// ── 9. Purity ───────────────────────────────────────────────────────────────
 console.log("\n══ purity ══");
 {
   const input = [hero(), close(), footer()];

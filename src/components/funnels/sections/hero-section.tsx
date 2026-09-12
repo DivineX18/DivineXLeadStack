@@ -33,6 +33,7 @@ const FOLD_HEADLINE = "clamp(1.875rem, min(5.5vw, 7.2svh), 3.5rem)";
  *  blank band beneath it, which read as a broken image on a generated page. */
 const FOLD_MEDIA = "max-h-[32svh] w-auto object-contain";
 import { DeviceFrame } from "./device-frame";
+import { DocumentShowcase } from "./composition";
 import { MediaPlaceholder } from "./media-placeholder";
 
 function MediaBlock({
@@ -154,7 +155,11 @@ export function HeroSection({
   // honest labeled placeholder) when Zeno set mediaPlaceholderLabel but has
   // no real asset yet — but never for a plain funnel with neither signal,
   // which stays the exact today's-behavior centered fallback.
-  const hasMediaIntent = config.mediaType !== "none" && (!!config.mediaUrl || !!config.mediaPlaceholderLabel);
+  // A composed deliverable preview is media for layout purposes: it is what
+  // the split fold will actually render on its media side.
+  const hasProofShowcase = !!config.proofShowcase?.items?.length && !config.mediaUrl;
+  const hasMediaIntent =
+    hasProofShowcase || (config.mediaType !== "none" && (!!config.mediaUrl || !!config.mediaPlaceholderLabel));
   const layout = hasMediaIntent ? (config.layout ?? "centered") : "centered";
   const form = config.formId && forms ? forms[config.formId] : null;
 
@@ -337,7 +342,20 @@ export function HeroSection({
             {bulletsNode}
             {cta}
           </div>
-          <MediaBlock config={config} accentColor={accentColor} className="aspect-video w-full" />
+          {/* THE DELIVERABLE, WHERE THE PHOTOGRAPH WOULD HAVE BEEN.
+              A one-fold opt-in page is a single hero, so if its fold carries no
+              visual the whole page carries none — which is what the lead-magnet
+              fixture shipped. Its category also forbids stock photography, and
+              correctly so, which left the mid-page proof beat with nowhere to
+              go. Showing the guide's own contents beside the headline puts the
+              proof in the only fold there is, using facts the page already
+              states. Falls through to the ordinary media block whenever a real
+              asset exists. */}
+          {config.proofShowcase?.items?.length && !config.mediaUrl ? (
+            <DocumentShowcase items={config.proofShowcase.items} accentColor={accentColor} />
+          ) : (
+            <MediaBlock config={config} accentColor={accentColor} className="aspect-video w-full" />
+          )}
         </div>
       </section>
     );
@@ -383,11 +401,30 @@ export function HeroSection({
     );
   }
 
+  // A SPARSE FOLD SIZES TO WHAT IT HAS.
+  //
+  // The fold budget exists so the headline, the CTA and the trust evidence are
+  // all visible without scrolling — it is a FLOOR under the decision, not a
+  // quota of empty space. A hero carrying all of those fills a viewport and
+  // should keep one. A hero carrying only a headline, a subheadline and a
+  // button — no eyebrow, no trust row, no media, which is what a thin
+  // generation produces — centres about 340px of content inside 844px on a
+  // phone and renders as a third of a screen of empty gradient above the
+  // headline. That reads as a page that failed to load.
+  //
+  // So the budget adapts DOWNWARD for that case only. Every protection in
+  // verify-hero-fold.mts still holds, and holds for the right reason: the
+  // guard exists to stop the CTA being pushed BELOW the fold, and a shorter
+  // hero cannot do that. Content stays vertically centred; the media cap, the
+  // headline scaling and the composed CTA/trust row are untouched.
+  const sparseFold =
+    !hasMediaIntent && !config.eyebrow && !config.trustBadges?.length && !config.bullets?.length;
   return (
     <section
       className={`relative overflow-hidden ${FOLD_SECTION}`}
       style={{
         backgroundImage: `linear-gradient(180deg, ${accentColor}22 0%, ${accentColor}0a 45%, transparent 80%), radial-gradient(ellipse 70% 50% at 50% 0%, ${accentColor}30, transparent)`,
+        ...(sparseFold ? { minHeight: "68svh" } : {}),
       }}
     >
       <div className="relative mx-auto max-w-3xl text-center">

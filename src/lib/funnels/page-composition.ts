@@ -64,6 +64,10 @@ export type LayoutFamily =
   | "alternating"
   /** A card grid. */
   | "grid"
+  /** The deliverable framed as a labelled example document. */
+  | "showcase"
+  /** The verified mechanism drawn as a sequence. */
+  | "process"
   /** A full-width strip: ratings, logos, stats, a pull quote, the full-bleed close. */
   | "band"
   /** A contained card the eye is meant to stop on: the offer, the checkout. */
@@ -79,8 +83,13 @@ export function layoutFamilyOf(section: FunnelSection): LayoutFamily {
   switch (section.type) {
     case "hero":
       return "fold";
-    case "benefits_grid":
-      return (section.config as BenefitsGridConfig).variant === "alternating_image" ? "alternating" : "centered_column";
+    case "benefits_grid": {
+      const v = (section.config as BenefitsGridConfig).variant;
+      if (v === "alternating_image") return "alternating";
+      if (v === "document_showcase") return "showcase";
+      if (v === "process_flow") return "process";
+      return "centered_column";
+    }
     case "problem_solution":
       return (section.config as ProblemSolutionConfig).variant === "before_after" ? "split" : "centered_column";
     case "cta_banner":
@@ -123,6 +132,25 @@ export interface PageCompositionContext {
   /** Why acting now makes sense — the plan's own reason, which is what a
    *  closing section is FOR. */
   closeReason?: string | null;
+  /**
+   * What this page is allowed to use as VISUAL PROOF.
+   *
+   * Some categories cannot honestly use photography at all (a stock "product"
+   * for a product nobody has seen). Blocking the photograph was correct and
+   * left three of five fixtures rendering with no visual of any kind, because
+   * nothing downstream was responsible for putting anything in its place.
+   *
+   * So the page plan allocates the space deliberately. `document_showcase`
+   * suits an offer that IS a thing the buyer receives (a guide, a report, a
+   * product); `process_flow` suits an offer that is work performed (a review,
+   * a consultation, a service).
+   *
+   * Named for EVERY page rather than only the ones that block photography,
+   * because it is applied only when the finished page carries no real image —
+   * which also covers a page whose candidate photographs were all rejected as
+   * irrelevant. Absent means this pass leaves proof alone entirely.
+   */
+  proofVisual?: "document_showcase" | "process_flow" | null;
 }
 
 /** Case- and punctuation-insensitive comparison, so "Ready?" and "ready" are
@@ -377,7 +405,150 @@ function breakLayoutRuns(sections: FunnelSection[]): FunnelSection[] {
 }
 
 /**
- * 5. A REAL PHOTOGRAPH EARNS THE FOLD'S WIDTH.
+ * REPEATING THE DELIVERABLES AT THE BUTTON IS NOT A BUG.
+ *
+ * The offer card restating the three things the visitor gets, directly above
+ * the CTA, is ordinary and effective direct response — the reader is deciding
+ * at that moment and should not have to scroll back. So a verbatim repeat is
+ * not by itself a defect, and removing it automatically would make the page
+ * worse.
+ *
+ * What separates it from an accident is whether the repeating section DOES
+ * anything with the repetition. A block that restates the list and then asks
+ * for the decision — a button, a form, a price — is reinforcement. A block that
+ * restates the list and then stops is the same content printed twice for no
+ * reason, and that one is a defect.
+ *
+ * So the test is not "is this duplicated" but "is this duplicated AND inert".
+ */
+function repeatsEarlierList(section: FunnelSection, earlier: Set<string>): boolean {
+  const c = section.config as { bullets?: string[]; items?: { title?: string }[] };
+  const own = [...(c.bullets ?? []), ...(c.items ?? []).map((i) => i.title ?? "")]
+    .map((t) => normalize(t))
+    .filter(Boolean);
+  if (own.length === 0) return false;
+  return own.every((t) => earlier.has(t));
+}
+
+/** Does this section ask for the decision, or merely restate? */
+function carriesConversionContext(section: FunnelSection): boolean {
+  const c = section.config as { ctaLabel?: string; formId?: string | null; priceCents?: number | null; cta?: unknown };
+  return !!c.ctaLabel?.trim() || !!c.formId || typeof c.priceCents === "number" || !!c.cta;
+}
+
+function resolveRepetition(sections: FunnelSection[]): FunnelSection[] {
+  const seenList = new Set<string>();
+  return sections.map((s) => {
+    if (!sectionHasRenderableContent(s)) return s;
+    const duplicated = repeatsEarlierList(s, seenList);
+    const c = s.config as { bullets?: string[]; items?: { title?: string }[] };
+    for (const t of [...(c.bullets ?? []), ...(c.items ?? []).map((i) => i.title ?? "")]) {
+      const n = normalize(t);
+      if (n) seenList.add(n);
+    }
+    if (!duplicated) return s;
+    // Reinforcement at the point of decision: keep it, that is the job.
+    if (carriesConversionContext(s)) return s;
+    // Inert repetition: drop the duplicated list. The section keeps its
+    // heading and anything else it carries, and is removed downstream by the
+    // completeness pass if that leaves nothing — which is the correct outcome
+    // for a block that was only ever an echo.
+    const next = { ...(s.config as Record<string, unknown>) };
+    if (Array.isArray(next.bullets)) next.bullets = [];
+    if (Array.isArray(next.items)) next.items = [];
+    return { ...s, config: next as FunnelSection["config"] };
+  });
+}
+
+/** Does anything on this page render a real picture? */
+function carriesRealImage(sections: FunnelSection[]): boolean {
+  return sections.some((s) => {
+    if (!sectionHasRenderableContent(s)) return false;
+    const c = s.config as { mediaUrl?: string; mediaType?: string; photoUrl?: string; productImageUrl?: string; images?: unknown[]; items?: { imageUrl?: string }[]; logos?: unknown[] };
+    if (c.mediaUrl && c.mediaType === "image") return true;
+    if (c.photoUrl || c.productImageUrl) return true;
+    if (c.images?.length) return true;
+    if (c.logos?.length) return true;
+    return (c.items ?? []).some((it) => !!it.imageUrl);
+  });
+}
+
+/**
+ * 5. A PAGE THAT CANNOT PHOTOGRAPH ANYTHING STILL SHOWS SOMETHING TRUE.
+ *
+ * The rule this implements is the whole reason the proof variants exist: when
+ * the category makes stock imagery counterfeit AND nothing on the page carries
+ * a real picture, the page must still have a visual beat, and it has to be
+ * built from facts the page already asserts.
+ *
+ * The beat is ALLOCATED, not hoped for. An earlier attempt set a variant on the
+ * `included` section for these categories, which did nothing at all because
+ * none of the affected pages compose an `included` section — the rule had
+ * nothing to apply to and three fixtures kept rendering with zero visuals. So
+ * this names the section that IS on the page (the benefits beat) and gives it
+ * the proof job, rather than adding a fourth copy of the same three items.
+ *
+ * Requires at least two items: a one-item "document" or a one-step "process" is
+ * a diagram of nothing, and would read as a mistake rather than as evidence.
+ */
+function allocateProofBeat(sections: FunnelSection[], ctx: PageCompositionContext): FunnelSection[] {
+  const mode = ctx.proofVisual;
+  if (mode !== "document_showcase" && mode !== "process_flow") return sections;
+  if (carriesRealImage(sections)) return sections;
+
+  let assigned = false;
+  const next = sections.map((s) => {
+    if (assigned || s.type !== "benefits_grid") return s;
+    const cfg = s.config as BenefitsGridConfig;
+    // An explicit register decision (an urgent page's dark checklist band) is
+    // still a decision; proof is assigned only where nothing was chosen.
+    //
+    // With ONE exception, which the booking fixture made visible: a decision to
+    // render zigzag image rows cannot be honoured when no row has an image, and
+    // the renderer already silently downgrades it to a plain checklist. That is
+    // not the register decision being respected, it is the register decision
+    // failing — and a composed proof beat is a better outcome than the bare
+    // list the page falls back to.
+    const wantsImagesButHasNone =
+      cfg.variant === "alternating_image" && !(cfg.items ?? []).some((it) => it.imageUrl);
+    if (cfg.variant !== undefined && !wantsImagesButHasNone) return s;
+    if ((cfg.items ?? []).length < 2) return s;
+    assigned = true;
+    return { ...s, config: { ...cfg, variant: mode } };
+  });
+  if (assigned || mode !== "document_showcase") return next;
+
+  // NO MID-PAGE BEAT TO USE. A one-fold opt-in page is a single hero by
+  // design, so there is no benefits section to carry the proof and the page
+  // ends up with no visual anywhere — which is what the lead-magnet fixture
+  // shipped, while its category simultaneously (and correctly) forbids stock
+  // photography. The fold is the only place left, so the deliverable's own
+  // contents render beside the headline there. Uses the hero's OWN bullets:
+  // nothing is invented and nothing is duplicated, because on a one-fold page
+  // there is no second section for them to be duplicated from.
+  return next.map((s) => {
+    if (s.type !== "hero") return s;
+    const cfg = s.config as HeroConfig & { proofShowcase?: unknown };
+    if (cfg.mediaUrl || cfg.proofShowcase) return s;
+    const bullets = (cfg.bullets ?? []).filter((b) => b.trim().length > 0);
+    if (bullets.length < 2) return s;
+    return {
+      ...s,
+      config: {
+        ...cfg,
+        proofShowcase: { items: bullets.map((b) => ({ title: b })) },
+        // The showcase IS the bullet list, presented as the thing the reader
+        // receives. Leaving the inline checklist as well printed the same three
+        // lines twice inside a single viewport, which is the most visible form
+        // of the repetition this pass exists to remove.
+        bullets: [],
+      },
+    };
+  });
+}
+
+/**
+ * 6. A REAL PHOTOGRAPH EARNS THE FOLD'S WIDTH.
  *
  * The centred hero renders its media as a small rounded card under the
  * subheadline, which is the weakest available use of the most valuable
@@ -446,6 +617,8 @@ export function composePage(
   let out = closeTheClose(sections, ctx);
   out = closeLast(out);
   out = dedupeHeadings(out);
+  out = resolveRepetition(out);
+  out = allocateProofBeat(out, ctx);
   out = widenTheFold(out);
   out = alternateMediaSides(out);
   out = breakLayoutRuns(out);

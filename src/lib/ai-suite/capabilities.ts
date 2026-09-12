@@ -77,7 +77,7 @@ import { scoreFunnelDesign } from "@/lib/design-intelligence/scoring";
 import { reviewFunnelCopy, type FunnelCopyReview } from "@/lib/conversion/funnel-copy-review";
 import type { OfferConfig, IncludedConfig, BenefitsGridConfig, CtaBannerConfig, FunnelDoc, FunnelSection, FunnelSectionType, HeroConfig, PhotoGalleryConfig, TicketTiersConfig, VisualRequirement, VisualDecision } from "@/types/funnels";
 import { imageryConfigured, searchSubjectImages } from "@/lib/funnels/imagery";
-import { planMediaIntents } from "@/lib/funnels/media-intent";
+import { planMediaIntents, selectRelevantMedia } from "@/lib/funnels/media-intent";
 import { inferAuthenticityCategory, stockAllowedFor, assetManifest, TRUST_QUESTIONS } from "@/lib/funnels/authenticity";
 import type { DesignPackId } from "@/lib/funnels/design-packs";
 import { FUNNEL_FRAMEWORKS, computeDecisionComplexity, computePersuasionDepth, resolveHeroLayout, type DecisionComplexity } from "@/lib/funnels/frameworks";
@@ -5510,8 +5510,19 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         if (intents.length > 0 && imageryConfigured() && ambientStockOk && !categoryBlocksAmbient) {
           // Each intent is resolved on its own so two slots can never receive
           // the same photograph from one result list.
+          // SEVERAL CANDIDATES, THEN JUDGED — not the first result taken on
+          // faith. Asking for one photo and placing it is how a roof-inspection
+          // hero shipped two people in hard hats standing indoors: the provider
+          // matched the industry, not the slot. Now each slot pulls a short list
+          // and keeps the best one that is actually about its own subject, and
+          // keeps NOTHING when none of them is. A page composed from verified
+          // content beats a page with a visibly wrong photograph on it.
           const resolved = await Promise.all(
-            intents.map(async (intent) => ({ intent, photo: (await searchSubjectImages(intent.subject, 1))[0] ?? null })),
+            intents.map(async (intent) => {
+              const candidates = await searchSubjectImages(intent.subject, 6);
+              const chosen = selectRelevantMedia(intent, candidates);
+              return { intent, photo: chosen?.pick ?? null };
+            }),
           );
           const heroHit = resolved.find((r) => r.intent.slot === "hero" && r.photo);
           const benefitHits = resolved.filter((r) => r.intent.slot === "benefit_item" && r.photo);
@@ -5667,6 +5678,22 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         primaryCtaLabel: (args.ctaLabel as string) || null,
         corePromise: effectivePlan.corePromise || null,
         closeReason: effectivePlan.closeReason || null,
+        // WHAT THIS PAGE MAY USE AS VISUAL PROOF. Where a photograph would be
+        // counterfeit evidence, the page still needs a visual beat, and the
+        // honest one depends on what the offer IS: a thing the buyer receives
+        // is shown as a labelled example of itself; work that gets performed is
+        // drawn as its own sequence. Both render facts the page already
+        // asserts. Categories that CAN photograph honestly keep the ordinary
+        // imagery path.
+        // Named for EVERY page, not only the ones that block photography.
+        // It is allocated only when the finished page carries no real image,
+        // which now includes a page whose candidate photographs were all
+        // rejected as irrelevant — so relevance rejection degrades into a
+        // composed proof beat instead of into an empty page.
+        proofVisual:
+          authenticityCategory === "info_product" || authenticityCategory === "physical_product"
+            ? ("document_showcase" as const)
+            : ("process_flow" as const),
       });
       // BUSINESS REALITY ENGINE (slice B) — the identity layer. Every page
       // ends grounded in the real organization: business name (agent

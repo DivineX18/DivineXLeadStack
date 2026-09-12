@@ -254,6 +254,12 @@ export interface HeroConfig {
    *  treatment. Falls back to centered when no media is set (every
    *  media-dependent layout has nothing to render without it). */
   layout?: "centered" | "split" | "background_image" | "founder_image" | "browser_mockup" | "phone_mockup";
+  /** A one-fold page has no mid-page beat to put proof in, so the fold itself
+   *  carries it: the deliverable's REAL contents rendered beside the headline
+   *  as a labelled example document. Set by the page-composition planner only
+   *  when the page would otherwise have no visual at all and no photograph
+   *  would be honest. Never invented — the items are the offer's own. */
+  proofShowcase?: { items: { title: string; description?: string }[] } | null;
   cta?: CtaExtras;
   /** Phase 2 — an honest labeled placeholder ("Add a product screenshot")
    *  shown in the media slot when the archetype calls for real media but
@@ -469,8 +475,15 @@ export interface BenefitsGridConfig {
   /** Art-direction layout variant. "flowing_checklist" (default) = the
    *  centered single-column sales-letter checklist. "alternating_image" =
    *  zigzag image/text rows (people-led, calm campaigns) — items render
-   *  their imageUrl when set, else the designed placeholder panel. */
-  variant?: "flowing_checklist" | "alternating_image";
+   *  their imageUrl when set, else the designed placeholder panel.
+   *
+   *  The last two are the PROOF variants, for pages whose category makes
+   *  stock photography counterfeit evidence and which would otherwise carry
+   *  no visual at all: "document_showcase" frames the items as a labelled
+   *  example of the deliverable, "process_flow" draws them as the verified
+   *  mechanism's sequence. Both render the items already present — neither
+   *  invents content or needs an asset. */
+  variant?: "flowing_checklist" | "alternating_image" | "document_showcase" | "process_flow";
 }
 export type BenefitIconType =
   | "check"
