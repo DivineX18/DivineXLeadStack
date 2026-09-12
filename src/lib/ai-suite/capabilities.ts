@@ -5519,8 +5519,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           // content beats a page with a visibly wrong photograph on it.
           const resolved = await Promise.all(
             intents.map(async (intent) => {
-              const candidates = await searchSubjectImages(intent.subject, 6);
-              const chosen = selectRelevantMedia(intent, candidates);
+              const candidates = await searchSubjectImages(intent.subject, 12);
+              // Purpose travels with the intent so the selector can weight
+              // "someone doing the work" against "a picture of the category".
+              const chosen = selectRelevantMedia({ subject: intent.subject, purpose: intent.purpose }, candidates);
               return { intent, photo: chosen?.pick ?? null };
             }),
           );

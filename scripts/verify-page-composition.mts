@@ -201,10 +201,52 @@ console.log("\n══ proof actually composes ══");
   check("a deliverable offer is shown as a labelled example document", layoutFamilyOf(out[1]) === "showcase", layoutFamilyOf(out[1]));
 }
 {
-  // A page that already has real photography does not need a substitute.
+  // A STEPPER OF BARE LABELS IS NOT PROCESS PROOF. The consultant page drew
+  // three unexplained labels joined by a line and communicated less than the
+  // checklist it replaced.
+  const bare = sec("s2", "benefits_grid", { items: [{ title: "Apply" }, { title: "Strategy call" }, { title: "Roadmap" }] });
+  const out = composePage([hero(), bare, footer()], { primaryCtaLabel: "Book it", proofVisual: "process_flow" });
+  check("unexplained steps are not drawn as a process", layoutFamilyOf(out[1]) === "showcase", layoutFamilyOf(out[1]));
+}
+{
+  // With real substance under each step, the flow earns its place.
+  const explained = sec("s2", "benefits_grid", {
+    items: [
+      { title: "Apply", description: "You answer six questions about how delivery currently runs." },
+      { title: "Delivery-path map", description: "We trace one live project end to end and mark where it stalls." },
+      { title: "Written findings", description: "You get the constraint, the evidence, and what to fix first." },
+    ],
+  });
+  const out = composePage([hero(), explained, footer()], { primaryCtaLabel: "Book it", proofVisual: "process_flow" });
+  check("explained steps are drawn as a process", layoutFamilyOf(out[1]) === "process", layoutFamilyOf(out[1]));
+}
+{
+  // PERSUASION-BEAT DIFFERENTIATION. A showcase above the offer card has
+  // already done the "what's inside" job; the card repeating it is repetition,
+  // not reinforcement.
+  const bg = sec("s2", "benefits_grid", { items: [{ title: "One" }, { title: "Two" }, { title: "Three" }] });
+  const card = sec("s3", "offer", { headline: "Know the three changes", bullets: ["One", "Two", "Three"], ctaLabel: "Get it", priceCents: 4900 });
+  const out = composePage([hero(), bg, card, footer()], { primaryCtaLabel: "Get it", proofVisual: "document_showcase" });
+  check("the showcase carried the contents", layoutFamilyOf(out[1]) === "showcase", layoutFamilyOf(out[1]));
+  check("the offer card does not restate what the showcase just showed", ((out[2].config as { bullets?: string[] }).bullets ?? []).length === 0, `${((out[2].config as { bullets?: string[] }).bullets ?? []).length} bullets`);
+  check("the offer card keeps the job only it can do", (out[2].config as { priceCents?: number }).priceCents === 4900 && !!(out[2].config as { ctaLabel?: string }).ctaLabel);
+}
+{
+  // PHOTO AND PROOF ARE INDEPENDENT JOBS. A hero photograph used to stand proof
+  // down for the whole page, which on the booking fixture left one image in the
+  // fold and two bare checklists beneath it. A picture in the fold says this is
+  // real; a proof beat says here is what happens. One does not answer the other.
   const withPhoto = sec("s1", "hero", { headline: "H", ctaLabel: "Book it", mediaType: "image", mediaUrl: "https://example.test/a.jpg" });
   const out = composePage([withPhoto, benefits(true), footer()], { primaryCtaLabel: "Book it", proofVisual: "process_flow" });
-  check("a page that carries a real photograph keeps its ordinary benefits beat", layoutFamilyOf(out[1]) === "alternating" || layoutFamilyOf(out[1]) === "centered_column", layoutFamilyOf(out[1]));
+  check("a hero photograph does not suppress the page's proof beat", layoutFamilyOf(out[1]) === "showcase" || layoutFamilyOf(out[1]) === "process", layoutFamilyOf(out[1]));
+}
+{
+  // What DOES stand proof down is the section itself already having imagery.
+  const withOwnImages = sec("s2", "benefits_grid", {
+    items: [{ title: "A", imageUrl: "https://x.test/a.jpg" }, { title: "B", imageUrl: "https://x.test/b.jpg" }],
+  });
+  const out = composePage([hero(), withOwnImages, footer()], { primaryCtaLabel: "Book it", proofVisual: "process_flow" });
+  check("a section with its own photographs is not overwritten by proof", layoutFamilyOf(out[1]) !== "process" && layoutFamilyOf(out[1]) !== "showcase", layoutFamilyOf(out[1]));
 }
 {
   // One item is a diagram of nothing.
@@ -256,11 +298,23 @@ console.log("\n══ proof actually composes ══");
   // downgrades it to a bare checklist, and a composed proof beat is better.
   const wants = sec("s2", "benefits_grid", { variant: "alternating_image", items: [{ title: "A", description: "a" }, { title: "B", description: "b" }] });
   const out = composePage([hero(), wants, footer()], { primaryCtaLabel: "Book it", proofVisual: "process_flow" });
-  check("an image variant with no images yields to the proof beat", layoutFamilyOf(out[1]) === "process", layoutFamilyOf(out[1]));
+  const fam = layoutFamilyOf(out[1]);
+  check("an image variant with no images yields to the proof beat", fam === "process" || fam === "showcase", fam);
+}
+{
+  // ONE image across three rows is the same failure as none: the renderer
+  // downgrades it, so the planner must not read it as "this section has
+  // imagery" and stand proof down.
+  const minority = sec("s2", "benefits_grid", {
+    variant: "alternating_image",
+    items: [{ title: "A", imageUrl: "https://x.test/a.jpg" }, { title: "B" }, { title: "C" }],
+  });
+  const out = composePage([hero(), minority, footer()], { primaryCtaLabel: "Book it", proofVisual: "document_showcase" });
+  check("a zigzag that cannot fill half its rows yields to proof", layoutFamilyOf(out[1]) === "showcase", layoutFamilyOf(out[1]));
 }
 {
   // ...but one that DOES have images keeps its rows.
-  const has = sec("s2", "benefits_grid", { variant: "alternating_image", items: [{ title: "A", imageUrl: "https://x.test/a.jpg" }, { title: "B", description: "b" }] });
+  const has = sec("s2", "benefits_grid", { variant: "alternating_image", items: [{ title: "A", imageUrl: "https://x.test/a.jpg" }, { title: "B", imageUrl: "https://x.test/b.jpg" }] });
   const out = composePage([hero(), has, footer()], { primaryCtaLabel: "Book it", proofVisual: "process_flow" });
   check("an image variant that has images is untouched", layoutFamilyOf(out[1]) === "alternating", layoutFamilyOf(out[1]));
 }

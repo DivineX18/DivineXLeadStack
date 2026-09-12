@@ -168,9 +168,13 @@ export function planMediaIntents(
     intents.push({
       sectionType: "hero",
       slot: "hero",
-      purpose: "establish_context",
-      // The hero establishes that this is a real operation doing real work.
-      subject: `professional ${core} work in progress`,
+      // The hero's job on a service page is not to depict the category, it is
+      // to show the work being done — an inspection happening, not a roof.
+      purpose: "show_the_work",
+      // Phrased so the PROVIDER is also biased toward a working photograph
+      // rather than scenery, since the query is the only lever on what comes
+      // back before anything can be judged.
+      subject: `${core} being carried out by a specialist`,
       aspect: "landscape",
       altPrefix: `${ctx.businessName ?? "The team"} carrying out ${core}`,
     });
@@ -288,16 +292,76 @@ export function mediaIsRelevant(intent: Pick<MediaIntent, "subject">, candidateD
   return wanted <= 2 ? hits >= 1 : hits >= 2;
 }
 
-/** Pick the candidate that depicts the subject best, or nothing. */
+/**
+ * WORDS THAT MEAN SOMEONE IS DOING THE THING.
+ *
+ * Generic, never industry-specific: these describe a photograph in which work
+ * is being PERFORMED or a customer is present, as opposed to a picture of the
+ * category's scenery.
+ */
+const ACTION_CUES = [
+  "inspect", "examin", "check", "repair", "install", "fix", "measur", "assess", "review",
+  "work", "perform", "service", "treat", "clean", "build", "test", "survey", "consult",
+  "explain", "show", "discuss", "meet", "advis", "help", "teach", "present",
+];
+const PERSON_CUES = [
+  // Roles a caption uses for WHOEVER is doing the work or receiving it, kept
+  // generic rather than per-trade: the participle test above catches the verb,
+  // these catch a caption that names a person without one.
+  "worker", "specialist", "professional", "staff", "team", "crew", "expert",
+  "customer", "client", "patient", "homeowner", "owner", "man", "woman", "person", "people", "hands",
+];
+
+/**
+ * DOES THIS PHOTOGRAPH SHOW THE JOB BEING DONE?
+ *
+ * Relevance alone is not persuasion. The Summit hero shipped a technically
+ * relevant photograph — an actual roofline — for a page whose entire offer is
+ * an INSPECTION, and a picture of a roof sells nothing that the headline has
+ * not already said. A picture of someone inspecting a roof is evidence that
+ * the service exists and is performed by people.
+ *
+ * So a relevant candidate that also depicts the action, or the person doing
+ * it, outranks relevant scenery. Derived from the slot's purpose rather than
+ * from any industry: every business has work being performed and a customer
+ * receiving it, and these cues describe that shape in general terms.
+ */
+export function scoreActionFit(candidateDescription: string): number {
+  const text = candidateDescription.toLowerCase();
+  // A present participle is the generic signal that something is HAPPENING —
+  // kneading, examining, inspecting, fitting. Listing the verbs instead would
+  // mean naming every trade, which is the hardcoding this is supposed to
+  // avoid; the explicit cues below only add the ones a caption might use as a
+  // noun ("a roof repair", "an inspection") where no participle appears.
+  const participle = /\b[a-z]{4,}ing\b/.test(text) ? 1 : 0;
+  const action = participle || ACTION_CUES.some((c) => text.includes(c)) ? 1 : 0;
+  const person = PERSON_CUES.some((c) => text.includes(c)) ? 1 : 0;
+  return action + person;
+}
+
+/**
+ * Pick the candidate that best depicts the subject BEING DONE, or nothing.
+ *
+ * Ordered on subject match first — a vivid photograph of the wrong thing is
+ * still the wrong thing — and on action fit second, so among candidates that
+ * are equally about the subject the working one wins. Purpose weights it:
+ * a slot whose job is to show the work or humanise the business cares more
+ * about action than one merely establishing context.
+ */
 export function selectRelevantMedia<T extends { alt: string }>(
-  intent: Pick<MediaIntent, "subject">,
+  intent: Pick<MediaIntent, "subject"> & { purpose?: MediaPurpose },
   candidates: T[],
-): { pick: T; matches: number } | null {
-  let best: { pick: T; matches: number } | null = null;
+): { pick: T; matches: number; action: number } | null {
+  const purposeWeight = intent.purpose === "establish_context" ? 1 : 2;
+  let best: { pick: T; matches: number; action: number; rank: number } | null = null;
   for (const c of candidates) {
     if (!mediaIsRelevant(intent, c.alt)) continue;
     const matches = countMediaMatches(intent, c.alt);
-    if (!best || matches > best.matches) best = { pick: c, matches };
+    const action = scoreActionFit(c.alt);
+    // Subject match dominates; action fit breaks ties and can lift a candidate
+    // one subject-term behind a piece of scenery.
+    const rank = matches * 3 + action * purposeWeight;
+    if (!best || rank > best.rank) best = { pick: c, matches, action, rank };
   }
-  return best;
+  return best ? { pick: best.pick, matches: best.matches, action: best.action } : null;
 }

@@ -17,7 +17,7 @@
  *
  *   npx tsx scripts/verify-media-relevance.mts
  */
-import { countMediaMatches, mediaIsRelevant, selectRelevantMedia } from "../src/lib/funnels/media-intent.ts";
+import { countMediaMatches, mediaIsRelevant, scoreActionFit, selectRelevantMedia } from "../src/lib/funnels/media-intent.ts";
 
 let failures = 0;
 const check = (label: string, ok: boolean, detail = "") => {
@@ -84,6 +84,47 @@ console.log("\n══ the rule is not about any one industry ══");
   // Filler words in the brief must not be able to earn a match on their own.
   const n = countMediaMatches({ subject: "professional work in progress" }, "A professional at work");
   check("scaffolding words alone cannot qualify a photo", n === 0, `${n} matches`);
+}
+
+// ── The action, not the category ────────────────────────────────────────────
+console.log("\n══ the photograph should show the job being done ══");
+{
+  // The Summit hero shipped a technically relevant roofline for a page whose
+  // whole offer is an INSPECTION. Relevant is not the same as persuasive.
+  const scenery = "A residential roof against a cloudy sky";
+  const working = "Roof inspector examining shingles on a residential roof";
+  check("scenery scores no action fit", scoreActionFit(scenery) === 0, `${scoreActionFit(scenery)}`);
+  check(
+    "the work being performed outscores the scenery",
+    scoreActionFit(working) > scoreActionFit(scenery),
+    `${scoreActionFit(working)} vs ${scoreActionFit(scenery)}`,
+  );
+}
+{
+  const intent = { subject: "residential roof inspection Houston", purpose: "show_the_work" as const };
+  const picked = selectRelevantMedia(intent, [
+    { alt: "A residential roof against a cloudy sky", url: "scenery" },
+    { alt: "Inspector examining a residential roof", url: "working" },
+  ]);
+  check("the working photograph is preferred over equally relevant scenery", picked?.pick.url === "working", picked?.pick.url ?? "none");
+}
+{
+  // Subject match still dominates: a vivid photo of the wrong thing loses.
+  const intent = { subject: "residential roof inspection Houston", purpose: "show_the_work" as const };
+  const picked = selectRelevantMedia(intent, [
+    { alt: "Roof inspection of a residential property", url: "right" },
+    { alt: "Dentist examining a patient in a clinic", url: "wrong-but-active" },
+  ]);
+  check("action fit never outranks being about the subject", picked?.pick.url === "right", picked?.pick.url ?? "none");
+}
+{
+  // Generic across industries, not a roofing rule.
+  check(
+    "a bakery at work outscores an empty one",
+    scoreActionFit("Baker kneading dough in a kitchen") > scoreActionFit("An empty bakery counter at dawn"),
+    `${scoreActionFit("Baker kneading dough in a kitchen")} vs ${scoreActionFit("An empty bakery counter at dawn")}`,
+  );
+  check("an empty room scores nothing", scoreActionFit("An empty bakery counter at dawn") === 0);
 }
 
 console.log(failures === 0 ? "\nMEDIA RELEVANCE: ALL CHECKS PASSED\n" : `\nMEDIA RELEVANCE: ${failures} FAILED\n`);

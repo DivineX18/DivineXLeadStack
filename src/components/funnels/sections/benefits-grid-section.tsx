@@ -56,9 +56,17 @@ export function BenefitsGridSection({
   // (numbered, typography-led); if NO row has a real image the whole
   // section recomposes to the flowing-checklist letter layout. The builder
   // preview keeps the labeled placeholder panels (operator guidance).
+  //
+  // A MINORITY of images is the same failure as none. The zero case was
+  // already handled; one image across three rows was not, and the booking page
+  // rendered exactly that — a photograph beside the first row and two bare
+  // labels stranded beside empty space under it, which reads as a section that
+  // failed to load rather than as a zigzag. The layout only works when most
+  // rows can actually carry their side of it.
   const realImageCount = config.items.filter((it) => !!it.imageUrl).length;
+  const tooFewImagesToAlternate = realImageCount < Math.ceil(config.items.length / 2);
   const effectiveVariant =
-    config.variant === "alternating_image" && published && realImageCount === 0
+    config.variant === "alternating_image" && published && tooFewImagesToAlternate
       ? undefined
       : config.variant;
 

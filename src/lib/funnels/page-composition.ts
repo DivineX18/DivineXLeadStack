@@ -436,19 +436,42 @@ function carriesConversionContext(section: FunnelSection): boolean {
   return !!c.ctaLabel?.trim() || !!c.formId || typeof c.priceCents === "number" || !!c.cta;
 }
 
+/** Is this section a composed proof visual (a showcase or a process flow)? */
+function isProofVisual(section: FunnelSection): boolean {
+  const f = layoutFamilyOf(section);
+  return f === "showcase" || f === "process";
+}
+
 function resolveRepetition(sections: FunnelSection[]): FunnelSection[] {
   const seenList = new Set<string>();
+  // Tracks whether the list a later section repeats was already presented as a
+  // proof VISUAL rather than as a plain list — see the note at the keep rule.
+  const shownAsProof = new Set<string>();
   return sections.map((s) => {
     if (!sectionHasRenderableContent(s)) return s;
     const duplicated = repeatsEarlierList(s, seenList);
     const c = s.config as { bullets?: string[]; items?: { title?: string }[] };
-    for (const t of [...(c.bullets ?? []), ...(c.items ?? []).map((i) => i.title ?? "")]) {
-      const n = normalize(t);
-      if (n) seenList.add(n);
+    const own = [...(c.bullets ?? []), ...(c.items ?? []).map((i) => i.title ?? "")]
+      .map((t) => normalize(t))
+      .filter(Boolean);
+    const listAlreadyShownAsProof = duplicated && own.every((t) => shownAsProof.has(t));
+    const proofHere = isProofVisual(s);
+    for (const n of own) {
+      seenList.add(n);
+      if (proofHere) shownAsProof.add(n);
     }
     if (!duplicated) return s;
     // Reinforcement at the point of decision: keep it, that is the job.
-    if (carriesConversionContext(s)) return s;
+    //
+    // Unless the earlier occurrence ALREADY DID that job visually. A proof
+    // visual is not a plain list a reader skimmed past — the deliverable
+    // showcase above the offer card is itself a full "here is what's inside"
+    // beat, so the card restating the same three lines is not reinforcing a
+    // previous beat, it is repeating one. On the paid-offer page that put the
+    // same content in consecutive sections with no progression between them.
+    // The card keeps its heading, its price and its button, which is the job
+    // only it can do.
+    if (carriesConversionContext(s) && !listAlreadyShownAsProof) return s;
     // Inert repetition: drop the duplicated list. The section keeps its
     // heading and anything else it carries, and is removed downstream by the
     // completeness pass if that leaves nothing — which is the correct outcome
@@ -491,11 +514,47 @@ function carriesRealImage(sections: FunnelSection[]): boolean {
  * Requires at least two items: a one-item "document" or a one-step "process" is
  * a diagram of nothing, and would read as a mistake rather than as evidence.
  */
+/**
+ * A STEPPER OF BARE LABELS IS NOT PROCESS PROOF.
+ *
+ * The consultant page drew "For services businesses past the founder-led stage
+ * / Written findings in ten working days / Fixed scope and fixed fee" as three
+ * numbered steps joined by a line. It is not a process, the items are not
+ * sequential, and with nothing under each label it communicates less than the
+ * checklist it replaced — a diagram of nothing, dressed as evidence.
+ *
+ * A process visual earns its place only when each step says what actually
+ * happens. That detail has to be VERIFIED content, so when it is absent the
+ * answer is a different composition, never an invented explanation: the same
+ * items presented as the deliverable they actually describe.
+ */
+function resolveProofVariant(
+  mode: "document_showcase" | "process_flow",
+  items: { title: string; description?: string }[],
+): "document_showcase" | "process_flow" {
+  if (mode !== "process_flow") return mode;
+  const explained = items.filter((it) => (it.description ?? "").trim().length >= 20).length;
+  // Most of the steps must be explained, not one of them — a flow where only
+  // the first step says anything reads as an unfinished diagram.
+  return explained >= Math.ceil(items.length * 0.6) ? "process_flow" : "document_showcase";
+}
+
 function allocateProofBeat(sections: FunnelSection[], ctx: PageCompositionContext): FunnelSection[] {
   const mode = ctx.proofVisual;
   if (mode !== "document_showcase" && mode !== "process_flow") return sections;
-  if (carriesRealImage(sections)) return sections;
 
+  // PROOF NEED IS DECIDED PER SECTION, NOT PER PAGE.
+  //
+  // This used to stand down the moment ANY section anywhere carried a real
+  // photograph, which is far too coarse: on the booking page one surviving
+  // hero image suppressed proof for the whole page, and the benefits beat fell
+  // back to a bare checklist beside another bare checklist. A photograph in
+  // the fold and a proof visual in the middle do DIFFERENT persuasion jobs —
+  // one says this is real, the other says here is what happens — so the
+  // presence of the first is not an argument against the second.
+  //
+  // What does stand proof down is the section that would carry it already
+  // carrying its own imagery, which is checked per section below.
   let assigned = false;
   const next = sections.map((s) => {
     if (assigned || s.type !== "benefits_grid") return s;
@@ -509,12 +568,22 @@ function allocateProofBeat(sections: FunnelSection[], ctx: PageCompositionContex
     // not the register decision being respected, it is the register decision
     // failing — and a composed proof beat is a better outcome than the bare
     // list the page falls back to.
-    const wantsImagesButHasNone =
-      cfg.variant === "alternating_image" && !(cfg.items ?? []).some((it) => it.imageUrl);
-    if (cfg.variant !== undefined && !wantsImagesButHasNone) return s;
-    if ((cfg.items ?? []).length < 2) return s;
+    const items = cfg.items ?? [];
+    // MOST rows, not one. The renderer downgrades a zigzag that cannot fill
+    // half its rows with real photographs, so the planner has to use the same
+    // threshold or the two disagree: the booking page had one image across
+    // three rows, which the planner read as "this section has imagery" and the
+    // renderer read as "this cannot alternate", leaving a bare checklist with
+    // no proof beat behind it.
+    const enoughImagesToAlternate = items.filter((it) => it.imageUrl).length >= Math.ceil(items.length / 2);
+    const cannotHonourImageVariant = cfg.variant === "alternating_image" && !enoughImagesToAlternate;
+    if (cfg.variant !== undefined && !cannotHonourImageVariant) return s;
+    // The section already carries enough of its own photography; proof is not
+    // its job.
+    if (enoughImagesToAlternate && items.length > 0) return s;
+    if (items.length < 2) return s;
     assigned = true;
-    return { ...s, config: { ...cfg, variant: mode } };
+    return { ...s, config: { ...cfg, variant: resolveProofVariant(mode, items) } };
   });
   if (assigned || mode !== "document_showcase") return next;
 
@@ -617,8 +686,12 @@ export function composePage(
   let out = closeTheClose(sections, ctx);
   out = closeLast(out);
   out = dedupeHeadings(out);
-  out = resolveRepetition(out);
+  // Proof is allocated BEFORE repetition is judged. A benefits beat only
+  // becomes a showcase here, and the repetition rule has to know whether the
+  // earlier occurrence of a list was a plain list or a proof visual before it
+  // can tell reinforcement from an echo.
   out = allocateProofBeat(out, ctx);
+  out = resolveRepetition(out);
   out = widenTheFold(out);
   out = alternateMediaSides(out);
   out = breakLayoutRuns(out);
