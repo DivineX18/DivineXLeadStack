@@ -95,6 +95,7 @@ import {
   type EmotionalTransformation,
 } from "@/lib/funnels/art-direction";
 import { composePage } from "@/lib/funnels/page-composition";
+import { stripUnsupportedClaims } from "@/lib/funnels/claim-integrity";
 import {
   VISUAL_ARCHETYPE_IDS,
   VISUAL_ARCHETYPES,
@@ -4081,18 +4082,24 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const guaranteeBody = guaranteeHeadlineRaw ? guaranteeBodyRaw : "";
 
       const trustBadgesRaw = raw.trust_badges;
-      const trustBadges = (
-        Array.isArray(trustBadgesRaw) ? trustBadgesRaw.filter((b): b is string => typeof b === "string") : []
-      )
-        .slice(0, 5)
-        .map((b) => b.slice(0, 40));
+      // TRUST CLAIMS ARE FILTERED, NOT TRUSTED. A generated page shipped
+      // "Locally owned in Houston" from a business that had only ever stated
+      // it serves Houston — an ownership structure inferred from a service
+      // area. The tool description already bans inventing organizational
+      // status and the claim shipped anyway, so the rule lives here, where a
+      // prompt cannot talk its way around it. See claim-integrity.ts.
+      const trustBadges = stripUnsupportedClaims(
+        (Array.isArray(trustBadgesRaw) ? trustBadgesRaw.filter((b): b is string => typeof b === "string") : [])
+          .slice(0, 5)
+          .map((b) => b.slice(0, 40)),
+      ).kept;
 
       const heroTrustBadgesRaw = raw.hero_trust_badges;
-      const heroTrustBadges = (
-        Array.isArray(heroTrustBadgesRaw) ? heroTrustBadgesRaw.filter((b): b is string => typeof b === "string") : []
-      )
-        .slice(0, 3)
-        .map((b) => b.slice(0, 40));
+      const heroTrustBadges = stripUnsupportedClaims(
+        (Array.isArray(heroTrustBadgesRaw) ? heroTrustBadgesRaw.filter((b): b is string => typeof b === "string") : [])
+          .slice(0, 3)
+          .map((b) => b.slice(0, 40)),
+      ).kept;
 
       // Sanitized only — the actual per-stage alternates check happens in
       // buildFrameworkSections() at execute() time (an invalid/unknown

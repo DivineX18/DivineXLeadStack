@@ -74,7 +74,8 @@ interface Row {
 }
 const rows: Row[] = [];
 
-for (const fx of FIXTURES) {
+const ONLY = (process.env.ONLY_FIXTURE ?? "").split(",").filter(Boolean);
+for (const fx of FIXTURES.filter((f) => ONLY.length === 0 || ONLY.includes(f.id))) {
   console.log(`\n${"=".repeat(72)}\n${fx.label}\n${"=".repeat(72)}`);
   const chatRes = await fetch(`${BASE}/api/ai-suite/chat`, {
     method: "POST",

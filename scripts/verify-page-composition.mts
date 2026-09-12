@@ -388,7 +388,59 @@ console.log("\n══ a malformed field cannot discard the argument ══");
   check("a plan carrying no usable material is still rejected", empty === null);
 }
 
-// ── 9. Purity ───────────────────────────────────────────────────────────────
+// ── 9. Trust-claim integrity ────────────────────────────────────────────────
+console.log("\n══ ownership is not a place ══");
+{
+  const { isUnsupportedOwnershipClaim, stripUnsupportedClaims } = await import("../src/lib/funnels/claim-integrity.ts");
+
+  // THE CLAIM THAT SHIPPED. Houston was verified; local ownership never was.
+  check("the badge that shipped is caught", isUnsupportedOwnershipClaim("Locally owned in Houston"));
+
+  for (const claim of [
+    "Family owned since day one", "Veteran owned business", "Woman owned studio",
+    "Minority owned", "Independently owned", "Founder-led team",
+    "Proudly family-run", "Owned and operated locally", "100% Australian owned",
+    "Employee owned", "A family business",
+  ]) {
+    check(`caught: "${claim}"`, isUnsupportedOwnershipClaim(claim));
+  }
+
+  // ORDINARY COPY MUST SURVIVE. A rule that eats real content is worse than
+  // the claim it removes.
+  for (const fine of [
+    "Free, no obligation", "Written recommendation, not a quote",
+    "Serving Houston homeowners", "Locally sourced materials",
+    "We own the outcome", "Family bathroom refits", "Licensed and insured",
+    "No credit card required", "Evening appointments twice a week",
+  ]) {
+    check(`kept: "${fine}"`, !isUnsupportedOwnershipClaim(fine));
+  }
+
+  const { kept, dropped } = stripUnsupportedClaims([
+    "Free, no obligation",
+    "Written recommendation, not a quote",
+    "Locally owned in Houston",
+  ]);
+  check("the unsupported claim is removed and the rest survive", kept.length === 2 && dropped.length === 1, `kept ${kept.length}, dropped ${dropped.join("|")}`);
+  check("nothing is invented to replace it", !kept.some((k) => /owned/i.test(k)));
+}
+{
+  // The validate layer must apply it, not just the helper.
+  const { getCapability } = await import("../src/lib/ai-suite/capabilities.ts");
+  const v = getCapability("create_funnel")!.validate!({
+    funnel_name: "Summit Roofing", genre: "lead_gen",
+    headline: "Find out what condition your roof is actually in",
+    bullets: "A, B, C", cta_label: "Book it",
+    hero_trust_badges: ["Free, no obligation", "Locally owned in Houston", "Written recommendation, not a quote"],
+    trust_badges: ["Family owned", "Privacy protected"],
+  } as never) as { ok: boolean; args: Record<string, unknown> };
+  const hero = (v.args.heroTrustBadges ?? []) as string[];
+  const section = (v.args.trustBadges ?? []) as string[];
+  check("validate strips the ownership claim from hero badges", hero.length === 2 && !hero.some((b) => /owned/i.test(b)), hero.join(" | "));
+  check("validate strips it from section badges too", section.length === 1 && section[0] === "Privacy protected", section.join(" | "));
+}
+
+// ── 10. Purity ──────────────────────────────────────────────────────────────
 console.log("\n══ purity ══");
 {
   const input = [hero(), close(), footer()];
