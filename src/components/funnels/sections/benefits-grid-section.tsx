@@ -114,7 +114,7 @@ export function BenefitsGridSection({
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={item.imageUrl}
-                        alt=""
+                        alt={item.imageAlt ?? ""}
                         loading="lazy"
                         className="aspect-[4/3] w-full object-cover shadow-[0_20px_50px_-24px_rgba(0,0,0,0.4)]"
                         style={{ borderRadius: "var(--flow-radius, 0.75rem)" }}

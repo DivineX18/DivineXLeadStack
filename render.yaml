@@ -89,6 +89,15 @@ services:
         sync: false
       - key: OPENROUTER_API_KEY
         sync: false
+      # Stock photography for generated landing pages (lib/funnels/imagery.ts).
+      # Absent here until now, which is why every page generated on a
+      # DEPLOYMENT rendered with zero images while working locally: the key
+      # lives in .env.local and was never carried into Render. Set the value in
+      # the dashboard (sync: false keeps it out of the repo). Without it the
+      # media planner still runs and still reasons, it simply resolves every
+      # slot to "no image" and the page composes text-led.
+      - key: PEXELS_API_KEY
+        sync: false
       # Ascend OS Phase 2, Slice 9/10.5 — Intelligence Bridge client
       # (src/lib/intelligence/ascend-intelligence-client.ts). URL must
       # include the /api prefix since the client appends

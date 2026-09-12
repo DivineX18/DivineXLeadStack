@@ -64,7 +64,7 @@ function MediaBlock({
           />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={config.mediaUrl} alt="" className={FOLD_MEDIA} />
+          <img src={config.mediaUrl} alt={config.mediaAlt ?? ""} className={FOLD_MEDIA} />
         )
       ) : config.mediaPlaceholderLabel ? (
         <MediaPlaceholder label={config.mediaPlaceholderLabel} accentColor={accentColor} className="h-full w-full" />
@@ -230,7 +230,7 @@ export function HeroSection({
           />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={config.mediaUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <img src={config.mediaUrl} alt={config.mediaAlt ?? ""} className="absolute inset-0 h-full w-full object-cover" />
         )}
         <div className="absolute inset-0 bg-black/55" />
         <div className="relative mx-auto max-w-3xl text-center text-white">
@@ -269,7 +269,7 @@ export function HeroSection({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={config.mediaUrl}
-              alt=""
+              alt={config.mediaAlt ?? ""}
               className="mx-auto mb-6 h-20 w-20 rounded-full object-cover shadow-lg ring-4 ring-white/40 dark:ring-black/30"
             />
           ) : config.mediaPlaceholderLabel ? (

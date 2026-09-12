@@ -77,6 +77,7 @@ import { scoreFunnelDesign } from "@/lib/design-intelligence/scoring";
 import { reviewFunnelCopy, type FunnelCopyReview } from "@/lib/conversion/funnel-copy-review";
 import type { OfferConfig, IncludedConfig, BenefitsGridConfig, CtaBannerConfig, FunnelDoc, FunnelSection, FunnelSectionType, HeroConfig, PhotoGalleryConfig, TicketTiersConfig, VisualRequirement, VisualDecision } from "@/types/funnels";
 import { imageryConfigured, searchSubjectImages } from "@/lib/funnels/imagery";
+import { planMediaIntents } from "@/lib/funnels/media-intent";
 import { inferAuthenticityCategory, stockAllowedFor, assetManifest, TRUST_QUESTIONS } from "@/lib/funnels/authenticity";
 import type { DesignPackId } from "@/lib/funnels/design-packs";
 import { FUNNEL_FRAMEWORKS, computeDecisionComplexity, computePersuasionDepth, resolveHeroLayout, type DecisionComplexity } from "@/lib/funnels/frameworks";
@@ -5417,7 +5418,6 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       })();
 
       try {
-        const imageryBrief = mediaSubject || heroMediaBrief || "";
         // Slice C — IMAGERY AS EVIDENCE: ambient stock only where the
         // category says ambience IS honest evidence. Product-led categories
         // (physical_product, enterprise_software) need the PRODUCT — stock
@@ -5435,38 +5435,94 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           authenticityCategory === "nonprofit" ||
           authenticityCategory === "info_product" ||
           authenticityCategory === "coaching";
-        if (imageryBrief && imageryConfigured() && ambientStockOk && !categoryBlocksAmbient) {
-          const photos = await searchSubjectImages(imageryBrief, 4);
-          if (photos.length > 0) {
-            let photoIdx = 0;
-            sectionsToSave = sectionsToSave.map((s) => {
-              if (s.type === "hero") {
-                const c = s.config as HeroConfig;
-                if (!c.mediaUrl && c.mediaType !== "none" && photoIdx < photos.length) {
-                  const p = photos[photoIdx++];
-                  return { ...s, config: { ...c, mediaType: "image" as const, mediaUrl: p.url, mediaIsStock: true, mediaPlaceholderLabel: "" } };
-                }
-                return s;
-              }
-              // Benefits rows get imagery only on non-urgent campaigns (urgent
-              // pages run the checklist-on-dark band, where photos would dilute).
-              if (s.type === "benefits_grid" && artProfile.energy !== "urgent") {
-                const c = s.config as BenefitsGridConfig;
+        // MEDIA IS PLANNED PER SLOT, NOT SEARCHED ONCE FOR THE PAGE.
+        //
+        // This used to be a single `searchSubjectImages(imageryBrief, 4)` whose
+        // results were dealt out to the hero and every benefit row by array
+        // index. It failed in two directions: an empty brief (the model supplied
+        // neither media_subject nor a hero brief) returned nothing and the page
+        // rendered with ZERO images while reporting success, and a populated
+        // brief gave four near-identical photos of one phrase.
+        //
+        // planMediaIntents derives a DISTINCT brief per slot from facts already
+        // in hand, so the hero shows the work and each benefit row shows a
+        // different angle on it. It returns nothing at all when there is no
+        // honest subject or the category makes ambient stock counterfeit — in
+        // which case the page composes text-led, which is the correct outcome
+        // rather than a failure.
+        const benefitRowCount = sectionsToSave
+          .filter((s) => s.type === "benefits_grid")
+          .reduce((n, s) => n + ((s.config as BenefitsGridConfig).items?.length ?? 0), 0);
+        const intents = planMediaIntents(
+          {
+            businessName: (args.funnelName as string) || (args.funnel_name as string) || null,
+            whatTheyDo: (args.mediaSubject as string) || heroMediaBrief || (args.objective as string) || null,
+            offer: (args.headline as string) || null,
+            explicitSubject: mediaSubject || null,
+            mechanism: ((args.salesArgument as Record<string, unknown> | null)?.mechanism as string) ?? null,
+            authenticityCategory,
+          },
+          {
+            hero: sectionsToSave.some((s) => s.type === "hero" && !(s.config as HeroConfig).mediaUrl && (s.config as HeroConfig).mediaType !== "none"),
+            benefitCount: artProfile.energy === "urgent" ? 0 : benefitRowCount,
+          },
+        );
+
+        if (intents.length > 0 && imageryConfigured() && ambientStockOk && !categoryBlocksAmbient) {
+          // Each intent is resolved on its own so two slots can never receive
+          // the same photograph from one result list.
+          const resolved = await Promise.all(
+            intents.map(async (intent) => ({ intent, photo: (await searchSubjectImages(intent.subject, 1))[0] ?? null })),
+          );
+          const heroHit = resolved.find((r) => r.intent.slot === "hero" && r.photo);
+          const benefitHits = resolved.filter((r) => r.intent.slot === "benefit_item" && r.photo);
+          const used = new Set<string>();
+          let benefitIdx = 0;
+
+          sectionsToSave = sectionsToSave.map((s) => {
+            if (s.type === "hero" && heroHit?.photo) {
+              const c = s.config as HeroConfig;
+              if (!c.mediaUrl && c.mediaType !== "none") {
+                used.add(heroHit.photo.url);
                 return {
                   ...s,
                   config: {
                     ...c,
-                    items: c.items.map((it) =>
-                      !it.imageUrl && photoIdx < photos.length
-                        ? { ...it, imageUrl: photos[photoIdx++].url, imageIsStock: true }
-                        : it,
-                    ),
+                    mediaType: "image" as const,
+                    mediaUrl: heroHit.photo.url,
+                    mediaIsStock: true,
+                    // Alt text was retrieved and then thrown away here. The
+                    // provider's own description is the better one when it has
+                    // one; the intent's is the honest fallback.
+                    mediaAlt: heroHit.photo.alt || heroHit.intent.altPrefix,
+                    mediaPlaceholderLabel: "",
                   },
                 };
               }
               return s;
-            });
-          }
+            }
+            if (s.type === "benefits_grid" && artProfile.energy !== "urgent") {
+              const c = s.config as BenefitsGridConfig;
+              return {
+                ...s,
+                config: {
+                  ...c,
+                  items: c.items.map((it) => {
+                    if (it.imageUrl) return it;
+                    // Skip any photo already placed, so a repeat is impossible
+                    // even when two briefs resolve to the same result.
+                    while (benefitIdx < benefitHits.length && used.has(benefitHits[benefitIdx].photo!.url)) benefitIdx++;
+                    const hit = benefitHits[benefitIdx];
+                    if (!hit?.photo) return it;
+                    benefitIdx++;
+                    used.add(hit.photo.url);
+                    return { ...it, imageUrl: hit.photo.url, imageIsStock: true, imageAlt: hit.photo.alt || hit.intent.altPrefix };
+                  }),
+                },
+              };
+            }
+            return s;
+          });
         }
       } catch {
         // Imagery is always best-effort — never blocks funnel creation.

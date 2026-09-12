@@ -219,6 +219,9 @@ export interface HeroConfig {
    *  with your real photo" so operators know to personalize. Cleared when
    *  the operator sets their own media. */
   mediaIsStock?: boolean;
+  /** Meaningful alt text for the hero image. Empty string means deliberately
+   *  decorative; ABSENT means nobody decided, which is the bug this closes. */
+  mediaAlt?: string;
   ctaLabel?: string;
   ctaHref?: string;
   /** Lets the hero itself BE the capture surface — a real one-fold page
@@ -462,7 +465,7 @@ export interface VideoConfig {
  *  not a different section type. */
 export interface BenefitsGridConfig {
   headline?: string;
-  items: { title: string; description?: string; iconType?: BenefitIconType; imageUrl?: string; imageIsStock?: boolean }[];
+  items: { title: string; description?: string; iconType?: BenefitIconType; imageUrl?: string; imageIsStock?: boolean; imageAlt?: string }[];
   /** Art-direction layout variant. "flowing_checklist" (default) = the
    *  centered single-column sales-letter checklist. "alternating_image" =
    *  zigzag image/text rows (people-led, calm campaigns) — items render

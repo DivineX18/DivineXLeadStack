@@ -48,27 +48,34 @@ const check = (label: string, ok: boolean, detail = "") => {
 /** The five fixtures. Deterministic inputs, so a page can always be rebuilt. */
 const FIXTURES = [
   {
-    id: "local-service",
-    label: "Local service lead-gen",
+    // FIXTURE #1 — Summit Roofing & Exteriors, the owner's exact business facts.
+    // Deliberately specifies NO layout, section order, media subject, image
+    // count or hero treatment: those are the decisions under test.
+    // Trust facts (years in business, ratings, review counts, certifications,
+    // warranties, insurance, awards, customer counts) are UNKNOWN and must not
+    // appear on the generated page.
+    id: "summit-roofing",
+    label: "Summit Roofing (local service lead-gen)",
     args: {
-      funnel_name: "Emergency AC Repair",
+      funnel_name: "Summit Roofing & Exteriors",
       genre: "lead_gen",
-      headline: "AC down in this heat? We can be there today.",
-      subheadline: "Same-day emergency repair across the metro area, including weekends.",
-      bullets: "Technician dispatched today, Upfront price before work starts, We fix it or you don't pay the call-out",
-      cta_label: "Get my repair booked",
-      emotional_transformation: "panic_to_relief",
-      awareness: "most_aware",
-      traffic_temperature: "hot",
+      headline: "Find out what condition your roof is actually in",
+      subheadline: "A free 25-point inspection for Houston homeowners, with photos of what we find and a written recommendation before any work begins.",
+      bullets: "Free 25-point roof inspection, Photo documentation of any damage we find, Written recommendations before any work begins",
+      cta_label: "Schedule My Free Roof Inspection",
+      media_subject: "residential roof inspection in Houston",
+      emotional_transformation: "uncertainty_to_confidence",
+      awareness: "problem_aware",
+      traffic_temperature: "warm",
       sales_argument: {
-        prospect: "A homeowner whose air conditioning died in a heatwave",
-        arrival_context: "Searching on a phone in a hot house, needs someone today",
-        current_belief: "Everyone is booked out and I'll be told Thursday",
-        belief_chain: "Same-day is a dispatch problem, and we hold slots for emergencies",
-        mechanism: "Held same-day emergency slots and a technician already in your area",
-        core_promise: "Cool air back today",
-        primary_objection: "They'll quote me a fortune once they're here",
-        close_reason: "The price is agreed before any work starts",
+        prospect: "A Houston homeowner with an aging roof or possible storm damage",
+        arrival_context: "Worried after a storm, unsure whether the roof is actually damaged",
+        current_belief: "Anyone I call will just try to sell me a whole new roof",
+        belief_chain: "You cannot decide about a roof you have never seen the condition of",
+        mechanism: "A 25-point inspection that documents the actual condition with photos",
+        core_promise: "Know exactly what condition your roof is in before spending anything",
+        primary_objection: "I do not know if I need a new roof and do not want to be sold one",
+        close_reason: "The inspection is free and ends with a written recommendation, not a quote",
       },
     },
   },
@@ -198,7 +205,7 @@ try {
   for (const fx of FIXTURES) {
     const v = funnel.validate!({ ...fx.args } as never);
     if (!(v as { ok: boolean }).ok) {
-      check(`${fx.label}: validates`, false, (v as { reason?: string }).reason ?? "");
+      check(`${fx.label}: validates`, false, (v as { error?: string; reason?: string }).error ?? (v as { reason?: string }).reason ?? "");
       continue;
     }
     const res = await funnel.execute(ctx, (v as { args: Record<string, unknown> }).args);
@@ -336,6 +343,7 @@ try {
       check(`${tag}: no actionless CTA`, audit.actionless === 0, `${audit.actionless}`);
       check(`${tag}: no placeholder text`, audit.placeholders === 0, `${audit.placeholders}`);
       check(`${tag}: images carry alt text`, audit.imagesWithoutAlt === 0, `${audit.imagesWithoutAlt} without alt`);
+      check(`${tag}: no photograph is used twice`, audit.repeated === 0, `${audit.repeated} repeats`);
       if (device === "desktop") {
         check(`${tag}: no wall-of-text line lengths`, audit.tooWide === 0, `${audit.tooWide} paragraphs >900px`);
         // The headline finding: is the page one pattern repeated?
