@@ -5,11 +5,15 @@ import { DocumentShowcase, SectionShell } from "./composition";
 export function IncludedSection({
   config,
   accentColor,
+  theme,
   iconPalette,
   iconStyle,
 }: {
   config: IncludedConfig;
   accentColor: string;
+  /** The page's own theme, so the framed document lifts off the right
+   *  background. See DocumentShowcase. */
+  theme?: "light" | "dark";
   iconPalette?: string[];
   iconStyle?: "outline" | "duotone" | "filled";
 }) {
@@ -34,7 +38,7 @@ export function IncludedSection({
             benefits grid's proof variant — the markup used to live only
             here, so a second section could not present a deliverable
             without copying it. */}
-        <DocumentShowcase items={config.items} accentColor={accentColor} />
+        <DocumentShowcase items={config.items} accentColor={accentColor} theme={theme} />
       </SectionShell>
     );
   }

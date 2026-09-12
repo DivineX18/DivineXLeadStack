@@ -35,7 +35,7 @@ if (TARGETS.length === 0) throw new Error("FUNNEL_IDS is required (label=id,labe
 const { getAdminDb } = await import("../src/lib/firebase/admin.ts");
 const { updateFunnelServerSide } = await import("../src/lib/server/funnels-service.ts");
 const { describePageRhythm } = await import("../src/lib/funnels/page-composition.ts");
-const { isUnsupportedOwnershipClaim } = await import("../src/lib/funnels/claim-integrity.ts");
+const { isUnsupportedTrustClaim } = await import("../src/lib/funnels/claim-integrity.ts");
 const db = getAdminDb();
 
 let failures = 0;
@@ -77,7 +77,7 @@ for (const t of TARGETS) {
     for (const b of c.trustBadges ?? []) claims.push(b);
     for (const b of c.badges ?? []) if (b.label) claims.push(b.label);
   }
-  const unsupported = claims.filter((c) => isUnsupportedOwnershipClaim(c));
+  const unsupported = claims.filter((c) => isUnsupportedTrustClaim(c));
   check(`${t.label}: no unsupported ownership claim anywhere on the page`, unsupported.length === 0, unsupported.join(" | "));
 
   if (doc.status !== "published") {
@@ -150,6 +150,95 @@ for (const t of TARGETS) {
         height: document.body.scrollHeight,
       };
     });
+
+    // IS THE PROOF BEAT ACTUALLY READABLE?
+    //
+    // The paid-offer page's only visual was a framed document whose paper was
+    // painted with a Tailwind `dark:` variant. A funnel's dark theme is set per
+    // page and applied as inline colours, not as the viewer's colour scheme, so
+    // on a dark page in a light-mode browser the variant never fired: a
+    // 60%-white wash over near-black gave a flat mid grey, under the page's
+    // near-white ink. Every existing check passed — the section rendered, had
+    // content, was visible and was counted as a visual beat — and the beat was
+    // close to unreadable.
+    //
+    // Colours are read here and the ratio computed in Node: the page can only
+    // report what it paints, never whether that was legible.
+    const swatches = await page.evaluate(() => {
+      const out: { color: string; bg: string; opacity: number; text: string }[] = [];
+      for (const panel of Array.from(document.querySelectorAll("[data-proof-visual]"))) {
+        for (const node of Array.from(panel.querySelectorAll("p, h2, h3, h4, li, span"))) {
+          const own = (node.textContent ?? "").trim();
+          if (own.length < 8) continue;
+          // The painted background is whatever the nearest opaque ancestor
+          // sets — the element's own is usually transparent.
+          let bg = "rgba(0, 0, 0, 0)";
+          let cursor: Element | null = node;
+          while (cursor) {
+            const c = getComputedStyle(cursor).backgroundColor;
+            if (c && !c.startsWith("rgba(0, 0, 0, 0)") && c !== "transparent") {
+              bg = c;
+              break;
+            }
+            cursor = cursor.parentElement;
+          }
+          // Body copy in these panels is dimmed with `opacity-70`, which the
+          // computed COLOR does not reflect — read it separately or the
+          // measurement flatters exactly the text most at risk.
+          let opacity = 1;
+          let fade: Element | null = node;
+          while (fade && fade !== document.body) {
+            opacity *= Number(getComputedStyle(fade).opacity);
+            fade = fade.parentElement;
+          }
+          out.push({ color: getComputedStyle(node).color, bg, opacity, text: own.slice(0, 40) });
+        }
+      }
+      return out;
+    });
+
+    /** WCAG relative luminance, with alpha flattened onto the page's own base. */
+    const luminance = (css: string, base: [number, number, number], extraAlpha = 1): number => {
+      const m = css.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0];
+      const a = (m.length > 3 ? m[3] : 1) * extraAlpha;
+      const channels = [0, 1, 2].map((i) => (m[i] ?? 0) * a + base[i] * (1 - a));
+      const linear = channels.map((v) => {
+        const s = v / 255;
+        return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+    };
+
+    // The funnel paints its own page background; flatten translucent layers
+    // onto it rather than onto an assumed white.
+    const pageBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    const pageRgb = (pageBg.match(/[\d.]+/g)?.map(Number) ?? [255, 255, 255]).slice(0, 3) as [number, number, number];
+    let worst = { ratio: 21, text: "" };
+    for (const s of swatches) {
+      const lBg = luminance(s.bg, pageRgb);
+      // Text is flattened onto the surface BEHIND it (already flattened onto
+      // the page), so a dimmed line is measured against what it sits on.
+      const bgRgbFlat = [0, 1, 2].map((i) => {
+        const m = s.bg.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0];
+        const a = m.length > 3 ? m[3] : 1;
+        return (m[i] ?? 0) * a + pageRgb[i] * (1 - a);
+      }) as [number, number, number];
+      const lFg = luminance(s.color, bgRgbFlat, s.opacity);
+      const ratio = (Math.max(lFg, lBg) + 0.05) / (Math.min(lFg, lBg) + 0.05);
+      if (ratio < worst.ratio) worst = { ratio, text: s.text };
+    }
+    if (swatches.length > 0) {
+      // 4.5:1 is the WCAG AA floor for body text. The broken panel put
+      // near-white titles on a flat mid grey at about 2.5:1, with the dimmed
+      // body copy below that — so this is not a close call the check has to
+      // adjudicate. It guards the whole class of theme-mismatched surface,
+      // not the one component that exposed it.
+      check(
+        `${tag}: the proof visual is readable`,
+        worst.ratio >= 4.5,
+        `${worst.ratio.toFixed(2)}:1 on "${worst.text}"`,
+      );
+    }
 
     console.log(`     ${tag}: ${audit.sections} sections, ${audit.images} imgs, ${audit.proofVisuals} proof, ${audit.height}px`);
     check(`${tag}: renders`, (res?.status() ?? 0) === 200, String(res?.status()));

@@ -178,13 +178,35 @@ export function DocumentShowcase({
   accentColor,
   label = "Example preview",
   className = "",
+  theme,
 }: {
   items: { title: string; description?: string }[];
   accentColor: string;
   /** What this artifact IS. Must never imply a real customer's document. */
   label?: string;
   className?: string;
+  /**
+   * THE PAGE'S OWN THEME, NOT THE BROWSER'S.
+   *
+   * These surfaces were painted with Tailwind `dark:` variants, which key off
+   * the VIEWER's colour scheme. A funnel's dark theme is not that — it is set
+   * per page and applied as inline colours on the root, so on a dark page in a
+   * light-mode browser the `dark:` half never fired: the paper rendered as a
+   * 60%-white wash over near-black (a flat mid grey) while the text kept the
+   * page's near-white ink. The paid-offer page's only visual beat shipped as
+   * light-grey copy on mid-grey, close to unreadable.
+   *
+   * So the surfaces read the page's theme, which is what they always meant.
+   */
+  theme?: "light" | "dark";
 }) {
+  const dark = theme === "dark";
+  // A sheet of paper is a LIFT off whatever it sits on: near-white on a light
+  // page, a faint white veil on a dark one. Same intent the `dark:` variants
+  // carried, keyed to the right signal.
+  const paper = dark ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.6)";
+  const ink = dark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.15)";
+  const ruleLine = dark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.07)";
   return (
     <div
       // Marked so the rendered-quality harness can count composed proof as a
@@ -200,9 +222,9 @@ export function DocumentShowcase({
         style={{ borderColor: `${accentColor}22`, backgroundColor: `${accentColor}0d` }}
       >
         <div className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-black/15 dark:bg-white/20" />
-          <span className="h-2.5 w-2.5 rounded-full bg-black/15 dark:bg-white/20" />
-          <span className="h-2.5 w-2.5 rounded-full bg-black/15 dark:bg-white/20" />
+          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: ink }} />
+          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: ink }} />
+          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: ink }} />
         </div>
         <span
           className="rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest opacity-60"
@@ -211,7 +233,7 @@ export function DocumentShowcase({
           {label}
         </span>
       </div>
-      <div className="space-y-4 bg-white/60 px-6 py-6 dark:bg-white/5">
+      <div className="space-y-4 px-6 py-6" style={{ backgroundColor: paper }}>
         {items.map((item, i) => (
           <div key={i} className="flex items-start gap-3">
             <span
@@ -228,8 +250,8 @@ export function DocumentShowcase({
                   information, and announcing it would imply content that is
                   not there. */}
               <div className="mt-2 space-y-1.5" aria-hidden>
-                <div className="h-1.5 w-4/5 rounded-full bg-black/[0.07] dark:bg-white/10" />
-                <div className="h-1.5 w-3/5 rounded-full bg-black/[0.07] dark:bg-white/10" />
+                <div className="h-1.5 w-4/5 rounded-full" style={{ backgroundColor: ruleLine }} />
+                <div className="h-1.5 w-3/5 rounded-full" style={{ backgroundColor: ruleLine }} />
               </div>
             </div>
           </div>

@@ -127,5 +127,85 @@ console.log("\n══ the photograph should show the job being done ══");
   check("an empty room scores nothing", scoreActionFit("An empty bakery counter at dawn") === 0);
 }
 
+// ── A SCHEMA TOKEN IS NOT A SUBJECT ─────────────────────────────────────────
+console.log("\n══ the brief describes the work, not the strategy ══");
+{
+  // WHAT ACTUALLY SHIPPED ON THE CONSULTANT PAGE. `objective` is a strategy
+  // enum, and it was read as "what the business does", so the brief became
+  // "application close up detail". Everything downstream then worked exactly as
+  // designed: the relevance test matched "application" to a caption reading
+  // "a person applying green face paint" on the four-letter stem, and a
+  // face-painting close-up shipped beside "Past the founder-led stage".
+  //
+  // The rule is upstream — only a description of the work may become a brief —
+  // so this asserts the two halves that matter: the enum never reaches the
+  // planner, and the real words still do.
+  const objectiveAsBrief = { subject: "application close up detail" };
+  const facePaint = "Detailed shot of a person applying green face paint meticulously with a brush.";
+  check(
+    "the caption that matched the enum really does match it (the defect was upstream)",
+    mediaIsRelevant(objectiveAsBrief, facePaint),
+    `${countMediaMatches(objectiveAsBrief, facePaint)} matches`,
+  );
+
+  const { planMediaIntents } = await import("../src/lib/funnels/media-intent.ts");
+  // The exact context the consultant generation produced: no media_subject, no
+  // hero brief, and the objective enum no longer offered as a description.
+  const intents = planMediaIntents(
+    {
+      businessName: "Operations Strategy Review",
+      whatTheyDo: null,
+      offer: "Find Out Where Delivery Breaks Before You Double the Volume",
+      explicitSubject: null,
+      mechanism: "A structured review that stress-tests the current delivery model against doubled volume",
+      authenticityCategory: "b2b_services",
+    },
+    { hero: true, benefitCount: 4 },
+  );
+  check(
+    "no slot asks for a photograph of a conversion objective",
+    !intents.some((i) => /\b(application|lead_generation|purchase|consultation|donation|free_trial|appointment)\b/i.test(i.subject)),
+    intents.map((i) => i.subject).join(" / "),
+  );
+  // Judged the way the resolver judges: on the business's own subject, never on
+  // the angle the planner appended.
+  const rel = (i: { subjectCore: string }, alt: string) => mediaIsRelevant({ subject: i.subjectCore }, alt);
+  check(
+    "the face-paint photograph no longer qualifies for any slot",
+    !intents.some((i) => rel(i, facePaint)),
+    intents.filter((i) => rel(i, facePaint)).map((i) => i.subject).join(" / "),
+  );
+  const realEstate =
+    "Real estate agent greeting a client at the entrance of a new home, symbolizing a welcoming embrace for potential buyers.";
+  check("the real-estate photograph no longer qualifies for any slot", !intents.some((i) => rel(i, realEstate)));
+  // THE ANGLE'S OWN WORDS ARE NOT EVIDENCE. Judged against the full brief this
+  // same photograph scored two matches, on "client" and "home" — both supplied
+  // by the planner, neither about the business.
+  const angled = intents.find((i) => /homeowner or client/.test(i.subject));
+  check(
+    "the angle's vocabulary cannot qualify a photograph on its own",
+    !!angled && mediaIsRelevant({ subject: angled.subject }, realEstate) && !rel(angled, realEstate),
+    angled?.subject ?? "no angled slot",
+  );
+  // ... and a business that DOES describe its work still gets briefs.
+  const real = planMediaIntents(
+    {
+      businessName: "Summit Roofing",
+      whatTheyDo: "residential roof inspection in Houston",
+      offer: "Find out what condition your roof is actually in",
+      explicitSubject: "residential roof inspection in Houston",
+      mechanism: "A 25-point inspection that documents the actual condition with photos",
+      authenticityCategory: "local_service_trade",
+    },
+    { hero: true, benefitCount: 3 },
+  );
+  check("a described business still gets its photo briefs", real.length === 4, `${real.length} intents`);
+  check(
+    "and they are about the work",
+    real.every((i) => /roof/i.test(i.subject)),
+    real.map((i) => i.subject).join(" / "),
+  );
+}
+
 console.log(failures === 0 ? "\nMEDIA RELEVANCE: ALL CHECKS PASSED\n" : `\nMEDIA RELEVANCE: ${failures} FAILED\n`);
 process.exit(failures === 0 ? 0 : 1);

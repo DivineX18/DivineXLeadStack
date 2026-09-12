@@ -47,6 +47,22 @@ export interface MediaIntent {
   purpose: MediaPurpose;
   /** The actual search subject, written as a photo brief rather than a keyword. */
   subject: string;
+  /**
+   * THE PART OF THE BRIEF A PHOTOGRAPH HAS TO BE ABOUT.
+   *
+   * `subject` carries an angle the planner added — "close up detail", "with a
+   * homeowner or client present" — to stop four slots resolving to one
+   * photograph. That phrasing steers the PROVIDER, and it must not be
+   * admissible as evidence of relevance: judged against the whole brief, a
+   * real-estate handshake captioned "greeting a client at the entrance of a new
+   * home" scored two matches on "client" and "home" and shipped onto a B2B
+   * operations page, having matched nothing about the business at all.
+   *
+   * So relevance is judged against the business's own subject alone. Same
+   * reasoning as the STOPWORDS list, one level up: words the generator supplied
+   * cannot be used to prove the generator picked correctly.
+   */
+  subjectCore: string;
   /** Shape the slot renders at, so a portrait is never asked for a 21:9 band. */
   aspect: "landscape" | "portrait" | "square";
   /** Alt text is written from the intent, so it survives even when the
@@ -175,6 +191,7 @@ export function planMediaIntents(
       // rather than scenery, since the query is the only lever on what comes
       // back before anything can be judged.
       subject: `${core} being carried out by a specialist`,
+      subjectCore: core,
       aspect: "landscape",
       altPrefix: `${ctx.businessName ?? "The team"} carrying out ${core}`,
     });
@@ -195,6 +212,7 @@ export function planMediaIntents(
       slot: "benefit_item",
       purpose: a.purpose,
       subject: `${core} ${a.suffix}`,
+      subjectCore: core,
       aspect: "landscape",
       altPrefix: a.alt,
     });

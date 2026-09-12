@@ -282,9 +282,77 @@ console.log("\n══ proof actually composes ══");
   );
 }
 {
+  // THE HOLE THE FOLD SUBSTITUTE FELL THROUGH.
+  //
+  // The rule above used to ask `proofVisual === "document_showcase"`, which is a
+  // question about the CATEGORY, not about the page — so it was unreachable for
+  // every page whose proof mode is `process_flow`. The real lead-magnet
+  // generation classified as coaching (a paediatric sleep consultant), took the
+  // process_flow branch, and shipped a single hero with no visual anywhere on
+  // it. The same page, one enum apart, must get the same treatment.
+  const oneFold = sec("s1", "hero", {
+    headline: "The one schedule change that ends most toddler night waking",
+    ctaLabel: "Send me the guide",
+    layout: "split",
+    mediaType: "none",
+    bullets: ["Built around wake windows", "Nothing to buy to use it", "Written by a sleep consultant"],
+  });
+  const out = composePage([oneFold, footer()], { primaryCtaLabel: "Send me the guide", proofVisual: "process_flow" });
+  const cfg = out[0].config as { proofShowcase?: { items: { title: string }[] }; layout?: string };
+  check(
+    "a one-fold page is given its fold beat whatever the proof mode",
+    (cfg.proofShowcase?.items.length ?? 0) === 3,
+    `${cfg.proofShowcase?.items.length ?? 0} items`,
+  );
+}
+{
+  // A SUBSTITUTE THAT NOTHING RENDERS IS NOT A SUBSTITUTE. Only the split fold
+  // draws a proof showcase — the centred fold ignores the field — so assigning
+  // one without the layout would delete the bullets and show nothing in their
+  // place. The lead-magnet hero happened to already be split; the rule must not
+  // depend on that luck.
+  const centred = sec("s1", "hero", {
+    headline: "H",
+    ctaLabel: "Go",
+    mediaType: "none",
+    bullets: ["One thing", "Two thing", "Three thing"],
+  });
+  const out = composePage([centred, footer()], { primaryCtaLabel: "Go", proofVisual: "process_flow" });
+  const cfg = out[0].config as { proofShowcase?: { items: unknown[] }; layout?: string; bullets?: string[] };
+  check("the fold beat brings a layout that renders it", cfg.layout === "split", cfg.layout ?? "centered");
+  check(
+    "the bullets are not cleared without something taking their place",
+    !((cfg.bullets ?? []).length === 0 && !cfg.proofShowcase?.items.length),
+  );
+}
+{
+  // A planned media slot is NOT imagery: the published renderer strips a hero
+  // whose mediaUrl never resolved, so a page carrying only that intent has
+  // nothing to show and must still be given a beat.
+  const planned = sec("s1", "hero", {
+    headline: "H",
+    ctaLabel: "Go",
+    mediaType: "image",
+    mediaPlaceholderLabel: "A photo of the work",
+    bullets: ["One thing", "Two thing"],
+  });
+  const out = composePage([planned, footer()], { primaryCtaLabel: "Go", proofVisual: "process_flow" });
+  check(
+    "an unresolved media slot does not count as a visual beat",
+    ((out[0].config as { proofShowcase?: { items: unknown[] } }).proofShowcase?.items.length ?? 0) === 2,
+  );
+}
+{
   // A page that DOES have a mid-page beat must use that, not the fold.
   const out = composePage([hero(), benefits(true), footer()], { primaryCtaLabel: "Book it", proofVisual: "document_showcase" });
   check("a page with a mid-page beat does not also load the fold", (out[0].config as { proofShowcase?: unknown }).proofShowcase === undefined);
+}
+{
+  // ...and a real photograph ANYWHERE on the page is a visual beat, so the fold
+  // is left as written rather than doubling up.
+  const story = sec("s2", "story", { headline: "S", body: "b", photoUrl: "https://x.test/p.jpg" });
+  const out = composePage([hero(), story, footer()], { primaryCtaLabel: "Book it", proofVisual: "process_flow" });
+  check("a photograph elsewhere on the page stands the fold beat down", (out[0].config as { proofShowcase?: unknown }).proofShowcase === undefined);
 }
 {
   // A real photograph always wins the fold.
@@ -389,12 +457,12 @@ console.log("\n══ a malformed field cannot discard the argument ══");
 }
 
 // ── 9. Trust-claim integrity ────────────────────────────────────────────────
-console.log("\n══ ownership is not a place ══");
+console.log("\n══ a service area is not an organisation ══");
 {
-  const { isUnsupportedOwnershipClaim, stripUnsupportedClaims } = await import("../src/lib/funnels/claim-integrity.ts");
+  const { isUnsupportedTrustClaim, stripUnsupportedClaims } = await import("../src/lib/funnels/claim-integrity.ts");
 
   // THE CLAIM THAT SHIPPED. Houston was verified; local ownership never was.
-  check("the badge that shipped is caught", isUnsupportedOwnershipClaim("Locally owned in Houston"));
+  check("the badge that shipped is caught", isUnsupportedTrustClaim("Locally owned in Houston"));
 
   for (const claim of [
     "Family owned since day one", "Veteran owned business", "Woman owned studio",
@@ -402,7 +470,19 @@ console.log("\n══ ownership is not a place ══");
     "Proudly family-run", "Owned and operated locally", "100% Australian owned",
     "Employee owned", "A family business",
   ]) {
-    check(`caught: "${claim}"`, isUnsupportedOwnershipClaim(claim));
+    check(`caught: "${claim}"`, isUnsupportedTrustClaim(claim));
+  }
+
+  // WHERE THE PEOPLE ARE IS THE SAME INFERENCE. The badge blocked above came
+  // straight back as a staffing claim on the next generation of the same
+  // business, from the same single fact — that it serves Houston.
+  check("the staffing badge that shipped next is caught", isUnsupportedTrustClaim("Local Houston crew"));
+  for (const claim of [
+    "Local crew", "Local team you can call", "Locally based",
+    "Local Brisbane technicians", "Locally staffed", "Our local installers",
+    "Crew based locally", "Team that lives locally", "Local workforce",
+  ]) {
+    check(`caught: "${claim}"`, isUnsupportedTrustClaim(claim));
   }
 
   // ORDINARY COPY MUST SURVIVE. A rule that eats real content is worse than
@@ -412,8 +492,13 @@ console.log("\n══ ownership is not a place ══");
     "Serving Houston homeowners", "Locally sourced materials",
     "We own the outcome", "Family bathroom refits", "Licensed and insured",
     "No credit card required", "Evening appointments twice a week",
+    // A SERVICE IS NOT A STAFFING CLAIM. These describe what the business
+    // DOES; deleting them would be the rule doing the damage it exists to
+    // prevent.
+    "Local SEO experts", "Local search specialists", "Local delivery available",
+    "We know the local market", "Local pickup in 2 hours",
   ]) {
-    check(`kept: "${fine}"`, !isUnsupportedOwnershipClaim(fine));
+    check(`kept: "${fine}"`, !isUnsupportedTrustClaim(fine));
   }
 
   const { kept, dropped } = stripUnsupportedClaims([
@@ -431,13 +516,34 @@ console.log("\n══ ownership is not a place ══");
     funnel_name: "Summit Roofing", genre: "lead_gen",
     headline: "Find out what condition your roof is actually in",
     bullets: "A, B, C", cta_label: "Book it",
-    hero_trust_badges: ["Free, no obligation", "Locally owned in Houston", "Written recommendation, not a quote"],
+    hero_trust_badges: ["Free, no obligation", "Locally owned in Houston", "Local Houston crew"],
     trust_badges: ["Family owned", "Privacy protected"],
   } as never) as { ok: boolean; args: Record<string, unknown> };
   const hero = (v.args.heroTrustBadges ?? []) as string[];
   const section = (v.args.trustBadges ?? []) as string[];
-  check("validate strips the ownership claim from hero badges", hero.length === 2 && !hero.some((b) => /owned/i.test(b)), hero.join(" | "));
+  check(
+    "validate strips both the ownership and the staffing claim from hero badges",
+    hero.length === 1 && hero[0] === "Free, no obligation",
+    hero.join(" | "),
+  );
   check("validate strips it from section badges too", section.length === 1 && section[0] === "Privacy protected", section.join(" | "));
+}
+{
+  // A BADGE IS CUT AT A WORD, NEVER THROUGH ONE. Summit's fold shipped
+  // "Written recommendation, not a sales quot" — the 40-character cap applied
+  // to a 41-character line, which turns honest copy into a visible typo in the
+  // most-read part of the page.
+  const { getCapability } = await import("../src/lib/ai-suite/capabilities.ts");
+  const v = getCapability("create_funnel")!.validate!({
+    funnel_name: "Summit Roofing", genre: "lead_gen",
+    headline: "Find out what condition your roof is actually in",
+    bullets: "A, B, C", cta_label: "Book it",
+    hero_trust_badges: ["Written recommendation, not a sales quote", "Free, no obligation"],
+  } as never) as { ok: boolean; args: Record<string, unknown> };
+  const badges = (v.args.heroTrustBadges ?? []) as string[];
+  check("an over-long badge is trimmed to a whole word", badges[0] === "Written recommendation, not a sales", badges[0]);
+  check("every badge still fits the cap", badges.every((b) => b.length <= 40), badges.join(" | "));
+  check("a badge that fits is untouched", badges[1] === "Free, no obligation", badges[1]);
 }
 
 // ── 10. Purity ──────────────────────────────────────────────────────────────

@@ -27,11 +27,15 @@ export function BenefitsGridSection({
   config,
   published,
   accentColor,
+  theme,
   iconPalette,
   iconStyle,
 }: {
   config: BenefitsGridConfig;
   accentColor: string;
+  /** The page's own theme, so the framed document lifts off the right
+   *  background. See DocumentShowcase. */
+  theme?: "light" | "dark";
   /** Design-pack icon-badge colors, cycled one-per-card instead of every
    *  card reusing the single accent color. Omitted = monochrome (today's
    *  behavior). */
@@ -91,7 +95,7 @@ export function BenefitsGridSection({
         {effectiveVariant === "process_flow" ? (
           <ProcessFlow steps={config.items} accentColor={accentColor} />
         ) : (
-          <DocumentShowcase items={config.items} accentColor={accentColor} />
+          <DocumentShowcase items={config.items} accentColor={accentColor} theme={theme} />
         )}
       </SectionShell>
     );

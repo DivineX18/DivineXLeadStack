@@ -539,6 +539,37 @@ function resolveProofVariant(
   return explained >= Math.ceil(items.length * 0.6) ? "process_flow" : "document_showcase";
 }
 
+/**
+ * Does this section put a REAL photograph in front of the reader?
+ *
+ * Only a resolved asset counts. A planned media slot with no URL behind it is
+ * what this whole pass exists to catch: the published renderer strips it, so
+ * treating the intent as imagery is how a page ends up believing it has a
+ * visual it will never show.
+ */
+function carriesRealImagery(section: FunnelSection): boolean {
+  const cfg = section.config as {
+    mediaUrl?: string;
+    mediaType?: string;
+    photoUrl?: string;
+    imageUrl?: string;
+    productImageUrl?: string;
+    images?: { url?: string }[];
+    items?: { imageUrl?: string }[];
+  };
+  if (cfg.mediaUrl && cfg.mediaType !== "none") return true;
+  if (cfg.photoUrl || cfg.imageUrl || cfg.productImageUrl) return true;
+  if ((cfg.images ?? []).some((i) => !!i.url)) return true;
+  return (cfg.items ?? []).some((i) => !!i.imageUrl);
+}
+
+/** Does this section already render a composed proof visual? */
+function carriesProofVisual(section: FunnelSection): boolean {
+  const v = (section.config as { variant?: string; proofShowcase?: { items?: unknown[] } }).variant;
+  if (v === "document_showcase" || v === "process_flow" || v === "deliverable_preview") return true;
+  return !!(section.config as { proofShowcase?: { items?: unknown[] } }).proofShowcase?.items?.length;
+}
+
 function allocateProofBeat(sections: FunnelSection[], ctx: PageCompositionContext): FunnelSection[] {
   const mode = ctx.proofVisual;
   if (mode !== "document_showcase" && mode !== "process_flow") return sections;
@@ -585,16 +616,31 @@ function allocateProofBeat(sections: FunnelSection[], ctx: PageCompositionContex
     assigned = true;
     return { ...s, config: { ...cfg, variant: resolveProofVariant(mode, items) } };
   });
-  if (assigned || mode !== "document_showcase") return next;
+  // WOULD THE FINISHED PAGE SHOW THE READER ANYTHING AT ALL?
+  //
+  // This used to ask `mode === "document_showcase"`, which is a question about
+  // the CATEGORY and not about the page. It meant the fold substitute was
+  // unreachable for every page whose proof mode is `process_flow` — coaching,
+  // applications, local service, b2b — and the lead-magnet generation walked
+  // straight through the hole: a paediatric sleep consultant classifies as
+  // coaching, its page composed to a single hero plus a footer, the hero's
+  // planned split media never resolved, the published renderer stripped the
+  // empty media side, and what shipped was a centred wall of text with no
+  // visual anywhere on it.
+  //
+  // The condition that actually matters is whether anything survives to be
+  // SEEN. A planned media slot is not imagery — the renderer drops it — so a
+  // page counts as having a visual beat only when some section carries a real
+  // asset or a composed proof visual. When none does, the fold is the last
+  // place left to put one, whatever the category.
+  const pageShowsSomething = next.some((s) => carriesRealImagery(s) || carriesProofVisual(s));
+  if (pageShowsSomething) return next;
 
-  // NO MID-PAGE BEAT TO USE. A one-fold opt-in page is a single hero by
-  // design, so there is no benefits section to carry the proof and the page
-  // ends up with no visual anywhere — which is what the lead-magnet fixture
-  // shipped, while its category simultaneously (and correctly) forbids stock
-  // photography. The fold is the only place left, so the deliverable's own
-  // contents render beside the headline there. Uses the hero's OWN bullets:
-  // nothing is invented and nothing is duplicated, because on a one-fold page
-  // there is no second section for them to be duplicated from.
+  // THE FOLD IS THE ONLY PLACE LEFT. A one-fold opt-in page is a single hero by
+  // design, so there is no mid-page section to carry the proof. The
+  // deliverable's own contents render beside the headline instead. Uses the
+  // hero's OWN bullets: nothing is invented, and nothing is duplicated, because
+  // a page that reached this line has no second section to duplicate from.
   return next.map((s) => {
     if (s.type !== "hero") return s;
     const cfg = s.config as HeroConfig & { proofShowcase?: unknown };
@@ -605,6 +651,14 @@ function allocateProofBeat(sections: FunnelSection[], ctx: PageCompositionContex
       ...s,
       config: {
         ...cfg,
+        // THE LAYOUT HAS TO BE ONE THAT SHOWS IT. Only the split fold renders a
+        // proof showcase; the centred fold ignores the field entirely. Assigning
+        // the showcase without the layout would have deleted the bullets below
+        // and drawn nothing in their place — a substitute that makes the page
+        // worse than the hole it was filling. The lead-magnet hero happened to
+        // already be split, which is exactly the kind of luck a rule must not
+        // depend on, so the composition states the layout it needs.
+        layout: "split" as const,
         proofShowcase: { items: bullets.map((b) => ({ title: b })) },
         // The showcase IS the bullet list, presented as the thing the reader
         // receives. Leaving the inline checklist as well printed the same three

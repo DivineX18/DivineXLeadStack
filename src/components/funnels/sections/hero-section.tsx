@@ -352,7 +352,7 @@ export function HeroSection({
               states. Falls through to the ordinary media block whenever a real
               asset exists. */}
           {config.proofShowcase?.items?.length && !config.mediaUrl ? (
-            <DocumentShowcase items={config.proofShowcase.items} accentColor={accentColor} />
+            <DocumentShowcase items={config.proofShowcase.items} accentColor={accentColor} theme={theme} />
           ) : (
             <MediaBlock config={config} accentColor={accentColor} className="aspect-video w-full" />
           )}

@@ -4081,6 +4081,25 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const guaranteeHeadline = guaranteeBodyRaw ? guaranteeHeadlineRaw : "";
       const guaranteeBody = guaranteeHeadlineRaw ? guaranteeBodyRaw : "";
 
+      /**
+       * A BADGE IS CUT AT A WORD, NEVER THROUGH ONE.
+       *
+       * The cap is 40 characters and `slice(0, 40)` obeys it literally, so
+       * Summit's fold shipped "Written recommendation, not a sales quot" —
+       * forty-one characters of honest copy turned into a visible typo in the
+       * most-read part of the page. Trimming back to the last whole word costs
+       * one word and reads as written rather than as broken.
+       */
+      const badgeText = (b: string): string => {
+        const t = b.trim();
+        if (t.length <= 40) return t;
+        const cut = t.slice(0, 40);
+        const lastSpace = cut.lastIndexOf(" ");
+        // A single 40-character word has no boundary to fall back to; a hard
+        // cut is then the only option and is still better than overflowing.
+        return (lastSpace > 20 ? cut.slice(0, lastSpace) : cut).replace(/[,;:\-\s]+$/, "");
+      };
+
       const trustBadgesRaw = raw.trust_badges;
       // TRUST CLAIMS ARE FILTERED, NOT TRUSTED. A generated page shipped
       // "Locally owned in Houston" from a business that had only ever stated
@@ -4091,14 +4110,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const trustBadges = stripUnsupportedClaims(
         (Array.isArray(trustBadgesRaw) ? trustBadgesRaw.filter((b): b is string => typeof b === "string") : [])
           .slice(0, 5)
-          .map((b) => b.slice(0, 40)),
+          .map(badgeText),
       ).kept;
 
       const heroTrustBadgesRaw = raw.hero_trust_badges;
       const heroTrustBadges = stripUnsupportedClaims(
         (Array.isArray(heroTrustBadgesRaw) ? heroTrustBadgesRaw.filter((b): b is string => typeof b === "string") : [])
           .slice(0, 3)
-          .map((b) => b.slice(0, 40)),
+          .map(badgeText),
       ).kept;
 
       // Sanitized only — the actual per-stage alternates check happens in
@@ -5502,7 +5521,23 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         const intents = planMediaIntents(
           {
             businessName: (args.funnelName as string) || (args.funnel_name as string) || null,
-            whatTheyDo: (args.mediaSubject as string) || heroMediaBrief || (args.objective as string) || null,
+            // `objective` USED TO BE IN THIS LADDER AND IS NOT A SUBJECT.
+            //
+            // It is a strategy enum — "application", "lead_generation",
+            // "purchase" — recorded so the campaign stays coherent. Read as a
+            // description of the business it produces the photo brief
+            // "application close up detail", which matched a stock caption
+            // reading "a person applying green face paint" on the four-letter
+            // stem "appl". The consultant page shipped that beside "Past the
+            // founder-led stage", with a real-estate handshake under it.
+            //
+            // Nothing downstream could have caught it: the relevance test was
+            // working correctly against the brief it was given, and the brief
+            // was a schema token. Only a description of the actual work belongs
+            // here, so the ladder now falls through to the headline and the
+            // mechanism — the business's own words — and to no photograph at
+            // all when neither is usable, which is the honest outcome.
+            whatTheyDo: (args.mediaSubject as string) || heroMediaBrief || null,
             offer: (args.headline as string) || null,
             explicitSubject: mediaSubject || null,
             mechanism: ((args.salesArgument as Record<string, unknown> | null)?.mechanism as string) ?? null,
@@ -5529,7 +5564,12 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               const candidates = await searchSubjectImages(intent.subject, 12);
               // Purpose travels with the intent so the selector can weight
               // "someone doing the work" against "a picture of the category".
-              const chosen = selectRelevantMedia({ subject: intent.subject, purpose: intent.purpose }, candidates);
+              // The PROVIDER is asked for the angled brief so four slots do not
+              // resolve to one photograph; RELEVANCE is judged against the
+              // business's own subject, because the angle's own vocabulary is
+              // not evidence that the photograph is about this business. See
+              // `subjectCore` in media-intent.ts.
+              const chosen = selectRelevantMedia({ subject: intent.subjectCore, purpose: intent.purpose }, candidates);
               return { intent, photo: chosen?.pick ?? null };
             }),
           );
