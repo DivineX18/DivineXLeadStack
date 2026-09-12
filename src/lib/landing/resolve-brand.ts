@@ -2,10 +2,26 @@ import "server-only";
 
 import { getAdminDb } from "@/lib/firebase/admin";
 import { CUSTOM_BRAND, type ResolvedBrand } from "@/config/landing";
+import { brandForProduct, resolveProductSurface } from "@/lib/landing/resolve-product-surface";
 import type { AgencyDoc } from "@/types";
 
 /**
- * Resolve the brand object passed to the custom landing components.
+ * THE BRAND IS DECIDED HERE, NOT AT EACH CALL SITE.
+ *
+ * This deployment serves two products from one app: crm.divinex.io is Flow,
+ * app.divinex.io is Ascend. The host-aware swap used to live in
+ * `brandForProduct()`, applied by whichever page remembered to call it — six
+ * did, and around twenty-five did not. The result was that nine of twelve
+ * public pages on the ASCEND host called themselves Flow, in body copy and in
+ * `<title>`, which is what Google indexes and what social shares display.
+ *
+ * Patching twenty-five call sites would have left the same trap set for the
+ * twenty-sixth page. So the swap moved INTO the shared resolver: every
+ * consumer now gets the right brand for the host it is being rendered on,
+ * without knowing this problem exists.
+ *
+ * The pages that already call `brandForProduct()` themselves are unaffected —
+ * it is idempotent, so applying it twice yields the same brand.
  *
  * Reads appConfig/main → firstAgencyId, then agencies/{firstAgencyId}, and
  * merges agency-doc field values over CUSTOM_BRAND defaults. Any field the
@@ -21,6 +37,25 @@ import type { AgencyDoc } from "@/types";
  * (`export const revalidate = 60` on the calling page) or memoize.
  */
 export async function resolveCustomBrand(): Promise<ResolvedBrand> {
+  return forHost(await resolveAgencyBrand());
+}
+
+/**
+ * Apply the host's product identity. Deliberately fail-open: `headers()`
+ * throws outside a request scope (a script, a build-time evaluation), and a
+ * brand lookup must never be the reason one of those dies — it simply falls
+ * back to the un-swapped brand, which is Flow's, the established default.
+ */
+async function forHost(brand: ResolvedBrand): Promise<ResolvedBrand> {
+  try {
+    return brandForProduct(brand, await resolveProductSurface());
+  } catch {
+    return brand;
+  }
+}
+
+/** The agency-doc merge, with no product opinion. */
+async function resolveAgencyBrand(): Promise<ResolvedBrand> {
   const fallback: ResolvedBrand = {
     name: CUSTOM_BRAND.name,
     logoUrl: null,

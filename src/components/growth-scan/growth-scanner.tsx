@@ -130,69 +130,72 @@ export function GrowthScanner() {
     setPhase({ s: "running", token: data.shareToken, since: Date.now() });
   }
 
-  return (
-    <main className="min-h-dvh bg-[#0b0d12] text-white">
-      <div className="mx-auto w-full max-w-3xl px-5 py-14 sm:py-20">
-        {phase.s === "ready" ? (
+  // The report is long by nature, so it keeps the reading column and scrolls.
+  // Only the ASK is held to one screen.
+  if (phase.s === "ready") {
+    return (
+      <main className="min-h-dvh bg-[#0b0d12] text-white">
+        <div className="mx-auto w-full max-w-3xl px-5 py-14 sm:py-20">
           <Results report={phase.report} />
-        ) : (
-          <>
-            <header className="text-center">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Ascend</p>
-              <h1 className="mt-5 text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl">
-                Find what&apos;s costing you leads.
-              </h1>
-              <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-white/65">
-                Enter your website and Ascend will analyze your marketing, identify your biggest growth
-                constraint, and show you what to fix first.
-              </p>
-            </header>
+        </div>
+      </main>
+    );
+  }
 
-            {phase.s === "running" || phase.s === "starting" ? (
-              <Waiting stage={phase.s === "starting" ? 0 : stage} />
-            ) : (
-              <form onSubmit={onSubmit} className="mx-auto mt-10 max-w-md space-y-3">
-                <Field label="Your website" value={website} onChange={setWebsite} placeholder="yourbusiness.com" autoFocus required />
-                <Field label="Email" value={email} onChange={setEmail} placeholder="you@yourbusiness.com" type="email" required />
-                <Field label="Your name" value={name} onChange={setName} placeholder="Jane" />
-                <button
-                  type="submit"
-                  className="mt-2 w-full rounded-xl bg-white px-6 py-4 text-base font-bold text-[#0b0d12] transition hover:bg-white/90"
-                >
-                  Run My Free Growth Scan
-                </button>
-                <p className="pt-1 text-center text-xs text-white/45">
-                  Free growth assessment. No software setup required.
-                </p>
-                {phase.s === "error" && (
-                  <p role="alert" className="rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-200">
-                    {phase.message}
-                  </p>
-                )}
-              </form>
-            )}
+  /**
+   * ONE SCREEN, TWO COLUMNS.
+   *
+   * This was a single centred column: headline, then three stacked fields,
+   * then the button, then two more sections below. On a laptop the form ran
+   * past the fold, so the thing the page exists to get you to do was the one
+   * thing you had to scroll to find.
+   *
+   * The argument now sits on the left and the form on the right, both
+   * vertically centred, so the ask is visible on arrival. The supporting
+   * sections moved into the left column instead of being stacked underneath —
+   * they are context for the decision, and they were never worth a scroll of
+   * their own.
+   *
+   * Below `lg` it stacks back to one column with the form first, because on a
+   * phone "one fold" is not achievable with three fields and pretending
+   * otherwise would just crush the type.
+   */
+  return (
+    <main className="min-h-dvh bg-[#0b0d12] text-white lg:flex lg:items-center">
+      <div className="mx-auto w-full max-w-6xl px-5 py-12 sm:py-16 lg:py-10">
+        <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
+          {/* The argument. Second on mobile so the form is reachable first. */}
+          <div className="order-2 lg:order-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Ascend</p>
+            <h1 className="mt-5 text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl">
+              Find what&apos;s costing you leads.
+            </h1>
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-white/65">
+              Enter your website and Ascend will analyze your marketing, identify your biggest growth
+              constraint, and show you what to fix first.
+            </p>
 
-            <section className="mt-16 border-t border-white/10 pt-10">
-              <h2 className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-white/45">
+            <div className="mt-9 border-t border-white/10 pt-7">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">
                 What Ascend looks for
               </h2>
-              <ul className="mx-auto mt-5 flex max-w-lg flex-wrap justify-center gap-2">
+              <ul className="mt-4 flex flex-wrap gap-2">
                 {SCAN_DIMENSIONS.map((d) => (
                   <li key={d} className="rounded-full border border-white/12 px-3.5 py-1.5 text-sm text-white/70">
                     {d}
                   </li>
                 ))}
               </ul>
-            </section>
+            </div>
 
-            <section className="mt-14 rounded-2xl border border-white/10 bg-white/[0.03] p-7 text-center">
-              <p className="text-lg font-bold leading-snug">
+            <div className="mt-8">
+              <p className="text-[15px] font-bold leading-snug">
                 Most marketing platforms start with what you want to build.
               </p>
-              <p className="mt-1.5 text-lg font-bold leading-snug text-white/55">
+              <p className="mt-1 text-[15px] font-bold leading-snug text-white/55">
                 Ascend starts with what you actually need to fix.
               </p>
-              <p className="mt-5 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs font-semibold uppercase tracking-wider text-white/40">
+              <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold uppercase tracking-wider text-white/40">
                 {["Diagnose", "Prioritize", "Create", "Execute", "Measure"].map((s, i) => (
                   <span key={s}>
                     {i > 0 && <span className="mr-2 text-white/20">→</span>}
@@ -200,9 +203,39 @@ export function GrowthScanner() {
                   </span>
                 ))}
               </p>
-            </section>
-          </>
-        )}
+            </div>
+          </div>
+
+          {/* The ask. A panel rather than bare fields, so it reads as the one
+              thing to do on this screen rather than the page continuing. */}
+          <div className="order-1 lg:order-2">
+            <div className="rounded-2xl border border-white/12 bg-white/[0.04] p-6 sm:p-7">
+              {phase.s === "running" || phase.s === "starting" ? (
+                <Waiting stage={phase.s === "starting" ? 0 : stage} />
+              ) : (
+                <form onSubmit={onSubmit} className="space-y-3">
+                  <Field label="Your website" value={website} onChange={setWebsite} placeholder="yourbusiness.com" autoFocus required />
+                  <Field label="Email" value={email} onChange={setEmail} placeholder="you@yourbusiness.com" type="email" required />
+                  <Field label="Your name" value={name} onChange={setName} placeholder="Jane" />
+                  <button
+                    type="submit"
+                    className="mt-2 w-full rounded-xl bg-white px-6 py-4 text-base font-bold text-[#0b0d12] transition hover:bg-white/90"
+                  >
+                    Run My Free Growth Scan
+                  </button>
+                  <p className="pt-1 text-center text-xs text-white/45">
+                    Free growth assessment. No software setup required.
+                  </p>
+                  {phase.s === "error" && (
+                    <p role="alert" className="rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-200">
+                      {phase.message}
+                    </p>
+                  )}
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );

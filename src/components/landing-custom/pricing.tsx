@@ -28,6 +28,25 @@ import type { PublicPlanSummary } from "@/types/billing";
  * page — same component, same data, so the numbers can never drift.
  */
 
+/**
+ * Who each tier is for, keyed by the tier NAME so it works for both products
+ * (Ascend and Flow ship the same Solo/Team/Agency ladder at different prices).
+ * Positioning only — no counts, no outcomes, nothing a plan could fail to
+ * deliver. Used only when the plan doc carries no description of its own.
+ */
+function audienceFor(planName: string): string | null {
+  switch (planName.trim().toLowerCase()) {
+    case "solo":
+      return "Perfect for one person running the whole business.";
+    case "team":
+      return "Built for a small team working one shared pipeline.";
+    case "agency":
+      return "For agencies running growth across multiple clients.";
+    default:
+      return null;
+  }
+}
+
 export function Pricing({
   plans,
   configured,
@@ -110,7 +129,12 @@ export function Pricing({
                   className={cn(
                     "flex flex-col transition-all duration-200",
                     highlighted
-                      ? "relative border-primary shadow-xl shadow-primary/10 ring-2 ring-primary/30 hover:shadow-2xl hover:shadow-primary/15"
+                      ? // overflow-visible is the fix for the clipped badge: Card's
+                        // base class sets overflow-hidden, so the card was cropping
+                        // its own "Most popular" pill at -top-3. tailwind-merge lets
+                        // this override it without touching the shared primitive,
+                        // and these cards contain no media that relied on clipping.
+                        "relative overflow-visible border-primary shadow-xl shadow-primary/10 ring-2 ring-primary/30 hover:shadow-2xl hover:shadow-primary/15"
                       : "hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md",
                   )}
                 >
@@ -122,8 +146,15 @@ export function Pricing({
                   )}
                   <CardHeader>
                     <CardTitle className="text-lg">{plan.name}</CardTitle>
-                    {plan.description && (
-                      <CardDescription>{plan.description}</CardDescription>
+                    {/* Who the tier is FOR, before what it costs. A price with no
+                        audience makes the reader do the sorting themselves, which
+                        is the work the page should be doing. The plan doc's own
+                        description wins when the owner has written one; the
+                        fallback is positioning by tier name, never a claim. */}
+                    {(plan.description || audienceFor(plan.name)) && (
+                      <CardDescription>
+                        {plan.description || audienceFor(plan.name)}
+                      </CardDescription>
                     )}
                     <div className="mt-4 flex items-baseline gap-1">
                       <span className="text-4xl font-bold tracking-tight">
