@@ -5788,6 +5788,72 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             ? ("document_showcase" as const)
             : ("process_flow" as const),
       });
+
+      // THE VISUAL STORY. Planned AFTER composePage, because the page's beats
+      // and their order are only settled once composition has run — and the
+      // visual story has to follow the argument the reader will actually meet,
+      // not the one the framework seeded.
+      //
+      // Every beat that resolves to a CONSTRUCTED visual attaches its shape and
+      // the proposition it communicates to the section that owns the argument,
+      // so the drawing sits with the copy it supports rather than wherever a
+      // slot happened to be. Photographic rungs are already placed by the
+      // imagery pass above; this pass adds only what that could not answer.
+      try {
+        const { planVisualStory } = await import("@/lib/funnels/visual-story");
+        const { resolveVisualSource } = await import("@/lib/funnels/visual-source");
+        const sa = args.salesArgument as Record<string, unknown> | null;
+        const story = planVisualStory(sectionsToSave, {
+          arrivalContext: (sa?.arrivalContext as string) ?? null,
+          currentBelief: effectivePlan.currentBelief ?? null,
+          oldWay: effectivePlan.oldWay ?? null,
+          whyOldWayFails: effectivePlan.whyOldWayFails ?? null,
+          mechanism: effectivePlan.mechanism ?? null,
+          corePromise: effectivePlan.corePromise ?? null,
+          primaryObjection: (sa?.primaryObjection as string) ?? null,
+          closeReason: effectivePlan.closeReason ?? null,
+        });
+        const drawn = new Map<string, { shape: string; caption: string }>();
+        for (const beat of story) {
+          const host = sectionsToSave.find((s) => s.id === beat.sectionId);
+          if (!host) continue;
+          const cfg = host.config as Record<string, unknown>;
+          // A section that already shows something real keeps it: rung 1 and
+          // rung 2 outrank a drawing, and the imagery pass has already run.
+          const alreadyVisual =
+            !!cfg.mediaUrl ||
+            !!cfg.photoUrl ||
+            ((cfg.items as { imageUrl?: string }[] | undefined) ?? []).some((i) => i.imageUrl);
+          if (alreadyVisual) continue;
+          const resolved = resolveVisualSource(beat, {
+            category: authenticityCategory,
+            // Photography for this concept was already attempted and placed
+            // above where it qualified; re-searching here would only give the
+            // same rejected candidates a second hearing.
+            photos: [],
+          });
+          if (resolved.source === "constructed" && resolved.shape) {
+            drawn.set(host.id, { shape: resolved.shape, caption: beat.concept });
+          }
+        }
+        if (drawn.size > 0) {
+          sectionsToSave = sectionsToSave.map((s) =>
+            drawn.has(s.id)
+              ? ({
+                  ...s,
+                  // Additive on the section's own config, like every other
+                  // composition decision — a section that never gets one is
+                  // byte-identical to the certified shape.
+                  config: { ...(s.config as object), conceptVisual: drawn.get(s.id) },
+                } as FunnelSection)
+              : s,
+          );
+        }
+      } catch {
+        // The visual story is best-effort like every other imagery decision —
+        // a page without it is the certified page, never a failed build.
+      }
+
       // BUSINESS REALITY ENGINE (slice B) — the identity layer. Every page
       // ends grounded in the real organization: business name (agent
       // profile > workspace name), contact email/phone (accountContact),

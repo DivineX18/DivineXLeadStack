@@ -127,10 +127,14 @@ function conceptFor(job: VisualJob, ctx: ArgumentContext, servesBelief?: string 
       return proposition(ctx.mechanism) ?? belief;
     case "show_deliverable":
       return belief ?? proposition(ctx.corePromise);
+    // `servesBelief` first for both of these, because a page may legitimately
+    // answer several DIFFERENT objections, or reduce uncertainty at more than
+    // one point in the journey. The page-level field is the fallback for the
+    // first such beat, not the answer for all of them.
     case "answer_objection":
-      return proposition(ctx.primaryObjection);
+      return belief ?? proposition(ctx.primaryObjection);
     case "reduce_uncertainty":
-      return proposition(ctx.closeReason);
+      return belief ?? proposition(ctx.closeReason);
     // Proof speaks for itself: the concept is the evidence, which the proof
     // router supplies. Nothing here should invent a proposition for it.
     case "establish_proof":
@@ -176,12 +180,15 @@ export function conceptsOverlap(a: string, b: string): boolean {
  * to say at it. Sections are visited in page order, so `continuesFrom` is the
  * real reading sequence rather than a sort of convenience.
  *
- * Two invariants, enforced here rather than left to the resolver:
+ * THE INVARIANT IS THE CONCEPT, NOT THE JOB.
  *
- *   1. No job repeats. Once the page has shown the cost of the current state,
- *      showing it again is not progression.
- *   2. No concept repeats. Two beats may legitimately share a job across very
- *      different propositions, but never the same proposition twice.
+ * An earlier version also refused a repeated `visualJob`, which is wrong: a
+ * page with three distinct objections is entitled to answer each of them, and
+ * uncertainty can honestly need reducing at more than one point in a journey.
+ * What a page may never do is DRAW THE SAME PROPOSITION TWICE — that is the
+ * move that stops being a story and starts being decoration. So a job may
+ * recur; a concept may not, and a recurring job therefore has to arrive
+ * carrying something genuinely different to say.
  *
  * Note what is NOT decided here: whether an image exists. A beat is a NEED.
  * Resolution against the source hierarchy happens afterwards and may end in a
@@ -190,13 +197,12 @@ export function conceptsOverlap(a: string, b: string): boolean {
  */
 export function planVisualStory(sections: FunnelSection[], ctx: ArgumentContext): VisualBeat[] {
   const beats: VisualBeat[] = [];
-  const usedJobs = new Set<VisualJob>();
 
   for (const section of sections) {
     const role = (section as { argumentRole?: string }).argumentRole;
     if (!role) continue;
     const job = ROLE_TO_JOB[role];
-    if (!job || usedJobs.has(job)) continue;
+    if (!job) continue;
 
     const servesBelief = (section as { servesBelief?: string }).servesBelief;
     const concept = conceptFor(job, ctx, servesBelief);
@@ -212,7 +218,6 @@ export function planVisualStory(sections: FunnelSection[], ctx: ArgumentContext)
       concept,
       continuesFrom: beats.length > 0 ? beats[beats.length - 1].visualJob : null,
     });
-    usedJobs.add(job);
   }
 
   return beats;
@@ -227,15 +232,30 @@ export function planVisualStory(sections: FunnelSection[], ctx: ArgumentContext)
  */
 export function describeVisualStory(beats: VisualBeat[]): {
   jobs: VisualJob[];
-  repeatsJob: boolean;
+  /** A job recurring is FINE — see planVisualStory. Reported so a reviewer can
+   *  see the shape of the story, never treated as a defect. */
+  recurringJobs: VisualJob[];
+  /** The real defect: the same proposition drawn more than once. */
   repeatsConcept: boolean;
+  /** The sharper case of it — a visual that merely restates the one before. */
+  restatesPrevious: boolean;
 } {
   const jobs = beats.map((b) => b.visualJob);
+  const seen = new Set<VisualJob>();
+  const recurringJobs: VisualJob[] = [];
+  for (const j of jobs) {
+    if (seen.has(j) && !recurringJobs.includes(j)) recurringJobs.push(j);
+    seen.add(j);
+  }
   let repeatsConcept = false;
+  let restatesPrevious = false;
   for (let i = 0; i < beats.length; i++) {
     for (let j = i + 1; j < beats.length; j++) {
-      if (conceptsOverlap(beats[i].concept, beats[j].concept)) repeatsConcept = true;
+      if (conceptsOverlap(beats[i].concept, beats[j].concept)) {
+        repeatsConcept = true;
+        if (j === i + 1) restatesPrevious = true;
+      }
     }
   }
-  return { jobs, repeatsJob: new Set(jobs).size !== jobs.length, repeatsConcept };
+  return { jobs, recurringJobs, repeatsConcept, restatesPrevious };
 }

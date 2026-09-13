@@ -73,10 +73,31 @@ console.log("\n══ every visual serves a named argument ══");
   check("the close is left alone", !beats.some((b) => b.argumentRole === "close"));
 
   const story = describeVisualStory(beats);
-  check("no job is used twice", !story.repeatsJob, story.jobs.join(" → "));
   check("no concept is drawn twice", !story.repeatsConcept);
+  check("no visual merely restates the one before it", !story.restatesPrevious);
   check("every beat but the first knows what it follows", beats.slice(1).every((b) => b.continuesFrom !== null));
   console.log(`     visual story: ${story.jobs.join(" → ")}`);
+}
+{
+  // A JOB MAY RECUR WHEN IT CARRIES SOMETHING DIFFERENT. Three distinct
+  // objections each deserve answering; what they may not do is share a
+  // proposition.
+  const twoObjections = [
+    sec("o1", "faq", "objections", "Consultants produce a deck and disappear"),
+    sec("o2", "faq", "objections", "We cannot pause delivery for a review"),
+  ];
+  const beats = planVisualStory(twoObjections, NORTHSTAR);
+  check("a recurring job is allowed", beats.length === 2, `${beats.length} beats`);
+  check("both are the same job", beats.every((b) => b.visualJob === "answer_objection"));
+  check("carrying genuinely different concepts", !describeVisualStory(beats).repeatsConcept);
+  check("and the recurrence is reported, not treated as a defect", describeVisualStory(beats).recurringJobs.includes("answer_objection"));
+
+  // ... but the SAME objection twice is still refused.
+  const sameTwice = [
+    sec("o1", "faq", "objections", "Consultants produce a deck and disappear"),
+    sec("o2", "faq", "objections", "Consultants just produce a deck and then disappear"),
+  ];
+  check("the same objection is not answered twice", planVisualStory(sameTwice, NORTHSTAR).length === 1);
 }
 {
   // NOTHING TRUE TO SAY, NOTHING TO SHOW.
