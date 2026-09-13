@@ -5825,12 +5825,30 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             !!cfg.photoUrl ||
             ((cfg.items as { imageUrl?: string }[] | undefined) ?? []).some((i) => i.imageUrl);
           if (alreadyVisual) continue;
+          // WHAT THIS BEAT IS COMPETING WITH. A drawing has to add something
+          // the reader does not already have — so the host section and its
+          // neighbours are handed to the resolver, both as text and as the
+          // structural devices they already render. A 1-2-3 sequence above a
+          // process section is the failure this prevents.
+          const hostIdx = sectionsToSave.findIndex((s) => s.id === host.id);
+          const window = sectionsToSave.slice(Math.max(0, hostIdx - 1), hostIdx + 2);
+          const nearbyContent = window.map((s) => JSON.stringify(s.config ?? {})).join(" ");
+          const nearbyDevices: ("sequence" | "state_contrast" | "distributed_network")[] = [];
+          for (const s of window) {
+            const v = (s.config as { variant?: string }).variant;
+            if (s.type === "agenda" || v === "process_flow") nearbyDevices.push("sequence");
+            if (s.type === "comparison" || s.type === "before_after" || v === "before_after") {
+              nearbyDevices.push("state_contrast");
+            }
+          }
           const resolved = resolveVisualSource(beat, {
             category: authenticityCategory,
             // Photography for this concept was already attempted and placed
             // above where it qualified; re-searching here would only give the
             // same rejected candidates a second hearing.
             photos: [],
+            nearbyContent,
+            nearbyDevices,
           });
           if (resolved.source === "constructed" && resolved.shape) {
             drawn.set(host.id, { shape: resolved.shape, caption: beat.concept });

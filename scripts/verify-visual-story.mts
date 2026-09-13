@@ -188,5 +188,41 @@ const base: SourceInventory = { category: "b2b_services", photos: [] };
   check("a concept no medium can carry ends text-led", resolved.source === "text_led", resolved.source);
 }
 
+// ── 3. A visual must add something the page does not already say ────────────
+console.log("\n══ a drawing that redraws the page is declined ══");
+{
+  // THE FAILURE THE FIRST RENDER SHOWED. A drawn 1-2-3 sequence shipped
+  // immediately above a process section that said the same thing with real
+  // step labels. The concept was sound; the visual was redundant.
+  const mech = beats.find((b) => b.visualJob === "explain_mechanism")!;
+  const alone = resolveVisualSource(mech, base);
+  check("a mechanism beat can be drawn when nothing else says it", alone.source === "constructed", alone.source);
+
+  const beside = resolveVisualSource(mech, { ...base, nearbyDevices: ["sequence"] });
+  check("but not beside a process section that already renders one", beside.source !== "constructed", `${beside.source} — ${beside.reason}`);
+
+  const said = resolveVisualSource(mech, { ...base, nearbyContent: mech.concept });
+  check("and not where the copy already communicates it", said.source !== "constructed", `${said.source} — ${said.reason}`);
+}
+{
+  // THE SHAPE FOLLOWS THE RELATIONSHIP, NOT THE JOB.
+  const bottleneck = { ...problemBeat, visualJob: "explain_mechanism" as const, concept: "every decision routes back through the owner" };
+  check("a mechanism about a bottleneck is not drawn as a sequence", resolveVisualSource(bottleneck, base).shape === "hub_bottleneck", resolveVisualSource(bottleneck, base).shape ?? "");
+  const spread = { ...problemBeat, visualJob: "explain_mechanism" as const, concept: "responsibility is distributed across the team" };
+  check("one about distributed ownership is drawn as a network", resolveVisualSource(spread, base).shape === "distributed_network");
+  const steps = { ...problemBeat, visualJob: "make_future_tangible" as const, concept: "we walk your delivery path end to end, stage by stage" };
+  check("and one that really is ordered steps is drawn as a sequence", resolveVisualSource(steps, base).shape === "sequence");
+}
+{
+  // PHOTOGRAPHY ANSWERS THE SAME QUESTION AS THE DRAWING.
+  const generic = "Businessman on a video call with a laptop in a modern office";
+  check(
+    "a generic business photo is not about the bottleneck concept",
+    !photoWouldQualify(problemBeat.concept, generic),
+  );
+  const resolved = resolveVisualSource(problemBeat, { ...base, photos: [{ url: "g", alt: generic }] });
+  check("so it does not take the beat", resolved.source !== "contextual_photo", resolved.source);
+}
+
 console.log(failures === 0 ? "\nVISUAL STORY: ALL CHECKS PASSED\n" : `\nVISUAL STORY: ${failures} FAILED\n`);
 process.exit(failures === 0 ? 0 : 1);
