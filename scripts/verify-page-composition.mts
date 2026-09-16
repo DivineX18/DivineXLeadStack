@@ -551,10 +551,14 @@ console.log("\n══ a service area is not an organisation ══");
   check("validate strips it from section badges too", section.length === 1 && section[0] === "Privacy protected", section.join(" | "));
 }
 {
-  // A BADGE IS CUT AT A WORD, NEVER THROUGH ONE. Summit's fold shipped
-  // "Written recommendation, not a sales quot" — the 40-character cap applied
-  // to a 41-character line, which turns honest copy into a visible typo in the
-  // most-read part of the page.
+  // A BADGE IS A COMPLETE THOUGHT, OR IT IS DROPPED.
+  //
+  // This check used to assert the intermediate fix: a 41-character line cut
+  // back to the last whole word, giving "Written recommendation, not a sales".
+  // That removed the typo and kept the real defect — a sentence that stops.
+  // Northstar later shipped "Application only, we take a limited" the same way,
+  // which is how an invented capacity cap reached the fold wearing a shorter
+  // coat. Compression is now only ever a leading clause that stands alone.
   const { getCapability } = await import("../src/lib/ai-suite/capabilities.ts");
   const v = getCapability("create_funnel")!.validate!({
     funnel_name: "Summit Roofing", genre: "lead_gen",
@@ -563,7 +567,8 @@ console.log("\n══ a service area is not an organisation ══");
     hero_trust_badges: ["Written recommendation, not a sales quote", "Free, no obligation"],
   } as never) as { ok: boolean; args: Record<string, unknown> };
   const badges = (v.args.heroTrustBadges ?? []) as string[];
-  check("an over-long badge is trimmed to a whole word", badges[0] === "Written recommendation, not a sales", badges[0]);
+  check("an over-long badge compresses to a complete leading clause", badges[0] === "Written recommendation", badges[0]);
+  check("... and never ends on a dangling word", !/\b(a|an|the|not|and|or|of|to|for|with)$/i.test(badges[0] ?? ""), badges[0]);
   check("every badge still fits the cap", badges.every((b) => b.length <= 40), badges.join(" | "));
   check("a badge that fits is untouched", badges[1] === "Free, no obligation", badges[1]);
 }

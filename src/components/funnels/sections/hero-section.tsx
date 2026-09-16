@@ -35,6 +35,7 @@ const FOLD_MEDIA = "max-h-[32svh] w-auto object-contain";
 import { DeviceFrame } from "./device-frame";
 import { DocumentShowcase } from "./composition";
 import { MediaPlaceholder } from "./media-placeholder";
+import { heroForeground, heroOnPhotography } from "@/lib/funnels/hero-foreground";
 
 function MediaBlock({
   config,
@@ -163,28 +164,30 @@ export function HeroSection({
   const layout = hasMediaIntent ? (config.layout ?? "centered") : "centered";
   const form = config.formId && forms ? forms[config.formId] : null;
 
+  // ONE ANSWER TO "AM I ON PHOTOGRAPHY?", CONSUMED BY EVERY FOREGROUND ELEMENT.
+  // Asked per element, it was answered wrong by every element that forgot to
+  // ask — see lib/funnels/hero-foreground.ts.
+  const fg = heroForeground(heroOnPhotography(config, layout), accentColor);
+
   const eyebrow = config.eyebrow && (
-    <p
-      className="mb-6 inline-block rounded-full border px-4 py-1.5 text-sm font-semibold tracking-tight"
-      style={{
-        backgroundColor: `${accentColor}14`,
-        color: accentColor,
-        borderColor: `${accentColor}33`,
-      }}
-    >
+    <p className={fg.eyebrowClass} style={fg.eyebrowStyle}>
       {config.eyebrow}
     </p>
   );
 
   const headlineNode = (
-    <GradientHeadline headline={config.headline} accentPhrase={config.headlineAccent} gradient={headlineGradient} />
+    <GradientHeadline
+      headline={config.headline}
+      accentPhrase={config.headlineAccent}
+      gradient={fg.allowHeadlineGradient ? headlineGradient : undefined}
+    />
   );
 
   const bulletsNode = config.bullets && config.bullets.length > 0 && (
     <ul className="mx-auto mt-6 flex max-w-xl flex-col items-center gap-2 text-left sm:items-start">
       {config.bullets.map((b, i) => (
-        <li key={i} className="flex items-start gap-2.5 text-sm opacity-85">
-          <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: accentColor }} />
+        <li key={i} className={fg.bulletTextClass}>
+          <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: fg.markColor }} />
           <span>{b}</span>
         </li>
       ))}
@@ -192,10 +195,10 @@ export function HeroSection({
   );
 
   const trustNode = config.trustBadges && config.trustBadges.length > 0 && (
-    <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm opacity-70">
+    <div className={fg.trustRowClass}>
       {config.trustBadges.map((b, i) => (
         <span key={i} className="inline-flex items-center gap-1.5">
-          <Check className="h-4 w-4 shrink-0" style={{ color: accentColor }} />
+          <Check className="h-4 w-4 shrink-0" style={{ color: fg.markColor }} />
           <span>{b}</span>
         </span>
       ))}

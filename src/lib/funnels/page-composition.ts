@@ -565,9 +565,14 @@ function carriesRealImagery(section: FunnelSection): boolean {
 
 /** Does this section already render a composed proof visual? */
 function carriesProofVisual(section: FunnelSection): boolean {
-  const v = (section.config as { variant?: string; proofShowcase?: { items?: unknown[] } }).variant;
+  const cfg = section.config as { variant?: string; proofShowcase?: { items?: unknown[] }; beatVisual?: unknown };
+  const v = cfg.variant;
   if (v === "document_showcase" || v === "process_flow" || v === "deliverable_preview") return true;
-  return !!(section.config as { proofShowcase?: { items?: unknown[] } }).proofShowcase?.items?.length;
+  // A beat visual the visual story placed IS something the reader will see, so
+  // a page carrying one is not a page with nothing on it. Missing this made the
+  // fold-substitute below fire on pages that already had a visual beat.
+  if (cfg.beatVisual) return true;
+  return !!cfg.proofShowcase?.items?.length;
 }
 
 function allocateProofBeat(sections: FunnelSection[], ctx: PageCompositionContext): FunnelSection[] {
@@ -609,6 +614,15 @@ function allocateProofBeat(sections: FunnelSection[], ctx: PageCompositionContex
     const enoughImagesToAlternate = items.filter((it) => it.imageUrl).length >= Math.ceil(items.length / 2);
     const cannotHonourImageVariant = cfg.variant === "alternating_image" && !enoughImagesToAlternate;
     if (cfg.variant !== undefined && !cannotHonourImageVariant) return s;
+    // THE VISUAL STORY ALREADY DECIDED THIS SECTION.
+    //
+    // Re-varianting it into a showcase or a process flow would replace a visual
+    // chosen for this beat's concept with one chosen for the page's category,
+    // which is the two-authorities problem the visual story exists to end. It
+    // also silently contradicts the resolver: a grid that has a drawing beside
+    // it would become a drawn sequence, and the resolver declined a sequence
+    // there precisely because the cards already enumerate.
+    if (cfg.beatVisual) return s;
     // The section already carries enough of its own photography; proof is not
     // its job.
     if (enoughImagesToAlternate && items.length > 0) return s;
@@ -757,6 +771,65 @@ export function composePage(
  * Critic. Deliberately factual: it counts shapes and repeats, and asserts
  * nothing about taste.
  */
+/**
+ * SECTIONS THAT ORIENT THEMSELVES.
+ *
+ * Not every section needs a heading, and adding one where the component already
+ * answers "what am I looking at?" makes a page noisier, not clearer. An FAQ and
+ * an agenda print their own headings; a problem/solution prints "The problem"
+ * and "The fix"; a comparison labels its own columns; a story opens with a
+ * byline; a proof strip, a guarantee badge and a price card are recognisable on
+ * sight. Requiring a heading on any of these would manufacture exactly the
+ * generic copy this codebase spends its effort removing.
+ *
+ * What is NOT here is the short list that renders as an unlabelled block of
+ * content: a benefits grid, an included list, a value stack, and an offer card
+ * carrying neither a heading nor a price.
+ */
+const SELF_ORIENTING_SECTIONS = new Set<string>([
+  "hero", "faq", "agenda", "cta_banner", "problem_solution", "before_after",
+  "comparison", "story", "proof_strip", "trust_badges", "business_footer",
+  "photo_gallery", "testimonials", "stats", "guarantee", "countdown", "video",
+  "multi_step_form", "checkout", "ticket_tiers", "upsell_offer", "callout",
+  "image_text", "team",
+]);
+
+/**
+ * EVERY VISIBLE SECTION MUST TELL THE READER WHAT IT IS.
+ *
+ * A deterministic check, not a taste judgement: a section a visitor can see,
+ * which neither self-orients nor carries a heading, is ambiguous on the page.
+ * Booking shipped a conversion card that opened with blank space above a bullet
+ * list; Northstar shipped a framed five-item document nobody had named. Both
+ * were invisible to every existing check because both were "complete" —
+ * completeness asks whether a section has content, this asks whether the reader
+ * can tell what the content IS.
+ *
+ * Invisible sections are excluded by construction: a section the renderer drops
+ * cannot confuse anyone, and demanding a heading for one would be the same
+ * mistake the persuasion-role invariant already corrected.
+ */
+export function findUnorientedSections(
+  sections: FunnelSection[],
+): { id: string; sectionType: string; reason: string }[] {
+  const out: { id: string; sectionType: string; reason: string }[] = [];
+  for (const s of sections) {
+    if (!sectionHasRenderableContent(s)) continue;
+    if (SELF_ORIENTING_SECTIONS.has(s.type)) continue;
+    const c = s.config as { headline?: string; priceCents?: number };
+    if (c.headline?.trim()) continue;
+    // A price is an orientation mechanism in its own right — a card leading
+    // with "$49" is not ambiguous about what it is.
+    if (typeof c.priceCents === "number" && c.priceCents > 0) continue;
+    out.push({
+      id: s.id,
+      sectionType: s.type,
+      reason: "renders to the visitor with no heading and nothing that self-identifies it",
+    });
+  }
+  return out;
+}
+
 export function describePageRhythm(sections: FunnelSection[]): {
   families: LayoutFamily[];
   longestRun: number;

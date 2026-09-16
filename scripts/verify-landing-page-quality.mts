@@ -57,8 +57,14 @@ const check = (label: string, ok: boolean, detail = "") => {
   if (!ok) failures++;
 };
 
-/** The five fixtures — one shared definition (scripts/fixtures). */
-const { FIXTURES } = await import("./fixtures/landing-page-fixtures.mts");
+/** The five fixtures — one shared definition (scripts/fixtures).
+ *  FIXTURE=<id[,id]> narrows the run to one page. Judging a single fixture
+ *  closely is the normal shape of a visual-design pass; generating all five to
+ *  look at one of them spends four model calls to learn nothing. */
+const { FIXTURES: ALL_FIXTURES } = await import("./fixtures/landing-page-fixtures.mts");
+const only = (process.env.FIXTURE ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+const FIXTURES = only.length > 0 ? ALL_FIXTURES.filter((f) => only.includes(f.id)) : ALL_FIXTURES;
+if (FIXTURES.length === 0) throw new Error(`FIXTURE matched nothing. Known ids: ${ALL_FIXTURES.map((f) => f.id).join(", ")}`);
 
 const RUN = `lpq${Date.now()}`;
 const AGENCY = `test-agency-${RUN}`;
@@ -77,6 +83,17 @@ await db.doc(`subAccounts/${SA}`).set({
 });
 
 try {
+  // ── Preflight: nothing may be inherited ─────────────────────────────────
+  //
+  // Runs before a single page is generated. A workspace holding another
+  // business's approved photography would lend it to every fixture and make
+  // the run look better than the generator earned — see cert-workspace.mts.
+  {
+    const { assertCleanCertificationWorkspace } = await import("./cert-workspace.mts");
+    await assertCleanCertificationWorkspace(SA);
+    console.log(`\n══ preflight ══\nPASS workspace ${SA} is clean — nothing inherited`);
+  }
+
   // ── Generate + publish through the real path ────────────────────────────
   console.log("\n══ generating ══");
   const funnel = getCapability("create_funnel")!;

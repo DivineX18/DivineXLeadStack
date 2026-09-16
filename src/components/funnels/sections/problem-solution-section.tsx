@@ -1,5 +1,7 @@
 import { X, Check } from "lucide-react";
 import type { ProblemSolutionConfig } from "@/types/funnels";
+import { SplitLayout } from "./composition";
+import { BeatVisual } from "./concept-visual";
 
 export function ProblemSolutionSection({
   config,
@@ -11,6 +13,70 @@ export function ProblemSolutionSection({
   // No valid content -> render NOTHING on the customer-facing page (never
   // an empty band or a builder message).
   if (!config.problemText && !config.solutionText) return null;
+
+  // THE BELIEF SHIFT, BESIDE THE PICTURE OF IT.
+  //
+  // This section is where most pages carry the argument a visual can actually
+  // help with — the cost of the current state — and a narrative column with a
+  // diagram underneath it reads as two separate things. Composed as a split,
+  // the claim and its picture are one beat. Only the stacked narrative takes
+  // the split: `before_after` is ALREADY a state-contrast device drawn with the
+  // page's own words, which is why the resolver declines to draw a second one
+  // beside it.
+  const beat = config.variant !== "before_after" ? config.beatVisual : undefined;
+  if (beat) {
+    return (
+      <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>
+        <SplitLayout
+          className="mx-auto max-w-6xl"
+          mediaSide={beat.side ?? "right"}
+          media={<BeatVisual visual={beat} accentColor={accentColor} />}
+        >
+          <div className="flex flex-col gap-5">
+            <div>
+              <span className="mb-3 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest opacity-50">
+                <X className="h-3.5 w-3.5" /> The problem
+              </span>
+              {config.problemHeadline && (
+                <h3
+                  className="text-balance font-extrabold tracking-tight"
+                  style={{ fontSize: "clamp(1.4rem, 3.2vw, 2rem)", lineHeight: 1.14 }}
+                >
+                  {config.problemHeadline}
+                </h3>
+              )}
+              {config.problemText && (
+                <p className="mt-3 text-[1.08rem] leading-relaxed opacity-80">{config.problemText}</p>
+              )}
+            </div>
+            <div
+              className="h-9 w-px"
+              style={{ background: `linear-gradient(to bottom, transparent, ${accentColor})` }}
+            />
+            <div>
+              <span
+                className="mb-3 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest"
+                style={{ color: accentColor }}
+              >
+                <Check className="h-3.5 w-3.5" /> The fix
+              </span>
+              {config.solutionHeadline && (
+                <h3
+                  className="text-balance font-extrabold tracking-tight"
+                  style={{ fontSize: "clamp(1.4rem, 3.2vw, 2rem)", lineHeight: 1.14 }}
+                >
+                  {config.solutionHeadline}
+                </h3>
+              )}
+              {config.solutionText && (
+                <p className="mt-3 text-[1.08rem] leading-relaxed opacity-90">{config.solutionText}</p>
+              )}
+            </div>
+          </div>
+        </SplitLayout>
+      </section>
+    );
+  }
   // Art-direction variant: "before_after" — the transformation VISUALIZED as
   // two strongly contrasting panels with a directional transition (muted
   // "before" state → accent-bright "after" state). Used by urgent campaigns

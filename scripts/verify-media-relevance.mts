@@ -17,7 +17,7 @@
  *
  *   npx tsx scripts/verify-media-relevance.mts
  */
-import { countMediaMatches, mediaIsRelevant, scoreActionFit, selectRelevantMedia } from "../src/lib/funnels/media-intent.ts";
+import { countMediaMatches, mediaIsRelevant, scoreActionFit, selectRelevantMedia, matchesServiceDomain } from "../src/lib/funnels/media-intent.ts";
 
 let failures = 0;
 const check = (label: string, ok: boolean, detail = "") => {
@@ -178,16 +178,16 @@ console.log("\n══ the brief describes the work, not the strategy ══");
   const realEstate =
     "Real estate agent greeting a client at the entrance of a new home, symbolizing a welcoming embrace for potential buyers.";
   check("the real-estate photograph no longer qualifies for any slot", !intents.some((i) => rel(i, realEstate)));
-  // THE ANGLE'S OWN WORDS ARE NOT EVIDENCE. Judged against the full brief this
-  // same photograph scored two matches, on "client" and "home" — both supplied
-  // by the planner, neither about the business.
-  const angled = intents.find((i) => /homeowner or client/.test(i.subject));
-  check(
-    "the angle's vocabulary cannot qualify a photograph on its own",
-    !!angled && mediaIsRelevant({ subject: angled.subject }, realEstate) && !rel(angled, realEstate),
-    angled?.subject ?? "no angled slot",
-  );
-  // ... and a business that DOES describe its work still gets briefs.
+  // PERSUASION COPY NO LONGER REACHES THE BRIEF AT ALL.
+  //
+  // This context is the consultant generation verbatim: no media_subject, no
+  // hero brief, only a headline and a mechanism. It used to yield intents built
+  // from the HEADLINE, which is how "Find Out Where Delivery Breaks" matched a
+  // photograph of takeaway coffee cups captioned "perfect for takeout or
+  // delivery". A business that never described its work now asks for nothing.
+  check("persuasion-only context produces no intents at all", intents.length === 0, `${intents.length} intents`);
+  // ... and a business that DOES describe its work still gets briefs, where the
+  // angle-vocabulary rule can actually be exercised.
   const real = planMediaIntents(
     {
       businessName: "Summit Roofing",
@@ -198,6 +198,24 @@ console.log("\n══ the brief describes the work, not the strategy ══");
       authenticityCategory: "local_service_trade",
     },
     { hero: true, benefitCount: 3 },
+  );
+  // THE ANGLE'S OWN WORDS ARE NOT EVIDENCE. Judged against the full brief the
+  // real-estate photograph scored two matches, on "client" and "home" — both
+  // supplied by the planner, neither about the business.
+  const angled = real.find((i) => /homeowner or client/.test(i.subject));
+  // This used to assert that the angle's words COULD qualify the photograph
+  // when judged against the full brief, and that only `subjectCore` saved us.
+  // The domain anchor removes that possibility entirely: "real estate agent
+  // greeting a client at the entrance of a new home" shares no roofing word,
+  // so it is refused against the angled brief too. Strictly stronger.
+  check(
+    "the angle's vocabulary cannot qualify a photograph on its own",
+    !!angled && !rel(angled, realEstate),
+    angled?.subject ?? "no angled slot",
+  );
+  check(
+    "... and identity refuses it regardless of term count",
+    !matchesServiceDomain("residential roof inspection", realEstate),
   );
   check("a described business still gets its photo briefs", real.length === 4, `${real.length} intents`);
   check(
@@ -296,3 +314,84 @@ console.log("\n══ a contextual photograph is not evidence ══");
 
 console.log(failures === 0 ? "\nMEDIA RELEVANCE: ALL CHECKS PASSED\n" : `\nMEDIA RELEVANCE: ${failures} FAILED\n`);
 process.exit(failures === 0 ? 0 : 1);
+
+// ── DOMAIN IDENTITY, NOT PROSE VOCABULARY ──────────────────────────────────
+//
+// Three photographs qualified on a word that was TRUE of the business and did
+// not identify it: "delivery" (coffee cups), "residential" (a courier), and
+// "Houston"+"photograph" (a street photographer). Each time the fix extracted
+// better words from the same descriptive prose, and each time the prose
+// contained something else that matched. The anchor now comes from a dedicated
+// service_domain field whose only job is to name the trade.
+console.log("\n══ only the service domain can anchor a photograph ══");
+{
+  const ROOFING = "residential roof inspection and repair";
+  const DENTAL = "general dentistry";
+  const OPS = "operations strategy consulting";
+
+  // ROOFING — accept the trade, decline everything merely adjacent to it.
+  check("roofers replacing shingles", matchesServiceDomain(ROOFING, "Roofers replacing shingles on a residential roof"));
+  check("roofer inspecting a residential roof", matchesServiceDomain(ROOFING, "Roofer inspecting damaged shingles on a residential roof"));
+  check("Houston street photographer DECLINED", !matchesServiceDomain(ROOFING, "A professional photographer takes pictures on a busy street in downtown Houston, TX."));
+  check("delivery worker at a Houston home DECLINED", !matchesServiceDomain(ROOFING, "Man in a hi-vis vest delivering a parcel to a residential home in Houston"));
+  check("construction worker indoors DECLINED", !matchesServiceDomain(ROOFING, "Construction worker standing inside an unfinished building"));
+
+  // DENTAL.
+  check("dentist examining a patient", matchesServiceDomain(DENTAL, "Dentist examining a patient in a dental clinic"));
+  check("dental hygienist with a patient", matchesServiceDomain(DENTAL, "Dental hygienist cleaning a patient's teeth"));
+  check("medical receptionist without dental context DECLINED", !matchesServiceDomain(DENTAL, "Medical receptionist greeting a visitor at a clinic front desk"));
+
+  // OPERATIONS CONSULTING — generic office imagery identifies nothing.
+  check("generic laptop meeting DECLINED", !matchesServiceDomain(OPS, "Businessman on a video call with a laptop in a modern office"));
+  check("handshake DECLINED", !matchesServiceDomain(OPS, "Two professionals shaking hands in a conference room"));
+
+  // POLYSEMY: the words that broke this three times cannot anchor anything,
+  // because none of them appears in a declared service domain.
+  for (const word of ["delivery", "application", "pipeline", "traffic", "conversion", "engagement", "lead", "closing"]) {
+    check(
+      `"${word}" cannot anchor a roofing page`,
+      !matchesServiceDomain(ROOFING, `A stock photograph about ${word} in a modern setting`),
+    );
+  }
+
+  // LOCATION AND ACTIVITY INSIDE THE DOMAIN FIELD still cannot anchor: a model
+  // that writes "roof inspection in Houston" anchors on roofing, never on the city.
+  check("a city inside the domain does not anchor", !matchesServiceDomain("roof inspection in Houston", "A busy street in downtown Houston, TX"));
+  check("... while the trade still does", matchesServiceDomain("roof inspection in Houston", "Roof inspection on a residential property"));
+
+  // SAFE FAILURE: no declared domain, no stock photography.
+  check("no domain declared means nothing anchors", !matchesServiceDomain("", "Roofers replacing shingles on a residential roof"));
+  check("an all-generic domain anchors nothing", !matchesServiceDomain("professional local service business", "A professional at a local business"));
+}
+
+// ── SOMEBODY ELSE'S PREMISES ────────────────────────────────────────────────
+//
+// A certified Booking page carried two photographs of a dental reception with a
+// DIFFERENT practice's wordmark legible on the wall. On-domain, honest, and it
+// implies the customer is a business they have never heard of.
+//
+// This is a PROXY and is labelled as one: we cannot read pixels, and the alts
+// described a dentist and a patient, never the logo. What is declined is the
+// shot TYPE where third-party branding reliably appears.
+console.log("\n══ premises shots are declined; the work is not ══");
+{
+  const { depictsBrandedPremises } = await import("../src/lib/funnels/visual-source.ts");
+  for (const branded of [
+    "Woman at the reception desk of a modern dental clinic",
+    "Receptionist greeting a patient at a dental practice front desk",
+    "Storefront of a local business with signage above the entrance",
+    "Branded delivery van parked outside a house",
+    "Close up of a company logo on an office wall",
+  ]) {
+    check(`declined: "${branded.slice(0, 44)}…"`, depictsBrandedPremises(branded));
+  }
+  // THE WORK BEING PERFORMED is unaffected — no premises claim is made.
+  for (const work of [
+    "Dentist in gloves talking with a patient in a treatment room",
+    "Roofers working on a brick home addressing shingles",
+    "Inspector examining damaged shingles on a residential roof",
+    "Baker kneading sourdough in a kitchen",
+  ]) {
+    check(`kept: "${work.slice(0, 44)}…"`, !depictsBrandedPremises(work));
+  }
+}

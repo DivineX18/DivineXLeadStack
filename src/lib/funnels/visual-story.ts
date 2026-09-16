@@ -1,3 +1,4 @@
+import { completeThoughtWithin } from "@/lib/funnels/display-text";
 import type { FunnelSection } from "@/types/funnels";
 
 /**
@@ -61,6 +62,13 @@ export interface VisualBeat {
   /**
    * THE PROPOSITION, not a query. Passed to every source rung, each of which
    * attempts it in its own medium.
+   *
+   * HELD IN FULL, NEVER PRE-TRIMMED. It used to be capped at 180 characters
+   * here because it doubles as a caption, and that cost a real visual: the
+   * relationship a page asserts is often in its last clause, so a belief-shift
+   * ending "...and you end up back to sticky notes" had the only words naming
+   * the relationship cut off before the shape matcher ever saw them. Shortening
+   * for display is the renderer's job — see `captionFor`.
    */
   concept: string;
   /** The job of the visual immediately before this one, so a planner and a
@@ -99,11 +107,26 @@ const ROLE_TO_JOB: Record<string, VisualJob> = {
   risk_reversal: "reduce_uncertainty",
 };
 
-/** Trim a verified sentence to a proposition without rewriting it. */
+/** The verified sentence, normalised but NOT shortened. */
 function proposition(text: string | null | undefined): string | null {
   const t = (text ?? "").trim().replace(/\s+/g, " ");
-  if (t.length < 12) return null;
-  return t.length <= 180 ? t : `${t.slice(0, 177).replace(/[,;:\s]+\S*$/, "")}…`;
+  return t.length < 12 ? null : t;
+}
+
+/**
+ * The same proposition as a caption a reader can take in at a glance.
+ *
+ * Applied at the point a visual is WRITTEN, not when the beat is planned, so
+ * that nothing downstream ever matches a shape against shortened text.
+ */
+export function captionFor(text: string): string {
+  const clean = text.trim().replace(/\s+/g, " ");
+  if (clean.length <= 180) return clean;
+  // A caption wraps, so length is a readability preference rather than a hard
+  // limit — but it is still generated prose shown to a visitor, so it obeys the
+  // same contract as every other shortened string: a whole clause or nothing.
+  // Never a character cut with an ellipsis standing in for the missing half.
+  return completeThoughtWithin(clean, 180) ?? clean;
 }
 
 /**

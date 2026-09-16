@@ -305,6 +305,9 @@ export interface StoryConfig {
   byline: string;
   paragraphs: string[];
   photoUrl?: string;
+  /** The visual for this section's persuasion beat — see BeatVisualConfig.
+   *  Distinct from `photoUrl`, which is the byline's small round portrait. */
+  beatVisual?: BeatVisualConfig;
   /** Honest labeled placeholder ("Add founder photo") shown when the
    *  archetype expects a founder photo but none was supplied. Ignored once
    *  photoUrl is set. */
@@ -484,6 +487,14 @@ export interface BenefitsGridConfig {
    *  mechanism's sequence. Both render the items already present — neither
    *  invents content or needs an asset. */
   variant?: "flowing_checklist" | "alternating_image" | "document_showcase" | "process_flow";
+  /** The visual for this section's persuasion beat — see BeatVisualConfig.
+   *  Only ever set on the default checklist variant (the other three ARE a
+   *  composed visual device already). `side` carries "anchor" placement by
+   *  being absent on a grid too long to split. */
+  beatVisual?: BeatVisualConfig;
+  /** Set when the beat visual LEADS the section rather than sitting beside it
+   *  — a transition the cards beneath then detail. */
+  beatVisualAnchored?: boolean;
 }
 export type BenefitIconType =
   | "check"
@@ -499,11 +510,35 @@ export type BenefitIconType =
  *  offer solves it. Covers both the "Problem" and "Solution" framework
  *  stages in one section (splitting them into two separate sections read
  *  as redundant in practice). */
+/**
+ * ONE BEAT'S VISUAL, PLACED INSIDE ITS OWN SECTION.
+ *
+ * Written by the visual story (lib/funnels/visual-story.ts and visual-source.ts)
+ * onto the section whose ARGUMENT the visual supports, so the reader meets the
+ * claim and the picture of the claim as one beat. Absent on every section that
+ * did not earn one, which is most of them — see visual-placement.ts for why a
+ * section with no honest slot stays text-led rather than receiving a band.
+ *
+ * `caption` is the page's own proposition, never invented copy. A drawn visual
+ * carries `shape`; a photographic one carries `url` + `alt`; never both.
+ */
+export interface BeatVisualConfig {
+  shape?: string;
+  url?: string;
+  alt?: string;
+  caption: string;
+  /** Which side the visual takes at desktop width. Assigned across the page so
+   *  two split beats cannot both open on the same side. */
+  side?: "left" | "right";
+}
+
 export interface ProblemSolutionConfig {
   problemHeadline: string;
   problemText: string;
   solutionHeadline: string;
   solutionText: string;
+  /** The visual for this section's persuasion beat — see BeatVisualConfig. */
+  beatVisual?: BeatVisualConfig;
   /** Art-direction layout variant. "stacked" (default) = the centered
    *  flowing problem → turn → solution narrative. "before_after" = two
    *  contrasting panels with a directional transition (the visualized
@@ -584,6 +619,8 @@ export interface StatsConfig {
 export interface CalloutConfig {
   text: string;
   tone?: "info" | "highlight";
+  /** The visual for this section's persuasion beat — see BeatVisualConfig. */
+  beatVisual?: BeatVisualConfig;
 }
 
 /** Multiple people — distinct from StoryConfig, which is one operator's
@@ -735,10 +772,34 @@ export interface FunnelSection {
    *  to answer "what persuasion job would be lost if this disappeared?" —
    *  stored so the answer lives in data, not in a discarded prompt. */
   argumentRole?: string;
-  /** The specific belief (verbatim from salesArgument.beliefChain) this
-   *  section is responsible for establishing — the data-level proof the
-   *  belief chain is CONSUMED by composition, not decorative. */
+  /**
+   * THE ONE belief (verbatim from salesArgument.beliefChain) this section is
+   * primarily responsible for establishing — the data-level proof the belief
+   * chain is CONSUMED by composition, not decorative.
+   *
+   * ALWAYS A SINGLE COHERENT PROPOSITION. It used to hold several beliefs
+   * joined with " + " when one section absorbed the remainder of the chain,
+   * and that serialization reached a visitor: the constructed visual on a
+   * Summit page captioned itself "…so no one is pushing a sale + If I only
+   * need a small repair, they'll tell me that…", because a drawn visual's
+   * caption is the beat's concept and the beat's concept is this field.
+   *
+   * Downstream reasoning (VisualBeat concepts, captions, redundancy checks)
+   * treats this as one proposition, so it must BE one. Extra beliefs go in
+   * `alsoServesBeliefs`, structurally.
+   */
   servesBelief?: string;
+  /**
+   * Additional beliefs this section also establishes, when the chain has more
+   * steps than it has rendered carriers.
+   *
+   * An array rather than more prose, deliberately: the previous design encoded
+   * exactly this list into `servesBelief` with a delimiter, which made every
+   * consumer that wanted "the proposition" silently receive a concatenation.
+   * Kept so coverage is not lost — a belief nobody is responsible for is a hole
+   * in the argument — while leaving the primary proposition usable on its own.
+   */
+  alsoServesBeliefs?: string[];
 }
 
 export interface FunnelDoc {

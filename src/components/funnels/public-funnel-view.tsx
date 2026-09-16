@@ -22,7 +22,6 @@ import { CheckoutSection } from "./sections/checkout-section";
 import { UpsellOfferSection } from "./sections/upsell-offer-section";
 import { VideoSection } from "./sections/video-section";
 import { BenefitsGridSection } from "./sections/benefits-grid-section";
-import { ConceptVisual } from "./sections/concept-visual";
 import { ProblemSolutionSection } from "./sections/problem-solution-section";
 import { BeforeAfterSection } from "./sections/before-after-section";
 import { IncludedSection } from "./sections/included-section";
@@ -290,13 +289,12 @@ export function PublicFunnelView({
           const bgStyle = section.canvas
             ? canvasWrapStyle(section.canvas, dark, funnel.accentColor)
             : backgroundWrapStyle(backgroundForIndex(tokens, i), dark, funnel.accentColor);
-          // THE DRAWN BEAT. A constructed visual belongs to the section whose
-          // argument it supports, so it renders inside that section's own
-          // background band — the reader meets the claim and the picture of
-          // the claim as one beat, not as a diagram floating between two
-          // sections. See visual-story.ts for how the pairing is decided.
-          const conceptVisual = (section.config as { conceptVisual?: { shape: string; caption: string } })
-            .conceptVisual;
+          // NOTE: a beat's visual is NOT rendered here. It used to be — as a
+          // band appended under the host section — and that is precisely what
+          // made a load-bearing diagram read as a footnote. A visual now
+          // participates in its section's own composition (see
+          // lib/funnels/visual-placement.ts), so the section component renders
+          // it and the page renderer has nothing to add.
           return (
             <div key={section.id} style={bgStyle}>
               <AnimatedSection level={tokens.animationLevel} index={i}>
@@ -350,15 +348,6 @@ export function PublicFunnelView({
                   iconStyle={tokens.iconStyle}
                   ctaAnimationLevel={tokens.animationLevel}
                 />
-                {conceptVisual && (
-                  <div className="px-4 pb-[var(--flow-py,3rem)]">
-                    <ConceptVisual
-                      shape={conceptVisual.shape as never}
-                      caption={conceptVisual.caption}
-                      accentColor={funnel.accentColor}
-                    />
-                  </div>
-                )}
               </AnimatedSection>
             </div>
           );

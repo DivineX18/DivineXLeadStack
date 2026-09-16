@@ -21,6 +21,7 @@
  *    already wrote; nothing here invents copy, stats, imagery, or proof.
  */
 
+import { completeThoughtWithin } from "@/lib/funnels/display-text";
 import type { FunnelSection, SectionCanvas } from "@/types/funnels";
 import type {
   BenefitsGridConfig,
@@ -217,9 +218,62 @@ const SECTION_ARGUMENT_ROLES: Record<string, string> = {
 };
 
 /** Stamp every section with its argument role. Pure; returns new objects. */
+/**
+ * MAY THIS SECTION BE RE-PRESENTED AS TWO CONTRASTING PANELS?
+ *
+ * Not when the visual story already placed a visual in it. `before_after` is
+ * itself a visual device built from the section's own copy, so applying it over
+ * a beat visual puts two visual treatments on one beat: the renderer then has
+ * to drop one, and it dropped the photograph — a real, relevant image of the
+ * work, discarded in favour of re-typesetting the text beside it.
+ *
+ * The register decision is still honoured everywhere the visual story declined,
+ * which is most pages. Where the two disagree, the medium that shows something
+ * new wins over the one that restates what is already written.
+ */
+function beforeAfterOk(section: FunnelSection): boolean {
+  return !(section.config as { beatVisual?: unknown }).beatVisual;
+}
+
+/**
+ * IF A VISITOR CANNOT SEE IT, IT CANNOT CARRY THE ARGUMENT.
+ *
+ * A persuasion role is a promise that some part of the page performs that job
+ * for the reader. A section that renders nothing performs no job, so stamping
+ * one is a claim the published page does not honour.
+ *
+ * The case that forced this: a `photo_gallery` is created with `images: []` and
+ * an honest "Add photos of your work" placeholder, which is right — the builder
+ * shows the operator where their real photography belongs. But the published
+ * renderer deliberately returns null for an image-less gallery (never a
+ * placeholder dead zone in front of a visitor), while `SECTION_ARGUMENT_ROLES`
+ * handed that same section the `proof` role on type alone. So the page's plan
+ * recorded proof as handled, the visual story's proof beat resolved against a
+ * section nobody sees, and the live page carried no proof beat at all. Northstar
+ * and Marchetti both shipped in that state.
+ *
+ * The rule generalises past galleries, and that is the point: it holds for any
+ * section that exists in the generation model and disappears at render time —
+ * missing media, conditional components, unsupported widgets, emptied content.
+ * `sectionHasRenderableContent` already mirrors the components' own null-render
+ * rules and was already governing belief carriers; roles now use the same gate,
+ * so the two can never disagree again.
+ *
+ * A role is REMOVED, not merely withheld, when a section stops rendering — a
+ * stale role from an earlier stamp is exactly the false claim this prevents. And
+ * the reverse holds: a gallery that later receives real customer media becomes
+ * renderable and is stamped `proof` on the next pass, which is why this gate
+ * reads live config rather than a one-time decision.
+ */
 export function stampArgumentRoles(sections: FunnelSection[]): FunnelSection[] {
   const lastCta = sections.reduce((last, s, i) => (s.type === "cta_banner" ? i : last), -1);
   return sections.map((s, i) => {
+    if (!sectionHasRenderableContent(s)) {
+      if (s.argumentRole === undefined) return s;
+      const rest = { ...s };
+      delete (rest as { argumentRole?: string }).argumentRole;
+      return rest;
+    }
     const role = i === lastCta ? "close" : SECTION_ARGUMENT_ROLES[s.type];
     return role ? { ...s, argumentRole: role } : s;
   });
@@ -425,19 +479,60 @@ export function applySalesArgument(
   // model's own words, not invented copy. Only ever fills a BLANK headline.
   sections = sections.map((s) => {
     if (s.type !== "offer" && s.type !== "checkout") return s;
-    const c = s.config as { headline?: string };
+    const c = s.config as { headline?: string; priceCents?: number };
     if (c.headline?.trim()) return s;
     const promise = plan.corePromise?.trim();
-    if (!promise) return s;
-    // Whole thoughts only. Trimming at a word boundary still shipped
-    // "...a detailed report that protects your" as a live offer heading.
-    // If not even the first clause fits, leave the headline alone rather
-    // than head the offer with a fragment: an unheaded offer is a known,
-    // recoverable state that the completeness rules already describe, and a
-    // sentence that stops mid-thought is not.
-    const headline = fitCompleteThought(promise, 80)?.replace(/[.,;:]\s*$/, "");
-    if (!headline) return s;
+    // Whole thoughts only, in three descending preferences. A punctuation seam
+    // is cleanest; failing that the longest complete word-boundary prefix of the
+    // operator's own promise; failing that a plain label that names the section
+    // rather than a blank one.
+    //
+    // The third rung exists because the first two can both legitimately fail —
+    // a very long unpunctuated promise whose opening words say nothing on their
+    // own — and a card that never says what it is selling is the worst of the
+    // available outcomes. "What you get" introduces no claim; it orients.
+    // ONE CONTRACT — see lib/funnels/display-text.ts. The word-boundary
+    // fallback that used to sit here produced "…the most conversions on your
+    // specific" on a live conversion card: a whole word, not a whole thought.
+    // When no author-terminated clause fits, the label below is the honest
+    // outcome rather than a cleverer cut.
+    const derived = promise ? completeThoughtWithin(promise, 80)?.replace(/[.;:]\s*$/, "") : null;
+    // A PRICE ALREADY ORIENTS THE CARD. A tripwire that leads with "$49" is not
+    // an ambiguous section, so it keeps the operator's chosen silence.
+    if (!derived && typeof c.priceCents === "number" && c.priceCents > 0) return s;
+    const headline = derived || "What you get";
     return { ...s, config: { ...s.config, headline } };
+  });
+
+  /**
+   * A FRAMED ARTIFACT NEEDS A NAME.
+   *
+   * The Northstar page put a browser-framed "EXAMPLE PREVIEW" card of five
+   * items directly below the fold with no heading, because the model left
+   * `headline` empty on a benefits grid and nothing seeded it. A reader cannot
+   * tell whether that card is the deliverable, the agenda, or the qualification
+   * criteria — the strongest composition on the page, unlabelled.
+   *
+   * The label is chosen by VARIANT, because the variant is what the reader is
+   * actually looking at: a framed document, an ordered process, a list. It
+   * describes what is about to be seen and asserts nothing new, which is the
+   * whole bar for a fallback heading. The model's own heading always wins, and
+   * on a normal generation it is present — this only catches the omission.
+   */
+  const GRID_LABEL: Record<string, string> = {
+    document_showcase: "What you get",
+    process_flow: "How it works",
+    alternating_image: "What you get",
+    flowing_checklist: "What you get",
+  };
+  sections = sections.map((s) => {
+    if (s.type !== "benefits_grid" && s.type !== "included" && s.type !== "value_stack") return s;
+    const c = s.config as { headline?: string; variant?: string; items?: unknown[] };
+    if (c.headline?.trim()) return s;
+    if (!Array.isArray(c.items) || c.items.length === 0) return s; // nothing renders; pruning owns this
+    const label =
+      s.type === "benefits_grid" ? (GRID_LABEL[c.variant ?? "flowing_checklist"] ?? "What you get") : "What's included";
+    return { ...s, config: { ...s.config, headline: label } };
   });
 
   const first = chain[0];
@@ -458,19 +553,27 @@ export function applySalesArgument(
     (a, b) =>
       CARRIER_ROLE_PRIORITY[a.s.argumentRole!] - CARRIER_ROLE_PRIORITY[b.s.argumentRole!] || a.idx - b.idx,
   );
-  const beliefByIdx = new Map<number, string>();
+  // A PRIMARY BELIEF, AND ANY IT ALSO ABSORBS — never one string of both.
+  //
+  // The last carrier still absorbs the remainder of the chain (a benefits
+  // section with three items can legitimately establish two beliefs) so every
+  // required belief keeps a responsible rendered section. What changed is the
+  // SHAPE: the remainder used to be `middle.slice(i).join(" + ")`, an array
+  // serialized into prose, and every downstream consumer that asked for "the
+  // belief this section serves" received a concatenation instead. One of them
+  // is the constructed visual's caption, so the delimiter reached a customer.
+  //
+  // Nothing is discarded and no bridging copy is invented; the list is simply
+  // kept as a list.
+  const beliefByIdx = new Map<number, { primary: string; also: string[] }>();
   carrierIdxs.forEach(({ idx }, i) => {
-    if (middle.length === 0) { beliefByIdx.set(idx, first); return; }
+    if (middle.length === 0) { beliefByIdx.set(idx, { primary: first, also: [] }); return; }
     const isLast = i === carrierIdxs.length - 1;
-    // The last carrier ABSORBS any remaining middle beliefs (a benefits
-    // section with 3 items can legitimately establish 2 beliefs) so every
-    // required belief always has a responsible rendered section.
-    beliefByIdx.set(
-      idx,
-      isLast && middle.length > carrierIdxs.length
-        ? middle.slice(i).join(" + ")
-        : middle[Math.min(i, middle.length - 1)],
-    );
+    const absorbs = isLast && middle.length > carrierIdxs.length;
+    beliefByIdx.set(idx, {
+      primary: middle[Math.min(i, middle.length - 1)],
+      also: absorbs ? middle.slice(i + 1) : [],
+    });
   });
 
   return sections.map((s, idx) => {
@@ -483,8 +586,10 @@ export function applySalesArgument(
     if (!canAssignBeliefs) {
       // nothing to assign; the copy-seeding steps below still run
     } else if (role === "hook" && renders) next = { ...next, servesBelief: first };
-    else if (beliefByIdx.has(idx)) next = { ...next, servesBelief: beliefByIdx.get(idx)! };
-    else if ((role === "offer" || role === "action" || role === "close") && renders) {
+    else if (beliefByIdx.has(idx)) {
+      const { primary, also } = beliefByIdx.get(idx)!;
+      next = { ...next, servesBelief: primary, ...(also.length > 0 ? { alsoServesBeliefs: also } : {}) };
+    } else if ((role === "offer" || role === "action" || role === "close") && renders) {
       next = { ...next, servesBelief: last };
     } else if ((role === "objections" || role === "risk_reversal") && renders) {
       next = { ...next, servesBelief: middle[middle.length - 1] ?? last };
@@ -640,7 +745,9 @@ export function applyArtDirection(
           return {
             ...section,
             canvas: "clean" as SectionCanvas,
-            config: { ...(section.config as ProblemSolutionConfig), variant: "before_after" as const },
+            config: beforeAfterOk(section)
+              ? { ...(section.config as ProblemSolutionConfig), variant: "before_after" as const }
+              : (section.config as ProblemSolutionConfig),
           };
         case "benefits_grid":
           return {
@@ -710,7 +817,9 @@ export function applyArtDirection(
           return {
             ...section,
             canvas: "clean" as SectionCanvas,
-            config: { ...(section.config as ProblemSolutionConfig), variant: "before_after" as const },
+            config: beforeAfterOk(section)
+              ? { ...(section.config as ProblemSolutionConfig), variant: "before_after" as const }
+              : (section.config as ProblemSolutionConfig),
           };
         case "benefits_grid":
           return { ...section, canvas: "warm_paper" as SectionCanvas };
@@ -728,7 +837,9 @@ export function applyArtDirection(
       case "problem_solution":
         return {
           ...section,
-          config: { ...(section.config as ProblemSolutionConfig), variant: "before_after" as const },
+          config: beforeAfterOk(section)
+              ? { ...(section.config as ProblemSolutionConfig), variant: "before_after" as const }
+              : (section.config as ProblemSolutionConfig),
         };
       case "cta_banner":
         return i === lastCtaBannerIndex

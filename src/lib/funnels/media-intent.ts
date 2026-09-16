@@ -76,16 +76,10 @@ export interface MediaPlanningContext {
   businessName?: string | null;
   /** What the business actually does, in the operator's own words. */
   whatTheyDo?: string | null;
-  /** The offer being converted on. */
-  offer?: string | null;
   /** Free-text industry/vertical if known. */
   industry?: string | null;
   /** Model-supplied subject, when there is one. Still the strongest signal. */
   explicitSubject?: string | null;
-  /** The sales argument's mechanism: the work this business actually performs.
-   *  Always present on a generated funnel, which is what makes it a reliable
-   *  floor when no explicit subject was written. */
-  mechanism?: string | null;
   authenticityCategory: AuthenticityCategory;
 }
 
@@ -114,27 +108,44 @@ function toSubject(text: string): string {
 }
 
 /**
- * The single most specific description of the work available.
+ * WHAT THE BUSINESS ACTUALLY DOES, IN DESCRIPTIVE TERMS — or nothing.
  *
- * The ladder matters: an explicit subject is the operator's own words and wins.
- * Below it are fields `create_funnel` ALWAYS has, because the previous version
- * stopped at `explicitSubject` and returned null whenever the model happened
- * not to supply one — which was most generations, and was the second half of
- * why deployed pages had no images at all.
+ * PERSUASION LANGUAGE ESTABLISHES THE VISUAL JOB. DESCRIPTIVE BUSINESS TRUTH
+ * ESTABLISHES THE PHOTOGRAPHIC DOMAIN. That split is the whole rule here, and
+ * every entry removed from this ladder was removed for violating it.
+ *
+ * `objective` went first: read as a description of the business, the schema
+ * token "application" produced the brief "application close up detail" and
+ * matched a stock photograph of someone applying green FACE PAINT, which
+ * shipped on a consultant page.
+ *
+ * `offer` — the hero HEADLINE — went next, for exactly the same reason one
+ * round later. An operations page headlined "Find Out Where Delivery Breaks
+ * Before You Double Volume" searched on "Find Out Where Delivery Breaks" and
+ * took a photograph of two takeaway coffee cups, captioned "perfect for takeout
+ * or delivery". Nothing downstream could catch it: the photograph genuinely IS
+ * about delivery, in the other sense of the word. To this business delivery
+ * means order fulfilment; to a stock library it means parcels and coffee.
+ *
+ * `mechanism` went with it. It is a sentence about a PROCESS ("a first visit
+ * that is assessment only, with no treatment on the day") and the dental page
+ * searching on it got back nothing recognisably dental, because the sentence
+ * never says so.
+ *
+ * The survivors all NAME THE WORK rather than argue for it. This is not a
+ * blacklist of ambiguous words — pipeline, traffic, conversion, engagement,
+ * lead and close are all equally dangerous and there is no end to that list.
+ * It is a rule about which FIELDS may speak: a headline is written to persuade,
+ * so whatever domain its words happen to belong to is an accident.
+ *
+ * Returning null is a first-class outcome. A business that never described its
+ * work gets no photograph, and text-led beats wrong-domain every time.
  */
 function coreSubject(ctx: MediaPlanningContext): string | null {
   const ladder = [
-    ctx.explicitSubject,
-    ctx.whatTheyDo,
-    ctx.industry,
-    // The offer line names WHAT THE BUSINESS IS ABOUT, in its own words, and a
-    // photograph of this business should be of that. It sits above the
-    // mechanism now because the mechanism is a sentence describing a PROCESS
-    // ("a first visit that is assessment only, with no treatment on the day"),
-    // which makes a poor photo brief — the dental page searched on it and got
-    // nothing recognisably dental, because the sentence never says so.
-    ctx.offer,
-    ctx.mechanism,
+    ctx.explicitSubject, // the operator's own media_subject
+    ctx.whatTheyDo, //     a description of the work
+    ctx.industry, //       the verified vertical
   ];
   for (const candidate of ladder) {
     const t = candidate?.trim();
@@ -169,6 +180,56 @@ function asPhotoSubject(text: string): string {
  * `benefitCount` is how many benefit rows exist; each gets its OWN intent so
  * they cannot all resolve to the same photograph.
  */
+/**
+ * THE PHOTOGRAPHIC BRIEF FOR ONE VISUAL BEAT.
+ *
+ * The visual story states a beat's need as a PROPOSITION — "a new person
+ * inherits the same unclear handoffs" — which is the right thing to judge a
+ * candidate against and a hopeless thing to search on: a stock provider has no
+ * index for an argument. So the query and the test are separated exactly as
+ * `subject`/`subjectCore` already separates them one level up.
+ *
+ * The QUERY is the business's own work, angled by what the beat is for. The
+ * TEST stays the beat's concept, applied by the resolver — so a photograph that
+ * the provider returned for "roof inspection" still has to be about THIS BEAT
+ * to be placed, and generic business imagery still cannot be.
+ *
+ * Returns null where a photograph could not honestly answer the beat at all:
+ * proof is evidence and a stock photograph of evidence is a fabrication, and a
+ * call to action is not a thing that can be photographed.
+ */
+export function photoBriefForVisualJob(
+  job: string,
+  ctx: MediaPlanningContext,
+): { subject: string; purpose: MediaPurpose } | null {
+  const core = coreSubject(ctx);
+  if (!core) return null;
+  if (!AMBIENT_HONEST.includes(ctx.authenticityCategory)) return null;
+  switch (job) {
+    // The world the reader is in, and the state they are in it. Plain: an angle
+    // added here would be the generator's vocabulary, not the business's.
+    case "recognise_problem":
+    case "show_cost_of_current_state":
+      return { subject: core, purpose: "establish_context" };
+    // The work being performed — the single most useful photograph any service
+    // business has, because it is evidence the service exists and is done by
+    // people.
+    case "explain_mechanism":
+    case "show_what_happens_next":
+      return { subject: `${core} being carried out by a specialist`, purpose: "show_the_work" };
+    case "make_future_tangible":
+    case "show_deliverable":
+      return { subject: `${core} completed`, purpose: "show_the_deliverable" };
+    // Reassurance is a person, where a person is the reassurance.
+    case "answer_objection":
+    case "reduce_uncertainty":
+      return { subject: `${core} with a client present`, purpose: "humanise" };
+    // establish_proof and direct_to_action deliberately absent — see above.
+    default:
+      return null;
+  }
+}
+
 export function planMediaIntents(
   ctx: MediaPlanningContext,
   slots: { hero: boolean; benefitCount: number },
@@ -311,9 +372,97 @@ export function countMediaMatches(intent: Pick<MediaIntent, "subject">, candidat
  * photo costs a little warmth. Placing a wrong one costs the visitor's belief
  * in everything around it.
  */
+/**
+ * WORDS EVERY BUSINESS SHARES, WHICH THEREFORE IDENTIFY NONE OF THEM.
+ *
+ * A Summit page shipped a photograph of a hi-vis courier kneeling in a doorway
+ * holding a parcel, on a roofing fold. It was not a bug in the counting: the
+ * candidate genuinely matched two terms of "residential roof inspection" —
+ * "residential" and a worker cue — and two matches is the bar. Generic trade
+ * vocabulary simply outvoted the only word that meant roofing.
+ *
+ * This is NOT an industry blacklist; there is no "delivery" or "roofing" here,
+ * and there never can be, because the next miss will be a word nobody listed.
+ * It is the same closed, structural idea as STOPWORDS one level up: these words
+ * describe the SETTING that every service business shares, so none of them can
+ * establish WHICH business a photograph is of.
+ */
+const GENERIC_CONTEXT = new Set([
+  "worker", "workers", "professional", "professionals", "specialist", "specialists",
+  "staff", "team", "crew", "employee", "employees", "person", "people", "man", "woman",
+  "customer", "customers", "client", "clients", "homeowner", "homeowners", "patient",
+  "residential", "commercial", "domestic", "industrial", "local",
+  "home", "house", "building", "property", "office", "business", "company",
+  "service", "services", "work", "working", "job", "visit", "appointment",
+  "quality", "expert", "experts", "trusted", "modern", "indoor", "outdoor",
+]);
+
+/**
+ * THE DOMAIN ANCHOR, BUILT FROM IDENTITY RATHER THAN FROM PROSE.
+ *
+ * Three times now a photograph qualified on a word that was TRUE of the
+ * business and did not identify it:
+ *
+ *   "delivery"    -> takeaway coffee cups, on an operations consultancy
+ *   "residential" -> a hi-vis courier at a front door, on a roofing page
+ *   "Houston" + "photograph" -> a street photographer, on a roofing page
+ *
+ * Each time the fix was to extract better words from the same descriptive
+ * prose, and each time the prose contained something else that happened to
+ * match. The prose was never the problem. We were asking one blob of text to
+ * answer two different questions: "why should this visitor buy?" and "what
+ * kind of business is this?". Only the second can anchor a photograph.
+ *
+ * So the anchor now comes from `service_domain` — a dedicated field whose whole
+ * job is to name the trade, as you would brief a photographer. Four categories
+ * of language, one of which qualifies:
+ *
+ *   DOMAIN IDENTITY   roof inspection, dentistry, operations consulting  <- this
+ *   SERVICE ACTIVITY  photographing, inspecting, mapping, reviewing
+ *   CONTEXT           Houston, homeowners, residential, after a storm
+ *   GENERIC           professional, service, business, customer
+ *
+ * The other three may still contribute to relevance SCORING once identity has
+ * matched; none may establish it.
+ */
+
+/** Tokens in a domain phrase that do not name the trade. Proper nouns are
+ *  places; generic context is shared by every business. Both are stripped so a
+ *  model that writes "roof inspection in Houston" still anchors on roofing. */
+function domainAnchors(serviceDomain: string): string[] {
+  return serviceDomain
+    .split(/[\s,/&-]+/)
+    .filter(Boolean)
+    .filter((raw) => {
+      // A capitalised token mid-phrase is a place or a brand, not a trade.
+      if (/^[A-Z][a-z]{2,}$/.test(raw)) return false;
+      const w = raw.toLowerCase().replace(/[^a-z]/g, "");
+      return w.length > 2 && !STOPWORDS.has(w) && !GENERIC_CONTEXT.has(w);
+    })
+    .map((w) => w.toLowerCase().replace(/[^a-z]/g, ""));
+}
+
+/**
+ * Does this candidate depict the BUSINESS, not merely something true about it?
+ *
+ * Matches against the declared service domain only. Returns false when no
+ * domain was declared — safe failure: a business that never named its trade
+ * gets no stock photography, which is the correct outcome rather than a guess.
+ */
+export function matchesServiceDomain(serviceDomain: string | null | undefined, candidateDescription: string): boolean {
+  if (!serviceDomain?.trim()) return false;
+  const anchors = domainAnchors(serviceDomain);
+  if (anchors.length === 0) return false;
+  const got = meaningfulWords(candidateDescription);
+  return anchors.some((a) => got.some((g) => sameSubject(a, g)));
+}
+
 export function mediaIsRelevant(intent: Pick<MediaIntent, "subject">, candidateDescription: string): boolean {
   const wanted = new Set(meaningfulWords(intent.subject)).size;
   const hits = countMediaMatches(intent, candidateDescription);
+  // TERM COUNT ONLY. Identity is a separate question with a separate answer —
+  // see `matchesServiceDomain`, enforced by the resolver. Folding it in here
+  // conflated "is this about the brief?" with "is this the right business?".
   return wanted <= 2 ? hits >= 1 : hits >= 2;
 }
 

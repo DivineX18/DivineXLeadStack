@@ -30,6 +30,7 @@ import {
   toolsForLevel,
   type AiSuiteActionContext,
 } from "@/lib/ai-suite/capabilities";
+import { operatorFigureStatements } from "@/lib/funnels/claim-integrity";
 import { CUSTOM_BRAND } from "@/config/landing";
 import type {
   AiSuiteChatMessage,
@@ -183,6 +184,22 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+
+  // WHAT THE OPERATOR ACTUALLY SAID, WITH A NUMBER IN IT.
+  //
+  // A figure on a generated page must be grounded in the operator's own words
+  // (see "A NUMBER IS A FACT" in claim-integrity.ts). Only this route has
+  // those words, so it attaches them to every write proposal before validate
+  // reads it. Taken from USER turns only: a number the assistant said earlier
+  // is the model quoting itself, not a source. Always overwritten, so a model
+  // cannot ground its own figure by sending this field.
+  const operatorFigures = operatorFigureStatements(
+    messages.filter((m) => m.role === "user").map((m) => m.content),
+  );
+  const withOperatorFigures = (args: Record<string, unknown>) => ({
+    ...args,
+    operator_stated_figures: operatorFigures,
+  });
 
   const lvl = level as AiSuiteLevel;
   const tools = toolsForLevel(lvl, roleCtx);
@@ -404,6 +421,26 @@ export async function POST(request: Request) {
     for (let hop = 0; ; hop++) {
       turn = await runAiSuiteTurn({ messages: llmMessages, tools });
       const call = turn.toolCall;
+
+      // A TRUNCATED TOOL CALL IS NOT BAD ARGUMENTS.
+      //
+      // The model wrote a complete answer; the output budget ended before we
+      // received it. Handing the resulting empty args to the repair loop below
+      // asks it to fix work it already did correctly, spends two more calls
+      // failing the same way, and finishes by telling the customer to describe
+      // their offer in more detail — when an unusually DETAILED brief is what
+      // caused it. So this exits here with something true instead.
+      if (call && turn.truncated) {
+        console.warn(
+          `[ai-suite/chat] ${call.name} tool call truncated by the output ceiling — not entering the repair loop`,
+        );
+        const response: AiSuiteChatResponse = {
+          type: "message",
+          text: "I had your draft nearly written and my response got cut off before I could finish it. That's a limit on my side, not a problem with your brief — send it through again and I'll build it.",
+        };
+        return NextResponse.json(response);
+      }
+
       if (!call || hop >= MAX_LOOKUP_HOPS) break;
       const cap = getCapability(call.name);
 
@@ -419,7 +456,7 @@ export async function POST(request: Request) {
         roleSatisfies(cap.requiredRole, roleCtx) &&
         writeRepairs < MAX_WRITE_REPAIR_HOPS
       ) {
-        const attempt = cap.validate(call.args);
+        const attempt = cap.validate(withOperatorFigures(call.args));
         if (attempt.ok) break; // good args — fall through to the proposal path
         writeRepairs++;
         console.warn(`[ai-suite/chat] ${cap.name} args rejected (repair ${writeRepairs}): ${attempt.error}`);
@@ -523,7 +560,7 @@ export async function POST(request: Request) {
   if (turn.toolCall) {
     const cap = getCapability(turn.toolCall.name);
     if (cap && !cap.readonly && cap.level === lvl) {
-      const validated = cap.validate(turn.toolCall.args);
+      const validated = cap.validate(withOperatorFigures(turn.toolCall.args));
       if (validated.ok) {
         const response: AiSuiteChatResponse = {
           type: "proposal",

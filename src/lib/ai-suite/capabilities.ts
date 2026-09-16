@@ -75,10 +75,14 @@ import {
 } from "@/lib/server/funnels-service";
 import { scoreFunnelDesign } from "@/lib/design-intelligence/scoring";
 import { reviewFunnelCopy, type FunnelCopyReview } from "@/lib/conversion/funnel-copy-review";
-import type { OfferConfig, IncludedConfig, BenefitsGridConfig, CtaBannerConfig, FunnelDoc, FunnelSection, FunnelSectionType, HeroConfig, PhotoGalleryConfig, TicketTiersConfig, VisualRequirement, VisualDecision } from "@/types/funnels";
+import type { OfferConfig, IncludedConfig, CtaBannerConfig, FunnelDoc, FunnelSection, FunnelSectionType, HeroConfig, PhotoGalleryConfig, TicketTiersConfig, VisualRequirement, VisualDecision } from "@/types/funnels";
 import { imageryConfigured, searchSubjectImages } from "@/lib/funnels/imagery";
-import { planMediaIntents, selectRelevantMedia } from "@/lib/funnels/media-intent";
-import { inferAuthenticityCategory, stockAllowedFor, assetManifest, TRUST_QUESTIONS } from "@/lib/funnels/authenticity";
+// NOTE: `planMediaIntents` / `selectRelevantMedia` / `stockAllowedFor` are no
+// longer imported here. They belonged to the autonomous business-level
+// photography pass, which the visual story replaced — see the note where it
+// used to run. `selectRelevantMedia` still guards every photograph; it is now
+// called by the source hierarchy, per beat, instead of by this file.
+import { inferAuthenticityCategory, assetManifest, TRUST_QUESTIONS } from "@/lib/funnels/authenticity";
 import type { DesignPackId } from "@/lib/funnels/design-packs";
 import { FUNNEL_FRAMEWORKS, computeDecisionComplexity, computePersuasionDepth, resolveHeroLayout, type DecisionComplexity } from "@/lib/funnels/frameworks";
 import {
@@ -95,7 +99,14 @@ import {
   type EmotionalTransformation,
 } from "@/lib/funnels/art-direction";
 import { composePage } from "@/lib/funnels/page-composition";
-import { stripUnsupportedClaims } from "@/lib/funnels/claim-integrity";
+import {
+  buildCopyGrounding,
+  isUnsupportedTrustClaim,
+  stripUngroundedClaims,
+  unsupportedZeroPriceClaims,
+  type CopyGrounding,
+} from "@/lib/funnels/claim-integrity";
+import { completeThoughtWithin, readsAsCompleteLabel } from "@/lib/funnels/display-text";
 import {
   VISUAL_ARCHETYPE_IDS,
   VISUAL_ARCHETYPES,
@@ -322,6 +333,101 @@ function stripUngroundedOutcomeClaims(text: string): string {
     .split(/(?<=[.!?])\s+/)
     .filter((sentence) => !OUTCOME_CLAIM.test(sentence));
   return kept.join(" ").trim();
+}
+
+/**
+ * UNSUPPORTED FACTS ARE REMOVED FROM EVERY PIECE OF MODEL-AUTHORED COPY.
+ *
+ * Two families travel through here: figures nobody supplied, and prices of
+ * zero nobody supplied (see claim-integrity.ts). Both are facts about the
+ * offer, both were invented on certified pages, and both are removed the same
+ * way, so a third family can be added without a third traversal.
+ *
+ * `stripUngroundedOutcomeClaims` above only knew one shape ("save $300"). A
+ * certified roofing page then shipped "got a $18k quote before they were even
+ * off the ladder" in its before-panel, which no verb list could anticipate.
+ * The rule is in claim-integrity.ts: a figure must be stated by the operator
+ * or carried by a typed channel. This walks the whole payload so body copy,
+ * headings, badges, FAQs, steps, emails and the argument plan are all held to
+ * it, not just the fields someone remembered to list.
+ *
+ * Keys that hold identity, links or typed values are left alone: they are not
+ * prose, and several of them ARE the grounding. An array item that loses a
+ * field entirely is dropped whole, because an FAQ question without its answer
+ * or a step title without its description is not a smaller item, it is a
+ * broken one.
+ */
+const NUMERIC_NON_COPY_KEY =
+  /(url|href|phone|slug|color|^id$|_id$|Id$|start_at|StartAt|operator_stated_figures|operatorStatedFigures|real_rating|realRating|supplied_evidence|suppliedEvidence|value_stack|valueStack|service_domain|serviceDomain|media_subject|mediaSubject|funnel_name|funnelName|^tag$)/;
+/** Fields the model may send as one comma-separated string. */
+const COMMA_LIST_KEYS = new Set(["bullets"]);
+/** Arrays whose entries are whole SECTIONS, not items: an entry keeps its other
+ *  content when one field is emptied, and the section's own completeness rules
+ *  decide what an empty field means. */
+const SECTION_ARRAY_KEYS = new Set(["stage_content", "stageContent"]);
+
+function groundNumericCopy(value: unknown, g: CopyGrounding, key: string, dropped: string[]): unknown {
+  if (key && NUMERIC_NON_COPY_KEY.test(key)) return value;
+  if (typeof value === "string") {
+    if (COMMA_LIST_KEYS.has(key)) {
+      return value
+        .split(",")
+        .map((part) => {
+          const r = stripUngroundedClaims(part.trim(), g);
+          dropped.push(...r.dropped);
+          return r.text;
+        })
+        .filter(Boolean)
+        .join(", ");
+    }
+    const r = stripUngroundedClaims(value, g);
+    dropped.push(...r.dropped);
+    return r.text;
+  }
+  if (Array.isArray(value)) {
+    const out: unknown[] = [];
+    for (const item of value) {
+      if (typeof item === "string") {
+        const r = stripUngroundedClaims(item, g);
+        dropped.push(...r.dropped);
+        if (r.text.trim() || !item.trim()) out.push(r.text);
+        continue;
+      }
+      if (item && typeof item === "object" && !Array.isArray(item)) {
+        const cleaned = groundNumericCopy(item, g, key, dropped) as Record<string, unknown>;
+        const lostAField = Object.entries(item as Record<string, unknown>).some(
+          ([k, v]) => typeof v === "string" && v.trim() !== "" && typeof cleaned[k] === "string" && (cleaned[k] as string).trim() === "",
+        );
+        if (!lostAField || SECTION_ARRAY_KEYS.has(key)) out.push(cleaned);
+        continue;
+      }
+      out.push(groundNumericCopy(item, g, key, dropped));
+    }
+    return out;
+  }
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) out[k] = groundNumericCopy(v, g, k, dropped);
+    return out;
+  }
+  return value;
+}
+
+/** Values carried by typed channels: a supplied rating and the event time. */
+function typedNumericValues(raw: Record<string, unknown>): number[] {
+  const values: number[] = [];
+  const r = raw.real_rating;
+  if (r && typeof r === "object" && !Array.isArray(r)) {
+    const o = r as Record<string, unknown>;
+    if (typeof o.score === "number") values.push(o.score);
+    if (typeof o.count === "number") values.push(o.count);
+  }
+  const at = typeof raw.event_start_at === "string" ? new Date(raw.event_start_at) : null;
+  if (at && !Number.isNaN(at.getTime())) {
+    const h = at.getUTCHours();
+    values.push(at.getUTCFullYear(), at.getUTCMonth() + 1, at.getUTCDate(), h, h % 12 || 12, at.getUTCMinutes());
+  }
+  return values;
 }
 
 function stripToolSyntaxDebris(text: string): string {
@@ -3918,6 +4024,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           description: "A REAL image/video URL the user gave you (screenshot, founder photo, product shot). Never invent or guess a URL. Omit if you don't have one — the hero shows an honest placeholder instead.",
         },
         hero_media_type: { type: "string", enum: ["image", "video"], description: "Only used with hero_media_url. Omit to default to 'image'." },
+        service_domain: {
+          type: "string",
+          description:
+            "WHAT THIS BUSINESS IS, in plain descriptive terms — the answer you would give a PHOTOGRAPHER who asked 'what kind of business am I shooting?'. Two to five words naming the service or trade: 'residential roof inspection and repair', 'general dentistry', 'operations strategy consulting', 'warehouse automation integration', 'paediatric sleep coaching'. This is BUSINESS TRUTH, deliberately separate from the persuasion copy: it is NOT the headline, NOT the offer's benefit, NOT the buyer, NOT the city, and NOT an activity performed along the way. A roofer who photographs damage is 'roof inspection', not 'photography'. A consultancy whose page talks about delivery breaking is 'operations consulting', not 'delivery'. Omit ONLY if you genuinely cannot name the service from what the user told you — omitting means the page composes without stock photography, which is the correct outcome when the trade is unknown.",
+        },
         media_subject: {
           type: "string",
           description: "A SPECIFIC description of what the placeholder photo should show, written for the operator, not the visitor — e.g. 'Technician repairing an HVAC unit' or 'You speaking at a recent event', not a generic 'a photo'. Only used when hero_media_url is omitted (no real media yet); shown next to the placeholder in the builder as a shooting brief, never on the public page. Write this whenever media_strategy implies a real photo (service_photo/team_photo/community_photo/founder_photo) — skip for dashboard/product screenshots (there's nothing to 'shoot').",
@@ -3939,9 +4050,48 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // original snake_case key and its own camelCase output key. Same
       // pattern create_website's validate() uses, for the same reason.
       const rawObj = (rawIn ?? {}) as Record<string, unknown>;
-      const raw: Record<string, unknown> = aliasCamelKeysDeep(deepStripDebris({ ...rawObj }));
+      const rawAuthored: Record<string, unknown> = aliasCamelKeysDeep(deepStripDebris({ ...rawObj }));
+
+      // NUMERIC GROUNDING — see groundNumericCopy. The operator's own figure
+      // sentences are attached by the chat route from what they typed; absent
+      // means this payload did not come through a conversation (a direct
+      // caller), and there is nothing to ground against.
+      const figuresIn = rawAuthored.operator_stated_figures;
+      const operatorStatedFigures = Array.isArray(figuresIn)
+        ? figuresIn.filter((f): f is string => typeof f === "string").slice(-60).map((f) => f.slice(0, 400))
+        : null;
+      const numericDropped: string[] = [];
+      const raw: Record<string, unknown> = operatorStatedFigures
+        ? (groundNumericCopy(
+            rawAuthored,
+            buildCopyGrounding({
+              operatorStatements: operatorStatedFigures,
+              priceCents: Number.isFinite(Number(rawAuthored.price_cents)) ? Number(rawAuthored.price_cents) : null,
+              typedValues: typedNumericValues(rawAuthored),
+            }),
+            "",
+            numericDropped,
+          ) as Record<string, unknown>)
+        : rawAuthored;
+      if (numericDropped.length > 0) {
+        console.warn(`[create_funnel] removed unsupported claims: ${[...new Set(numericDropped)].map((d) => JSON.stringify(d)).join(" | ")}`);
+      }
 
       const headline = str(raw, "headline");
+      const sentHeadline = typeof rawObj.headline === "string" ? rawObj.headline.trim() : "";
+      if (!headline && sentHeadline && operatorStatedFigures) {
+        const pricedWithoutSource =
+          unsupportedZeroPriceClaims(
+            sentHeadline,
+            buildCopyGrounding({ operatorStatements: operatorStatedFigures, priceCents: Number(rawAuthored.price_cents) }),
+          ).length > 0;
+        return {
+          ok: false,
+          error: pricedWithoutSource
+            ? `your headline says something is free when the user never said it costs nothing ("${sentHeadline}"). Assessment-only, no-obligation and no-pressure are NOT the same claim as free. Rewrite THIS headline without the price claim, keeping the same promise, and call create_funnel again. Never substitute a different price. Do not ask the user.`
+            : `your headline states a figure nobody supplied ("${sentHeadline}"). Every number on the page must come from what the user told you. Rewrite THIS headline without the number, keeping the same promise, and call create_funnel again. Do not ask the user.`,
+        };
+      }
       // MISSING and TOO LONG are different failures and must say so. Both once
       // returned the same "a headline (max 80 characters) is required", which
       // reads as "you didn't send one" — so a model that HAD sent one, just an
@@ -4082,43 +4232,66 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const guaranteeBody = guaranteeHeadlineRaw ? guaranteeBodyRaw : "";
 
       /**
-       * A BADGE IS CUT AT A WORD, NEVER THROUGH ONE.
+       * A BADGE IS A COMPLETE THOUGHT, OR IT IS NOT A BADGE.
        *
-       * The cap is 40 characters and `slice(0, 40)` obeys it literally, so
-       * Summit's fold shipped "Written recommendation, not a sales quot" —
-       * forty-one characters of honest copy turned into a visible typo in the
-       * most-read part of the page. Trimming back to the last whole word costs
-       * one word and reads as written rather than as broken.
+       * Two generations of this were wrong in the same direction. `slice(0,40)`
+       * shipped "Written recommendation, not a sales quot" — honest copy turned
+       * into a visible typo on the most-read part of the page. Cutting back to
+       * the last whole word fixed the typo and kept the real defect: Northstar's
+       * fold then shipped "Application only, we take a limited", which is not a
+       * typo, it is a sentence that stops. A reader does not see a length cap,
+       * they see a page that does not finish its own claim.
+       *
+       * Worse, the cut CONCEALED a fabrication. The full line was "…we take a
+       * limited number each quarter", an invented capacity cap, and shortening
+       * it removed the evidence while keeping the insinuation. So claim
+       * integrity now runs FIRST, against the FULL text, and truncation can
+       * never launder a claim past it again.
+       *
+       * The order is: keep a badge that already fits, else compress ONLY by
+       * taking a leading clause that is itself a complete label, else drop it.
+       * Nothing is ever cut mid-clause. Two honest badges beat three where one
+       * trails off.
        */
-      const badgeText = (b: string): string => {
-        const t = b.trim();
-        if (t.length <= 40) return t;
-        const cut = t.slice(0, 40);
-        const lastSpace = cut.lastIndexOf(" ");
-        // A single 40-character word has no boundary to fall back to; a hard
-        // cut is then the only option and is still better than overflowing.
-        return (lastSpace > 20 ? cut.slice(0, lastSpace) : cut).replace(/[,;:\-\s]+$/, "");
+      const BADGE_MAX = 40;
+      /** Accept, compress, or drop. Never returns a fragment.
+       *
+       *  Compression is delegated to the one display-text contract shared with
+       *  headings and captions — see lib/funnels/display-text.ts. This used to
+       *  carry its own clause-splitting and its own dangling-word list, which is
+       *  how the same defect kept reappearing in a different component. */
+      const acceptBadge = (b: string): string | null => {
+        const t = b.trim().replace(/\s+/g, " ");
+        if (!t) return null;
+        // CLAIM INTEGRITY FIRST, ON THE WHOLE LINE — a shortened claim must
+        // never be able to launder past the filter.
+        if (isUnsupportedTrustClaim(t)) return null;
+        const fitted = completeThoughtWithin(t, BADGE_MAX);
+        if (!fitted || !readsAsCompleteLabel(fitted)) return null;
+        return isUnsupportedTrustClaim(fitted) ? null : fitted;
       };
+      const acceptBadges = (v: unknown, limit: number): string[] =>
+        (Array.isArray(v) ? v.filter((b): b is string => typeof b === "string") : [])
+          .map(acceptBadge)
+          .filter((b): b is string => b !== null)
+          .slice(0, limit);
 
-      const trustBadgesRaw = raw.trust_badges;
       // TRUST CLAIMS ARE FILTERED, NOT TRUSTED. A generated page shipped
       // "Locally owned in Houston" from a business that had only ever stated
       // it serves Houston — an ownership structure inferred from a service
       // area. The tool description already bans inventing organizational
       // status and the claim shipped anyway, so the rule lives here, where a
       // prompt cannot talk its way around it. See claim-integrity.ts.
-      const trustBadges = stripUnsupportedClaims(
-        (Array.isArray(trustBadgesRaw) ? trustBadgesRaw.filter((b): b is string => typeof b === "string") : [])
-          .slice(0, 5)
-          .map(badgeText),
-      ).kept;
+      // Filtering happens inside acceptBadge, before any shortening.
+      // DOMAIN IDENTITY — the only field allowed to anchor photography.
+      // Kept as a PHRASE (not run through the photo-brief reducer) because a
+      // service phrase like "roof inspection" is the unit that identifies a
+      // trade; reducing it to loose tokens is what let "Houston" and
+      // "photograph" qualify a street photographer for a roofing page.
+      const serviceDomain = str(raw, "service_domain").slice(0, 80);
 
-      const heroTrustBadgesRaw = raw.hero_trust_badges;
-      const heroTrustBadges = stripUnsupportedClaims(
-        (Array.isArray(heroTrustBadgesRaw) ? heroTrustBadgesRaw.filter((b): b is string => typeof b === "string") : [])
-          .slice(0, 3)
-          .map(badgeText),
-      ).kept;
+      const trustBadges = acceptBadges(raw.trust_badges, 5);
+      const heroTrustBadges = acceptBadges(raw.hero_trust_badges, 3);
 
       // Sanitized only — the actual per-stage alternates check happens in
       // buildFrameworkSections() at execute() time (an invalid/unknown
@@ -4281,6 +4454,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       return {
         ok: true,
         args: {
+          ...(operatorStatedFigures ? { operatorStatedFigures } : {}),
           funnelName,
           genre,
           eyebrow: truncateAtWord(str(raw, "eyebrow"), 100),
@@ -4470,6 +4644,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           heroMediaUrl,
           heroMediaType,
           mediaSubject,
+          serviceDomain,
           galleryLayout,
         },
       };
@@ -5524,151 +5699,330 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         authenticityCategory === "info_product" ||
         authenticityCategory === "coaching";
 
+      // THE AUTONOMOUS BUSINESS-LEVEL PHOTOGRAPHY PASS USED TO RUN HERE.
+      //
+      // It asked what the BUSINESS does, searched the provider once per slot,
+      // and filled the hero plus every benefit row with whatever came back. It
+      // was a second visual authority that could — and did — disagree with the
+      // one that reads the page's argument: the operations fixture took a stock
+      // photograph of a businessman on a video call for its fold, because the
+      // query was a business-level subject and the photograph genuinely matched
+      // it. Nothing downstream could catch that, because nothing downstream knew
+      // what the fold was supposed to ARGUE.
+      //
+      // Photography now enters through the visual story below, per BEAT, judged
+      // against that beat's concept — the same test a drawing has to pass, in a
+      // different medium. One authority, one decision order. Customer-owned and
+      // editor-chosen media are upstream of both and are never overridden.
+
+      // PROOF WHERE A PHOTOGRAPH WOULD BE COUNTERFEIT.
+      //
+      // The categories listed in `categoryBlocksAmbient` above correctly get no
+      // stock photography: a stock "product" for a product nobody has seen, or
+      // a stock "coach" for a coach we cannot picture, is invented evidence.
+      // But blocking the photo was the whole intervention, so those pages ended
+      // up with no proof beat of any kind — three of the five fixtures rendered
+      // with zero images and nothing in their place, which is not honesty, it
+      // is an absence.
+      //
+      // The honest substitute is the thing that IS verifiable: what the buyer
+      // actually receives. `deliverable_preview` frames the section's REAL
+      // items as a visibly-labelled example of the contents — presentation of
+      // facts the page already asserts, never dressed as customer evidence.
+      // So it applies to the same set that cannot use a photograph, not just
+      // the two categories it started with.
+      if (categoryBlocksAmbient || authenticityCategory === "b2b_services") {
+        sectionsToSave = sectionsToSave.map((s2) =>
+          s2.type === "included"
+            ? { ...s2, config: { ...(s2.config as IncludedConfig), variant: "deliverable_preview" as const } }
+            : s2,
+        );
+      }
+      // Sales Argument Engine: every section carries its persuasion JOB
+      // (hook / belief_shift / promise / mechanism / proof / offer /
+      // risk_reversal / objections / close) — stored so the argument is
+      // auditable from data, never a discarded prompt.
+      sectionsToSave = stampArgumentRoles(sectionsToSave);
+      // ... and the plan is STRUCTURALLY CONSUMED: belief-chain steps are
+      // assigned to responsible sections (servesBelief), offer bullets that
+      // duplicate benefits are removed, and the close is seeded from
+      // corePromise + closeReason when left generic. Never decorative.
+      // FLOOR: a missing model plan is synthesized from the model's own copy
+      // (headline/bullets/CTA) so the argument — and servesBelief coverage —
+      // can never be absent. An explicit plan always wins.
+      const effectivePlan =
+        (args.salesArgument as
+          | {
+              beliefChain: string[];
+              corePromise: string;
+              closeReason: string;
+              currentBelief?: string;
+              whyOldWayFails?: string;
+              mechanism?: string;
+              oldWay?: string;
+            }
+          | null) ??
+        synthesizeSalesArgument({
+          headline: args.headline as string,
+          bullets: (args.bullets as string[]) ?? [],
+          ctaLabel: (args.ctaLabel as string) || undefined,
+        });
+      sectionsToSave = applySalesArgument(sectionsToSave, effectivePlan);
+      // RE-STAMP, because applySalesArgument CHANGES WHAT RENDERS.
+      //
+      // Roles are gated on renderable content now (see stampArgumentRoles: an
+      // invisible section may not carry a persuasion role). That gate runs
+      // above, before the plan has been consumed — and consuming the plan is
+      // exactly what fills a blank problem/solution beat from currentBelief +
+      // mechanism. A section that was empty at the first stamp and is real by
+      // the time the page is composed must carry its role, or the belief shift
+      // silently loses its visual story beat.
+      //
+      // Idempotent by construction: roles are re-derived from type + live
+      // config, never accumulated, so running it twice settles rather than
+      // drifts. Cheap, pure, and it keeps the invariant true of the FINAL page
+      // rather than of an intermediate one.
+      sectionsToSave = stampArgumentRoles(sectionsToSave);
+      // ── THE VISUAL STORY ───────────────────────────────────────────────
+      //
+      // THE ONE AUTHORITY FOR THIS PAGE'S PLANNED MEDIA. Not an extra pass that
+      // adds drawings where photography failed — that was the split brain, and
+      // it is gone. Photography, constructed visuals and document
+      // representations all enter here, through one decision order:
+      //
+      //   argumentRole -> visualJob -> concept -> source -> composition -> placement
+      //
+      // Planned from the argument the page CARRIES (stampArgumentRoles +
+      // servesBelief, both stamped immediately above), so a visual serves a
+      // named persuasion job or it does not exist. Runs BEFORE applyArtDirection
+      // and composePage on purpose: those two read real media to decide the
+      // fold's treatment and the page's rhythm, and they cannot decide about a
+      // photograph that has not been chosen yet.
+      //
+      // What a visual has to survive, in order: a host section that can
+      // actually COMPOSE it, the source hierarchy's own truthfulness tests, a
+      // redundancy check against what the page already renders, and the
+      // page-level rule that no constructed shape repeats. Most beats do not
+      // survive all four, and that is the intended shape of the outcome — a
+      // page with one or two visuals carrying real weight beats a page with
+      // five that decorate.
+      // PLAN AGAINST THE PAGE THAT WILL ACTUALLY EXIST.
+      //
+      // Empty sections are pruned later, before the Critic, for exactly this
+      // reason: judging a composition the save is about to change is judging
+      // the wrong page. The visual story needs the same guarantee and did not
+      // have it — the booking fixture planned a drawn sequence onto a `story`
+      // section that was empty and about to be removed, so the beat was spent
+      // and the visual never rendered. Pruning is pure and idempotent, so doing
+      // it here costs nothing and the later prune still runs unchanged.
       try {
-        const ambientStockOk =
-          stockAllowedFor(authenticityCategory, "office_photo") ||
-          stockAllowedFor(authenticityCategory, "job_photo") ||
-          stockAllowedFor(authenticityCategory, "facility_photo") ||
-          stockAllowedFor(authenticityCategory, "texture_photo");
-        // MEDIA IS PLANNED PER SLOT, NOT SEARCHED ONCE FOR THE PAGE.
+        const { pruneEmptySections } = await import("@/lib/funnels/section-completeness");
+        sectionsToSave = pruneEmptySections(sectionsToSave).sections;
+      } catch {
+        // Pruning is an optimisation for the planner here, not a contract —
+        // the authoritative prune still runs below.
+      }
+
+      try {
+        const { planVisualStory, captionFor } = await import("@/lib/funnels/visual-story");
+        const { resolveVisualSource } = await import("@/lib/funnels/visual-source");
+        const { compositionForSection, devicesRenderedBy, sideForPlacement } = await import(
+          "@/lib/funnels/visual-placement"
+        );
+        const { photoBriefForVisualJob } = await import("@/lib/funnels/media-intent");
+        const sa = args.salesArgument as Record<string, unknown> | null;
+        const story = planVisualStory(sectionsToSave, {
+          arrivalContext: (sa?.arrivalContext as string) ?? null,
+          currentBelief: effectivePlan.currentBelief ?? null,
+          oldWay: effectivePlan.oldWay ?? null,
+          whyOldWayFails: effectivePlan.whyOldWayFails ?? null,
+          mechanism: effectivePlan.mechanism ?? null,
+          corePromise: effectivePlan.corePromise ?? null,
+          primaryObjection: (sa?.primaryObjection as string) ?? null,
+          closeReason: effectivePlan.closeReason ?? null,
+        });
+
+        // The business facts a photo brief may be written from — the same
+        // ladder the retired pass used, kept because it is the business's own
+        // words. What changed is that it now only steers the PROVIDER; whether
+        // a result is placed is judged against the beat's concept.
+        // DESCRIPTIVE FIELDS ONLY — see `coreSubject` in media-intent.ts.
+        // `headline` and `mechanism` were passed here and are deliberately gone:
+        // persuasion language decides WHY a visual helps, never WHAT real-world
+        // subject gets photographed. A headline that happens to contain
+        // "delivery" is not evidence that this business delivers anything.
+        const photoCtx = {
+          businessName: (args.funnelName as string) || (args.funnel_name as string) || null,
+          whatTheyDo: (args.mediaSubject as string) || heroMediaBrief || null,
+          explicitSubject: mediaSubject || null,
+          authenticityCategory,
+        };
+        const canSearchPhotos = imageryConfigured() && !categoryBlocksAmbient;
+        // THE VERIFIED SUBJECT A CONTEXT PHOTOGRAPH MAY DEPICT.
         //
-        // This used to be a single `searchSubjectImages(imageryBrief, 4)` whose
-        // results were dealt out to the hero and every benefit row by array
-        // index. It failed in two directions: an empty brief (the model supplied
-        // neither media_subject nor a hero brief) returned nothing and the page
-        // rendered with ZERO images while reporting success, and a populated
-        // brief gave four near-identical photos of one phrase.
-        //
-        // planMediaIntents derives a DISTINCT brief per slot from facts already
-        // in hand, so the hero shows the work and each benefit row shows a
-        // different angle on it. It returns nothing at all when there is no
-        // honest subject or the category makes ambient stock counterfeit — in
-        // which case the page composes text-led, which is the correct outcome
-        // rather than a failure.
-        const benefitRowCount = sectionsToSave
-          .filter((s) => s.type === "benefits_grid")
-          .reduce((n, s) => n + ((s.config as BenefitsGridConfig).items?.length ?? 0), 0);
-        const intents = planMediaIntents(
-          {
-            businessName: (args.funnelName as string) || (args.funnel_name as string) || null,
-            // `objective` USED TO BE IN THIS LADDER AND IS NOT A SUBJECT.
-            //
-            // It is a strategy enum — "application", "lead_generation",
-            // "purchase" — recorded so the campaign stays coherent. Read as a
-            // description of the business it produces the photo brief
-            // "application close up detail", which matched a stock caption
-            // reading "a person applying green face paint" on the four-letter
-            // stem "appl". The consultant page shipped that beside "Past the
-            // founder-led stage", with a real-estate handshake under it.
-            //
-            // Nothing downstream could have caught it: the relevance test was
-            // working correctly against the brief it was given, and the brief
-            // was a schema token. Only a description of the actual work belongs
-            // here, so the ladder now falls through to the headline and the
-            // mechanism — the business's own words — and to no photograph at
-            // all when neither is usable, which is the honest outcome.
-            whatTheyDo: (args.mediaSubject as string) || heroMediaBrief || null,
-            offer: (args.headline as string) || null,
-            explicitSubject: mediaSubject || null,
-            mechanism: ((args.salesArgument as Record<string, unknown> | null)?.mechanism as string) ?? null,
-            authenticityCategory,
-          },
-          {
-            // THE FOLD EARNS ITS PICTURE, IT DOES NOT INHERIT ONE.
-            //
-            // This used to require `mediaType !== "none"` — that the hero
-            // ALREADY carry a media slot. But "none" is what
-            // `defaultSectionConfig("hero")` returns; a slot only ever opened
-            // when some upstream design strategy happened to name a media
-            // strategy. So whether a page could have a photograph was decided
-            // by a field nobody sets on most generations, never by whether a
-            // photograph would help. A hero with no asset yet is ELIGIBLE; if
-            // nothing relevant resolves, nothing is placed and the published
-            // renderer strips the empty slot exactly as before.
-            hero: sectionsToSave.some((s) => s.type === "hero" && !(s.config as HeroConfig).mediaUrl),
-            benefitCount: artProfile.energy === "urgent" ? 0 : benefitRowCount,
-          },
+        // Same ladder, reduced to the noun phrase a photograph can be OF. Used
+        // only when a beat's own proposition turns out to be unphotographable;
+        // see the context-establishing branch in visual-source.ts. It is the
+        // business's own description of its work, never the generator's.
+        const contextSubject = (mediaSubject as string) || (args.mediaSubject as string) || heroMediaBrief || "";
+        // BUSINESS TRUTH, separate from persuasion copy — see media-intent.ts.
+        // Absent means the model could not name the trade, and the page
+        // composes without stock photography rather than guessing at one.
+        const serviceDomain = (args.serviceDomain as string) || "";
+        let contextPhotoUsedOnPage = false;
+
+        // Approved customer assets that the Image Director did not already
+        // place. Rung 1 outranks everything, and an asset used twice on one
+        // page is a repeat, so placement is tracked.
+        const placedUrls = new Set<string>();
+        for (const s of sectionsToSave) {
+          const c = s.config as Record<string, unknown>;
+          if (typeof c.mediaUrl === "string") placedUrls.add(c.mediaUrl);
+          if (typeof c.photoUrl === "string") placedUrls.add(c.photoUrl);
+        }
+        const ownedPool = (profileInputs?.assets.visualCandidates ?? []).filter(
+          (a) => a.approved && a.isPhotograph && !placedUrls.has(a.url),
         );
 
-        if (intents.length > 0 && imageryConfigured() && ambientStockOk && !categoryBlocksAmbient) {
-          // Each intent is resolved on its own so two slots can never receive
-          // the same photograph from one result list.
-          // SEVERAL CANDIDATES, THEN JUDGED — not the first result taken on
-          // faith. Asking for one photo and placing it is how a roof-inspection
-          // hero shipped two people in hard hats standing indoors: the provider
-          // matched the industry, not the slot. Now each slot pulls a short list
-          // and keeps the best one that is actually about its own subject, and
-          // keeps NOTHING when none of them is. A page composed from verified
-          // content beats a page with a visibly wrong photograph on it.
-          const resolved = await Promise.all(
-            intents.map(async (intent) => {
-              const candidates = await searchSubjectImages(intent.subject, 12);
-              // Purpose travels with the intent so the selector can weight
-              // "someone doing the work" against "a picture of the category".
-              // The PROVIDER is asked for the angled brief so four slots do not
-              // resolve to one photograph; RELEVANCE is judged against the
-              // business's own subject, because the angle's own vocabulary is
-              // not evidence that the photograph is about this business. See
-              // `subjectCore` in media-intent.ts.
-              const chosen = selectRelevantMedia({ subject: intent.subjectCore, purpose: intent.purpose }, candidates);
-              return { intent, photo: chosen?.pick ?? null };
-            }),
-          );
-          const heroHit = resolved.find((r) => r.intent.slot === "hero" && r.photo);
-          const benefitHits = resolved.filter((r) => r.intent.slot === "benefit_item" && r.photo);
-          const used = new Set<string>();
-          let benefitIdx = 0;
+        // Resolved in PAGE ORDER, so shape progression and side alternation are
+        // properties of the page rather than of whichever beat ran first.
+        // Stock photographs placed so far, with the provider identity that lets
+        // a second frame of the same shoot be recognised (see sharesStockShoot).
+        const placedStockPhotos: import("@/lib/funnels/visual-source").PhotoCandidate[] = [];
+        const shapesUsedOnPage: ("hub_bottleneck" | "distributed_network" | "fragmented_to_connected" | "state_contrast" | "sequence")[] = [];
+        let placedCount = 0;
+        const trace: string[] = [];
 
-          sectionsToSave = sectionsToSave.map((s) => {
-            if (s.type === "hero" && heroHit?.photo) {
-              const c = s.config as HeroConfig;
-              // Matches the eligibility rule above: a hero with no asset takes
-              // the photograph whether or not a slot had been opened for it.
-              if (!c.mediaUrl) {
-                used.add(heroHit.photo.url);
-                return {
-                  ...s,
-                  config: {
-                    ...c,
-                    mediaType: "image" as const,
-                    mediaUrl: heroHit.photo.url,
-                    mediaIsStock: true,
-                    // Alt text was retrieved and then thrown away here. The
-                    // provider's own description is the better one when it has
-                    // one; the intent's is the honest fallback.
-                    mediaAlt: heroHit.photo.alt || heroHit.intent.altPrefix,
-                    mediaPlaceholderLabel: "",
-                  },
-                };
-              }
-              return s;
+        for (const beat of story) {
+          const hostIdx = sectionsToSave.findIndex((s) => s.id === beat.sectionId);
+          if (hostIdx < 0) continue;
+          const host = sectionsToSave[hostIdx];
+          const cfg = host.config as Record<string, unknown>;
+
+          // AN EXPLICIT CHOICE IS NEVER OVERRIDDEN. A model-supplied asset, a
+          // customer upload the Image Director placed, or an operator's own
+          // edit already occupies this section's visual slot.
+          const alreadyVisual =
+            !!cfg.mediaUrl ||
+            !!cfg.photoUrl ||
+            !!cfg.proofShowcase ||
+            ((cfg.items as { imageUrl?: string }[] | undefined) ?? []).some((i) => i.imageUrl);
+          if (alreadyVisual) {
+            trace.push(`${beat.visualJob}: kept the existing asset on ${host.type}`);
+            continue;
+          }
+
+          const composition = compositionForSection(host);
+
+          // WHAT THIS BEAT IS COMPETING WITH — the host section and its
+          // neighbours, as text and as the structural devices they already
+          // draw. A drawing that restates either is declined.
+          const window = sectionsToSave.slice(Math.max(0, hostIdx - 1), hostIdx + 2);
+          const nearbyContent = window.map((s) => JSON.stringify(s.config ?? {})).join(" ");
+          const nearbyDevices = window.flatMap(devicesRenderedBy);
+
+          // PHOTOGRAPHY FOR THIS BEAT, not for this business. The brief is the
+          // business's work angled by what the beat is for; relevance is judged
+          // against the beat's concept inside the resolver.
+          let photos: { url: string; alt: string }[] = [];
+          let photoPurpose: import("@/lib/funnels/media-intent").MediaPurpose | undefined;
+          if (canSearchPhotos && composition) {
+            const brief = photoBriefForVisualJob(beat.visualJob, photoCtx);
+            if (brief) {
+              photoPurpose = brief.purpose;
+              const found = await searchSubjectImages(brief.subject, 12);
+              photos = found
+                .filter((f) => !placedUrls.has(f.url))
+                .map((f) => ({ url: f.url, alt: f.alt, providerId: f.providerId, photographerId: f.photographerId }));
             }
-            if (s.type === "benefits_grid" && artProfile.energy !== "urgent") {
-              const c = s.config as BenefitsGridConfig;
-              return {
-                ...s,
-                config: {
-                  ...c,
-                  items: c.items.map((it) => {
-                    if (it.imageUrl) return it;
-                    // Skip any photo already placed, so a repeat is impossible
-                    // even when two briefs resolve to the same result.
-                    while (benefitIdx < benefitHits.length && used.has(benefitHits[benefitIdx].photo!.url)) benefitIdx++;
-                    const hit = benefitHits[benefitIdx];
-                    if (!hit?.photo) return it;
-                    benefitIdx++;
-                    used.add(hit.photo.url);
-                    return { ...it, imageUrl: hit.photo.url, imageIsStock: true, imageAlt: hit.photo.alt || hit.intent.altPrefix };
-                  }),
-                },
-              };
-            }
-            return s;
+          }
+
+          const resolved = resolveVisualSource(beat, {
+            category: authenticityCategory,
+            firstParty: composition ? ownedPool.map((a) => ({ url: a.url, alt: a.alt ?? undefined, approved: true })) : [],
+            photos,
+            photoPurpose,
+            hostComposition: composition,
+            hostType: host.type,
+            shapesUsedOnPage: [...shapesUsedOnPage],
+            contextSubject,
+            serviceDomain,
+            contextPhotoUsedOnPage,
+            placedStockPhotos: [...placedStockPhotos],
+            nearbyContent,
+            nearbyDevices,
           });
 
+          trace.push(`${beat.visualJob} @ ${host.type}: ${resolved.source}${resolved.shape ? `/${resolved.shape}` : ""} — ${resolved.reason}`);
+
+          if (resolved.source === "text_led" || resolved.source === "document" || resolved.source === "composed_proof") {
+            // Rungs 4 and 5 are satisfied by compositions this page already
+            // applies (the deliverable preview, the proof visual) — nothing to
+            // place here, and text-led is a decision rather than a gap.
+            continue;
+          }
+          if (resolved.url) placedUrls.add(resolved.url);
+          if (resolved.source === "contextual_photo" && resolved.url) {
+            const placedPhoto = photos.find((p) => p.url === resolved.url);
+            if (placedPhoto) placedStockPhotos.push(placedPhoto);
+          }
+          if (resolved.source === "constructed" && resolved.shape) shapesUsedOnPage.push(resolved.shape);
+          // One context-establishing photograph per page, hard — see the
+          // context branch in visual-source.ts.
+          if (resolved.source === "contextual_photo" && resolved.reason.startsWith("concept is abstract")) {
+            contextPhotoUsedOnPage = true;
+          }
+
+          const side = sideForPlacement(placedCount);
+          placedCount++;
+
+          if (resolved.composition === "fold_media" && resolved.url) {
+            // The fold takes a real photograph through the hero's own media
+            // slot; applyArtDirection and widenTheFold, both of which run
+            // below, then give it the treatment the register calls for.
+            sectionsToSave = sectionsToSave.map((s) =>
+              s.id === host.id
+                ? ({
+                    ...s,
+                    config: {
+                      ...(s.config as object),
+                      mediaType: "image" as const,
+                      mediaUrl: resolved.url,
+                      mediaIsStock: resolved.source === "contextual_photo",
+                      mediaAlt: resolved.alt ?? "",
+                      mediaPlaceholderLabel: "",
+                    },
+                  } as FunnelSection)
+                : s,
+            );
+          } else if (resolved.composition === "split" || resolved.composition === "anchor") {
+            // One config shape for both treatments; `beatVisualAnchored` is the
+            // only difference, and it is set by the composition the resolver
+            // chose rather than by the section guessing at render time.
+            const anchored = resolved.composition === "anchor";
+            sectionsToSave = sectionsToSave.map((s) =>
+              s.id === host.id
+                ? ({
+                    ...s,
+                    config: {
+                      ...(s.config as object),
+                      beatVisual: {
+                        ...(resolved.shape ? { shape: resolved.shape } : {}),
+                        ...(resolved.url ? { url: resolved.url, alt: resolved.alt ?? "" } : {}),
+                        caption: captionFor(beat.concept),
+                        side,
+                      },
+                      ...(anchored ? { beatVisualAnchored: true } : {}),
+                    },
+                  } as FunnelSection)
+                : s,
+            );
+          }
         }
+        if (trace.length > 0) console.log(`[visual-story] ${trace.join(" | ")}`);
       } catch {
-        // Imagery is always best-effort — never blocks funnel creation.
+        // The visual story is best-effort like every other imagery decision —
+        // a page without it is the certified page, never a failed build.
       }
 
       // BUSINESS REALITY ENGINE (slice E) — visual semantics: composition
@@ -5706,60 +6060,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           });
         }
       }
-      // PROOF WHERE A PHOTOGRAPH WOULD BE COUNTERFEIT.
-      //
-      // The categories listed in `categoryBlocksAmbient` above correctly get no
-      // stock photography: a stock "product" for a product nobody has seen, or
-      // a stock "coach" for a coach we cannot picture, is invented evidence.
-      // But blocking the photo was the whole intervention, so those pages ended
-      // up with no proof beat of any kind — three of the five fixtures rendered
-      // with zero images and nothing in their place, which is not honesty, it
-      // is an absence.
-      //
-      // The honest substitute is the thing that IS verifiable: what the buyer
-      // actually receives. `deliverable_preview` frames the section's REAL
-      // items as a visibly-labelled example of the contents — presentation of
-      // facts the page already asserts, never dressed as customer evidence.
-      // So it applies to the same set that cannot use a photograph, not just
-      // the two categories it started with.
-      if (categoryBlocksAmbient || authenticityCategory === "b2b_services") {
-        sectionsToSave = sectionsToSave.map((s2) =>
-          s2.type === "included"
-            ? { ...s2, config: { ...(s2.config as IncludedConfig), variant: "deliverable_preview" as const } }
-            : s2,
-        );
-      }
       sectionsToSave = applyArtDirection(sectionsToSave, artProfile);
-      // Sales Argument Engine: every section carries its persuasion JOB
-      // (hook / belief_shift / promise / mechanism / proof / offer /
-      // risk_reversal / objections / close) — stored so the argument is
-      // auditable from data, never a discarded prompt.
-      sectionsToSave = stampArgumentRoles(sectionsToSave);
-      // ... and the plan is STRUCTURALLY CONSUMED: belief-chain steps are
-      // assigned to responsible sections (servesBelief), offer bullets that
-      // duplicate benefits are removed, and the close is seeded from
-      // corePromise + closeReason when left generic. Never decorative.
-      // FLOOR: a missing model plan is synthesized from the model's own copy
-      // (headline/bullets/CTA) so the argument — and servesBelief coverage —
-      // can never be absent. An explicit plan always wins.
-      const effectivePlan =
-        (args.salesArgument as
-          | {
-              beliefChain: string[];
-              corePromise: string;
-              closeReason: string;
-              currentBelief?: string;
-              whyOldWayFails?: string;
-              mechanism?: string;
-              oldWay?: string;
-            }
-          | null) ??
-        synthesizeSalesArgument({
-          headline: args.headline as string,
-          bullets: (args.bullets as string[]) ?? [],
-          ctaLabel: (args.ctaLabel as string) || undefined,
-        });
-      sectionsToSave = applySalesArgument(sectionsToSave, effectivePlan);
       // PAGE-LEVEL COMPOSITION: the first pass that reads the page top to
       // bottom rather than one section at a time. It closes the page in the
       // page's own CTA language (the seeded "Ready?" / "Get started" default
@@ -5789,88 +6090,6 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             : ("process_flow" as const),
       });
 
-      // THE VISUAL STORY. Planned AFTER composePage, because the page's beats
-      // and their order are only settled once composition has run — and the
-      // visual story has to follow the argument the reader will actually meet,
-      // not the one the framework seeded.
-      //
-      // Every beat that resolves to a CONSTRUCTED visual attaches its shape and
-      // the proposition it communicates to the section that owns the argument,
-      // so the drawing sits with the copy it supports rather than wherever a
-      // slot happened to be. Photographic rungs are already placed by the
-      // imagery pass above; this pass adds only what that could not answer.
-      try {
-        const { planVisualStory } = await import("@/lib/funnels/visual-story");
-        const { resolveVisualSource } = await import("@/lib/funnels/visual-source");
-        const sa = args.salesArgument as Record<string, unknown> | null;
-        const story = planVisualStory(sectionsToSave, {
-          arrivalContext: (sa?.arrivalContext as string) ?? null,
-          currentBelief: effectivePlan.currentBelief ?? null,
-          oldWay: effectivePlan.oldWay ?? null,
-          whyOldWayFails: effectivePlan.whyOldWayFails ?? null,
-          mechanism: effectivePlan.mechanism ?? null,
-          corePromise: effectivePlan.corePromise ?? null,
-          primaryObjection: (sa?.primaryObjection as string) ?? null,
-          closeReason: effectivePlan.closeReason ?? null,
-        });
-        const drawn = new Map<string, { shape: string; caption: string }>();
-        for (const beat of story) {
-          const host = sectionsToSave.find((s) => s.id === beat.sectionId);
-          if (!host) continue;
-          const cfg = host.config as Record<string, unknown>;
-          // A section that already shows something real keeps it: rung 1 and
-          // rung 2 outrank a drawing, and the imagery pass has already run.
-          const alreadyVisual =
-            !!cfg.mediaUrl ||
-            !!cfg.photoUrl ||
-            ((cfg.items as { imageUrl?: string }[] | undefined) ?? []).some((i) => i.imageUrl);
-          if (alreadyVisual) continue;
-          // WHAT THIS BEAT IS COMPETING WITH. A drawing has to add something
-          // the reader does not already have — so the host section and its
-          // neighbours are handed to the resolver, both as text and as the
-          // structural devices they already render. A 1-2-3 sequence above a
-          // process section is the failure this prevents.
-          const hostIdx = sectionsToSave.findIndex((s) => s.id === host.id);
-          const window = sectionsToSave.slice(Math.max(0, hostIdx - 1), hostIdx + 2);
-          const nearbyContent = window.map((s) => JSON.stringify(s.config ?? {})).join(" ");
-          const nearbyDevices: ("sequence" | "state_contrast" | "distributed_network")[] = [];
-          for (const s of window) {
-            const v = (s.config as { variant?: string }).variant;
-            if (s.type === "agenda" || v === "process_flow") nearbyDevices.push("sequence");
-            if (s.type === "comparison" || s.type === "before_after" || v === "before_after") {
-              nearbyDevices.push("state_contrast");
-            }
-          }
-          const resolved = resolveVisualSource(beat, {
-            category: authenticityCategory,
-            // Photography for this concept was already attempted and placed
-            // above where it qualified; re-searching here would only give the
-            // same rejected candidates a second hearing.
-            photos: [],
-            nearbyContent,
-            nearbyDevices,
-          });
-          if (resolved.source === "constructed" && resolved.shape) {
-            drawn.set(host.id, { shape: resolved.shape, caption: beat.concept });
-          }
-        }
-        if (drawn.size > 0) {
-          sectionsToSave = sectionsToSave.map((s) =>
-            drawn.has(s.id)
-              ? ({
-                  ...s,
-                  // Additive on the section's own config, like every other
-                  // composition decision — a section that never gets one is
-                  // byte-identical to the certified shape.
-                  config: { ...(s.config as object), conceptVisual: drawn.get(s.id) },
-                } as FunnelSection)
-              : s,
-          );
-        }
-      } catch {
-        // The visual story is best-effort like every other imagery decision —
-        // a page without it is the certified page, never a failed build.
-      }
 
       // BUSINESS REALITY ENGINE (slice B) — the identity layer. Every page
       // ends grounded in the real organization: business name (agent

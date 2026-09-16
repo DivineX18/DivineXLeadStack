@@ -43,17 +43,25 @@ function check(label: string, ok: boolean, detail?: string) {
 }
 
 // --- 2. Every section gets a JOB (argument roles) ---
+//
+// SECTIONS CARRY REAL CONTENT HERE, and that is load-bearing rather than
+// incidental. These used to be `config: {}` stubs, which quietly made this a
+// test of section TYPE alone. A role is now also gated on whether the section
+// renders anything (see stampArgumentRoles: an invisible section may not carry
+// a persuasion role), so stubs would assert that empty sections get jobs —
+// exactly the false claim that gate exists to prevent. The gate itself is
+// covered in verify-visible-persuasion.mts.
 {
   const sections = [
-    { id: "s1", type: "hero", config: {} },
-    { id: "s2", type: "problem_solution", config: {} },
-    { id: "s3", type: "benefits_grid", config: {} },
-    { id: "s4", type: "cta_banner", config: {} },
-    { id: "s5", type: "story", config: {} },
-    { id: "s6", type: "offer", config: {} },
-    { id: "s7", type: "guarantee", config: {} },
-    { id: "s8", type: "faq", config: {} },
-    { id: "s9", type: "cta_banner", config: {} },
+    { id: "s1", type: "hero", config: { headline: "Same-day emergency AC repair" } },
+    { id: "s2", type: "problem_solution", config: { problemText: "Your AC died in summer heat", solutionText: "We answer and quote before we touch it" } },
+    { id: "s3", type: "benefits_grid", config: { items: [{ title: "A real person answers" }] } },
+    { id: "s4", type: "cta_banner", config: { headline: "Call now", ctaLabel: "Call" } },
+    { id: "s5", type: "story", config: { paragraphs: ["We have run this shop for years."] } },
+    { id: "s6", type: "offer", config: { headline: "Same-day repair", ctaLabel: "Book" } },
+    { id: "s7", type: "guarantee", config: { headline: "Price before the wrench turns" } },
+    { id: "s8", type: "faq", config: { items: [{ question: "How fast?", answer: "Same day." }] } },
+    { id: "s9", type: "cta_banner", config: { headline: "Ready?", ctaLabel: "Call" } },
   ] as unknown as FunnelSection[];
   const out = stampArgumentRoles(sections);
   const role = (id: string) => out.find((s) => s.id === id)?.argumentRole;
@@ -61,6 +69,17 @@ function check(label: string, ok: boolean, detail?: string) {
   check("2b. story=mechanism, offer=offer, guarantee=risk_reversal, faq=objections", role("s5") === "mechanism" && role("s6") === "offer" && role("s7") === "risk_reversal" && role("s8") === "objections");
   check("2c. the FINAL cta_banner is the CLOSE; a mid-page one is an action beat", role("s9") === "close" && role("s4") === "action");
   check("2d. every section answers 'what job would be lost?' (all stamped)", out.every((s) => !!s.argumentRole));
+  // ... and the CONTENT-BEARING sections, emptied, claim no job at all. The
+  // always-rendering shells (hero, offer, guarantee, cta_banner) keep theirs:
+  // they render their own frame regardless, so their role is still honoured.
+  const hollow = stampArgumentRoles(sections.map((s) => ({ ...s, config: {} }) as FunnelSection));
+  const roleOf = (id: string) => hollow.find((s) => s.id === id)?.argumentRole;
+  check(
+    "2e. emptied content sections claim no job",
+    !roleOf("s2") && !roleOf("s3") && !roleOf("s5") && !roleOf("s8"),
+    `ps=${roleOf("s2")} grid=${roleOf("s3")} story=${roleOf("s5")} faq=${roleOf("s8")}`,
+  );
+  check("2f. sections that render their own frame keep theirs", roleOf("s1") === "hook" && roleOf("s6") === "offer");
 }
 
 // --- 3. Plan validation: thin arguments are rejected, real ones capped + kept ---
@@ -181,7 +200,13 @@ function check(label: string, ok: boolean, detail?: string) {
   );
   const out = applySalesArgument(composed, plan);
 
-  const serves = (b: string) => out.some((s) => (s.servesBelief ?? "").includes(b));
+  // COVERAGE ASKS WHETHER SOME RENDERED SECTION IS RESPONSIBLE, and a section
+  // may be responsible for more than one belief. Those extras live in
+  // `alsoServesBeliefs` as a list — they used to be concatenated into
+  // `servesBelief` with " + ", which is how a delimiter reached a rendered
+  // caption. Coverage reads both; nothing is lost by the shape change.
+  const serves = (b: string) =>
+    out.some((s) => (s.servesBelief ?? "") === b || (s.alsoServesBeliefs ?? []).includes(b));
   check("5a. at least one RENDERED section is RESPONSIBLE for belief B", serves(B), out.map((s) => `${s.type}:${s.servesBelief ?? "-"}`).join(" | "));
   check("5b. at least one RENDERED section is RESPONSIBLE for belief C", serves(C));
   check("5c. at least one RENDERED section is RESPONSIBLE for belief D", serves(D));

@@ -28,6 +28,10 @@ export interface StockImage {
   url: string;
   alt: string;
   photographer: string;
+  /** The provider's own photo id. Uploads from one session get nearby ids. */
+  providerId?: number;
+  /** The provider's photographer id — stable, unlike the display name. */
+  photographerId?: number;
 }
 
 /** Search Pexels for up to `count` DISTINCT landscape photos matching the
@@ -42,7 +46,9 @@ export async function searchSubjectImages(query: string, count = 4): Promise<Sto
       { headers: { Authorization: key }, signal: AbortSignal.timeout(8000) },
     );
     if (!res.ok) return [];
-    const json = (await res.json()) as { photos?: { id?: number; alt?: string; photographer?: string; src?: { large2x?: string; large?: string } }[] };
+    const json = (await res.json()) as {
+      photos?: { id?: number; alt?: string; photographer?: string; photographer_id?: number; src?: { large2x?: string; large?: string } }[];
+    };
     const photos = Array.isArray(json?.photos) ? json.photos : [];
     const out: StockImage[] = [];
     const seen = new Set<number>();
@@ -50,7 +56,13 @@ export async function searchSubjectImages(query: string, count = 4): Promise<Sto
       const url = p?.src?.large2x || p?.src?.large;
       if (!url || (typeof p.id === "number" && seen.has(p.id))) continue;
       if (typeof p.id === "number") seen.add(p.id);
-      out.push({ url, alt: p.alt || q, photographer: p.photographer || "" });
+      out.push({
+        url,
+        alt: p.alt || q,
+        photographer: p.photographer || "",
+        ...(typeof p.id === "number" ? { providerId: p.id } : {}),
+        ...(typeof p.photographer_id === "number" ? { photographerId: p.photographer_id } : {}),
+      });
       if (out.length >= count) break;
     }
     return out;

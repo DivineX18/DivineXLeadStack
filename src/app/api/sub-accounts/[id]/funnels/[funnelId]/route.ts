@@ -89,6 +89,18 @@ function sanitizeSections(raw: unknown): FunnelSection[] | null {
       config: s.config,
       ...(typeof s.argumentRole === "string" && s.argumentRole ? { argumentRole: s.argumentRole.slice(0, 40) } : {}),
       ...(typeof s.servesBelief === "string" && s.servesBelief ? { servesBelief: s.servesBelief.slice(0, 240) } : {}),
+      // Secondary beliefs travel with the primary one, or the first human edit
+      // would drop them and leave those chain steps with no responsible
+      // section — the same silent-destruction failure this block exists to
+      // prevent. Validated the same way: strings only, bounded, capped.
+      ...(Array.isArray(s.alsoServesBeliefs) && s.alsoServesBeliefs.length > 0
+        ? {
+            alsoServesBeliefs: (s.alsoServesBeliefs as unknown[])
+              .filter((b): b is string => typeof b === "string" && b.trim().length > 0)
+              .slice(0, 6)
+              .map((b) => b.slice(0, 240)),
+          }
+        : {}),
       ...(canvas ? { canvas } : {}),
     });
   }

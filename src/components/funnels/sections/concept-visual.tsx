@@ -156,6 +156,19 @@ const SHAPES: Record<ConstructedShape, (p: { accent: string }) => React.ReactEle
   sequence: Sequence,
 };
 
+/**
+ * THE DRAWING, AS PART OF ITS SECTION.
+ *
+ * Sized to take a full column of a split rather than to sit as a small card in
+ * a band of its own. The first render capped this at `max-w-md` and centred it
+ * under the copy, which is what made a load-bearing diagram read as a
+ * placeholder: a visual that is the other half of a beat has to hold the weight
+ * of the half it is beside.
+ *
+ * The caption is not decoration either — it is the page's own proposition, so
+ * the idea survives for a screen reader and for anyone who reads the picture
+ * rather than studies it.
+ */
 export function ConceptVisual({
   shape,
   caption,
@@ -180,15 +193,64 @@ export function ConceptVisual({
       role="img"
     >
       <div
-        className="mx-auto aspect-[4/3] w-full max-w-md overflow-hidden p-6 ring-1 ring-black/[0.06] dark:ring-white/[0.10]"
+        className="aspect-[4/3] w-full overflow-hidden p-8 ring-1 ring-black/[0.06] dark:ring-white/[0.10]"
         style={{
           borderRadius: "var(--flow-radius, 1rem)",
-          backgroundColor: "color-mix(in oklab, currentColor 3.5%, transparent)",
+          // Enough tint to read as a deliberate surface rather than as an empty
+          // area the page forgot to fill, and a tint of the ACCENT so it
+          // belongs to this page rather than to the component.
+          backgroundColor: `color-mix(in oklab, ${accentColor} 7%, transparent)`,
         }}
       >
         <Shape accent={accentColor} />
       </div>
       <Caption text={caption} />
     </figure>
+  );
+}
+
+/**
+ * ONE BEAT'S VISUAL, WHATEVER MEDIUM WON IT.
+ *
+ * The section hosting a beat should not have to know which rung of the source
+ * hierarchy answered — that decision was made upstream, and a section that
+ * branched on it would be a second place the hierarchy is encoded. It renders a
+ * photograph or a drawing through the same slot, at the same weight.
+ */
+export function BeatVisual({
+  visual,
+  accentColor,
+  className = "",
+}: {
+  visual: { shape?: string; caption: string; url?: string; alt?: string };
+  accentColor: string;
+  className?: string;
+}) {
+  if (visual.url) {
+    return (
+      <figure className={`m-0 ${className}`}>
+        <div
+          className="overflow-hidden ring-1 ring-black/[0.06] dark:ring-white/[0.08]"
+          style={{ borderRadius: "var(--flow-radius, 1rem)" }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={visual.url}
+            alt={visual.alt ?? ""}
+            loading="lazy"
+            className="aspect-[4/3] w-full object-cover"
+          />
+        </div>
+      </figure>
+    );
+  }
+  if (!visual.shape) return null;
+  return (
+    <ConceptVisual
+      shape={visual.shape as ConstructedShape}
+      caption={visual.caption}
+      accentColor={accentColor}
+      className={className}
+    />
   );
 }
