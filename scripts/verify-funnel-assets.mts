@@ -128,7 +128,17 @@ check("6o. /lp welcome bar renders delivery + download", src("src/app/lp/[funnel
 {
   const src = (f: string) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
   const bg = src("src/components/funnels/sections/benefits-grid-section.tsx");
-  check("10a. no-pseudo-media law: published rows without images recompose to editorial text", bg.includes("published && !item.imageUrl") && bg.includes("realImageCount === 0"));
+  // STALE ASSERTION, NOT A BEHAVIOR REGRESSION.
+  //   OLD: bg.includes("realImageCount === 0")
+  //   NEW: bg.includes("realImageCount < Math.ceil(config.items.length / 2)")
+  // Commit 7fa7ced generalized the alternating-row rule from "no images at
+  // all" to "too few images to alternate", so the old literal stopped
+  // matching while the law itself kept working. This check greps source text,
+  // so it went red on frozen, certified code and stayed red through
+  // promotion. Asserting the CURRENT expression, and the law is still proven
+  // by the `published && !item.imageUrl` recomposition branch below it.
+  check("10a. no-pseudo-media law: published rows without images recompose to editorial text",
+    bg.includes("published && !item.imageUrl") && bg.includes("realImageCount < Math.ceil(config.items.length / 2)"));
   check("10b. builder preview keeps labeled placeholders (operator guidance)", bg.includes("MediaPlaceholder"));
   const caps = src("src/lib/ai-suite/capabilities.ts");
   check("10c. creator-led compact hero (info/coaching portrait -> founder_image avatar)", caps.includes('layout: "founder_image"'));
