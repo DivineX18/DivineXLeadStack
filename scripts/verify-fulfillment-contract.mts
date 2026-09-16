@@ -20,7 +20,7 @@
  *
  *   NODE_OPTIONS="--conditions=react-server" npx tsx scripts/verify-fulfillment-contract.mts
  */
-import { findDeliveryGaps } from "../src/lib/funnels/cta-integrity.ts";
+import { findDeliveryGaps, withDeliveryLink } from "../src/lib/funnels/cta-integrity.ts";
 import { assertsCheckoutCapability, stripCheckoutCapabilityClaims } from "../src/lib/funnels/conversion-action.ts";
 
 let failures = 0;
@@ -88,6 +88,77 @@ console.log("\n══ pages that never promised a file are untouched ══");
   // Legacy callers that cannot supply the new evidence must not be newly broken.
   const legacy = findDeliveryGaps({ formIds: ["f"], workflows: [{ id: "w", name: "n", status: "active" }], hasLeadMagnetAsset: true, genre: "lead_magnet" });
   check("a caller supplying no asset/email evidence keeps its old behavior", legacy.length === 0, legacy.join(" | "));
+}
+
+// ── Where the download link goes in the email ──────────────────────────────
+console.log("\n══ the file goes above the legal footer, and there is only ever one ══");
+{
+  const URL_A = "https://crm.divinex.io/api/funnel-asset/AAA";
+  const URL_B = "https://crm.divinex.io/api/funnel-asset/BBB";
+  const original = "Hi {{contact.firstName}},\n\nThanks for requesting the guide.\n\n{{unsubscribeLink}}";
+
+  const once = withDeliveryLink(original, URL_A);
+  const linkAt = once.indexOf("Download your copy here:");
+  const unsubAt = once.indexOf("{{unsubscribeLink}}");
+  check("the link is inserted, not dropped", linkAt !== -1, once);
+  check("the link sits BEFORE the unsubscribe footer", linkAt < unsubAt, `link@${linkAt} unsub@${unsubAt}`);
+  check("the unsubscribe footer is still last", once.trimEnd().endsWith("{{unsubscribeLink}}"), JSON.stringify(once.slice(-40)));
+  check("the operator's own copy is preserved", once.includes("Thanks for requesting the guide.") && once.includes("Hi {{contact.firstName}},"));
+
+  // Replacing the PDF: the old link must be gone, not accompanied.
+  const twice = withDeliveryLink(once, URL_B);
+  const occurrences = (twice.match(/Download your copy here:/g) ?? []).length;
+  check("a replacement upload leaves exactly one link", occurrences === 1, `found ${occurrences}`);
+  check("... pointing at the NEW asset", twice.includes(URL_B) && !twice.includes(URL_A), twice);
+  check("... still above the footer", twice.indexOf("Download your copy here:") < twice.indexOf("{{unsubscribeLink}}"));
+  check("... and still preserving the operator's copy", twice.includes("Thanks for requesting the guide."));
+
+  // Re-running with the SAME asset is a no-op, which is what lets the route
+  // skip the write entirely.
+  check("re-running with the same asset changes nothing", withDeliveryLink(once, URL_A) === once);
+
+  // A body with no unsubscribe token still gets the file.
+  const noFooter = withDeliveryLink("Internal note: a lead came in.", URL_A);
+  check("an email with no unsubscribe token still receives the link", noFooter.includes(URL_A), noFooter);
+  check("... appended after the existing content", noFooter.startsWith("Internal note: a lead came in."), noFooter);
+  check("... exactly once on replacement", (withDeliveryLink(noFooter, URL_B).match(/Download your copy here:/g) ?? []).length === 1);
+
+  // Content living BELOW the unsubscribe token stays below it.
+  const withTail = withDeliveryLink("Body.\n\n{{unsubscribeLink}}\n\nDivineX, Dallas TX", URL_A);
+  check("a postal-address tail stays below the footer", withTail.endsWith("DivineX, Dallas TX"), JSON.stringify(withTail.slice(-30)));
+  check("... with the link still above the footer", withTail.indexOf(URL_A) < withTail.indexOf("{{unsubscribeLink}}"));
+
+  // A hand-written layout keeps its shape when the PDF is swapped.
+  const handWritten =
+    "Hi there,\n\nThanks for requesting the book.\n\nDownload your copy here: " +
+    URL_A +
+    "\n\nEnjoy,\nDivineX\n\n{{unsubscribeLink}}";
+  const swapped = withDeliveryLink(handWritten, URL_B);
+  check("a hand-placed link keeps its position on replacement", swapped.indexOf("Enjoy,") > swapped.indexOf(URL_B), swapped);
+  check("... with the URL actually swapped", swapped.includes(URL_B) && !swapped.includes(URL_A));
+  check("... and exactly one link", (swapped.match(/Download your copy here:/g) ?? []).length === 1);
+  check("... footer still last", swapped.trimEnd().endsWith("{{unsubscribeLink}}"));
+
+  // A link stranded BELOW the footer is the old bug: it gets moved, not kept.
+  const stranded = "Body.\n\n{{unsubscribeLink}}\n\nDownload your copy here: " + URL_A;
+  const rescued = withDeliveryLink(stranded, URL_B);
+  check("a link stranded below the footer is moved above it", rescued.indexOf(URL_B) < rescued.indexOf("{{unsubscribeLink}}"), rescued);
+  check("... leaving exactly one", (rescued.match(/Download your copy here:/g) ?? []).length === 1);
+
+  // Two links (the old double-append) are repaired down to one.
+  const doubled =
+    "Body.\n\nDownload your copy here: " + URL_A + "\n\n{{unsubscribeLink}}\n\nDownload your copy here: " + URL_A;
+  const repaired = withDeliveryLink(doubled, URL_B);
+  check("a doubled legacy body is repaired to one link", (repaired.match(/Download your copy here:/g) ?? []).length === 1, repaired);
+  check("... above the footer", repaired.indexOf(URL_B) < repaired.indexOf("{{unsubscribeLink}}"));
+
+  // A footer-only body must not gain leading blank lines.
+  const bare = withDeliveryLink("{{unsubscribeLink}}", URL_A);
+  check("a footer-only body gains no leading blank lines", bare.startsWith("Download your copy here:"), JSON.stringify(bare));
+
+  // The written result satisfies the publish check that reads it.
+  const gaps = findDeliveryGaps(ctx({ emailBodies: [once], leadMagnetAssetUrl: "/api/funnel-asset/AAA" }));
+  check("what the writer produces passes the publish check that reads it", gaps.length === 0, gaps.join(" | "));
 }
 
 // ── Checkout language is a capability claim ────────────────────────────────

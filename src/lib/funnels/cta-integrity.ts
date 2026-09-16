@@ -232,3 +232,68 @@ export function findDeliveryGaps(ctx: DeliveryContext): string[] {
 export function deliveryRejection(gaps: string[]): string {
   return `This page promises something it can't deliver yet: ${gaps.join("; ")}.`;
 }
+
+// ── Writing the delivery link into the email ───────────────────────────────
+
+/**
+ * THE THING THEY ASKED FOR GOES ABOVE THE LEGAL FOOTER.
+ *
+ * The upload route used to append the download line to the END of the email
+ * body. Every compliant body already ends with `{{unsubscribeLink}}` (the
+ * broadcast/automation validator requires it), so "the end" was always BELOW
+ * the unsubscribe footer. The subscriber got a note, then an unsubscribe
+ * link, then — underneath the part every reader treats as the end of the
+ * message — the file they actually signed up for.
+ *
+ * So insertion is positional, not appended: the link goes immediately before
+ * the unsubscribe token, and the footer stays last. A body with no
+ * unsubscribe token (an internal notification, a legacy template) still gets
+ * the link rather than being skipped, because the alternative is silently not
+ * delivering.
+ *
+ * This is the WRITE half of the rule `findDeliveryGaps` checks above, which
+ * is why it lives here: the pattern that removes a previous link and the
+ * check that looks for the current one cannot drift apart in one file.
+ */
+const DELIVERY_LINE_RE = /\n*Download your copy here: \S*\/api\/funnel-asset\/\S+/g;
+const DELIVERY_LINE = /Download your copy here: \S*\/api\/funnel-asset\/\S+/;
+const UNSUBSCRIBE_TOKEN = "{{unsubscribeLink}}";
+
+/**
+ * The email body carrying exactly one link, to exactly this asset.
+ *
+ * IDEMPOTENT MEANS "ONE LINK", NOT "ONE APPEND PER UPLOAD". A replacement
+ * upload mints a new assetId, so a previous link is never left alongside the
+ * new one — otherwise an operator who swapped their PDF would ship an email
+ * carrying two download links, the first pointing at the file they had just
+ * replaced. Everything the operator wrote themselves is preserved untouched.
+ *
+ * Placement follows one rule: A LINK THE READER WILL SEE KEEPS ITS PLACE, a
+ * link they will not is moved to where they will. So a body that already
+ * carries the line ABOVE the footer gets the URL swapped in place, leaving a
+ * hand-written layout ("here is your copy ... enjoy, DivineX") exactly as the
+ * operator wrote it. A body with no link, or with one stranded below the
+ * unsubscribe footer (what the old append-to-the-end behavior produced), has
+ * it inserted immediately above the footer instead.
+ */
+export function withDeliveryLink(body: string, absoluteUrl: string): string {
+  const line = `Download your copy here: ${absoluteUrl}`;
+  const footerAt = body.indexOf(UNSUBSCRIBE_TOKEN);
+  const found = DELIVERY_LINE.exec(body);
+  const count = (body.match(DELIVERY_LINE_RE) ?? []).length;
+
+  // Exactly one link, already somewhere the subscriber reads: swap the URL and
+  // leave the operator's layout alone. More than one means an earlier bug left
+  // a mess, which is repaired by the canonical path below rather than patched.
+  if (count === 1 && found && (footerAt === -1 || found.index < footerAt)) {
+    return body.slice(0, found.index) + line + body.slice(found.index + found[0].length);
+  }
+
+  const cleaned = body.replace(DELIVERY_LINE_RE, "");
+  const at = cleaned.indexOf(UNSUBSCRIBE_TOKEN);
+  if (at === -1) return `${cleaned.trimEnd()}\n\n${line}`;
+
+  const before = cleaned.slice(0, at).trimEnd();
+  const footer = cleaned.slice(at);
+  return `${before ? `${before}\n\n` : ""}${line}\n\n${footer}`;
+}
