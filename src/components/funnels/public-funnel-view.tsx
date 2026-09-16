@@ -296,7 +296,12 @@ export function PublicFunnelView({
           // lib/funnels/visual-placement.ts), so the section component renders
           // it and the page renderer has nothing to add.
           return (
-            <div key={section.id} style={bgStyle}>
+            // `id` makes the section addressable so a primary CTA elsewhere on
+            // the page can point AT the conversion control (a hero button that
+            // leads to the checkout section) instead of opening a second,
+            // competing mechanic beside it. Purely an anchor; no styling or
+            // layout behavior is attached to it.
+            <div key={section.id} id={section.id} style={bgStyle}>
               <AnimatedSection level={tokens.animationLevel} index={i}>
                 <Component
                   config={section.config}

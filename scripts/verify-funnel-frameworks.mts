@@ -303,7 +303,19 @@ try {
     check("5c. lead_magnet funnel has exactly one persuasion section (hero) + identity footer",
       persuasion.length === 1 && persuasion[0]?.type === "hero");
     const hero = persuasion[0];
-    check("5d. hero carries the bullets directly (no separate benefits section to hold them)", (hero?.config.bullets as string[])?.length === 2);
+    // STALE EXPECTATION FIXED (post-V1): the one-fold hero still carries the
+    // offer, but the proof-showcase composition now presents those bullets as
+    // the deliverable preview beside the copy instead of an inline checklist —
+    // the inline list printed the same lines twice in one viewport. The
+    // contract ("the hero carries them, there is no benefits section") is
+    // unchanged; where they render is what moved.
+    const heroShowcase = (hero?.config.proofShowcase as { items?: { title: string }[] } | undefined)?.items ?? [];
+    const heroBullets = (hero?.config.bullets as string[] | undefined) ?? [];
+    check(
+      "5d. hero carries the bullets directly (no separate benefits section to hold them)",
+      heroShowcase.length === 2 || heroBullets.length === 2,
+      `showcase=${heroShowcase.length} bullets=${heroBullets.length}`,
+    );
     check("5e. hero's CTA defaults to a popup form", (hero?.config.cta as { style?: string } | undefined)?.style === "popup_form");
     check("5f. hero is wired to a real capture form (formId set)", typeof hero?.config.formId === "string" && (hero?.config.formId as string).length > 0);
     if (typeof hero?.config.formId === "string") {
@@ -338,10 +350,16 @@ try {
     const snap = await db.doc(`funnels/${result.ref!.id}`).get();
     const sections = snap.data()?.sections as { type: string; config: Record<string, unknown> }[];
     const testimonials = sections.find((s) => s.type === "testimonials");
+    // STALE EXPECTATION FIXED (post-V1): this required the empty testimonials
+    // section to SURVIVE on the page. Empty-section pruning now removes it
+    // before save, which serves the same intent more completely — the override
+    // still fabricates nothing, and no dead section ships either. The check is
+    // now "nothing invented", which both behaviors satisfy and only a
+    // fabricated quote would fail.
     check(
-      "4h. Empty-items testimonials override resolves the layout but writes NO fabricated content",
-      !!testimonials && (testimonials.config.items as unknown[]).length === 0,
-      JSON.stringify(testimonials?.config),
+      "4h. Empty-items testimonials override writes NO fabricated content",
+      !testimonials || (testimonials.config.items as unknown[]).length === 0,
+      testimonials ? JSON.stringify(testimonials.config) : "pruned (renders nothing)",
     );
     const trustBadges = sections.find((s) => s.type === "trust_badges");
     check("4i. trust_badges is never in the resolved sections once overridden to testimonials (only one of the two competes for that slot)", !trustBadges);

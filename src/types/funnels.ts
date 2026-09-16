@@ -279,7 +279,15 @@ export interface ProofStripConfig {
   /** REAL rating only (e.g. the business's actual Google rating) — never
    *  fabricated. `href` links the strip to the live profile (Google Business,
    *  etc.) so the proof is verifiable. */
-  rating?: { score: number; reviewCount: number; scale?: number; href?: string };
+  rating?: {
+    score: number;
+    reviewCount: number;
+    scale?: number;
+    href?: string;
+    /** Whose reviews these are ("Google"). Rendered verbatim, so a page can
+     *  never imply a source the business did not name. */
+    source?: string;
+  };
   logos?: { url: string; alt: string }[];
   /** Evidence-strip heading over the logos row — "Trusted by", "As featured
    *  in", "Certifications & memberships". Defaults to "As seen in". */

@@ -308,7 +308,12 @@ export const VISUAL_ARCHETYPES: Record<VisualArchetype, VisualArchetypeDefinitio
     // Sales-letter hero: a big CENTERED headline, not a website-style
     // headline-left / media-right split. Media defaults to none (pure copy) or
     // a CENTERED video below — never a side screenshot box.
-    recommendedHeroLayouts: ["centered", "background_image"],
+    // `split` is third, not first: the sales-letter fold stays the default, and
+    // a split is only reached when the page genuinely has something to put
+    // beside the copy — a lead magnet's cover, a product shot. Without it an
+    // info-product page had no composition available except a centered block,
+    // which is half of why 106 of 109 funnels looked alike.
+    recommendedHeroLayouts: ["centered", "background_image", "split"],
     // popup_form leads (capture-safe), but phone + booking are supported so a
     // real call-now / booking CTA survives even in the bold default.
     recommendedCtaStyles: ["popup_form", "phone", "popup_calendar", "sticky_desktop", "dual"],
@@ -502,3 +507,125 @@ export function resolveEffectiveDesignTokens(funnel: {
 }
 
 export const VISUAL_ARCHETYPE_IDS = Object.keys(VISUAL_ARCHETYPES) as VisualArchetype[];
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * THE ARCHETYPE IS A PROPERTY OF THE BUSINESS, NOT A PREFERENCE.
+ *
+ * The architecture-diversity diagnostic measured 109 generated funnels: 80
+ * direct_response, 28 professional_enterprise, 1 nonprofit_mission, and zero of
+ * the other six archetypes. 106 of 109 used a centered hero.
+ *
+ * That was not the model collapsing. It was an allowlist: generation accepted
+ * the model's archetype ONLY when it was one of three "distinct industry" ones
+ * and forced everything else to direct_response, and the hero layout then fell
+ * to that archetype's first recommendation, which is `centered`. A dentist, a
+ * roofer, a SaaS and an agency all resolved to the same bold sales look because
+ * the code said so.
+ *
+ * So the archetype is derived from the business category the generator has
+ * ALREADY inferred (`AuthenticityCategory` — the same signal that decides
+ * whether a photograph can be honest evidence), and the model may choose within
+ * that category's eligible set rather than being overridden or trusted blindly.
+ *
+ * This deliberately does NOT manufacture variety: two dentists still resolve to
+ * the same archetype. The variety it produces is the variety the categories
+ * genuinely have.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Archetypes that suit each business category, best first.
+ *
+ * The first entry is what a page gets when the model names nothing usable, so
+ * the order is the editorial judgment: a clinic reads as `wellness` before it
+ * reads as a sales page, a trade business reads as `local_service`, a platform
+ * reads as `saas_technology`. Every list stays short, because "eligible" has to
+ * mean something — a nonprofit is never a luxury brand.
+ */
+const CATEGORY_ARCHETYPES: Record<string, VisualArchetype[]> = {
+  local_service_health: ["wellness", "local_service", "professional_enterprise"],
+  local_service_trade: ["local_service", "direct_response"],
+  b2b_services: ["professional_enterprise", "agency_creative", "coach_consultant"],
+  enterprise_software: ["saas_technology", "professional_enterprise"],
+  physical_product: ["direct_response", "agency_creative", "luxury_premium"],
+  info_product: ["direct_response", "coach_consultant"],
+  coaching: ["coach_consultant", "wellness", "direct_response"],
+  nonprofit: ["nonprofit_mission"],
+};
+
+/** The archetypes this business category may legitimately use, best first. */
+export function eligibleArchetypes(authenticityCategory: string): VisualArchetype[] {
+  return CATEGORY_ARCHETYPES[authenticityCategory] ?? ["professional_enterprise", "direct_response"];
+}
+
+/**
+ * The archetype for this page: the model's choice when the category allows it,
+ * otherwise the category's own default. An out-of-category choice is ignored
+ * rather than obeyed, which is the same contract `resolveDesignStrategy`
+ * already applies to every other override.
+ */
+export function archetypeForContext(input: {
+  authenticityCategory: string;
+  modelChoice?: string | null;
+}): VisualArchetype {
+  const eligible = eligibleArchetypes(input.authenticityCategory);
+  const choice = (input.modelChoice ?? "") as VisualArchetype;
+  if (eligible.includes(choice)) return choice;
+  // PREMIUM BY NATURE, WHEREVER THE CATEGORY LANDS (the §20 reconciliation the
+  // previous policy got right and kept). A private wealth advisory and a
+  // charity are both categories the inference ladder reads weakly, and both are
+  // actively HARMED by a bold sales look. When the model deliberately names one
+  // of these two, that choice stands even if the category did not predict it.
+  if (choice === "luxury_premium" || choice === "nonprofit_mission") return choice;
+  return eligible[0];
+}
+
+/**
+ * THE FOLD IS COMPOSED FOR WHAT IS ACTUALLY ON IT.
+ *
+ * `resolveDesignStrategy` falls back to `recommendedHeroLayouts[0]`, and six of
+ * the nine archetypes list `centered` first, which is how a page whose fold
+ * carries a photograph still composed as a centered text block.
+ *
+ * This picks from the SAME approved list — never outside it — using what the
+ * page will actually have above the fold. It cannot invent media: the hero
+ * renderer falls back to `centered` whenever a media layout has no media
+ * (see hero-section.tsx), so an optimistic choice degrades rather than
+ * shipping an empty frame.
+ */
+export function heroLayoutForContext(input: {
+  archetype: VisualArchetype;
+  /** A one-fold magnet or a deliverable preview sits BESIDE the copy. */
+  hasDeliverablePreview?: boolean;
+  /** A photograph is likely to land on the fold. */
+  hasPhotography?: boolean;
+  /** The page's own video carries the argument below the fold. */
+  isVideoLed?: boolean;
+  /** A named person is the offer (coach, founder, host). */
+  isPersonLed?: boolean;
+  /** High commitment earns a calm authority fold over a busy one. */
+  commitment?: "low" | "medium" | "high";
+}): HeroLayoutId {
+  const approved = VISUAL_ARCHETYPES[input.archetype].recommendedHeroLayouts;
+  const first = (...wanted: HeroLayoutId[]): HeroLayoutId | null =>
+    wanted.find((l) => approved.includes(l)) ?? null;
+
+  // Order matters: the most specific fact about this fold wins.
+  const preference: (HeroLayoutId | null)[] = [
+    // The deliverable IS the argument — show it beside the ask.
+    input.hasDeliverablePreview ? first("split", "centered") : null,
+    // A product surface belongs in a device frame, never a stock photo.
+    input.archetype === "saas_technology" ? first("browser_mockup", "phone_mockup", "split") : null,
+    // The video below the fold is the media; a second image above it competes.
+    input.isVideoLed ? first("centered", "split") : null,
+    // A person-led offer earns a portrait when the archetype composes one.
+    input.isPersonLed ? first("founder_image", "split") : null,
+    // A real photograph of the work: immersive where the archetype allows it,
+    // beside the copy otherwise.
+    input.hasPhotography && input.commitment !== "high" ? first("background_image", "split") : null,
+    input.hasPhotography ? first("split", "background_image") : null,
+    // Nothing to show. A centered fold is the honest composition.
+    first("centered", "split"),
+  ];
+
+  return preference.find((l): l is HeroLayoutId => l !== null) ?? approved[0];
+}

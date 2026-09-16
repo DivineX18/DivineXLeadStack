@@ -170,12 +170,20 @@ try {
     createdFunnelIds.push(result.ref!.id);
     const snap = await db.doc(`funnels/${result.ref!.id}`).get();
     const data = snap.data()!;
-    check("5b. non-soft archetype (SaaS) is forced to the bold direct_response default", data.designStrategy?.visualArchetype === "direct_response", JSON.stringify(data.designStrategy));
+    // POST-V1 (context-driven archetypes): a platform resolves to the platform
+    // archetype. This assertion previously required the opposite, because
+    // generation forced every archetype except three to direct_response —
+    // measured at 80/109 funnels and 106/109 centered heroes, which is the
+    // collapse the archetype work removed.
+    check("5b. a platform keeps the platform archetype", data.designStrategy?.visualArchetype === "saas_technology", JSON.stringify(data.designStrategy));
     check("5c. Accent/theme on the doc reflect the resolved palette (dark or light, a real archetype color, not the plain genre default)", typeof data.accentColor === "string" && /^#[0-9a-f]{6}$/i.test(data.accentColor));
     const hero = (data.sections as { type: string; config: Record<string, unknown> }[]).find((s) => s.type === "hero");
     check("5d. Real hero_media_url lands on the hero section (no placeholder needed since real media was given)", hero?.config.mediaUrl === "https://example.com/dashboard.png" && !hero?.config.mediaPlaceholderLabel);
-    check("5e. Hero resolves to the CENTERED sales-letter layout (Brunson default; only webinar splits)", hero?.config.layout === "centered", hero?.config.layout as string);
-    check("5f. Summary includes a DESIGN rationale section (bold Direct Response)", result.resultText.includes("DESIGN") && result.resultText.includes("Direct Response"));
+    // A device frame for a product surface, not a centered text block: the
+    // fold is composed for what is actually on it, and this fixture supplies a
+    // real dashboard screenshot.
+    check("5e. a platform with real product media composes a device frame", hero?.config.layout === "browser_mockup", hero?.config.layout as string);
+    check("5f. Summary includes a DESIGN rationale naming the resolved archetype", result.resultText.includes("DESIGN") && /SaaS & Technology/i.test(result.resultText), result.resultText.slice(-200));
   }
 
   // 5g. Local-service archetype with NO real media — media_strategy
@@ -202,14 +210,22 @@ try {
     const gallery = sections.find((s) => s.type === "photo_gallery");
     const cta = hero?.config.cta as { style?: string; phoneNumber?: string } | undefined;
     check("5h. Phone CTA style + real number wired onto the hero", cta?.style === "phone" && cta?.phoneNumber === "+15551234567", JSON.stringify(cta));
+    // Back to the behavior 5g's own comment describes: a local service with no
+    // real media routes its service_photo strategy to a dedicated gallery, so
+    // the hero stays clean and the operator has one place to add real work
+    // photos. The forced-direct_response policy had suppressed it.
     check(
-      "5i. Bold sales-letter mode uses centered copy, not a website photo gallery (media strategy is none)",
-      !gallery,
+      "5i. a local service routes its photo strategy to a gallery section",
+      !!gallery,
       JSON.stringify(gallery?.config),
     );
-    check("5i2. Local lead_gen funnel also resolves to the centered sales-letter layout", hero?.config.layout === "centered");
+    check("5i2. an urgent phone-CTA local hero stays centered (no media on the fold)", hero?.config.layout === "centered", hero?.config.layout as string);
     check("5i3. URGENT phone-CTA hero drops placeholder-only media (asset-fallback: headline + CTA own the viewport, never an empty panel)", hero?.config.mediaType === "none" && !hero?.config.mediaPlaceholderLabel);
-    check("5j. forced direct_response density/animation applied (high / moderate)", data.designStrategy?.visualDensity === "high" && data.designStrategy?.animationLevel === "moderate");
+    // Animation comes from the archetype itself; density can still be raised by
+    // a workspace profile or an explicit override, so only the archetype-owned
+    // half is asserted here. What matters is that it is no longer the forced
+    // direct_response pair (high / moderate).
+    check("5j. the local-service archetype's own animation level applies", data.designStrategy?.animationLevel === "minimal", `${data.designStrategy?.visualDensity} / ${data.designStrategy?.animationLevel}`);
   }
 
   // 5k. Contrasting archetypes actually produce MATERIALLY different
@@ -219,10 +235,15 @@ try {
   if (saasSnap && localSnap) {
     const saasStrategy = saasSnap.data()!.designStrategy;
     const localStrategy = localSnap.data()!.designStrategy;
+    // The original intent of this check, restored: contrasting businesses
+    // produce materially different tokens. That is the whole point of having
+    // archetypes, and a forced default made it unmeasurable.
     check(
-      "5k. Both non-soft funnels are forced to the bold direct_response default (funnels convert best as sales letters)",
-      saasStrategy.visualArchetype === "direct_response" && localStrategy.visualArchetype === "direct_response",
-      `${saasStrategy.visualArchetype} vs ${localStrategy.visualArchetype}`,
+      "5k. contrasting businesses produce materially different design tokens",
+      saasStrategy.visualArchetype !== localStrategy.visualArchetype &&
+        (saasStrategy.typographyPairing !== localStrategy.typographyPairing ||
+          saasStrategy.heroLayout !== localStrategy.heroLayout),
+      `${saasStrategy.visualArchetype}/${saasStrategy.heroLayout} vs ${localStrategy.visualArchetype}/${localStrategy.heroLayout}`,
     );
   }
 
@@ -240,7 +261,9 @@ try {
     createdFunnelIds.push(result.ref!.id);
     const snap = await db.doc(`funnels/${result.ref!.id}`).get();
     const data = snap.data()!;
-    check("5m. A no-archetype funnel is forced to the bold direct_response default (never a flat/light default)", data.designStrategy?.visualArchetype === "direct_response", JSON.stringify(data.designStrategy));
+    // No archetype named: the BUSINESS decides, not a house default. This
+    // fixture reads as a local service, so it composes as one.
+    check("5m. a no-archetype funnel derives its archetype from the business", data.designStrategy?.visualArchetype === "local_service", JSON.stringify(data.designStrategy));
   }
   // 5n. Funnels are ALWAYS bold sales letters — even a luxury-picked archetype
   // is forced to direct_response. (Soft / premium / website looks are website-

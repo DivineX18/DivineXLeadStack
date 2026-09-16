@@ -100,6 +100,13 @@ import {
 } from "@/lib/funnels/art-direction";
 import { composePage } from "@/lib/funnels/page-composition";
 import {
+  resolveConversionAction,
+  assertsCheckoutCapability,
+  stripCheckoutCapabilityClaims,
+  CHECKOUT_PENDING_NOTE,
+} from "@/lib/funnels/conversion-action";
+import { ratingStripConfig, reviewProofFromStore } from "@/lib/funnels/review-proof";
+import {
   buildCopyGrounding,
   isUnsupportedTrustClaim,
   stripUngroundedClaims,
@@ -112,6 +119,8 @@ import {
   VISUAL_ARCHETYPES,
   TYPOGRAPHY_PAIRINGS,
   resolveDesignStrategy,
+  archetypeForContext,
+  heroLayoutForContext,
   type VisualArchetype,
   type MediaStrategyId,
   type ColorMode,
@@ -4693,27 +4702,34 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // layout, CTA strategy, media placeholders) read from the same
       // resolved strategy — never two independent decisions that could
       // disagree with each other.
-      // Bold direct-response is the DEFAULT (funnels convert best that way, and
-      // the model kept choosing washed-light looks — wellness for a med spa,
-      // local_service for a roofer). RECONCILED with the spec's industry-design
-      // intelligence (§20/§30): a small set of genuinely-distinct, premium-by-
-      // nature industries — luxury (restraint), nonprofit (human/mission), and
-      // professional/healthcare/legal (calm authority) — where a ClickFunnels
-      // VSL look would actively HURT credibility, keep their own archetype when
-      // the model deliberately picked it. Everything else (SaaS, local service,
-      // coaching, agency, ecommerce) stays on the bold default; the operator can
-      // switch archetype in the builder either way. A real CTA fact (phone/
-      // booking) is still honored so call-now/booking survive.
-      const DISTINCT_INDUSTRY_ARCHETYPES = new Set<VisualArchetype>([
-        "luxury_premium",
-        "nonprofit_mission",
-        "professional_enterprise",
-      ]);
+      // THE ARCHETYPE IS DERIVED FROM THE BUSINESS, NOT ALLOWLISTED.
+      //
+      // What stood here accepted the model's archetype only when it was one of
+      // three "distinct industry" ones and forced everything else to
+      // direct_response. Measured across 109 generated funnels that produced
+      // 80 direct_response / 28 professional_enterprise / 1 nonprofit_mission
+      // and zero of the other six, with 106 of 109 on a centered hero: a
+      // dentist, a roofer, a SaaS and an agency all resolved to the same bold
+      // sales look because the code said so, however well the persuasion
+      // planner had differentiated the argument underneath.
+      //
+      // The category is the same one the evidence pipeline already infers, so
+      // no new signal and no new truth store is introduced — see
+      // `archetypeForContext` in design-strategy.ts for the eligibility model.
+      // It is resolved HERE (rather than at its old position further down)
+      // because the archetype now depends on it; the later block reuses this
+      // value instead of computing a second one.
+      const authenticityCategory = ((): import("@/lib/funnels/authenticity").AuthenticityCategory => {
+        const explicit = args.authenticityCategory as string | undefined;
+        const valid = ["local_service_health", "local_service_trade", "physical_product", "b2b_services", "enterprise_software", "info_product", "coaching", "nonprofit"];
+        if (explicit && valid.includes(explicit)) return explicit as never;
+        return inferAuthenticityCategory({ genre, archetype: (args.visualArchetype as string) || null });
+      })();
       const modelArchetype = (args.visualArchetype as VisualArchetype) || undefined;
-      const effectiveArchetype: VisualArchetype =
-        modelArchetype && DISTINCT_INDUSTRY_ARCHETYPES.has(modelArchetype)
-          ? modelArchetype
-          : ("direct_response" as VisualArchetype);
+      const effectiveArchetype: VisualArchetype = archetypeForContext({
+        authenticityCategory,
+        modelChoice: modelArchetype ?? null,
+      });
       // Color variety (funnels were ALL orange — the call never passed a
       // paletteId, so pickPalette always returned palettes[0]). Honor the
       // model's explicit palette_variant when valid; otherwise deterministically
@@ -4869,10 +4885,49 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // can switch any funnel to split via the Page-layout toggle. A split
       // lead-gen/application read as a "website", not a sales letter.
       const GENRE_SPLIT_HERO = new Set<string>(["webinar"]);
+      // THE FOLD IS COMPOSED FOR WHAT WILL BE ON IT.
+      //
+      // `designStrategy.heroLayout` is the archetype's FIRST recommendation
+      // whenever the model named none, and six of nine archetypes list
+      // `centered` first — which is how 106 of 109 measured funnels composed a
+      // centered fold regardless of what they had to show. The archetype's own
+      // approved list is still the only source of layouts (nothing new is
+      // invented); this just chooses within it from the page's real inputs.
+      //
+      // Optimistic by design: the hero renderer falls back to `centered` when a
+      // media layout has no media, so choosing `background_image` for a page
+      // whose photograph is later declined degrades to today's composition
+      // rather than shipping an empty frame.
+      const contextHeroLayout = heroLayoutForContext({
+        archetype: effectiveArchetype,
+        hasDeliverablePreview: genre === "lead_magnet" || authenticityCategory === "info_product",
+        hasPhotography:
+          !!(args.heroMediaUrl as string) ||
+          ((authenticityCategory === "local_service_trade" ||
+            authenticityCategory === "local_service_health" ||
+            authenticityCategory === "b2b_services") &&
+            !!(args.serviceDomain as string)),
+        isVideoLed: genre === "vsl",
+        isPersonLed: authenticityCategory === "coaching" || (args.campaignHumanity as string) === "people_led",
+        commitment: (() => {
+          const cents = Number(args.priceCents ?? 0);
+          return cents >= 100_000 ? "high" : cents > 0 ? "medium" : "low";
+        })(),
+      });
+      // THE OVERRIDE CONTRACT IS UNCHANGED. An explicit hero_layout still wins,
+      // but only when it is one of THIS archetype's own approved layouts —
+      // the same boundary resolveDesignStrategy applies to every other
+      // override. Without this check the context choice below would have been
+      // bypassed by an invalid one, which is the opposite of the frozen rule.
+      const approvedHeroLayouts = VISUAL_ARCHETYPES[effectiveArchetype].recommendedHeroLayouts;
+      const explicitHeroLayout =
+        args.heroLayout && approvedHeroLayouts.includes(args.heroLayout as HeroLayoutId)
+          ? (args.heroLayout as string)
+          : null;
       const heroLayout =
-        GENRE_SPLIT_HERO.has(genre) && !args.heroLayout
+        GENRE_SPLIT_HERO.has(genre) && !explicitHeroLayout
           ? "split"
-          : (designStrategy?.heroLayout ?? (args.heroLayout as string));
+          : (explicitHeroLayout ?? contextHeroLayout ?? designStrategy?.heroLayout);
       // designStrategy.ctaStrategy (when an archetype resolved) already
       // incorporated any explicit args.ctaStyle override during
       // resolveDesignStrategy() above, and always returns a real value —
@@ -5029,7 +5084,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               // archetype/genre default.
               ...(() => {
                 const effective = resolveHeroLayout({
-                  explicit: args.heroLayout as string | null,
+                  // The VALIDATED explicit choice, not the raw argument: an
+                  // override that is not one of this archetype's approved
+                  // layouts is ignored, which is the documented contract
+                  // (resolveDesignStrategy applies it to every other axis).
+                  // Passing the raw value here let an invalid layout reach the
+                  // hero even though the strategy had already rejected it.
+                  explicit: explicitHeroLayout,
                   composed: (section.config as HeroConfig).layout ?? null,
                   fallback: heroLayout,
                 });
@@ -5675,12 +5736,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // BUSINESS REALITY ENGINE (slice A): resolve the authenticity category
       // once — it gates imagery-as-evidence below and drives the asset
       // manifest in the reply. Model override wins; genre+archetype floor.
-      const authenticityCategory = ((): import("@/lib/funnels/authenticity").AuthenticityCategory => {
-        const explicit = args.authenticityCategory as string | undefined;
-        const valid = ["local_service_health", "local_service_trade", "physical_product", "b2b_services", "enterprise_software", "info_product", "coaching", "nonprofit"];
-        if (explicit && valid.includes(explicit)) return explicit as never;
-        return inferAuthenticityCategory({ genre, archetype: (args.visualArchetype as string) || effectiveArchetype });
-      })();
+      // (authenticityCategory is resolved above, where the archetype derives from it.)
 
       // Whether a photograph could be honest evidence for this business at all.
       // Declared HERE rather than inside the imagery block below because two
@@ -6127,16 +6183,126 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         }
       }
 
-      // Above-the-fold VERIFIED social proof: when the user supplied their
-      // real rating, the strip renders directly under the hero (linked to the
-      // live profile when given). Reuses the existing proof_strip; inserts one
-      // when the genre has none. Never rendered without real numbers.
-      const realRating = args.realRating as { score: number; count: number; url?: string } | null;
-      if (realRating) {
-        const ratingConfig = {
-          variant: "rating" as const,
-          rating: { score: realRating.score, reviewCount: realRating.count, ...(realRating.url ? { href: realRating.url } : {}) },
-        };
+      // THE PRIMARY BUTTON DOES WHAT THE PAGE IS FOR.
+      //
+      // A $39 kit, a $27 challenge and a $9,000 program all ended in a lead
+      // popup in the diversity diagnostic, because a form was the only
+      // conversion mechanic generation could compose. The decision itself is a
+      // pure function (see conversion-action.ts) so it can be tested without a
+      // live Stripe account; everything here is the composition it implies.
+      //
+      // The payment destination is read from the workspace, never inferred: the
+      // agency gate plus this sub-account's OWN connected Stripe account. No
+      // price, account or link is ever invented.
+      const stripeConfig = subSnap.data()?.stripeConfig as { status?: string } | undefined;
+      const conversionDecision = resolveConversionAction({
+        genre,
+        objective: (args.objective as string) ?? null,
+        priceCents: Number(args.priceCents ?? 0),
+        checkoutConfigured:
+          subSnap.data()?.funnelCheckoutEnabledByAgency === true && stripeConfig?.status === "connected",
+      });
+      if (conversionDecision.action === "checkout") {
+        // THE PAYMENT HOST is whichever section carries the primary ask: the
+        // offer on a sales page, the ticket card on a paid challenge. Both
+        // become a real checkout; a registration form that implies a purchase
+        // has happened without taking payment is the thing being removed.
+        const payIdx = sectionsToSave.findIndex((s2) => s2.type === "offer" || s2.type === "ticket_tiers");
+        if (payIdx !== -1) {
+          const host = sectionsToSave[payIdx];
+          const offerCfg = host.config as OfferConfig & TicketTiersConfig;
+          const tier = (offerCfg.tiers ?? [])[0];
+          const priceCents = Number(args.priceCents ?? 0) || tier?.priceCents || 0;
+          const bullets = (offerCfg.bullets ?? tier?.features ?? []).slice(0, 8);
+          const headline = offerCfg.headline || tier?.name || "";
+          sectionsToSave = sectionsToSave.map((s2, i) =>
+            i === payIdx
+              ? ({
+                  ...s2,
+                  type: "checkout" as const,
+                  config: {
+                    ...(headline ? { headline } : {}),
+                    priceCents,
+                    bullets,
+                    ctaLabel: offerCfg.ctaLabel || tier?.ctaLabel || "Buy now",
+                    checkoutMode: "stripe_checkout" as const,
+                    currency: "usd",
+                    billingMode: "one_time" as const,
+                  },
+                } as FunnelSection)
+              : s2,
+          );
+
+          // ONE PROMISE PER PAGE. The hero and the closing band are primary
+          // conversion controls, so on a page that takes payment they lead to
+          // the payment, not to a lead form beside it. The form is cleared
+          // because an attached form outranks an href inside CtaButton, which
+          // is exactly how the two mechanics ended up on one page.
+          const checkoutAnchor = `#${host.id}`;
+          sectionsToSave = sectionsToSave.map((s2) => {
+            if (s2.type !== "hero" && s2.type !== "cta_banner") return s2;
+            const cfg = s2.config as Record<string, unknown>;
+            return {
+              ...s2,
+              config: {
+                ...cfg,
+                formId: null,
+                ctaHref: checkoutAnchor,
+                cta: { ...((cfg.cta as Record<string, unknown>) ?? {}), style: "inline" },
+              },
+            } as FunnelSection;
+          });
+        }
+      } else {
+        // A PAGE MAY NOT CLAIM A CAPABILITY IT DOES NOT HAVE.
+        //
+        // The $39 fallback page shipped a "Secure checkout" badge while its
+        // button collected an email. Badges are model-written from the offer,
+        // and nothing checked them against what this workspace can actually
+        // do. Removed rather than reworded: inventing a different assurance
+        // would be the same failure in a new costume, and the operator (not
+        // the visitor) is told why via CHECKOUT_PENDING_NOTE.
+        const droppedClaims: string[] = [];
+        sectionsToSave = sectionsToSave.map((s2) => {
+          const cfg = s2.config as Record<string, unknown>;
+          if (Array.isArray(cfg.trustBadges)) {
+            const r = stripCheckoutCapabilityClaims(cfg.trustBadges as string[]);
+            droppedClaims.push(...r.dropped);
+            if (r.dropped.length > 0) return { ...s2, config: { ...cfg, trustBadges: r.kept } } as FunnelSection;
+          }
+          if (s2.type === "trust_badges" && Array.isArray(cfg.badges)) {
+            const badges = cfg.badges as { label: string }[];
+            const kept = badges.filter((b) => {
+              const bad = assertsCheckoutCapability(b.label ?? "");
+              if (bad) droppedClaims.push(b.label);
+              return !bad;
+            });
+            if (kept.length !== badges.length) return { ...s2, config: { ...cfg, badges: kept } } as FunnelSection;
+          }
+          return s2;
+        });
+        if (droppedClaims.length > 0) {
+          console.warn(`[create_funnel] removed checkout claims from a page with no checkout: ${[...new Set(droppedClaims)].join(" | ")}`);
+        }
+      }
+
+      // ABOVE-THE-FOLD REVIEW PROOF, FROM THE VERIFIED STORE ONLY.
+      //
+      // This used to render `args.real_rating` — a rating the MODEL passed,
+      // on the strength of "the user told me". That is a relayed claim, and a
+      // star rating is the single most valuable and most fabricable thing a
+      // page can say, so it now comes from the workspace's own structured
+      // field, which only an admin can write (see review-proof.ts and
+      // PATCH /api/sub-accounts/[id]/review-proof).
+      //
+      // A model-supplied rating is deliberately ignored rather than used as a
+      // fallback: a fallback is how the fabrication path stays open.
+      // No verified entry means no strip, never a placeholder.
+      const verifiedReviewProof = reviewProofFromStore(
+        subSnap.data()?.reviewProof as import("@/types/tenancy").ReviewProof | null | undefined,
+      );
+      const ratingConfig = ratingStripConfig(verifiedReviewProof);
+      if (ratingConfig) {
         const stripIdx = sectionsToSave.findIndex((x) => x.type === "proof_strip");
         if (stripIdx !== -1) {
           sectionsToSave = sectionsToSave.map((x, i) => (i === stripIdx ? { ...x, config: ratingConfig, argumentRole: "proof" } : x));
@@ -6523,6 +6689,9 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         review.push(`${requiredPhotos} photo${requiredPhotos === 1 ? "" : "s"} still needed before the page works properly — you can add them from the preview.`);
       } else if (outstandingPhotos.length > 0) {
         review.push(`Ready to review now. ${outstandingPhotos.length} real photo${outstandingPhotos.length === 1 ? "" : "s"} would make it stronger — you can add them from the preview.`);
+      }
+      if (conversionDecision.action === "capture_pending_checkout") {
+        review.push(CHECKOUT_PENDING_NOTE);
       }
       // P0.4: approved is not published. Say so plainly, every time.
       review.push("Nothing is public yet — this is a draft until you publish it.");

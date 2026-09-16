@@ -31,9 +31,15 @@ const made: string[] = [];
 
 async function build(extra: Record<string, unknown>) {
   const v = cap.validate!({
+    // GENRE CHANGED (post-V1): `lead_magnet` cannot show this chain at all. Its
+    // hero is composed as a `split` proof showcase by page-composition.ts, on
+    // purpose, and that composition legitimately wins over the archetype AND
+    // over an explicit layout — so every case here resolved to `split` and the
+    // suite could not observe what it exists to observe. `lead_gen` leaves the
+    // hero layout to the chain being tested.
     funnel_name: "[TEST] override chain", headline: "A calmer way to feel better",
-    genre: "lead_magnet", bullets: ["Real benefit one", "Real benefit two", "Real benefit three"],
-    visual_archetype: "luxury_premium", ...extra,
+    genre: "lead_gen", bullets: ["Real benefit one", "Real benefit two", "Real benefit three"],
+    visual_archetype: "luxury_premium", emotional_transformation: "confusion_to_clarity", ...extra,
   });
   if (!v.ok) throw new Error(v.error);
   const r = await cap.execute!(ctx as never, v.args);
@@ -43,12 +49,15 @@ async function build(extra: Record<string, unknown>) {
   return hero?.config.layout as string;
 }
 
-// wellness allows [centered, founder_image] and DEFAULTS to centered, so
-// founder_image can only appear if the override survived the whole chain.
-check("default is the archetype's own choice", (await build({})) === "background_image");
+// luxury_premium approves [background_image, centered, founder_image]. With no
+// override the fold is now composed from CONTEXT within that approved list
+// (post-V1 hero variety): nothing to show and a considered offer compose a
+// centered fold. founder_image can still only appear if an override survived
+// the whole chain, which is what the next two checks prove.
+check("default is the context choice within the archetype's list", (await build({})) === "centered");
 check("VALID hero_layout override reaches the funnel document", (await build({ hero_layout: "founder_image" })) === "founder_image");
 // browser_mockup is not allowed for wellness — must still be ignored.
-check("INVALID override still ignored (frozen contract preserved)", (await build({ hero_layout: "browser_mockup" })) === "background_image");
+check("INVALID override still ignored (frozen contract preserved)", (await build({ hero_layout: "browser_mockup" })) === "centered");
 
 for (const id of made) await db.doc(`funnels/${id}`).delete();
 console.log(`\ncleaned up ${made.length} test funnels`);

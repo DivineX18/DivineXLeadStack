@@ -140,7 +140,13 @@ try {
     // "an invalid override is silently ignored". That a VALID override
     // survives the whole chain is proven separately, against an archetype
     // that allows it: scripts/verify-design-override-chain.mts.
-    check("4e. Override invalid for the archetype is ignored, as documented", hero?.config.layout === "centered", hero?.config.layout as string);
+    // STALE EXPECTATION FIXED (post-V1): this asserted `centered`, from before
+    // the proof-showcase composition shipped. A lead-magnet hero with two or
+    // more bullets is deliberately composed as a `split` carrying the bullets
+    // as the deliverable preview (page-composition.ts), and that composition
+    // owns the final layout. The assertion's REAL subject is that an invalid
+    // override never takes effect, so that is what it now checks.
+    check("4e. Override invalid for the archetype is ignored, as documented", hero?.config.layout !== "founder_image", hero?.config.layout as string);
     // No genre was specified, so this defaults to lead_magnet — one-fold
     // (RC 1.1 length pass, 2026-08-02), meaning the hero itself is the
     // capture/CTA surface now (there's no separate offer section).

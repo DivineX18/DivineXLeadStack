@@ -447,6 +447,20 @@ export interface SubAccountDoc {
    */
   googleReviewConfig?: GoogleReviewConfig | null;
   /**
+   * VERIFIED review proof this business may publish above the fold.
+   *
+   * Operator-entered and server-validated, never model-written: generation
+   * READS this and may not create, infer, round or embellish any part of it
+   * (see `reviewProofFromStore` in lib/funnels/review-proof.ts). Absent means
+   * the page renders no rating at all rather than a placeholder.
+   *
+   * Distinct from `googleReviewConfig`, which is about ASKING customers for
+   * reviews. This is about publishing the result, and the two are separate
+   * facts: a business can solicit reviews long before it has a rating worth
+   * showing.
+   */
+  reviewProof?: ReviewProof | null;
+  /**
    * Public https URL of this sub-account's brand logo. Renders on
    * quote/invoice emails, public /q/[token] pages, and PDFs — the
    * external surfaces this client's customers see. Distinct from
@@ -696,6 +710,28 @@ export interface SubAccountStripeConfig {
  * quote/invoice is marked paid (when `triggerOnQuotePaid`) or on demand via the
  * contact-profile button.
  */
+/**
+ * A rating the business actually has, as the operator entered it.
+ *
+ * Every field is a fact about the outside world, so every field is required
+ * except the link: a rating with no count is not proof, and a count with no
+ * source cannot be stated truthfully on a page ("4.9 from 127 reviews" has to
+ * say WHOSE reviews).
+ */
+export interface ReviewProof {
+  /** 0.1 to 5.0, one decimal. Stored exactly as entered — never rounded up. */
+  rating: number;
+  /** How many reviews that rating is computed from. At least 1. */
+  reviewCount: number;
+  /** Where they live, shown to the visitor: "Google", "Facebook", "Trustpilot". */
+  reviewSource: string;
+  /** The public profile, so the claim is checkable. Optional. */
+  reviewUrl?: string | null;
+  /** Audit: who entered it and when. */
+  updatedAt?: unknown;
+  updatedByUid?: string;
+}
+
 export interface GoogleReviewConfig {
   /** Gates the AUTO trigger. The manual button works whenever `reviewUrl` is set. */
   enabled: boolean;

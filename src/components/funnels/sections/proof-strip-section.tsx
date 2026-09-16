@@ -3,7 +3,7 @@ import type { ProofStripConfig } from "@/types/funnels";
 
 export function ProofStripSection({ config }: { config: ProofStripConfig }) {
   if (config.variant === "rating" && config.rating) {
-    const { score, reviewCount, scale = 5, href } = config.rating;
+    const { score, reviewCount, scale = 5, href, source } = config.rating;
     if (!reviewCount) return null;
     const Wrap = href ? "a" : "div";
     return (
@@ -31,8 +31,13 @@ export function ProofStripSection({ config }: { config: ProofStripConfig }) {
           <span className="text-sm font-semibold opacity-80">
             {score.toFixed(1)}
           </span>
+          {/* "4.9 from 127 Google reviews". The source is rendered verbatim
+              and only when the business named one — a rating that cannot say
+              whose reviews it is never reaches this component (see
+              review-proof.ts), and legacy configs without a source keep the
+              original wording rather than gaining an implied one. */}
           <span className="text-sm opacity-50">
-            — {reviewCount.toLocaleString()} ratings
+            {source ? `from ${reviewCount.toLocaleString()} ${source} reviews` : `— ${reviewCount.toLocaleString()} ratings`}
           </span>
         </Wrap>
       </section>

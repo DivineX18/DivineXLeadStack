@@ -156,8 +156,18 @@ function check(label: string, ok: boolean, detail?: string) {
       const data = (await db.doc(`funnels/${result.ref!.id}`).get()).data()!;
       const sa = data.salesArgument as { beliefChain?: string[] } | undefined;
       check("4b. salesArgument is STORED on the funnel doc", !!sa && Array.isArray(sa.beliefChain) && sa.beliefChain.length === 4);
-      const sections = data.sections as { type: string; argumentRole?: string }[];
-      check("4c. every stored section carries its argumentRole", sections.every((s) => !!s.argumentRole), sections.map((s) => `${s.type}:${s.argumentRole ?? "-"}`).join("|"));
+      const sections = data.sections as { type: string; argumentRole?: string; config?: Record<string, unknown> }[];
+      // EVERY SECTION A READER CAN SEE carries its role. A section that renders
+      // nothing deliberately carries none — stamping one would record a
+      // persuasion job as handled by something nobody sees (see the
+      // renderability gate in art-direction.ts, which shipped for exactly that
+      // defect). An image-less photo_gallery is the standing example: the
+      // builder shows the operator where their photography belongs, the public
+      // page renders null, and the plan must not claim proof it has not got.
+      const visible = sections.filter(
+        (s) => !(s.type === "photo_gallery" && ((s.config?.images as unknown[] | undefined)?.length ?? 0) === 0),
+      );
+      check("4c. every stored section a reader can see carries its argumentRole", visible.every((s) => !!s.argumentRole), sections.map((s) => `${s.type}:${s.argumentRole ?? "-"}`).join("|"));
       check("4d. the page HAS a belief-shift section (problem_aware -> standard depth)", sections.some((s) => s.argumentRole === "belief_shift"));
       check("4e. the page HAS a close", sections.some((s) => s.argumentRole === "close"));
       if (result.ref?.id) await db.doc(`funnels/${result.ref.id}`).delete().catch(() => {});
