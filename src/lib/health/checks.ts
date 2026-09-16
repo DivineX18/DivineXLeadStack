@@ -212,11 +212,22 @@ async function checkAppCore(): Promise<IntegrationHealth> {
 // Stripe
 
 async function checkStripe(): Promise<IntegrationHealth> {
+  // STRIPE_PRO_PRICE_ID IS NOT LISTED, BECAUSE NOTHING READS IT.
+  //
+  // It was the template's single-plan price, consumed by
+  // `lib/stripe/checkout.ts::createCheckoutSession`, which has had no callers
+  // since Client Billing shipped: plans now mint their OWN product and price
+  // per plan (billing-service.ts), public signup charges `plan.stripePriceId`
+  // from the plan document, funnel checkout uses the tenant's materialized
+  // price, and quotes use their own path.
+  //
+  // Checking it made production report a red Stripe light for a variable no
+  // payment depends on — a test-mode id beside a live key — which invites
+  // exactly the wrong fix: creating a real live product to turn a light green.
   const keys = [
     "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
     "STRIPE_SECRET_KEY",
     "STRIPE_WEBHOOK_SECRET",
-    "STRIPE_PRO_PRICE_ID",
   ];
   const presence = envPresent(...keys);
   const subChecks: SubCheck[] = keys.map((k) => ({
@@ -228,10 +239,10 @@ async function checkStripe(): Promise<IntegrationHealth> {
     const ping = await withTimeout(async () => {
       const Stripe = (await import("stripe")).default;
       const client = new Stripe(process.env.STRIPE_SECRET_KEY!);
-      // Confirm the key is live + has read scope.
+      // Confirm the key is live + has read scope. That is the whole question
+      // a liveness check can answer here; which prices exist is per-plan data,
+      // not deployment configuration.
       await client.balance.retrieve();
-      // Confirm the price exists.
-      await client.prices.retrieve(process.env.STRIPE_PRO_PRICE_ID!);
       return true;
     }, "Stripe ping");
     subChecks.push(

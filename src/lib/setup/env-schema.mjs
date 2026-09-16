@@ -167,7 +167,9 @@ export const GROUPS = [
       ["NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", "req", startsWith("pk_")],
       ["STRIPE_SECRET_KEY", "req", startsWith("sk_")],
       ["STRIPE_WEBHOOK_SECRET", "req", startsWith("whsec_")],
-      ["STRIPE_PRO_PRICE_ID", "req", startsWith("price_")],
+      // STRIPE_PRO_PRICE_ID removed: no payment path reads it (see
+      // lib/health/checks.ts::checkStripe). Asking a buyer to create a price
+      // nothing charges against is setup work that buys them nothing.
     ],
     deep(add, env) {
       if (env.has("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY") && env.has("STRIPE_SECRET_KEY")) {
