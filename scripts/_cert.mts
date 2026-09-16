@@ -10,7 +10,7 @@ const unavail=(l:string,w:string)=>{console.log(`UNAVAILABLE ${l} — ${w}`);na+
 const { getAdminAuth } = await import("../src/lib/firebase/admin.ts");
 const ct=await getAdminAuth().createCustomToken(OWNER);
 const r=await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${process.env.NEXT_PUBLIC_FIREBASE_API_KEY}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:ct,returnSecureToken:true})});
-const {idToken}=await r.json() as any;
+const {idToken}=await r.json() as {idToken:string};
 const login=await fetch(`${BASE}/api/login`,{headers:{Authorization:`Bearer ${idToken}`},redirect:"manual"});
 const host=new URL(BASE).hostname;
 const cookies=(login.headers.getSetCookie?.()??[]).map(c=>{const [p]=c.split(";");const i=p.indexOf("=");return{name:p.slice(0,i),value:p.slice(i+1),domain:host,path:"/"};});

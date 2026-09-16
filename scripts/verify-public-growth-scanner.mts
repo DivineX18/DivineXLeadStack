@@ -68,7 +68,7 @@ check(
   (await (await fetch(`${BASE}/api/public/growth-scan`, {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name: "x", email: "a@b.co", websiteUrl: "not a url", businessType: "unknown" }),
-  })).json().then((j: any) => typeof j.error === "string")),
+  })).json().then((j: { error?: unknown }) => typeof j.error === "string")),
 );
 check(
   "a bad email is rejected",
@@ -78,15 +78,22 @@ check(
   })).status === 400,
 );
 
-let report: any = null;
+/** The scan report fields this suite asserts on. */
+interface ScanReport {
+  overallScore?: unknown;
+  primaryConstraint?: string;
+  categories?: unknown[];
+  topOpportunities?: unknown[];
+}
+let report: ScanReport | null = null;
 if (startBody.shareToken) {
   const t0 = Date.now();
   while (Date.now() - t0 < 540_000) {
     await new Promise((r) => setTimeout(r, 8000));
     const p = await fetch(`${BASE}/api/public/growth-scan/${startBody.shareToken}`, { cache: "no-store" }).catch(() => null);
     if (!p?.ok) continue;
-    const d = (await p.json()) as { state?: string; report?: any };
-    if (d.state === "ready") { report = d.report; break; }
+    const d = (await p.json()) as { state?: string; report?: ScanReport };
+    if (d.state === "ready") { report = d.report ?? null; break; }
     if (d.state === "failed") break;
     process.stdout.write(".");
   }
@@ -96,10 +103,10 @@ if (startBody.shareToken) {
 
 if (report) {
   console.log("\n── the normalized report ──");
-  check("a Growth Score is present", typeof report.overallScore === "number", String(report.overallScore));
-  check("the primary constraint is present", !!report.primaryConstraint, report.primaryConstraint);
-  check("category scores are present", Array.isArray(report.categories) && report.categories.length > 0, `${report.categories?.length}`);
-  check("prioritized actions are present", Array.isArray(report.topOpportunities) && report.topOpportunities.length > 0, `${report.topOpportunities?.length}`);
+  check("a Growth Score is present", typeof report!.overallScore === "number", String(report!.overallScore));
+  check("the primary constraint is present", !!report!.primaryConstraint, report!.primaryConstraint);
+  check("category scores are present", Array.isArray(report!.categories) && report!.categories!.length > 0, `${report!.categories?.length}`);
+  check("prioritized actions are present", Array.isArray(report!.topOpportunities) && report!.topOpportunities!.length > 0, `${report!.topOpportunities?.length}`);
   check(
     "internal diagnostic fields are NOT exposed to the public",
     !("reportReliabilityGate" in report) && !("explainability" in report) && !("blueprint" in report),

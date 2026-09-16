@@ -37,6 +37,25 @@ const {
 } = await import("../src/lib/funnels/claim-integrity.ts");
 const { FIXTURES } = await import("./fixtures/landing-page-fixtures.mts");
 
+/**
+ * The generated payload these checks read back out of create_funnel.validate.
+ *
+ * Only the fields this suite actually inspects, typed for real rather than
+ * reached through `any`: a wrong field name is then a compile error here
+ * instead of an `undefined` that quietly turns a check green.
+ */
+interface GeneratedFunnelArgs {
+  headline: string;
+  subheadline: string;
+  bullets: string[];
+  heroTrustBadges: string[];
+  storyParagraphs: string[];
+  faqItems: { question: string; answer: string }[];
+  stageContent: { sectionType: string; text: string; secondaryText: string }[];
+  operatorStatedFigures?: string[];
+}
+const asGenerated = (args: unknown) => args as GeneratedFunnelArgs;
+
 let failures = 0;
 const check = (label: string, ok: boolean, detail = "") => {
   console.log(`${ok ? "PASS" : "FAIL"} ${label}${detail ? ` — ${detail}` : ""}`);
@@ -231,14 +250,14 @@ console.log("\n══ create_funnel validate enforces it on every copy field ═
   const r = cap.validate(payload);
   check("validate succeeds", r.ok, r.ok ? "" : r.error);
   if (r.ok) {
-    const a = r.args as Record<string, any>;
-    const ps = a.stageContent.find((s: any) => s.sectionType === "problem_solution");
+    const a = asGenerated(r.args);
+    const ps = a.stageContent.find((s) => s.sectionType === "problem_solution")!;
     check("the $18k sentence is gone from the belief shift", !ps.text.includes("18k"), ps.text);
     check("... the rest of the problem copy stays", ps.text.includes("missing shingles") && ps.text.includes("never see what they saw"), ps.text);
     check("... the section's solution side is untouched", ps.secondaryText.includes("25-point"), ps.secondaryText);
-    check("an invented bullet is removed, the others kept", a.bullets.length === 2 && !a.bullets.some((b: string) => b.includes("4,000")), JSON.stringify(a.bullets));
-    check("the supported bullet survives", a.bullets.some((b: string) => b.includes("25-point")));
-    check("an invented tenure badge is removed", !a.heroTrustBadges.some((b: string) => b.includes("2009")), JSON.stringify(a.heroTrustBadges));
+    check("an invented bullet is removed, the others kept", a.bullets.length === 2 && !a.bullets.some((b) => b.includes("4,000")), JSON.stringify(a.bullets));
+    check("the supported bullet survives", a.bullets.some((b) => b.includes("25-point")));
+    check("an invented tenure badge is removed", !a.heroTrustBadges.some((b) => b.includes("2009")), JSON.stringify(a.heroTrustBadges));
     check("an FAQ whose answer was the invented figure is dropped whole", a.faqItems.length === 1 && a.faqItems[0].question.includes("free"), JSON.stringify(a.faqItems));
     check("an invented story paragraph is dropped", a.storyParagraphs.length === 1 && !a.storyParagraphs[0].includes("9 out of 10"), JSON.stringify(a.storyParagraphs));
     check("the supported subheadline is untouched", a.subheadline.includes("25-point"), a.subheadline);
@@ -248,7 +267,7 @@ console.log("\n══ create_funnel validate enforces it on every copy field ═
     const again = cap.validate(a);
     check("re-validation at confirm succeeds", again.ok, again.ok ? "" : again.error);
     if (again.ok) {
-      const b = again.args as Record<string, any>;
+      const b = asGenerated(again.args);
       check("... and changes nothing", JSON.stringify(b.stageContent) === JSON.stringify(a.stageContent) && JSON.stringify(b.bullets) === JSON.stringify(a.bullets) && JSON.stringify(b.faqItems) === JSON.stringify(a.faqItems));
     }
   }
@@ -265,7 +284,7 @@ console.log("\n══ create_funnel validate enforces it on every copy field ═
   // grounding list the zero-price rule would refuse "Free inspection" too, and
   // this case is about the NUMERIC rule. See verify-zero-price-integrity.mts.)
   const none = cap.validate({ headline: "Find out what your roof needs", bullets: "Photos of any damage we find, Repairs in 3 days", operator_stated_figures: [] });
-  check("an empty grounding list still enforces", none.ok && (none.args as any).bullets.length === 1, JSON.stringify(none.ok ? (none.args as any).bullets : none.error));
+  check("an empty grounding list still enforces", none.ok && asGenerated(none.args).bullets.length === 1, JSON.stringify(none.ok ? asGenerated(none.args).bullets : none.error));
 }
 
 // ── 8. The chat route attaches operator figures to EVERY write validation ──

@@ -81,7 +81,7 @@ const AG = "qa-battery-ag";
 await db.doc(`agencies/${AG}`).set({ id: AG, name: "QA Battery" }, { merge: true });
 await db.doc(`subAccounts/${SUB}`).set({ id: SUB, agencyId: AG, name: "QA Battery", funnelsEnabledByAgency: true }, { merge: true });
 const { getAdminAuth: _ } = { getAdminAuth };
-let uid = "qa-battery-user";
+const uid = "qa-battery-user";
 try { await getAdminAuth().createUser({ uid, email: "qa-battery@test.local" }); } catch { /* exists */ }
 const ctx = { uid, subAccountId: SUB, agencyId: AG, subAccountRole: "subAccountAdmin" } as unknown as Ctx;
 

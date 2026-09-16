@@ -72,9 +72,20 @@ function check(label: string, pass: boolean) {
 {
   const src = read("src/components/funnels/sections/cta-button.tsx");
   check('3a. No more href={href || "#"} dead-link fallback anywhere in CtaButton', !src.includes('href={href || "#"}'));
+  // SUPERSEDED EXPECTATION, CORRECTED 2026-09-16.
+  //   OLD: with no href, fall back to an inert `<button type="button">`.
+  //   NEW: with no href, render NOTHING.
+  // Commit d25526d removed that fallback on purpose. The inert button was a
+  // full-size, accent-coloured, hover-animated control that did nothing when
+  // clicked, and VA testing found live pages where every CTA was one. A
+  // button a visitor cannot use is worse than no button: it spends their
+  // intent and returns nothing. Asserting the old shape would demand the
+  // dead-button bug back, so this now checks the real contract, a live <a>
+  // when there is somewhere to go and no actionless control when there isn't.
   check(
-    "3b. Primary-button fallback renders a real <a> only when href is truthy, else an inert <button>",
-    /if \(href\) \{[\s\S]{0,120}<a href=\{href\}/.test(src) && /<button type="button" className=\{btnClass\} style=\{buttonStyle\}>\s*\{label\}/.test(src),
+    "3b. Primary button is a real <a> when href is truthy, and renders NOTHING when it isn't",
+    /if \(href\) \{[\s\S]{0,120}<a href=\{href\}/.test(src) &&
+      !/<button type="button" className=\{btnClass\} style=\{buttonStyle\}>/.test(src),
   );
   check(
     "3c. Sticky-desktop bar fallback also avoids the dead-link pattern",
@@ -106,22 +117,63 @@ function check(label: string, pass: boolean) {
 //    bug class as VideoSection, found across 6 more section components that
 //    genre frameworks treat as required (agenda/process, benefits_grid,
 //    problem_solution, story/host, ticket_tiers/register, callout,
-//    before_after/results). Each must now show a visible placeholder
-//    instead of `return null`.
+//    before_after/results).
+//
+// SUPERSEDED EXPECTATION, CORRECTED 2026-09-16.
+//   OLD: every one of these files must import MediaPlaceholder, i.e. an empty
+//        required stage always shows a visible placeholder panel.
+//   NEW: on the CUSTOMER-FACING page an empty stage renders NOTHING, and the
+//        placeholder survives only where it is operator guidance.
+// Commit 13b04ab ("Art direction: guaranteed composition + consumed plan + no
+// dead zones") deliberately reversed the old rule: "sections without valid
+// content render NOTHING on the customer-facing page ... the composition
+// adapts to missing assets rather than being designed around them". A
+// placeholder panel on a live page IS the dead zone that commit removed, so
+// asserting the old rule would push shipped behavior backwards.
+//
+// What still matters, and is what these checks now verify, is the bug the
+// original audit was actually about: a stage must never vanish while it HAS
+// content. So a `return null` is only legitimate when it is guarded by an
+// explicit emptiness condition on the same line. A BARE `return null;`
+// standing alone is still refused, exactly as before.
 {
-  const files = [
-    "src/components/funnels/sections/agenda-section.tsx",
+  // Placeholders kept: the builder preview labels an empty media slot so the
+  // operator knows to fill it (see verify-funnel-assets 10b).
+  const withBuilderPlaceholder = [
     "src/components/funnels/sections/benefits-grid-section.tsx",
-    "src/components/funnels/sections/problem-solution-section.tsx",
     "src/components/funnels/sections/story-section.tsx",
     "src/components/funnels/sections/ticket-tiers-section.tsx",
+  ];
+  // No placeholder: these render nothing at all when their content is absent.
+  const rendersNothingWhenEmpty = [
+    "src/components/funnels/sections/agenda-section.tsx",
+    "src/components/funnels/sections/problem-solution-section.tsx",
     "src/components/funnels/sections/callout-section.tsx",
     "src/components/funnels/sections/before-after-section.tsx",
   ];
-  for (const f of files) {
+
+  for (const f of [...withBuilderPlaceholder, ...rendersNothingWhenEmpty]) {
     const src = read(f);
     const name = f.split("/").pop();
-    check(`6. ${name} imports MediaPlaceholder and never bare-returns null for an empty required stage`, src.includes("MediaPlaceholder") && !/^\s*return null;\s*$/m.test(src));
+    // The original law, unchanged: no unconditional disappearing act.
+    check(`6. ${name} never bare-returns null (a populated stage cannot vanish)`, !/^\s*return null;\s*$/m.test(src));
+    // Any early return it does make must be guarded by emptiness.
+    const earlyReturns = src.match(/^\s*if \(.*\) return null;\s*$/gm) ?? [];
+    const allGuardedByEmptiness = earlyReturns.every((l) =>
+      /length === 0|!config\.|\.length < |=== 0/.test(l),
+    );
+    check(`6. ${name} only returns null on an explicit emptiness guard`, allGuardedByEmptiness,
+      earlyReturns.join(" | ").trim().slice(0, 90));
+  }
+  for (const f of withBuilderPlaceholder) {
+    const name = f.split("/").pop();
+    check(`6. ${name} keeps its labeled builder placeholder (operator guidance)`, read(f).includes("MediaPlaceholder"));
+  }
+  for (const f of rendersNothingWhenEmpty) {
+    const src = read(f);
+    const name = f.split("/").pop();
+    check(`6. ${name} renders nothing rather than a dead-zone placeholder panel`,
+      !src.includes("MediaPlaceholder") && /return null;/.test(src));
   }
 }
 

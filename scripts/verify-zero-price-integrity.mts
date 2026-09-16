@@ -36,6 +36,27 @@ const {
 } = await import("../src/lib/funnels/claim-integrity.ts");
 const { FIXTURES } = await import("./fixtures/landing-page-fixtures.mts");
 
+/**
+ * The generated payload these checks read back out of create_funnel.validate.
+ *
+ * Only the fields this suite actually inspects, typed for real rather than
+ * reached through `any`: a wrong field name is then a compile error here
+ * instead of an `undefined` that quietly turns a check green.
+ */
+interface GeneratedFunnelArgs {
+  headline: string;
+  bullets: string[];
+  heroTrustBadges: string[];
+  trustBadges: string[];
+  ctaBannerSubtext: string;
+  confirmationEmailBody: string;
+  faqItems: { question: string; answer: string }[];
+  stageContent: { sectionType: string; text: string; secondaryText: string }[];
+  processSteps: { title?: string; description?: string }[];
+  operatorStatedFigures?: string[];
+}
+const asGenerated = (args: unknown) => args as GeneratedFunnelArgs;
+
 let failures = 0;
 const check = (label: string, ok: boolean, detail = "") => {
   console.log(`${ok ? "PASS" : "FAIL"} ${label}${detail ? ` — ${detail}` : ""}`);
@@ -227,7 +248,7 @@ console.log("\n══ create_funnel validate enforces it everywhere ══");
   });
   check("validate succeeds", r.ok, r.ok ? "" : r.error);
   if (r.ok) {
-    const a = r.args as Record<string, any>;
+    const a = asGenerated(r.args);
     const { operatorStatedFigures: _operatorWords, ...generated } = a;
     const everything = JSON.stringify(generated);
     check("no zero-price claim survives anywhere in the payload", !/\bfree\b|complimentary|\bon us\b|costs you nothing/i.test(everything), everything.slice(0, 200));
@@ -236,7 +257,7 @@ console.log("\n══ create_funnel validate enforces it everywhere ══");
     check("the invented mid-page badge is gone", a.trustBadges.length === 0, JSON.stringify(a.trustBadges));
     check("the closing band keeps its instruction, loses the price", a.ctaBannerSubtext.startsWith("Tell us your worries") && !/free/i.test(a.ctaBannerSubtext), a.ctaBannerSubtext);
     check("the priced FAQ is dropped whole, the honest one stays", a.faqItems.length === 1 && /treatment/i.test(a.faqItems[0].question), JSON.stringify(a.faqItems));
-    const ps = a.stageContent.find((x: any) => x.sectionType === "problem_solution");
+    const ps = a.stageContent.find((x) => x.sectionType === "problem_solution")!;
     check("the belief shift loses only the priced sentence", !/free/i.test(ps.text) && ps.text.includes("the moment you sit down"), ps.text);
     check("... and its solution side is untouched", ps.secondaryText.includes("assessment only"), ps.secondaryText);
     check("the follow-up email loses the price claim", !/free/i.test(a.confirmationEmailBody), a.confirmationEmailBody);
@@ -244,7 +265,7 @@ console.log("\n══ create_funnel validate enforces it everywhere ══");
 
     // Confirm re-validates this same payload — it must be stable.
     const again = cap.validate(a);
-    check("re-validation at confirm is stable", again.ok && JSON.stringify((again.args as any).bullets) === JSON.stringify(a.bullets));
+    check("re-validation at confirm is stable", again.ok && JSON.stringify(asGenerated(again.args).bullets) === JSON.stringify(a.bullets));
   }
 
   // Summit keeps its supplied free offer through the same path.
@@ -254,8 +275,8 @@ console.log("\n══ create_funnel validate enforces it everywhere ══");
     hero_trust_badges: ["Free, no obligation"],
     operator_stated_figures: operatorFigureStatements([askOf("summit-roofing")]),
   });
-  check("Summit's supplied free offer survives validate", summit.ok && (summit.args as any).headline.startsWith("Free 25-Point"), summit.ok ? (summit.args as any).headline : summit.error);
-  check("... including its bullets and badge", summit.ok && (summit.args as any).bullets.length === 2 && (summit.args as any).heroTrustBadges.length === 1);
+  check("Summit's supplied free offer survives validate", summit.ok && asGenerated(summit.args).headline.startsWith("Free 25-Point"), summit.ok ? asGenerated(summit.args).headline : summit.error);
+  check("... including its bullets and badge", summit.ok && asGenerated(summit.args).bullets.length === 2 && asGenerated(summit.args).heroTrustBadges.length === 1);
 
   // A headline that is ONLY an invented price goes back for rewrite rather
   // than shipping blank, and the instruction never suggests another price.

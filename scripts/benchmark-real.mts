@@ -100,28 +100,47 @@ await db.doc(`agencies/${AG}`).set({ id: AG, name: "QA Real" });
 await db.doc(`subAccounts/${SUB}`).set({ id: SUB, agencyId: AG, name: "QA Real", funnelsEnabledByAgency: true });
 const ctx = { uid: user.uid, subAccountId: SUB, agencyId: AG, subAccountRole: "subAccountAdmin" } as unknown as AiSuiteActionContext;
 
-function printTrace(data: Record<string, never> | any) {
+/** The stored funnel fields this trace prints. Loose by design (it is a
+ *  debug dump of a model-generated doc), but named rather than `any`. */
+interface TracedFunnel {
+  genre?: string;
+  persuasionDepth?: string;
+  decisionComplexity?: string;
+  artDirection?: unknown;
+  designStrategy?: { visualArchetype?: string; paletteId?: string };
+  salesArgument?: Record<string, string | string[] | undefined>;
+  sections?: {
+    type?: string;
+    argumentRole?: string;
+    canvas?: string;
+    servesBelief?: string;
+    config?: Record<string, unknown>;
+  }[];
+}
+
+function printTrace(data: TracedFunnel) {
   const sa = data.salesArgument ?? {};
+  const str = (v: unknown) => (v == null ? "" : String(v));
   console.log(`  genre=${data.genre}  archetype=${data.designStrategy?.visualArchetype}  palette=${data.designStrategy?.paletteId}`);
   console.log(`  persuasionDepth=${data.persuasionDepth}  decisionComplexity=${data.decisionComplexity}`);
   console.log(`  artDirection=${JSON.stringify(data.artDirection)}`);
   console.log(`  ── SalesArgumentPlan (stored) ──`);
-  console.log(`  prospect:        ${sa.prospect ?? "(none)"}`);
-  console.log(`  arrivalContext:  ${sa.arrivalContext ?? ""}`);
-  console.log(`  currentBelief:   ${sa.currentBelief ?? ""}`);
-  console.log(`  beliefChain:${(sa.beliefChain ?? []).map((b: string, i: number) => `\n     ${i + 1}. ${b}`).join("")}`);
-  console.log(`  oldWay:          ${sa.oldWay ?? ""}`);
-  console.log(`  whyOldWayFails:  ${sa.whyOldWayFails ?? ""}`);
-  console.log(`  mechanism:       ${sa.mechanism ?? ""}`);
-  console.log(`  corePromise:     ${sa.corePromise ?? ""}`);
-  console.log(`  primaryObjection:${sa.primaryObjection ?? ""}`);
-  console.log(`  riskReversal:    ${sa.riskReversal ?? ""}`);
-  console.log(`  closeReason:     ${sa.closeReason ?? ""}`);
+  console.log(`  prospect:        ${str(sa.prospect) || "(none)"}`);
+  console.log(`  arrivalContext:  ${str(sa.arrivalContext)}`);
+  console.log(`  currentBelief:   ${str(sa.currentBelief)}`);
+  console.log(`  beliefChain:${(Array.isArray(sa.beliefChain) ? sa.beliefChain : []).map((b, i) => `\n     ${i + 1}. ${b}`).join("")}`);
+  console.log(`  oldWay:          ${str(sa.oldWay)}`);
+  console.log(`  whyOldWayFails:  ${str(sa.whyOldWayFails)}`);
+  console.log(`  mechanism:       ${str(sa.mechanism)}`);
+  console.log(`  corePromise:     ${str(sa.corePromise)}`);
+  console.log(`  primaryObjection:${str(sa.primaryObjection)}`);
+  console.log(`  riskReversal:    ${str(sa.riskReversal)}`);
+  console.log(`  closeReason:     ${str(sa.closeReason)}`);
   console.log(`  ── Sections (stored) ──`);
   for (const s of data.sections ?? []) {
-    const c = s.config ?? {};
-    const evidence = c.headline || c.problemHeadline || (Array.isArray(c.items) && c.items.length ? `${c.items.length} items` : "") || (Array.isArray(c.bullets) && c.bullets.length ? c.bullets.join("; ") : "") || (Array.isArray(c.paragraphs) && c.paragraphs.length ? `${c.paragraphs.length} paragraphs` : "");
-    console.log(`  [${s.type}] role=${s.argumentRole ?? "-"} canvas=${s.canvas ?? "-"} variant=${c.variant ?? "-"}`);
+    const c = (s.config ?? {}) as Record<string, unknown>;
+    const evidence = (c.headline as string) || (c.problemHeadline as string) || (Array.isArray(c.items) && c.items.length ? `${c.items.length} items` : "") || (Array.isArray(c.bullets) && c.bullets.length ? c.bullets.join("; ") : "") || (Array.isArray(c.paragraphs) && c.paragraphs.length ? `${c.paragraphs.length} paragraphs` : "");
+    console.log(`  [${s.type}] role=${s.argumentRole ?? "-"} canvas=${s.canvas ?? "-"} variant=${str(c.variant) || "-"}`);
     console.log(`     serves: ${s.servesBelief ?? "-"}`);
     if (evidence) console.log(`     copy:   ${String(evidence).slice(0, 100)}`);
   }
@@ -135,7 +154,7 @@ try {
     if (!v.ok) { console.log(`VALIDATE FAILED: ${JSON.stringify(v).slice(0, 400)}`); continue; }
     const result = await cap.execute!(ctx, v.args);
     const doc = (await db.doc(`funnels/${result.ref!.id}`).get()).data()!;
-    printTrace(doc);
+    printTrace(doc as TracedFunnel);
     // Publish a QA copy for rendering/screenshots (same doc, published).
     await db.doc(`funnels/${b.qaId}`).set({ ...doc, id: b.qaId, name: `[QA-REAL] ${doc.name}`, status: "published" });
     console.log(`  → published copy: /lp/${b.qaId}`);
