@@ -254,7 +254,7 @@ async function resolveExistingFormIds(
 async function loadFunnelWorkflows(
   subAccountId: string,
   formIds: ReadonlySet<string>,
-): Promise<{ id: string; name: string; status: string }[]> {
+): Promise<{ id: string; name: string; status: string; emailBodies: string[] }[]> {
   if (formIds.size === 0) return [];
   const snap = await getAdminDb()
     .collection("workflows")
@@ -262,11 +262,22 @@ async function loadFunnelWorkflows(
     .get();
   return snap.docs
     .map((d) => {
-      const w = d.data() as { name?: string; status?: string; trigger?: { formId?: string } };
-      return { id: d.id, name: w.name ?? "Follow-up", status: w.status ?? "draft", formId: w.trigger?.formId };
+      const w = d.data() as {
+        name?: string;
+        status?: string;
+        trigger?: { formId?: string };
+        nodes?: Record<string, { type?: string; config?: { body?: string } }>;
+      };
+      // Every send_email body this workflow would actually send. The delivery
+      // contract asks whether the download link is IN one of them, which is a
+      // different question from whether an email exists at all.
+      const emailBodies = Object.values(w.nodes ?? {})
+        .filter((n) => n?.type === "send_email")
+        .map((n) => n?.config?.body ?? "");
+      return { id: d.id, name: w.name ?? "Follow-up", status: w.status ?? "draft", formId: w.trigger?.formId, emailBodies };
     })
     .filter((w) => !!w.formId && formIds.has(w.formId))
-    .map(({ id, name, status }) => ({ id, name, status }));
+    .map(({ id, name, status, emailBodies }) => ({ id, name, status, emailBodies }));
 }
 
 export interface FunnelPatch {
@@ -593,11 +604,21 @@ export async function updateFunnelServerSide(opts: {
     // And a working button is not the same as a kept promise: the form can
     // submit perfectly and still deliver nothing, forever, because the
     // follow-up that was built for it is sitting in draft.
+    const funnelWorkflows = await loadFunnelWorkflows(opts.subAccountId, formIds);
+    // Does the attached file still exist? A funnel can carry a reference to an
+    // asset that was deleted, which reads as "attached" everywhere in the UI
+    // and downloads as a 404 for the visitor.
+    const assetResolves = oldData.leadMagnetAsset?.assetId
+      ? (await getAdminDb().doc(`funnelAssets/${oldData.leadMagnetAsset.assetId}`).get()).exists
+      : undefined;
     const gaps = findDeliveryGaps({
       formIds: [...formIds],
-      workflows: await loadFunnelWorkflows(opts.subAccountId, formIds),
+      workflows: funnelWorkflows,
       hasLeadMagnetAsset: !!oldData.leadMagnetAsset,
       genre: oldData.genre,
+      leadMagnetAssetUrl: oldData.leadMagnetAsset?.url ?? null,
+      assetResolves,
+      emailBodies: funnelWorkflows.flatMap((w) => w.emailBodies),
     });
     if (gaps.length > 0) {
       throw new FunnelValidationError(deliveryRejection(gaps));

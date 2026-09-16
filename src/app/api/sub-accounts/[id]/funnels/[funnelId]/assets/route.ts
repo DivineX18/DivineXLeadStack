@@ -79,13 +79,23 @@ export async function POST(
         let changed = false;
         const nodes = { ...data.nodes };
         for (const [nid, node] of Object.entries(nodes)) {
-          if (node?.type === "send_email" && node.config && typeof node.config.body === "string" && !node.config.body.includes(stored.url)) {
-            nodes[nid] = {
-              ...node,
-              config: { ...node.config, body: `${node.config.body}\n\nDownload your copy here: ${absoluteUrl}` },
-            };
-            changed = true;
-          }
+          if (node?.type !== "send_email" || !node.config || typeof node.config.body !== "string") continue;
+          // IDEMPOTENT MEANS "ONE LINK", NOT "ONE APPEND PER UPLOAD".
+          //
+          // The guard here used to be `!body.includes(stored.url)`, which is
+          // always true on a REPLACEMENT upload: a new upload is a new assetId,
+          // so the check compared against a URL that could not be there yet and
+          // appended a second line. An operator who swapped their PDF shipped an
+          // email carrying two download links, the first pointing at the file
+          // they had just replaced. Any previously injected line is removed
+          // first, so the email always carries exactly the current asset.
+          const withoutPrevious = node.config.body
+            .replace(/\n*Download your copy here: \S*\/api\/funnel-asset\/\S+/g, "")
+            .trimEnd();
+          const nextBody = `${withoutPrevious}\n\nDownload your copy here: ${absoluteUrl}`;
+          if (nextBody === node.config.body) continue;
+          nodes[nid] = { ...node, config: { ...node.config, body: nextBody } };
+          changed = true;
         }
         if (changed) await wf.ref.update({ nodes });
       }

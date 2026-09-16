@@ -133,6 +133,17 @@ export interface DeliveryContext {
   /** Whether an uploaded lead-magnet file is attached to the funnel. */
   hasLeadMagnetAsset: boolean;
   genre: FunnelDoc["genre"];
+  /** The attached file's public serve path, when there is one. */
+  leadMagnetAssetUrl?: string | null;
+  /** Whether that asset actually exists in the store. A funnel can carry a
+   *  reference to a file that was deleted, which reads as "attached" and
+   *  downloads as a 404. Server-verified by the caller; `undefined` means the
+   *  caller did not check (legacy callers keep their old behavior). */
+  assetResolves?: boolean;
+  /** The body of every send_email action across this funnel's workflows.
+   *  The delivery link has to be IN one of them — a workflow that emails a
+   *  lovely note with no download is not delivery. */
+  emailBodies?: string[];
 }
 
 /**
@@ -175,6 +186,44 @@ export function findDeliveryGaps(ctx: DeliveryContext): string[] {
     gaps.push(
       "this is a lead-magnet page, but there is nothing to deliver and no follow-up to send: upload the file on this funnel, or build a follow-up workflow on its capture form",
     );
+  }
+
+  // ── THE LEAD-MAGNET FULFILLMENT CONTRACT ─────────────────────────────────
+  //
+  // Live testing found the rest of this hole. A lead magnet is a page whose
+  // ENTIRE PURPOSE is handing over a file, and three separate states let one
+  // publish while unable to do that: no file uploaded at all, a file attached
+  // whose asset no longer exists, and an active workflow whose email never
+  // mentions the download. Each looks fine from the builder, and each ends
+  // with a visitor who typed their email and received nothing.
+  //
+  // The earlier rules above are deliberately generic (they hold for every
+  // genre); these apply only where the promise is explicit, so a lead-gen or
+  // booking page is untouched.
+  if (ctx.genre === "lead_magnet") {
+    if (ctx.workflows.length === 0) {
+      gaps.push(
+        "no follow-up has been built for this page, so a lead magnet nobody can be sent is all a visitor would get " +
+          "(build the follow-up on its capture form, then activate it)",
+      );
+    }
+    if (!ctx.hasLeadMagnetAsset) {
+      gaps.push(
+        "upload your lead magnet before publishing — this page promises a downloadable resource and no file is attached to it",
+      );
+    } else if (ctx.assetResolves === false) {
+      gaps.push(
+        "the file attached to this page no longer exists in storage, so the download link would fail — re-upload it before publishing",
+      );
+    } else if (ctx.emailBodies && ctx.leadMagnetAssetUrl) {
+      const delivered = ctx.emailBodies.some((b) => b.includes(ctx.leadMagnetAssetUrl as string));
+      if (!delivered) {
+        gaps.push(
+          "your delivery email is not connected to the uploaded resource, so the follow-up would arrive with no download link " +
+            "(re-upload the file, which writes the link into the email)",
+        );
+      }
+    }
   }
 
   return gaps;
