@@ -276,6 +276,36 @@ const UNSUBSCRIBE_TOKEN = "{{unsubscribeLink}}";
  * unsubscribe footer (what the old append-to-the-end behavior produced), has
  * it inserted immediately above the footer instead.
  */
+/**
+ * What the bridge-chain welcome bar may claim about delivery.
+ *
+ * The same rule the capture popup already follows (public-funnel-view.tsx
+ * gates its "check your inbox" copy on `deliveryLive`), applied to the one
+ * surface that was still missing it: the `?welcome=1&from=` bar shown when a
+ * visitor is carried straight onto the next step instead of a thank-you page.
+ * It promised an email unconditionally, so on a funnel whose follow-up cannot
+ * send, the visitor was told to go and watch an inbox that stays empty.
+ *
+ * `deliveryLive` is the SOURCE funnel's fact, not this page's: the email, if
+ * any, is sent by the workflow behind the form they actually submitted. It is
+ * read from `loadFunnelForRender`, never re-derived here, so there is exactly
+ * one definition of "can anything reach them" in the codebase.
+ *
+ * Fails closed. An absent or unreadable source funnel means unknown, and
+ * unknown may not promise. The download link is rendered beside this text
+ * either way, so a visitor never leaves with less than before.
+ */
+export function welcomeBannerMessage(opts: { hasDownload: boolean; deliveryLive: boolean }): string {
+  if (opts.hasDownload) {
+    return opts.deliveryLive
+      ? "your download is on its way to your email."
+      : "your download is ready right here.";
+  }
+  return opts.deliveryLive
+    ? "check your email for everything you need."
+    : "we've got your details and someone will be in touch.";
+}
+
 export function withDeliveryLink(body: string, absoluteUrl: string): string {
   const line = `Download your copy here: ${absoluteUrl}`;
   const footerAt = body.indexOf(UNSUBSCRIBE_TOKEN);

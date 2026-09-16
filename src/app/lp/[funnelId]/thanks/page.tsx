@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
  * thank-you questions (what happened / what's next / when / what now) and
  * carries the two bridge actions:
  *   1. DELIVERY — the lead magnet download button (funnel.leadMagnetAsset,
- *      uploaded by the operator; also delivered by the confirmation email).
+ *      uploaded by the operator; for the lead_magnet genre the same file is
+ *      also sent by the follow-up email, which the publish contract enforces).
  *   2. THE NEXT STEP — a CTA into the funnel's next offer when
  *      funnel.bridge.nextFunnelId is set (the magnet -> offer chain link).
  * Renders in the funnel's own accent/theme; no dashboard chrome. Public via
@@ -35,13 +36,37 @@ export default async function FunnelThanksPage({
   // paid=1 — the post-checkout order confirmation ("the thank you after the
   // checkout page"): purchase-toned defaults, and no next-offer card (the
   // upsell chain already ran inside the checkout flow itself).
+  //
+  // A SUCCESS PAGE MAY NOT PROMISE A MESSAGE NOBODY SENDS.
+  //
+  // Verified live against a real test-mode purchase: the payment, webhook,
+  // funnelOrders record and contact association all worked, and NO email was
+  // sent or even attempted. Funnel Checkout has no mailer in its path at all
+  // (lib/funnels/checkout-webhook.ts imports none), `receipt_email` is never
+  // set on the session or PaymentIntent, and `funnel.order.completed` only
+  // adds a "purchased" tag. The old copy told the buyer to go and check an
+  // inbox that was never going to receive anything, which is worse than the
+  // same untruth on a landing page: they have already paid, so they wait.
+  //
+  // So the copy states only what the product actually did. Deliberately NOT
+  // conditional on Stripe's "Successful payments" customer-email setting:
+  // that is an operator-level Dashboard choice this code cannot see, and a
+  // page whose honesty depends on an invisible external toggle is not honest.
+  // When a real confirmation email exists, this copy changes with it.
   const headline = paid ? "Order confirmed — you're in!" : bridge?.headline || "You're in!";
   const message = paid
-    ? "Check your email for your receipt and everything you need to get started."
+    ? "Your payment was successful and your order has been confirmed."
     : bridge?.message ||
+      // Same rule for the capture path. A lead magnet IS emailed (the publish
+      // contract in cta-integrity.ts refuses to publish one whose active
+      // follow-up does not carry the download link), but the download sits
+      // right here on this page, so pointing at the inbox adds nothing and
+      // risks promising delivery for a funnel whose email never arrives. With
+      // no magnet there is no guaranteed follow-up email at all, because the
+      // delivery contract only binds the lead_magnet genre.
       (magnet
-        ? "Your download is ready below — we've also sent a copy to your email so you can find it anytime."
-        : "Check your inbox — everything you need is on its way to your email.");
+        ? "Your download is ready below."
+        : "Thanks for signing up. Your details have been received.");
 
   return (
     <main

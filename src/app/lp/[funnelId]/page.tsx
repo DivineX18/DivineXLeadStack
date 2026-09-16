@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { loadFunnelForRender } from "@/lib/funnels/load-funnel-for-render";
+import { welcomeBannerMessage } from "@/lib/funnels/cta-integrity";
 import { PublicFunnelView } from "@/components/funnels/public-funnel-view";
 
 export const dynamic = "force-dynamic";
@@ -53,11 +54,15 @@ export default async function PublicFunnelPage({
   // the visitor still needs to SEE that their signup landed, so a slim
   // confirmation bar carries the delivery note + the download link.
   const sp = await searchParams;
-  let welcome: { magnetUrl?: string; magnetName?: string } | null = null;
+  // `deliveryLive` belongs to the SOURCE funnel (the one whose form they just
+  // submitted) — that is the workflow that would send. Defaults false, so an
+  // absent or unreadable `from` promises nothing.
+  let welcome: { magnetUrl?: string; magnetName?: string; deliveryLive: boolean } | null = null;
   if (sp.welcome === "1") {
-    welcome = {};
+    welcome = { deliveryLive: false };
     if (sp.from && /^[A-Za-z0-9_-]{10,40}$/.test(sp.from)) {
       const source = await loadFunnelForRender(sp.from);
+      welcome.deliveryLive = source?.deliveryLive === true;
       if (source?.funnel.leadMagnetAsset) {
         welcome.magnetUrl = source.funnel.leadMagnetAsset.url;
         welcome.magnetName = source.funnel.leadMagnetAsset.filename;
@@ -75,7 +80,7 @@ export default async function PublicFunnelPage({
           style={{ backgroundColor: accent }}
         >
           <span>
-            ✓ You&apos;re in — {welcome.magnetUrl ? "your download is on its way to your email." : "check your email for everything you need."}
+            ✓ You&apos;re in — {welcomeBannerMessage({ hasDownload: !!welcome.magnetUrl, deliveryLive: welcome.deliveryLive })}
           </span>
           {welcome.magnetUrl && (
             <a

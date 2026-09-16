@@ -20,7 +20,7 @@
  *
  *   NODE_OPTIONS="--conditions=react-server" npx tsx scripts/verify-fulfillment-contract.mts
  */
-import { findDeliveryGaps, withDeliveryLink } from "../src/lib/funnels/cta-integrity.ts";
+import { findDeliveryGaps, withDeliveryLink, welcomeBannerMessage } from "../src/lib/funnels/cta-integrity.ts";
 import { assertsCheckoutCapability, stripCheckoutCapabilityClaims } from "../src/lib/funnels/conversion-action.ts";
 
 let failures = 0;
@@ -159,6 +159,39 @@ console.log("\n══ the file goes above the legal footer, and there is only ev
   // The written result satisfies the publish check that reads it.
   const gaps = findDeliveryGaps(ctx({ emailBodies: [once], leadMagnetAssetUrl: "/api/funnel-asset/AAA" }));
   check("what the writer produces passes the publish check that reads it", gaps.length === 0, gaps.join(" | "));
+}
+
+// ── The bridge-chain welcome bar ───────────────────────────────────────────
+console.log("\n══ a welcome bar may only mention email when an email can be sent ══");
+{
+  const EMAIL_WORDS = /\bemail\b|\binbox\b/i;
+  const cases = [
+    { hasDownload: true, deliveryLive: true },
+    { hasDownload: false, deliveryLive: true },
+    { hasDownload: true, deliveryLive: false },
+    { hasDownload: false, deliveryLive: false },
+  ];
+  for (const c of cases) {
+    const msg = welcomeBannerMessage(c);
+    const mentions = EMAIL_WORDS.test(msg);
+    if (c.deliveryLive) {
+      check(`deliveryLive=true, download=${c.hasDownload}: email language is allowed`, mentions, msg);
+    } else {
+      check(`deliveryLive=false, download=${c.hasDownload}: NO email promise`, !mentions, msg);
+    }
+    check(`... and the message is never empty (download=${c.hasDownload}, live=${c.deliveryLive})`, msg.trim().length > 10, msg);
+  }
+  // A visitor with a file still gets pointed at it when nothing can be sent.
+  check("with a file but no live delivery, the copy points at the page itself",
+    /right here/i.test(welcomeBannerMessage({ hasDownload: true, deliveryLive: false })));
+  // And a visitor with neither is told something true rather than nothing.
+  check("with no file and no live delivery, the copy promises only follow-up",
+    /someone will be in touch/i.test(welcomeBannerMessage({ hasDownload: false, deliveryLive: false })));
+  // The live-delivery wording is unchanged from what shipped before.
+  check("live-delivery wording is preserved exactly (download)",
+    welcomeBannerMessage({ hasDownload: true, deliveryLive: true }) === "your download is on its way to your email.");
+  check("live-delivery wording is preserved exactly (no download)",
+    welcomeBannerMessage({ hasDownload: false, deliveryLive: true }) === "check your email for everything you need.");
 }
 
 // ── Checkout language is a capability claim ────────────────────────────────
