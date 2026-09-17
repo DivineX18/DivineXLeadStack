@@ -283,6 +283,16 @@ service cloud.firestore {
       // SMS suppression index — tenant + canonical phone line. Members may
       // read it (the UI shows why a send was refused); only trusted server
       // routes write it, because this IS the opt-out record.
+      // Operator attestations — a named human's assertion that they have
+      // permission to text a line. Readable by the workspace so the UI can
+      // skip re-prompting; written only by trusted server routes, because a
+      // client-writable attestation would authorise its own sends.
+      match /smsAttestations/{phoneKey} {
+        allow read: if isAgencyOwner(get(/databases/$(database)/documents/subAccounts/$(subAccountId)).data.agencyId)
+          || isSubMemberActive(subAccountId);
+        allow write: if false;
+      }
+
       match /smsSuppression/{phoneKey} {
         allow read: if isAgencyOwner(get(/databases/$(database)/documents/subAccounts/$(subAccountId)).data.agencyId)
           || isSubMemberActive(subAccountId);

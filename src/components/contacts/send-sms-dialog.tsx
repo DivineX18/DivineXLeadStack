@@ -33,6 +33,10 @@ export function SendSmsDialog({
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  // Set when the SERVER says this line needs an operator affirmation. The
+  // prompt is never shown on a client guess, so it cannot be skipped by one.
+  const [needsAttestation, setNeedsAttestation] = useState(false);
+  const [attesting, setAttesting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -40,6 +44,7 @@ export function SendSmsDialog({
       setBody("");
       setApiError(null);
       setErrors({});
+      setNeedsAttestation(false);
     }
   }, [open]);
 
@@ -67,8 +72,14 @@ export function SendSmsDialog({
           body: body.trim(),
         }),
       });
-      const data = (await res.json()) as { ok?: boolean; error?: string };
+      const data = (await res.json()) as { ok?: boolean; error?: string; reason?: string };
       if (!res.ok || !data.ok) {
+        // The one refusal the operator can resolve themselves.
+        if (data.reason === "attestation_required") {
+          setNeedsAttestation(true);
+          setApiError(null);
+          return;
+        }
         setApiError(data.error ?? "Couldn't send. Try again.");
         return;
       }
@@ -109,6 +120,44 @@ export function SendSmsDialog({
         {contact.smsOptedOut ? (
           <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-700 dark:text-amber-400">
             This contact is opted out of SMS. Messages to them are blocked.
+          </div>
+        ) : null}
+
+        {needsAttestation ? (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-3 text-sm">
+            <p className="font-medium text-amber-800 dark:text-amber-300">
+              No SMS consent is on record for this number.
+            </p>
+            <p className="mt-1 text-amber-700 dark:text-amber-400">
+              I confirm this person has given us permission to text them.
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Recorded against your account for this number. It is not recorded
+              as the recipient&apos;s own consent.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              className="mt-2.5"
+              disabled={attesting}
+              onClick={async () => {
+                setAttesting(true);
+                try {
+                  const res = await fetch(`/api/contacts/${contact.id}/sms-attestation`, { method: "POST" });
+                  const d = (await res.json()) as { ok?: boolean; error?: string };
+                  if (!res.ok || !d.ok) {
+                    setApiError(d.error ?? "Couldn't record that. Try again.");
+                    setNeedsAttestation(false);
+                    return;
+                  }
+                  setNeedsAttestation(false);
+                } finally {
+                  setAttesting(false);
+                }
+              }}
+            >
+              {attesting ? "Confirming…" : "Confirm and continue"}
+            </Button>
           </div>
         ) : null}
 

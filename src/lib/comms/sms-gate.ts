@@ -144,6 +144,81 @@ export async function isSmsSuppressed(subAccountId: string, e164: string): Promi
 
 /* ─────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * AN OPERATOR CAN VOUCH FOR PERMISSION. THEY CANNOT GRANT IT.
+ *
+ * Most contacts carry no consent evidence at all: they were imported from a
+ * CSV, created through the API, or typed in by hand. Blocking every manual
+ * message to them would stop the legitimate common case — someone hands over
+ * their number and asks to be texted — and in practice would push operators
+ * onto their personal phones, where there is no record of anything.
+ *
+ * So a manual send to an unknown-consent line asks the operator to affirm,
+ * once, that they have permission. That affirmation is recorded as what it
+ * actually is: a named human's assertion, with their uid and the time. It is
+ * deliberately NOT written into `smsConsent`, because that field means the
+ * RECIPIENT agreed, and an operator clicking a button is not the recipient.
+ * The two facts stay separate so a dispute can tell them apart.
+ *
+ * Keyed on workspace + canonical line, like suppression, so it survives the
+ * contact being duplicated or re-imported and never transfers to a different
+ * number, a different workspace, or a different line.
+ */
+export interface SmsAttestationRecord {
+  e164: string;
+  subAccountId: string;
+  /** The contact it was taken against, for the audit trail. */
+  contactId: string | null;
+  actorUid: string;
+  attestedAt: FirebaseFirestore.Timestamp | FieldValue | null;
+  basis: "operator_attestation";
+  history: { actorUid: string; contactId: string | null; at: string }[];
+}
+
+function attestationRef(subAccountId: string, e164: string) {
+  return getAdminDb()
+    .doc(`subAccounts/${subAccountId}/smsAttestations/${suppressionKey(e164)}`);
+}
+
+/**
+ * Record an operator's affirmation for this workspace + line.
+ *
+ * Additive: a second operator attesting appends to the history rather than
+ * erasing who vouched first.
+ */
+export async function recordSmsAttestation(opts: {
+  subAccountId: string;
+  e164: string;
+  contactId: string | null;
+  actorUid: string;
+}): Promise<void> {
+  await attestationRef(opts.subAccountId, opts.e164).set(
+    {
+      e164: opts.e164,
+      subAccountId: opts.subAccountId,
+      contactId: opts.contactId,
+      actorUid: opts.actorUid,
+      attestedAt: FieldValue.serverTimestamp(),
+      basis: "operator_attestation" as const,
+      history: FieldValue.arrayUnion({
+        actorUid: opts.actorUid,
+        contactId: opts.contactId,
+        at: new Date().toISOString(),
+      }),
+    },
+    { merge: true },
+  );
+}
+
+/** The attestation on file for this workspace + line, or null. */
+export async function getSmsAttestation(
+  subAccountId: string,
+  e164: string,
+): Promise<SmsAttestationRecord | null> {
+  const snap = await attestationRef(subAccountId, e164).get();
+  return snap.exists ? (snap.data() as SmsAttestationRecord) : null;
+}
+
 /* ─────────────────────────────────────────────────────────────────────────── */
 
 /**
@@ -185,6 +260,8 @@ export type SmsGateResult =
 export type SmsSendBasis =
   /** The recipient's own recorded consent. */
   | "recipient_consent"
+  /** A named operator affirmed they have permission. */
+  | "operator_attestation"
   /** The recipient initiated this exchange (inbound SMS or call). */
   | "recipient_initiated";
 
@@ -263,8 +340,11 @@ export async function checkSmsSendAllowed(opts: {
     };
   }
 
-  // Manual, unknown consent. Refused for now; the operator-attestation path
-  // that lets a named human vouch for permission lands next.
+  // Manual, unknown consent: an operator may vouch, once, per line.
+  const attestation = await getSmsAttestation(opts.subAccountId, identity.e164);
+  if (attestation) {
+    return { allowed: true, e164: identity.e164, consent, basis: "operator_attestation" };
+  }
   return {
     allowed: false,
     reason: "attestation_required",

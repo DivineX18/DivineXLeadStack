@@ -42,6 +42,8 @@ const {
   smsConsentState,
   findContactsByPhoneIdentity,
   phoneE164Field,
+  recordSmsAttestation,
+  getSmsAttestation,
 } = await import("../src/lib/comms/sms-gate.ts");
 const { getAdminDb } = await import("../src/lib/firebase/admin.ts");
 
@@ -105,7 +107,7 @@ try {
   const manualNoConsent = await checkSmsSendAllowed({
     subAccountId: TENANT_A, to: LINE, contact: { smsOptedOut: false, smsConsent: null }, posture: "manual",
   });
-  check("N2b. a manual 1:1 to an unknown-consent contact is refused pending an operator path",
+  check("N2b. under Option B a manual 1:1 to an unknown-consent contact needs an operator attestation first",
     !manualNoConsent.allowed && manualNoConsent.reason === "attestation_required",
     JSON.stringify(manualNoConsent));
 
@@ -122,6 +124,95 @@ try {
   });
   check("M4. an ambiguous destination is never sent to",
     !invalid.allowed && invalid.reason === "invalid_phone");
+
+  // ── OPTION B: the operator-attestation contract ──────────────────────────
+  console.log("\n══ an operator may vouch for permission, once, per line ══");
+  const RECORDED = { consented: true, textShown: "x", consentedAt: null, sourceUrl: null, ip: null };
+  const DECLINED = { consented: false, textShown: "x", consentedAt: null, sourceUrl: null, ip: null };
+  const ATT_LINE = "+14155553000";
+  const OTHER_LINE = "+14155554000";
+
+  const obA = await checkSmsSendAllowed({
+    subAccountId: TENANT_A, to: ATT_LINE, contact: { smsOptedOut: false, smsConsent: RECORDED }, posture: "manual",
+  });
+  check("OB-A. recorded consent + manual is allowed, on the recipient's own consent",
+    obA.allowed && obA.basis === "recipient_consent", JSON.stringify(obA));
+
+  const obB = await checkSmsSendAllowed({
+    subAccountId: TENANT_A, to: ATT_LINE, contact: { smsOptedOut: false, smsConsent: null }, posture: "manual",
+  });
+  check("OB-B. unknown consent + NO attestation is refused, and says what is needed",
+    !obB.allowed && obB.reason === "attestation_required" && /permission to text/i.test(obB.detail),
+    JSON.stringify(obB));
+
+  await recordSmsAttestation({ subAccountId: TENANT_A, e164: ATT_LINE, contactId: "c-att", actorUid: "uid-operator" });
+  const obC = await checkSmsSendAllowed({
+    subAccountId: TENANT_A, to: ATT_LINE, contact: { smsOptedOut: false, smsConsent: null }, posture: "manual",
+  });
+  check("OB-C. unknown consent + attestation is allowed, as operator_attestation",
+    obC.allowed && obC.basis === "operator_attestation", JSON.stringify(obC));
+  check("OB-C2. ... and smsConsent was NOT rewritten as recipient consent",
+    obC.allowed && obC.consent === "unknown");
+
+  const att = await getSmsAttestation(TENANT_A, ATT_LINE);
+  check("OB-C3. the attestation records the actor and its basis",
+    att?.actorUid === "uid-operator" && att?.basis === "operator_attestation" && att?.contactId === "c-att");
+
+  const obD = await checkSmsSendAllowed({
+    subAccountId: TENANT_A, to: ATT_LINE, contact: { smsOptedOut: false, smsConsent: DECLINED }, posture: "manual",
+  });
+  check("OB-D. a DECLINED recipient is refused even with an attestation on file",
+    !obD.allowed && obD.reason === "consent_declined", JSON.stringify(obD));
+
+  const obF = await checkSmsSendAllowed({
+    subAccountId: TENANT_A, to: ATT_LINE, contact: { smsOptedOut: false, smsConsent: null }, posture: "automated",
+  });
+  check("OB-F. an attestation does NOT authorise an automated send",
+    !obF.allowed && obF.reason === "consent_unknown", JSON.stringify(obF));
+
+  const obG = await checkSmsSendAllowed({
+    subAccountId: TENANT_A, to: OTHER_LINE, contact: { smsOptedOut: false, smsConsent: null }, posture: "responsive",
+  });
+  check("OB-G/H. a responsive reply needs no prior record, and says so",
+    obG.allowed && obG.basis === "recipient_initiated", JSON.stringify(obG));
+  const obDeclinedResponsive = await checkSmsSendAllowed({
+    subAccountId: TENANT_A, to: OTHER_LINE, contact: { smsOptedOut: false, smsConsent: DECLINED }, posture: "responsive",
+  });
+  check("OB-G2. ... and answering someone who declined marketing but texted us is allowed",
+    obDeclinedResponsive.allowed);
+
+  // Identity boundaries.
+  const obJ = await checkSmsSendAllowed({
+    subAccountId: TENANT_A, to: OTHER_LINE, contact: { smsOptedOut: false, smsConsent: null }, posture: "manual",
+  });
+  check("OB-J. an attestation does NOT transfer to a different number",
+    !obJ.allowed && obJ.reason === "attestation_required");
+  const obK = await checkSmsSendAllowed({
+    subAccountId: TENANT_B, to: ATT_LINE, contact: { smsOptedOut: false, smsConsent: null }, posture: "manual",
+  });
+  check("OB-K. an attestation does NOT transfer to another workspace",
+    !obK.allowed && obK.reason === "attestation_required");
+
+  // Re-import: the attestation belongs to the line, not the contact row.
+  const obI = await checkSmsSendAllowed({
+    subAccountId: TENANT_A, to: "+1 (415) 555-3000", contact: { smsOptedOut: false, smsConsent: null }, posture: "manual",
+  });
+  check("OB-I. a re-imported, differently formatted duplicate keeps the attestation",
+    obI.allowed && obI.basis === "operator_attestation", JSON.stringify(obI));
+
+  // Suppression outranks it, and the history survives.
+  await suppressSms({ subAccountId: TENANT_A, e164: ATT_LINE, source: "inbound_keyword", keyword: "STOP" });
+  const obE = await checkSmsSendAllowed({
+    subAccountId: TENANT_A, to: ATT_LINE, contact: { smsOptedOut: false, smsConsent: null }, posture: "manual",
+  });
+  check("OB-E. STOP overrides an existing attestation",
+    !obE.allowed && obE.reason === "suppressed", JSON.stringify(obE));
+  check("OB-E2. ... and the attestation remains readable for audit",
+    (await getSmsAttestation(TENANT_A, ATT_LINE))?.actorUid === "uid-operator");
+
+  const obAudit = readFileSync(new URL("../src/app/api/comms/sms/send/route.ts", import.meta.url), "utf8");
+  check("OB-O. the manual send audit row records which basis authorised it",
+    /meta: \{ sid, mode, basis \}/.test(obAudit) && /basis = result\.basis/.test(obAudit));
 
   // ── B / C / D / E / F. STOP, and what it blocks ──────────────────────────
   console.log("\n══ STOP suppresses the line, for this tenant only ══");
@@ -287,6 +378,7 @@ try {
   for (const t of [TENANT_A, TENANT_B]) {
     for (const line of [LINE, "+14155553000", "+14155554000"]) {
       await db.doc(`subAccounts/${t}/smsSuppression/${suppressionKey(line)}`).delete().catch(() => {});
+      await db.doc(`subAccounts/${t}/smsAttestations/${suppressionKey(line)}`).delete().catch(() => {});
     }
   }
   await db.doc(`contacts/qa-a-reimport`).delete().catch(() => {});

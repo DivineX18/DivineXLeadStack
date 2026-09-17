@@ -95,6 +95,10 @@ await env.withSecurityRulesDisabled(async (ctx) => {
   await setDoc(doc(db, `subAccounts/${SA_B}/smsSuppression/14155552671`), {
     e164: "+14155552671", subAccountId: SA_B, suppressed: true, source: "inbound_keyword", keyword: "STOP",
   });
+  await setDoc(doc(db, `subAccounts/${SA_A}/smsAttestations/14155553000`), {
+    e164: "+14155553000", subAccountId: SA_A, contactId: "c2",
+    actorUid: "uidA", basis: "operator_attestation",
+  });
 });
 
 const aDb = memberA.firestore();
@@ -156,6 +160,24 @@ await check("J. a member CANNOT read another workspace's suppression state", () 
 
 await check("J2. ... and cannot read the other workspace's contact either", () =>
   assertFails(getDoc(doc(bDb, `contacts/${CONTACT}`))));
+
+console.log("\n══ operator attestations are server-written only ══");
+await check("L. client CREATE of an attestation is DENIED", () =>
+  assertFails(setDoc(doc(aDb, `subAccounts/${SA_A}/smsAttestations/19998887777`), {
+    e164: "+19998887777", subAccountId: SA_A, actorUid: "uidA", basis: "operator_attestation",
+  })));
+
+await check("L2. client UPDATE of an attestation is DENIED", () =>
+  assertFails(updateDoc(doc(aDb, `subAccounts/${SA_A}/smsAttestations/14155553000`), { actorUid: "someone-else" })));
+
+await check("L3. client DELETE of an attestation is DENIED", () =>
+  assertFails(deleteDoc(doc(aDb, `subAccounts/${SA_A}/smsAttestations/14155553000`))));
+
+await check("M. a member CAN read their own workspace's attestation", () =>
+  assertSucceeds(getDoc(doc(aDb, `subAccounts/${SA_A}/smsAttestations/14155553000`))));
+
+await check("N. a member CANNOT read another workspace's attestation", () =>
+  assertFails(getDoc(doc(bDb, `subAccounts/${SA_A}/smsAttestations/14155553000`))));
 
 console.log("\n══ unrelated contact CRUD is untouched ══");
 await check("K. creating a contact in your own workspace is ALLOWED", () =>
