@@ -306,7 +306,60 @@ export function welcomeBannerMessage(opts: { hasDownload: boolean; deliveryLive:
     : "we've got your details and someone will be in touch.";
 }
 
-export function withDeliveryLink(body: string, absoluteUrl: string): string {
+/**
+ * A LINK IS NOT AN ATTACHMENT.
+ *
+ * Reproduced in the launch gate: a generated delivery email opened with "Your
+ * PDF guide is attached and ready to go." Nothing was attached. The asset is
+ * delivered by a link, and the recipient was told to look for a paperclip
+ * that does not exist, which is a false statement about the message itself.
+ *
+ * Fixed here rather than in any one workflow, because the copy is written by
+ * a model and a model will write it again. The rewrite is deliberately
+ * surgical: it repairs the CLAIM and leaves the operator's surrounding
+ * sentence intact, and it never names a file type, since the asset is not
+ * always a PDF.
+ */
+const ATTACHMENT_CLAIMS: [RegExp, string][] = [
+  // "is attached to this email" / "is attached below" / "is attached"
+  [/\b(is|are)\s+attached(\s+(?:to\s+this\s+(?:e-?mail|message)|below|here))?\b/gi, "is ready to download"],
+  // "attached is your guide" / "attached to this email is ..."
+  // "Attached is your copy" reads as a sentence opener, so it needs a phrase
+  // that can also open one. "Ready to download is your copy" is not English.
+  [/\battached(\s+to\s+this\s+(?:e-?mail|message))?\s+is\b/gi, "Here is"],
+  [/\battached(\s+to\s+this\s+(?:e-?mail|message))?\s+(you'?ll\s+find|please\s+find)\b/gi, "you'll find"],
+  // "please find attached", "see the attachment", "find the attachment below"
+  [/\bplease\s+find\s+attached\b/gi, "here is"],
+  [/\b(see|find|open|check)\s+(the\s+)?attachment(\s+below)?\b/gi, "use the download link below"],
+  // Bare nouns: "the attachment", "your attachment", "as an attachment"
+  [/\bas\s+an\s+attachment\b/gi, "as a download"],
+  [/\b(the|your)\s+attachment\b/gi, "the download"],
+  // "I've attached" / "we have attached" / "we've attached the guide"
+  [/\b(i|we)\s*('ve|'?ve|\s+have)\s+attached\b/gi, "we've made available"],
+  [/\battaching\b/gi, "sending a download link for"],
+];
+
+/**
+ * The same copy with any claim of an attachment rewritten as a download.
+ *
+ * Only ever applied on the link-delivery path, so a genuine attachment
+ * mechanism (the booking confirmation's ICS file, for example) is untouched:
+ * that email never travels through here.
+ */
+export function withoutAttachmentClaims(body: string): { text: string; changed: boolean } {
+  let out = body;
+  for (const [re, replacement] of ATTACHMENT_CLAIMS) out = out.replace(re, replacement);
+  return { text: out, changed: out !== body };
+}
+
+/** Does this copy still claim an attachment that link delivery cannot honour? */
+export function claimsAttachment(body: string): boolean {
+  return /\battach(ed|ment|ments|ing)\b/i.test(body);
+}
+
+export function withDeliveryLink(rawBody: string, absoluteUrl: string): string {
+  // The asset arrives as a link, so the copy may not claim an attachment.
+  const body = withoutAttachmentClaims(rawBody).text;
   const line = `Download your copy here: ${absoluteUrl}`;
   const footerAt = body.indexOf(UNSUBSCRIBE_TOKEN);
   const found = DELIVERY_LINE.exec(body);

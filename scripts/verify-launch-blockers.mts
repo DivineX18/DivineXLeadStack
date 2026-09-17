@@ -1,5 +1,5 @@
 /**
- * DEFECTS THE LAUNCH GATE REPRODUCED, AND THE RULES THAT CLOSE THEM.
+ * THREE DEFECTS THE LAUNCH GATE REPRODUCED, AND THE RULES THAT CLOSE THEM.
  *
  *  1. A booking page had no genre, so it fell back to lead_magnet, acquired a
  *     deliverable contract it never promised, and could not publish at all.
@@ -20,7 +20,7 @@ const check = (label: string, ok: boolean, detail = "") => {
   if (!ok) failures++;
 };
 
-const { findDeliveryGaps, withDeliveryLink } =
+const { findDeliveryGaps, withDeliveryLink, withoutAttachmentClaims, claimsAttachment } =
   await import("../src/lib/funnels/cta-integrity.ts");
 const { FUNNEL_FRAMEWORKS } = await import("../src/lib/funnels/frameworks.ts");
 const { resolveConversionAction } = await import("../src/lib/funnels/conversion-action.ts");
@@ -105,6 +105,42 @@ console.log("\n══ the lead hears from the business, not the platform ══"
     /\.\.\.workspaceSender\(ctx\.subAccount\)/.test(engine) && !/from: tenantFrom\(ctx\.subAccount\)/.test(engine));
   check("sender identity is derived from config, never from funnel copy",
     !/workspaceSender\([^)]*(headline|body|copy|args)/i.test(engine));
+}
+
+// ── 4. A LINK IS NOT AN ATTACHMENT ─────────────────────────────────────────
+console.log("\n══ link delivery may not claim an attachment ══");
+{
+  const URL_A = "https://crm.divinex.io/api/funnel-asset/AAA";
+  const CLAIMS = [
+    "Your PDF guide is attached and ready to go.",
+    "Your guide is attached to this email.",
+    "The checklist is attached below.",
+    "Attached is your copy of the guide.",
+    "Please find attached your checklist.",
+    "See the attachment below for your guide.",
+    "We've attached the workbook for you.",
+    "I have attached your copy.",
+    "Sending it as an attachment.",
+    "Open the attachment to get started.",
+    "Attaching the guide now.",
+  ];
+  for (const c of CLAIMS) {
+    const out = withoutAttachmentClaims(c);
+    check(`repaired: "${c.slice(0, 44)}…"`, out.changed && !claimsAttachment(out.text), out.text);
+  }
+  check("copy that never claimed an attachment is untouched",
+    withoutAttachmentClaims("Your guide is ready to download.").changed === false);
+  check("... and the word 'attach' in an unrelated sense is not mangled into a lie",
+    !claimsAttachment("Download your copy here: https://x/y"));
+
+  // End to end through the real writer.
+  const body = "Hi {{contact.firstName}},\n\nYour PDF guide is attached and ready to go.\n\nEnjoy,\nTeam\n\n{{unsubscribeLink}}";
+  const out = withDeliveryLink(body, URL_A);
+  check("the writer repairs the claim while injecting the link", !claimsAttachment(out), out.split("\n")[2]);
+  check("... the surrounding copy survives", out.includes("Hi {{contact.firstName}},") && out.includes("Enjoy,"));
+  check("... exactly one delivery link", (out.match(/Download your copy here:/g) ?? []).length === 1);
+  check("... still above the unsubscribe footer", out.indexOf(URL_A) < out.indexOf("{{unsubscribeLink}}"));
+  check("... and no file type is invented", !/\bPDF\b/.test(out.replace(/Your PDF guide/g, "")));
 }
 
 console.log(failures === 0 ? "\nLAUNCH BLOCKERS: ALL CHECKS PASSED\n" : `\nLAUNCH BLOCKERS: ${failures} FAILED\n`);
