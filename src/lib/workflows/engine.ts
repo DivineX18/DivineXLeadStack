@@ -11,6 +11,7 @@ import {
   subAccountWhatsappIsConfigured,
 } from "@/lib/comms/twilio";
 import { agencyAllowsSharedSms } from "@/lib/agency/policy";
+import { SmsSuppressedError } from "@/lib/comms/sms-gate";
 import { resolveTemplateVariables } from "@/lib/comms/whatsapp/resolve-template-variables";
 import { createTaskServerSide } from "@/lib/server/tasks-service";
 import {
@@ -76,6 +77,10 @@ interface NodeContext {
    * Webhook step can forward the form fields downstream.
    */
   triggerContext: Record<string, unknown>;
+  /** Identity of the run, so an automated send can be traced back to what
+   *  decided to send it. */
+  workflowId: string;
+  runId: string;
 }
 
 /** An executor returns the control-flow result + a short audit log string. */
@@ -188,11 +193,69 @@ const execSendEmail: NodeExecutor = async (ctx) => {
   }
 };
 
+/**
+ * AN AUTOMATED TEXT NEEDS A RECORD SOMEBODY CAN RETRIEVE.
+ *
+ * A workflow send used to leave the string "ok" in the run history and nothing
+ * else: no body, no recipient, no Twilio SID. If a carrier or a recipient
+ * disputed a message, there was nothing to produce. This writes the same
+ * `contacts/{id}/messages` row the manual send writes, so automated and manual
+ * SMS live in one thread and one model, plus an activity row for the timeline.
+ *
+ * Suppressed attempts are recorded too, and are distinguishable from provider
+ * failures: `status: "failed"` with a `suppressionReason` means the product
+ * refused to send, which is the evidence that the refusal worked.
+ */
+async function recordWorkflowSmsAttempt(opts: {
+  ctx: NodeContext;
+  to: string;
+  body: string;
+  outcome: "sent" | "suppressed" | "failed";
+  sid?: string;
+  from?: string;
+  reason?: string;
+}): Promise<void> {
+  const { ctx } = opts;
+  const db = getAdminDb();
+  const docId = opts.sid ?? `wf_${ctx.runId}_${ctx.node.id}`;
+  try {
+    await db
+      .collection("contacts")
+      .doc(ctx.contact.id)
+      .collection("messages")
+      .doc(docId)
+      .set(
+        {
+          id: docId,
+          agencyId: ctx.agencyId,
+          subAccountId: ctx.subAccountId,
+          contactId: ctx.contact.id,
+          direction: "outbound",
+          status: opts.outcome === "sent" ? "sent" : "failed",
+          body: opts.body,
+          from: opts.from ?? null,
+          to: opts.to,
+          twilioMessageSid: opts.sid ?? null,
+          sentByUid: null,
+          error: opts.outcome === "sent" ? null : (opts.reason ?? opts.outcome),
+          suppressionReason: opts.outcome === "suppressed" ? (opts.reason ?? "suppressed") : null,
+          source: "workflow",
+          workflowId: ctx.workflowId,
+          workflowRunId: ctx.runId,
+          nodeId: ctx.node.id,
+          createdAt: FieldValue.serverTimestamp(),
+          readAt: null,
+        },
+        { merge: true },
+      );
+  } catch (err) {
+    console.warn("[workflow/send_sms] audit write failed", err);
+  }
+}
+
 const execSendSms: NodeExecutor = async (ctx) => {
   const cfg = ctx.node.config as unknown as SendSmsConfig;
   const contact = ctx.contact;
-  if (contact.smsOptedOut)
-    return { result: { kind: "next" }, log: "skipped:opt_out" };
   const to = contact.phone;
   if (!to) return { result: { kind: "next" }, log: "skipped:no_phone" };
   // Send via the sub-account's dedicated Twilio when configured, else the
@@ -207,18 +270,35 @@ const execSendSms: NodeExecutor = async (ctx) => {
   }
   const body = resolveMergeTags(cfg.body ?? "", mergeSubject(ctx, ""));
   try {
-    await sendSmsForSubAccount({
+    // Automated: the system decided to send this, so it needs recorded
+    // consent, not merely an absent opt-out flag.
+    const sent = await sendSmsForSubAccount({
       subAccountId: ctx.subAccountId,
       subAccount: ctx.subAccount,
       to,
       body,
+      contact,
+      posture: "automated",
+    });
+    await recordWorkflowSmsAttempt({
+      ctx,
+      to: sent.e164,
+      body,
+      outcome: "sent",
+      sid: sent.sid,
+      from: sent.from,
     });
     return { result: { kind: "next" }, log: "ok" };
   } catch (err) {
-    return {
-      result: { kind: "next" },
-      log: `error:${err instanceof Error ? err.message : "send_failed"}`,
-    };
+    if (err instanceof SmsSuppressedError) {
+      await recordWorkflowSmsAttempt({
+        ctx, to, body, outcome: "suppressed", reason: err.reason,
+      });
+      return { result: { kind: "next" }, log: `skipped:${err.reason}` };
+    }
+    const reason = err instanceof Error ? err.message : "send_failed";
+    await recordWorkflowSmsAttempt({ ctx, to, body, outcome: "failed", reason });
+    return { result: { kind: "next" }, log: `error:${reason}` };
   }
 };
 
@@ -892,6 +972,8 @@ export async function runStep(runId: string, nodeId: string): Promise<void> {
     agencyId: run.agencyId,
     createdByUid: wf.createdByUid,
     triggerContext: run.context ?? {},
+    workflowId: run.workflowId,
+    runId,
   });
 
   const entry: WorkflowRunHistoryEntry = {
