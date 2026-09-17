@@ -25,6 +25,7 @@ const { findDeliveryGaps, withDeliveryLink } =
 const { FUNNEL_FRAMEWORKS } = await import("../src/lib/funnels/frameworks.ts");
 const { resolveConversionAction } = await import("../src/lib/funnels/conversion-action.ts");
 const { inferAuthenticityCategory } = await import("../src/lib/funnels/authenticity.ts");
+const { workspaceSender } = await import("../src/lib/comms/resend.ts");
 
 // ── 1. BOOKING IS A REAL GENRE ─────────────────────────────────────────────
 console.log("\n══ a page whose purpose is a time in the diary can say so ══");
@@ -72,6 +73,38 @@ console.log("\n══ an unrecognised genre degrades safely ══");
   // The fallback genre must itself be one that promises nothing.
   const fallbackGaps = findDeliveryGaps({ formIds: ["f1"], workflows: [{ id: "w", name: "n", status: "active" }], hasLeadMagnetAsset: false, genre: "lead_gen", leadMagnetAssetUrl: null, assetResolves: false, emailBodies: ["Thanks."] });
   check("the fallback genre carries no deliverable semantics", fallbackGaps.length === 0, fallbackGaps.join(" | "));
+}
+
+// ── 3. SENDER IDENTITY ─────────────────────────────────────────────────────
+console.log("\n══ the lead hears from the business, not the platform ══");
+{
+  const PLATFORM = process.env.EMAIL_FROM ?? "";
+  const addr = (PLATFORM.match(/<([^>]+)>/)?.[1] ?? PLATFORM).trim();
+
+  const s = workspaceSender({ name: "Brightwater Gutter Cleaning", replyToEmail: "hello@brightwater.example" });
+  check("the workspace name becomes the display name", s.from.startsWith("Brightwater Gutter Cleaning <"), s.from);
+  check("... on the verified platform address, never a spoofed domain", s.from.includes(addr), s.from);
+  check("the configured business email becomes Reply-To", s.replyTo === "hello@brightwater.example", String(s.replyTo));
+
+  const noReply = workspaceSender({ name: "Brightwater Gutter Cleaning", replyToEmail: null });
+  check("no configured address means NO Reply-To, never an invented one", noReply.replyTo === undefined, String(noReply.replyTo));
+  const badReply = workspaceSender({ name: "X Co", replyToEmail: "not-an-email" });
+  check("an invalid configured address is refused rather than sent", badReply.replyTo === undefined, String(badReply.replyTo));
+
+  const noName = workspaceSender({ name: null, replyToEmail: null });
+  check("no trustworthy name falls back to the platform sender, truthfully", noName.from === PLATFORM, noName.from);
+  const blankName = workspaceSender({ name: "  ", replyToEmail: null });
+  check("... and a blank name does too", blankName.from === PLATFORM, blankName.from);
+
+  const inject = workspaceSender({ name: 'Evil" <attacker@evil.test>, x', replyToEmail: null });
+  check("a name cannot inject a second address or header", !inject.from.includes("attacker@evil.test") && (inject.from.match(/</g) ?? []).length <= 1, inject.from);
+  check("... and control characters are stripped", !/[\r\n]/.test(workspaceSender({ name: "A\r\nBcc: x@y.z", replyToEmail: null }).from));
+
+  const engine = readFileSync(new URL("../src/lib/workflows/engine.ts", import.meta.url), "utf8");
+  check("the workflow engine uses the central contract, not an ad-hoc from",
+    /\.\.\.workspaceSender\(ctx\.subAccount\)/.test(engine) && !/from: tenantFrom\(ctx\.subAccount\)/.test(engine));
+  check("sender identity is derived from config, never from funnel copy",
+    !/workspaceSender\([^)]*(headline|body|copy|args)/i.test(engine));
 }
 
 console.log(failures === 0 ? "\nLAUNCH BLOCKERS: ALL CHECKS PASSED\n" : `\nLAUNCH BLOCKERS: ${failures} FAILED\n`);

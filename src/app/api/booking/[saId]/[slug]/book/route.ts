@@ -8,7 +8,7 @@ import { getAdminDb } from "@/lib/firebase/admin";
 import {
   emailIsConfigured,
   sendEmail,
-  tenantFrom,
+  workspaceSender,
 } from "@/lib/comms/resend";
 import { Resend } from "resend";
 import { buildPaypalAmountUrl } from "@/lib/paypal/payment-link";
@@ -526,8 +526,7 @@ export async function POST(
         subject: rendered.subject,
         text: rendered.text,
         html: rendered.html,
-        replyTo: sub.replyToEmail ?? undefined,
-        from: tenantFrom(sub),
+        ...workspaceSender(sub),
         icsAttachment: attachments,
       });
     } catch (err) {

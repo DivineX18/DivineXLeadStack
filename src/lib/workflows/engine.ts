@@ -2,7 +2,7 @@ import "server-only";
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
-import { sendEmail, emailIsConfigured, tenantFrom } from "@/lib/comms/resend";
+import { sendEmail, emailIsConfigured, workspaceSender } from "@/lib/comms/resend";
 import {
   sendSmsForSubAccount,
   sendWhatsappTemplateForSubAccount,
@@ -181,8 +181,9 @@ const execSendEmail: NodeExecutor = async (ctx) => {
       subject: subject || "(no subject)",
       text,
       html,
-      replyTo: ctx.subAccount?.replyToEmail ?? undefined,
-      from: tenantFrom(ctx.subAccount),
+      // The lead opted in to this business, so the business is who the mail
+      // comes from and who a reply reaches. See workspaceSender.
+      ...workspaceSender(ctx.subAccount),
     });
     return { result: { kind: "next" }, log: "ok" };
   } catch (err) {
@@ -557,7 +558,7 @@ const execNotify: NodeExecutor = async (ctx) => {
       subject: subject || "Workflow notification",
       text,
       html,
-      from: tenantFrom(ctx.subAccount),
+      ...workspaceSender(ctx.subAccount),
     });
     return { result: { kind: "next" }, log: "ok" };
   } catch (err) {
