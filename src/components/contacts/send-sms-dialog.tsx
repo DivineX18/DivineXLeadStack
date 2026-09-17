@@ -97,6 +97,21 @@ export function SendSmsDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {/*
+          THE REFUSAL HAS TO BE VISIBLE, NOT JUST ENFORCED.
+
+          This dialog had no opt-out check at all, so texting someone who had
+          sent STOP was two clicks from the contact header. The server refuses
+          it now regardless (that is the real boundary, and a direct POST hits
+          the same gate), but an operator should see WHY before they type a
+          message rather than after.
+        */}
+        {contact.smsOptedOut ? (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-700 dark:text-amber-400">
+            This contact is opted out of SMS. Messages to them are blocked.
+          </div>
+        ) : null}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="sms-to">To</Label>

@@ -14,7 +14,8 @@ import { Input } from "@/components/ui/input";
  * them; see the user report of 2026-07-07):
  *
  *   - `replyToEmail` — Reply-To header on every automated/broadcast email
- *   - `sendWindow`   — quiet-hours restriction for workflow sends
+ *   - `sendWindow`   — quiet-hours preference. STORED ONLY: no send path
+ *                      reads it today (see the checkbox copy below).
  *   - `automationsPaused` — the workflow-engine kill switch (still enforced
  *     by lib/workflows/engine.ts, so legacy paused workspaces need this UI
  *     to un-pause)
@@ -157,9 +158,20 @@ export function SubAccountSendingPreferencesSection() {
             />
             <span>
               <span className="font-medium">Restrict sending hours</span>
+              {/*
+                NOT YET ENFORCED, AND THE UI MAY NOT SAY OTHERWISE.
+
+                This copy promised that workflow messages outside the window
+                wait for the next window start. `sendWindow` is stored, edited
+                and read back here, and no send path anywhere reads it, for SMS
+                or for email. An operator who set quiet hours believed nothing
+                would go out at 3 AM, and it did. Enforcing it is a separate
+                piece of work; until then the setting says what it is.
+              */}
               <span className="block text-xs text-muted-foreground">
-                Workflow messages outside the window wait for the next window
-                start instead of sending at 3 AM.
+                Saved as a preference. Not enforced yet — messages currently
+                send whenever a workflow reaches them, including outside this
+                window.
               </span>
             </span>
           </label>
