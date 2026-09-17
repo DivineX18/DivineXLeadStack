@@ -15,7 +15,22 @@ export type FunnelGenre =
   | "application"
   | "tripwire"
   | "webinar"
-  | "lead_gen";
+  | "lead_gen"
+  /**
+   * BOOKING / CONSULTATION — the page's whole purpose is getting a time in
+   * the diary (a consultation, an assessment, a site visit).
+   *
+   * It exists because it was MISSING, and its absence had a customer-visible
+   * cost: a physiotherapy page offering a free 20-minute assessment was
+   * classified `lead_magnet`, so the publish contract demanded an uploaded
+   * file the page never promised, and the page could not go live at all.
+   * Booking intent had no way to be represented, so it borrowed the
+   * semantics of the one genre that requires a deliverable.
+   *
+   * Captures a lead like any other genre. Promises no file, so no
+   * lead-magnet asset and no delivery email are required of it.
+   */
+  | "booking";
 /**
  * APPROVAL STATES — P0.4. ADDITIVE ONLY.
  *

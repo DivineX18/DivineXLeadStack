@@ -140,6 +140,18 @@ export const FUNNEL_FRAMEWORKS: Record<FunnelGenre, FrameworkStage[]> = {
     { id: "faq", label: "FAQ", section: "faq" },
     { id: "cta", label: "CTA", section: "cta_banner" },
   ],
+  // Booking mirrors lead_gen's persuasion runway: someone giving up a slot in
+  // their day needs the same belief shift as someone giving up their email,
+  // and the capture stage IS the booking ask.
+  booking: [
+    { id: "attention", label: "Hero", section: "hero" },
+    { id: "trust_logos", label: "Trust Logos", section: "proof_strip" },
+    { id: "belief_shift", label: "Belief Shift", section: "problem_solution" },
+    { id: "benefits", label: "What to expect", section: "benefits_grid" },
+    { id: "offer", label: "Book", section: "offer", isCapture: true },
+    { id: "faq", label: "FAQ", section: "faq" },
+    { id: "cta", label: "CTA", section: "cta_banner" },
+  ],
   lead_gen: [
     { id: "attention", label: "Hero", section: "hero" },
     { id: "trust_logos", label: "Trust Logos", section: "proof_strip" },

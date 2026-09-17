@@ -79,6 +79,7 @@ const GENRE_LABELS: Record<FunnelGenre, string> = {
   tripwire: "Tripwire",
   webinar: "Webinar",
   lead_gen: "Lead Gen",
+  booking: "Booking",
 };
 
 const SECTION_LABELS: Record<FunnelSectionType, string> = {

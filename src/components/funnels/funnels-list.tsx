@@ -26,6 +26,7 @@ import {
   Tag,
   Trash2,
   Users,
+  CalendarCheck,
 } from "lucide-react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase/client";
@@ -84,6 +85,12 @@ const GENRES: { id: FunnelGenre; label: string; hint: string; icon: typeof BookO
     label: "Lead Gen",
     hint: "Generic interest capture -> no specific magnet asset",
     icon: BookOpen,
+  },
+  {
+    id: "booking",
+    label: "Booking",
+    hint: "Consultation, assessment or appointment -> a time in the diary, no file",
+    icon: CalendarCheck,
   },
 ];
 

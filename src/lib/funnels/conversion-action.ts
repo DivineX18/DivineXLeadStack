@@ -69,6 +69,11 @@ export function resolveConversionAction(input: ConversionActionInput): Conversio
   if (BOOKING_OBJECTIVES.has(objective)) {
     return { action: "booking", reason: "objective is an appointment, so the next step is a booking" };
   }
+  // A booking funnel books, whatever the objective field happens to say: its
+  // entire purpose is a time in the diary.
+  if (input.genre === "booking") {
+    return { action: "booking", reason: "a booking funnel exists to put a time in the diary" };
+  }
   // An application funnel is an application even when it names a fee.
   if (input.genre === "application") {
     return { action: "application", reason: "an application funnel qualifies before it sells" };

@@ -15,6 +15,7 @@ const GENRE_NAMES: Record<FunnelGenre, string> = {
   tripwire: "Tripwire",
   webinar: "Webinar",
   lead_gen: "Lead Gen",
+  booking: "Booking",
 };
 
 export const dynamic = "force-dynamic";
@@ -72,7 +73,15 @@ export async function POST(
   }
 
   const genre: FunnelGenre =
-    body.genre && body.genre in GENRE_NAMES ? body.genre : "lead_magnet";
+    // UNKNOWN GENRE FALLS BACK TO THE PERMISSIVE ONE, NOT THE STRICT ONE.
+    //
+    // This used to fall back to `lead_magnet`, which is the single genre whose
+    // publish contract REQUIRES an uploaded deliverable. An unrecognised value
+    // therefore silently acquired a promise the page had never made, and a
+    // booking page that fell through here could not be published at all.
+    // `lead_gen` is generic interest capture: it asserts nothing about a file,
+    // so a mis-typed genre degrades into a page that still works.
+    body.genre && body.genre in GENRE_NAMES ? body.genre : "lead_gen";
   const chainRole =
     body.chainRole === "upsell" || body.chainRole === "downsell"
       ? body.chainRole

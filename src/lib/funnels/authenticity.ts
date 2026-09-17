@@ -172,6 +172,10 @@ export function inferAuthenticityCategory(input: {
       return "info_product";
     case "tripwire":
       return "physical_product";
+    // A booking page sells someone's TIME at a real place. That is a service
+    // encounter, never an information product.
+    case "booking":
+      return "local_service_health";
     // `application` and `vsl` deliberately fall through. They say how the page
     // converts and nothing about who is behind it.
     default:

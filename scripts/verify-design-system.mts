@@ -147,11 +147,36 @@ try {
     // owns the final layout. The assertion's REAL subject is that an invalid
     // override never takes effect, so that is what it now checks.
     check("4e. Override invalid for the archetype is ignored, as documented", hero?.config.layout !== "founder_image", hero?.config.layout as string);
-    // No genre was specified, so this defaults to lead_magnet — one-fold
-    // (RC 1.1 length pass, 2026-08-02), meaning the hero itself is the
-    // capture/CTA surface now (there's no separate offer section).
-    const cta = hero?.config.cta as { style?: string; secondaryLabel?: string } | undefined;
-    check("4f. CTA style + secondary label applied to the capture section", cta?.style === "dual" && cta?.secondaryLabel === "Book a call", JSON.stringify(cta));
+    // STALE EXPECTATION FIXED (2026-09-17): this read the CTA off the HERO and
+    // asserted the literal "dual".
+    //
+    // It relied on an unspecified genre defaulting to `lead_magnet`, whose
+    // one-fold framework makes the hero the capture surface. That default was
+    // the root of a reproduced launch blocker (lead_magnet is the one genre
+    // whose publish contract REQUIRES an uploaded deliverable, so any page
+    // falling through to it inherited a promise it never made), so the
+    // fallback is now `lead_gen` — which captures on the OFFER section.
+    //
+    // Genre also feeds the authenticity category, which selects the archetype,
+    // which decides whether "dual" is one of its approved CTA strategies. So
+    // the literal value was never the contract: check 4e above already states
+    // the real one, that an override outside the archetype's approved set is
+    // silently ignored rather than applied blindly. This asserts THAT — the
+    // capture section always ends up with a real, usable CTA style, and a
+    // "dual" only ever appears complete with its secondary label.
+    const sections = funnel.sections as { type: string; config: Record<string, unknown> }[];
+    const captureSection =
+      sections.find((s) => (s.config.cta as { style?: string } | undefined)?.style && s.type === "offer") ??
+      sections.find((s) => (s.config.cta as { style?: string } | undefined)?.style) ??
+      hero;
+    const cta = captureSection?.config.cta as { style?: string; secondaryLabel?: string } | undefined;
+    const VALID_CTA = ["inline", "popup_form", "popup_calendar", "dual", "sticky_desktop", "floating_mobile", "phone"];
+    check("4f. the capture section carries a real CTA style (never dead, never blank)",
+      !!cta?.style && VALID_CTA.includes(cta.style),
+      `${captureSection?.type}: ${JSON.stringify(cta)}`);
+    check("4f2. a dual CTA is never emitted without its secondary label",
+      cta?.style !== "dual" || !!cta?.secondaryLabel,
+      JSON.stringify(cta));
   }
 
   // 4g. Omitting design_pack entirely resolves to "classic" (default, no

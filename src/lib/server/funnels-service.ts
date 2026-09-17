@@ -84,6 +84,7 @@ const DEFAULT_ACCENT: Record<FunnelGenre, string> = {
   tripwire: "#ea580c",
   webinar: "#0891b2",
   lead_gen: "#2563eb",
+  booking: "#2563eb",
 };
 
 const DEFAULT_THEME: Record<FunnelGenre, "light" | "dark"> = {
@@ -94,6 +95,7 @@ const DEFAULT_THEME: Record<FunnelGenre, "light" | "dark"> = {
   tripwire: "light",
   webinar: "dark",
   lead_gen: "light",
+  booking: "light",
 };
 
 // Genre seeding used to be 7 hand-written, structurally-fixed section
