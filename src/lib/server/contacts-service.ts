@@ -2,6 +2,7 @@ import "server-only";
 
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
+import { phoneE164Field } from "@/lib/comms/sms-gate";
 import { emitWebhookEvent } from "@/lib/api/webhooks/dispatch";
 import { fireWorkflowTrigger } from "@/lib/workflows/engine";
 import {
@@ -80,6 +81,9 @@ export async function createContactServerSide(
     name: input.name,
     email: input.email,
     phone: input.phone,
+    // Canonical identity alongside the raw value. Null when the number has no
+    // country code — a refusal to send, not a guessed country.
+    ...phoneE164Field(input.phone),
     company: input.company,
     address: input.address,
     source: input.source,

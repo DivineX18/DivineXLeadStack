@@ -103,8 +103,11 @@ function getChannelTransport(channelId: ConfiguredChannelId): ChannelTransport {
       messagesCollection: "messages",
       label: "SMS",
       isOptedOut: (c) => c.smsOptedOut === true,
+      // A reply to a message this person just sent us. Their inbound IS the
+      // invitation, so no separate consent record is demanded — but the
+      // suppression index still applies, so a STOP still silences the bot.
       send: ({ subAccountId, subAccount, to, body }) =>
-        sendSmsForSubAccount({ subAccountId, subAccount, to, body }).then(
+        sendSmsForSubAccount({ subAccountId, subAccount, to, body, posture: "responsive" }).then(
           (r) => ({ sid: r.sid, from: r.from }),
         ),
     };

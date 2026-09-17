@@ -4,6 +4,13 @@ import twilio, { type Twilio } from "twilio";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { agencyAllowsSharedSms } from "@/lib/agency/policy";
 import type { SubAccountDoc, TwilioConfig } from "@/types";
+import type { Contact } from "@/types/contacts";
+import {
+  checkSmsSendAllowed,
+  SmsSuppressedError,
+  type SmsSendBasis,
+  type SmsSendPosture,
+} from "@/lib/comms/sms-gate";
 
 /**
  * Two-mode Twilio client resolution:
@@ -202,19 +209,38 @@ export async function sendSmsForSubAccount({
   subAccount,
   to,
   body,
+  contact,
+  posture,
 }: {
   subAccountId: string;
   subAccount?: SubAccountDoc | null;
   to: string;
   body: string;
-}): Promise<{ sid: string; mode: TwilioMode; from: string }> {
+  /** The recipient, when the caller has them. Supplies the opt-out flag and
+   *  the consent evidence to the gate. */
+  contact?: Pick<Contact, "smsOptedOut" | "smsConsent"> | null;
+  /** Who decided to send this, and therefore what evidence justifies it.
+   *  See SmsSendPosture. */
+  posture: SmsSendPosture;
+}): Promise<{ sid: string; mode: TwilioMode; from: string; e164: string; basis: SmsSendBasis }> {
+  // THE ENFORCEMENT BOUNDARY IS HERE, NOT IN THE CALLERS.
+  //
+  // The gate used to live in four of the five send paths, and the one that
+  // skipped it was the manual route a human clicks. Putting the check in the
+  // transport means a new send path cannot forget it: reaching Twilio without
+  // passing suppression now requires deleting this code, not merely omitting
+  // a call. The destination Twilio receives is the canonical E.164 the gate
+  // validated, so what was checked and what is dialled are the same string.
+  const verdict = await checkSmsSendAllowed({ subAccountId, to, contact, posture });
+  if (!verdict.allowed) throw new SmsSuppressedError(verdict);
+
   const resolved = await getTwilioForSubAccount(subAccountId, subAccount);
   const msg = await resolved.client.messages.create({
     from: resolved.fromNumber,
-    to,
+    to: verdict.e164,
     body,
   });
-  return { sid: msg.sid, mode: resolved.mode, from: resolved.fromNumber };
+  return { sid: msg.sid, mode: resolved.mode, from: resolved.fromNumber, e164: verdict.e164, basis: verdict.basis };
 }
 
 /**

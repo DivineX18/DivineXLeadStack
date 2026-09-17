@@ -223,6 +223,9 @@ export async function maybeSendReviewRequest(
         subAccount,
         to: contact.phone,
         body: renderedBody,
+        contact,
+        // Proactive marketing, not a reply — requires recorded consent.
+        posture: "automated",
       });
       sid = res.sid;
       fromNumber = res.from;

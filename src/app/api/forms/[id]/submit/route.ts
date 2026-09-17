@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
+import { phoneE164Field } from "@/lib/comms/sms-gate";
 import { GLOBAL_TERRITORY_ID } from "@/types";
 import { fireWorkflowTrigger } from "@/lib/workflows/engine";
 import { emitWebhookEvent } from "@/lib/api/webhooks/dispatch";
@@ -326,6 +327,7 @@ async function handleSubmit(
       subAccountId,
       createdByUid: submissionCreatedBy,
       emailOptedOut: false,
+      ...phoneE164Field(mapped.phone ?? ""),
       // No consent field → legacy default (opted in). Consent field present →
       // the checkbox decides: checked opts in, unchecked opts out.
       smsOptedOut: consentField ? !consentChecked : false,

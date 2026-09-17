@@ -238,6 +238,9 @@ export async function handleMissedCall(input: {
       subAccount,
       to: from,
       body: bodyText,
+      // They just rang this number. The call is the invitation, so no separate
+      // consent record is demanded; suppression still applies.
+      posture: "responsive",
     });
     smsSid = sent.sid;
   } catch (err) {

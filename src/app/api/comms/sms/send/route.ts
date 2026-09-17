@@ -8,6 +8,7 @@ import {
 } from "@/lib/comms/twilio";
 import { requireContactAccessible, requireUid } from "@/lib/comms/route-auth";
 import { recordSend } from "@/lib/comms/usage";
+import { SmsSuppressedError } from "@/lib/comms/sms-gate";
 import { upsertConversationForMessage } from "@/lib/server/conversations-service";
 import type { SubAccountDoc } from "@/types";
 
@@ -83,17 +84,34 @@ export async function POST(request: Request) {
   let sid: string;
   let mode: "shared" | "dedicated";
   let fromNumber: string;
+  let basis: string;
   try {
+    // A named operator typing to one person: attributable to them, so a
+    // recorded consent is not demanded here the way it is for automation.
+    // Suppression and the opt-out flag ARE enforced, inside the transport.
     const result = await sendSmsForSubAccount({
       subAccountId: contact.subAccountId,
       subAccount,
       to: contact.phone,
       body,
+      contact,
+      posture: "manual",
     });
     sid = result.sid;
     mode = result.mode;
     fromNumber = result.from;
+    basis = result.basis;
   } catch (err) {
+    // THE SERVER IS THE ENFORCEMENT BOUNDARY.
+    //
+    // This route had no opt-out check at all: the composer disabled itself for
+    // an opted-out contact and the contact-header dialog did not, so texting
+    // someone who had sent STOP was two clicks, and a direct POST always
+    // worked. 409 rather than 502 — the request was understood and refused,
+    // which is a different thing from Twilio failing.
+    if (err instanceof SmsSuppressedError) {
+      return NextResponse.json({ error: err.message, reason: err.reason }, { status: 409 });
+    }
     const message = err instanceof Error ? err.message : "Failed to send SMS";
     return NextResponse.json({ error: message }, { status: 502 });
   }
@@ -111,7 +129,11 @@ export async function POST(request: Request) {
         type: "sms_sent",
         content: `SMS: ${preview}`,
         createdBy: auth.uid,
-        meta: { sid, mode },
+        // WHAT AUTHORISED THIS MESSAGE, not just that it was sent. For an
+        // operator-attested send this is the thread back to who vouched and
+        // when: the attestation lives at
+        // subAccounts/{sa}/smsAttestations/{digits of e164}.
+        meta: { sid, mode, basis },
         createdAt: FieldValue.serverTimestamp(),
       });
   } catch (err) {

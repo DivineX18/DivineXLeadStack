@@ -53,6 +53,20 @@ service cloud.firestore {
       return isAgencyOwner(agencyId) || isSubAdmin(saId);
     }
 
+    // COMPLIANCE STATE IS NOT CONTACT DATA.
+    //
+    // `smsOptedOut`, the consent evidence and the canonical phone identity
+    // decide whether this person may lawfully be texted. Contact `update` is
+    // open to any member, and these fields were in no locked list, so a member
+    // could flip an opted-out contact back to sendable — or rewrite the
+    // consent record itself — straight from the client SDK. They are now
+    // server-written only: STOP, the operator suppression route and the
+    // hosted-form consent capture all run through trusted routes.
+    function complianceFieldsUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['smsOptedOut', 'smsConsent', 'phoneE164']);
+    }
+
     function tenantFieldsLockedOnUpdate() {
       return request.resource.data.subAccountId == resource.data.subAccountId
         && request.resource.data.agencyId == resource.data.agencyId;
@@ -266,6 +280,15 @@ service cloud.firestore {
 
     // ---------- sub-accounts ----------
     match /subAccounts/{subAccountId} {
+      // SMS suppression index — tenant + canonical phone line. Members may
+      // read it (the UI shows why a send was refused); only trusted server
+      // routes write it, because this IS the opt-out record.
+      match /smsSuppression/{phoneKey} {
+        allow read: if isAgencyOwner(get(/databases/$(database)/documents/subAccounts/$(subAccountId)).data.agencyId)
+          || isSubMemberActive(subAccountId);
+        allow write: if false;
+      }
+
       // Read: agency owner (claim) OR active sub-account member (one get()).
       allow read: if
         isAgencyOwner(resource.data.agencyId) ||
@@ -776,6 +799,7 @@ service cloud.firestore {
         resource.data.agencyId,
         resource.data.get("territoryId", null)
       ) && tenantFieldsLockedOnUpdate()
+        && complianceFieldsUnchanged()
         && territoryIdUnchangedOrAdmin(
           resource.data.subAccountId,
           resource.data.agencyId

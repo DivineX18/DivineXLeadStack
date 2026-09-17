@@ -60,6 +60,16 @@ export interface Contact {
   name: string;
   email: string;
   phone: string;
+  /**
+   * The canonical E.164 identity of `phone`, when it has one.
+   *
+   * ADDITIVE, never a replacement: `phone` keeps exactly what the operator or
+   * lead typed, so nothing displayed is rewritten. This field exists because
+   * SMS identity has to be one string. Null means the stored number is not
+   * unambiguously dialable (no country code, or unparseable), which is a
+   * refusal to send rather than a guess at a country. Server-written only.
+   */
+  phoneE164?: string | null;
   company: string;
   /** Free-form billing/postal address. Surfaced under "Billed to" on
    *  quotes + invoices (snapshotted onto the doc at contact pick time

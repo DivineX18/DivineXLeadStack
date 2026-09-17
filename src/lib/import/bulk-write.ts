@@ -2,6 +2,7 @@ import "server-only";
 
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
+import { phoneE164Field } from "@/lib/comms/sms-gate";
 import { GLOBAL_TERRITORY_ID } from "@/types";
 import { parseContactCreate } from "@/lib/api/serializers/contacts";
 import { parseDealCreate } from "@/lib/api/serializers/deals";
@@ -261,6 +262,7 @@ function buildWrite(db: FirebaseFirestore.Firestore, a: BuildArgs): Built {
         name: v.name,
         email: v.email,
         phone: v.phone,
+        ...phoneE164Field(v.phone),
         company: v.company,
         address: v.address,
         source: v.source,

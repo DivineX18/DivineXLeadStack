@@ -4,6 +4,12 @@ import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import twilio from "twilio";
 import { getAdminDb } from "@/lib/firebase/admin";
+import { phoneIdentity } from "@/lib/comms/phone-identity";
+import {
+  findContactsByPhoneIdentity,
+  liftSmsSuppression,
+  suppressSms,
+} from "@/lib/comms/sms-gate";
 import { resolveAgent } from "@/lib/comms/ai/agent";
 import { maybeRespondWithAi } from "@/lib/comms/ai/respond";
 import { aiIsConfigured } from "@/lib/comms/ai/openrouter";
@@ -45,7 +51,34 @@ const STOP_WORDS = new Set([
   "END",
   "QUIT",
 ]);
-const START_WORDS = new Set(["START", "UNSTOP", "YES"]);
+// "YES" WAS A RE-SUBSCRIBE KEYWORD, AND SHOULD NOT HAVE BEEN.
+//
+// Answering "yes" to "are you still interested?" silently restored permission
+// to text someone who had previously said STOP, with no consent record written.
+// A conversational yes is not an opt-in to anything; only the explicit,
+// carrier-recognised words are.
+const START_WORDS = new Set(["START", "UNSTOP"]);
+/** Answered deterministically, never by the AI. See handleHelpKeyword. */
+const HELP_WORDS = new Set(["HELP", "INFO"]);
+
+/**
+ * The HELP answer, or null when the workspace has not configured enough
+ * identity to give one. Deliberately states only what is known: who this is,
+ * and the two keywords the product itself guarantees.
+ */
+function buildHelpReply(sub: SubAccountDoc | null): string | null {
+  const businessName = sub?.name?.trim();
+  if (!businessName) return null;
+  return `${businessName}: for help, reply to this message and a person will get back to you. Reply STOP to opt out of messages. Message and data rates may apply.`;
+}
+
+function messageTwimlResponse(body: string): string {
+  const escaped = body
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  return `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${escaped}</Message></Response>`;
+}
 
 function emptyTwimlResponse(): string {
   return '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
@@ -70,6 +103,8 @@ interface ResolvedRoute {
   /** Only populated for dedicated mode. Scopes contact lookups to this sub-account. */
   subAccountId: string | null;
   agencyId: string | null;
+  /** The resolved workspace, for identity-derived replies (HELP). */
+  subAccountDoc: SubAccountDoc | null;
 }
 
 /**
@@ -98,6 +133,7 @@ async function resolveRoute(
         authToken: sa.twilioConfig.authToken,
         subAccountId: dedicated.docs[0].id,
         agencyId: sa.agencyId,
+        subAccountDoc: sa,
       };
     }
   }
@@ -113,6 +149,7 @@ async function resolveRoute(
       authToken: envToken,
       subAccountId: null,
       agencyId: null,
+      subAccountDoc: null,
     };
   }
 
@@ -176,18 +213,23 @@ export async function POST(request: Request) {
   let nextOptedOut: boolean | null = null;
   if (STOP_WORDS.has(word)) nextOptedOut = true;
   else if (START_WORDS.has(word)) nextOptedOut = false;
+  const isHelp = HELP_WORDS.has(word);
 
-  // Match contacts.
-  // Shared mode: existing behavior — across all contacts (legacy).
-  // Dedicated mode: scope to this sub-account so cross-tenant phones don't leak.
+  // Match contacts, by canonical phone identity, inside ONE workspace.
+  //
+  // This query used to run unscoped in shared mode (so an inbound could read
+  // and write contacts belonging to other tenants), matched on the raw `phone`
+  // string only (so a contact stored in any other format was invisible), and
+  // was capped at five. All three are gone: shared mode resolves no workspace
+  // and therefore matches nothing, and the dedicated lookup is scoped,
+  // identity-based and uncapped.
   const db = getAdminDb();
-  let query = db
-    .collection("contacts")
-    .where("phone", "==", from) as FirebaseFirestore.Query;
-  if (route.mode === "dedicated" && route.subAccountId) {
-    query = query.where("subAccountId", "==", route.subAccountId);
-  }
-  const matches = await query.limit(5).get();
+  const senderIdentity = phoneIdentity(fromRaw);
+  const matchedContacts =
+    route.mode === "dedicated" && route.subAccountId && senderIdentity
+      ? await findContactsByPhoneIdentity(route.subAccountId, senderIdentity)
+      : [];
+  const matches = { docs: matchedContacts, empty: matchedContacts.length === 0 };
 
   // ----- Dedicated-mode message-row write (BEFORE opt-out so the row
   // captures the actual word the customer sent, even if it's STOP/START) -----
@@ -240,6 +282,29 @@ export async function POST(request: Request) {
     console.warn(
       `[twilio/inbound] dedicated inbound from ${from} → ${to} (sa=${route.subAccountId}): no contact match — dropping per locked policy`,
     );
+  }
+
+  // ----- HELP: answered by the product, never by the model ------------------
+  //
+  // HELP used to fall through to the AI auto-responder, which meant a carrier
+  // compliance keyword was answered by a language model improvising from a
+  // persona prompt. The disclosure this very product renders at opt-in time
+  // promises "Reply STOP to opt out, HELP for help", so the answer has to be a
+  // fact about the business, not a generation.
+  //
+  // Composed only from identity the workspace has actually configured. When
+  // there is not enough to answer with, nothing is sent and the gap is logged
+  // for the operator: an invented support address would be worse than silence.
+  if (isHelp) {
+    const helpReply = buildHelpReply(route.subAccountDoc ?? null);
+    if (!helpReply) {
+      console.error(
+        `[twilio/inbound] HELP received on ${to} (sa=${route.subAccountId ?? "shared"}) but this workspace has no ` +
+          `configured business name to answer with — no reply sent. Set the workspace name to enable HELP replies.`,
+      );
+      return twimlResponse(emptyTwimlResponse());
+    }
+    return twimlResponse(messageTwimlResponse(helpReply));
   }
 
   // ----- Opt-out / opt-in handling (both modes, existing behavior) -----
@@ -301,15 +366,59 @@ export async function POST(request: Request) {
     return twimlResponse(emptyTwimlResponse());
   }
 
-  if (matches.empty) {
+  // ── A KEYWORD BELONGS TO A TENANT AND A PHONE LINE ────────────────────────
+  //
+  // The old handler queried `contacts where phone == from` with NO tenancy
+  // filter in shared mode and `.limit(5)`, then flipped a boolean on whatever
+  // documents came back. Three separate failures lived in that one query: a
+  // STOP could mutate contacts belonging to other tenants, a number held by
+  // more than five contact rows stayed sendable on the sixth, and a contact
+  // whose stored phone was not already E.164 never matched at all, so their
+  // STOP was logged and dropped.
+  //
+  // Suppression is now recorded against sub-account + canonical line in an
+  // index no contact operation can disturb, so it survives deletion,
+  // duplication, re-import and reformatting. The contact flag is still written
+  // for the UI, but it is a mirror, not the decision.
+  const e164 = phoneIdentity(fromRaw);
+  if (!e164) {
     console.warn(
-      `[twilio/inbound] ${word} from ${from} (mode=${route.mode}) — no matching contact`,
+      `[twilio/inbound] ${word} from an unparseable sender (mode=${route.mode}) — cannot establish a phone identity, refusing to mutate`,
+    );
+    return twimlResponse(emptyTwimlResponse());
+  }
+
+  // Shared mode cannot name a tenant: the env number belongs to the
+  // deployment, not to a workspace, so there is no workspace whose
+  // suppression list this STOP belongs to. Fail closed and say so loudly
+  // rather than guess, which is what the unscoped query was doing.
+  if (route.mode !== "dedicated" || !route.subAccountId) {
+    console.error(
+      `[twilio/inbound] ${word} received on the SHARED number and cannot be attributed to a workspace. ` +
+        `No contact was modified. Shared inbound SMS needs a dedicated per-workspace number before it is safe.`,
+    );
+    return twimlResponse(emptyTwimlResponse());
+  }
+
+  const subAccountId = route.subAccountId;
+  if (nextOptedOut) {
+    await suppressSms({ subAccountId, e164, source: "inbound_keyword", keyword: word });
+  } else {
+    await liftSmsSuppression({ subAccountId, e164, source: "inbound_keyword", keyword: word });
+  }
+
+  // Mirror onto every contact in THIS workspace naming this line. Uncapped.
+  const contactDocs = await findContactsByPhoneIdentity(subAccountId, e164);
+  if (contactDocs.length === 0) {
+    console.warn(
+      `[twilio/inbound] ${word} recorded for ${e164} in ${subAccountId} with no matching contact — ` +
+        `suppression is stored against the number, so a later import cannot resurrect it`,
     );
     return twimlResponse(emptyTwimlResponse());
   }
 
   const batch = db.batch();
-  for (const docSnap of matches.docs) {
+  for (const docSnap of contactDocs) {
     batch.update(docSnap.ref, {
       smsOptedOut: nextOptedOut,
       updatedAt: FieldValue.serverTimestamp(),
@@ -317,10 +426,10 @@ export async function POST(request: Request) {
     batch.set(docSnap.ref.collection("activities").doc(), {
       type: "automation_step_skipped",
       content: nextOptedOut
-        ? `SMS opt-out (${word}) received from ${from}.`
-        : `SMS opt-in (${word}) received from ${from}.`,
+        ? `SMS opt-out (${word}) received from ${e164}.`
+        : `SMS opt-in (${word}) received from ${e164}.`,
       createdBy: "twilio_inbound",
-      meta: { kind: "sms_opt_out", word, optedOut: nextOptedOut, mode: route.mode },
+      meta: { kind: "sms_opt_out", word, optedOut: nextOptedOut, mode: route.mode, e164 },
       createdAt: FieldValue.serverTimestamp(),
     });
   }
