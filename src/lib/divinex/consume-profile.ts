@@ -1,5 +1,10 @@
 import "server-only";
-import { getDivinexProfileSnapshot, type DivinexProfileSnapshot } from "@/lib/divinex/contract";
+import {
+  getDivinexProfileSnapshot,
+  resolveProfileMediaTrust,
+  type DivinexProfileSnapshot,
+  type StoredDivinexProfile,
+} from "@/lib/divinex/contract";
 import type { CandidateAsset } from "@/lib/funnels/image-director";
 
 /**
@@ -50,11 +55,43 @@ export interface ProfileDerivedInputs {
   };
   /** Canonical offers, referenceable by stable id. */
   offers: { id: string; name: string; kind: string }[];
+  /** Whether this profile's imagery may be presented as the business's own,
+   *  and why. Surfaced so an operator can be told WHY their page has no
+   *  customer photography instead of quietly getting a thinner page. */
+  mediaTrust: { trusted: boolean; reason: string };
 }
 
 /** Classes that are genuine photography. Marks, seals, wordmarks and
  *  decorative graphics are never photography, however first-party. */
 const PHOTOGRAPHIC_CLASSES = new Set(["hero", "photo", "founder", "team", "customer", "product", "environment", "event"]);
+
+/**
+ * CLASSES THAT ARE NEVER PHOTOGRAPHY, whatever else discovery says.
+ *
+ * Checked as a VETO rather than by absence from the photographic set, because
+ * the two lists answer different questions. The set above asks "is this class
+ * one we expect photographs in"; this one asks "has discovery told us outright
+ * that this is drawn rather than shot". A future class discovery invents lands
+ * in neither and is treated as non-photographic by default, which is the safe
+ * direction.
+ */
+const NON_PHOTOGRAPHIC_CLASSES = new Set([
+  "logo",
+  "wordmark",
+  "mark",
+  "seal",
+  "icon",
+  "graphic",
+  "illustration",
+  "diagram",
+  "chart",
+  "map",
+  "infographic",
+  "badge",
+  "pattern",
+  "background",
+  "screenshot",
+]);
 
 const PEOPLE_CLASSES = new Set(["founder", "team", "customer"]);
 const EVIDENCE_CLASSES = new Set(["partner", "certification", "evidence"]);
@@ -73,6 +110,21 @@ export async function resolveProfileInputs(subAccountId: string): Promise<Profil
   const snapshot: DivinexProfileSnapshot | null = await getDivinexProfileSnapshot(subAccountId);
   if (!snapshot) return null;
 
+  // CONTEXT IS NOT THE SAME CLAIM AS PHOTOGRAPHY.
+  //
+  // Knowing what a business does is a description, and a stale or imported one
+  // is merely unhelpful. Putting a photograph on the page asserts "this is
+  // them" — and when the profile belongs to somebody else, that assertion is
+  // false in a way no amount of composition quality redeems. So the two are
+  // separated: an unbound profile still contributes identity, offers and brand
+  // axes, and contributes NO media at all.
+  //
+  // Every legacy profile lands here, deliberately. Generation continues through
+  // stock, generated media or no media, exactly as a workspace with no profile
+  // always has — nothing fails, nobody is made to click a modal before they can
+  // build, and no historical ownership is invented on their behalf.
+  const mediaTrust = resolveProfileMediaTrust(snapshot as StoredDivinexProfile, subAccountId);
+
   const business = (snapshot.business ?? {}) as Record<string, unknown>;
   const brand = (snapshot.brand ?? {}) as Record<string, unknown>;
   const visual = (brand.visual ?? {}) as Record<string, unknown>;
@@ -81,8 +133,14 @@ export async function resolveProfileInputs(subAccountId: string): Promise<Profil
   const personality = Array.isArray(visual.personality) ? (visual.personality as string[]) : [];
   const photography = Array.isArray(visual.photographyStyle) ? (visual.photographyStyle as string[]) : [];
 
-  // APPROVED ASSETS ONLY.
-  const approved = (snapshot.assets ?? []).filter((a) => (a.status ?? "approved") === "approved");
+  // APPROVED ASSETS ONLY — and only from a profile this workspace has claimed.
+  // Emptying the list here, at the single point every media consumer reads
+  // from, is what makes the guarantee hold everywhere at once: the hero, the
+  // gallery, the evidence strip, the Image Director's whole candidate pool and
+  // the visual-story beats all draw from this one array.
+  const approved = mediaTrust.trusted
+    ? (snapshot.assets ?? []).filter((a) => (a.status ?? "approved") === "approved")
+    : [];
   const byClass = (cls: string) => approved.filter((a) => a.classification === cls).map((a) => a.fileUrl);
 
   const evidenceLogos = approved
@@ -135,7 +193,9 @@ export async function resolveProfileInputs(subAccountId: string): Promise<Profil
       websiteUrl: typeof business.websiteUrl === "string" ? business.websiteUrl : undefined,
       email: typeof contact.email === "string" ? contact.email : undefined,
       phone: typeof contact.phone === "string" ? contact.phone : undefined,
-      logoUrl: typeof tokens.logoUrl === "string" ? tokens.logoUrl : undefined,
+      // A logo is imagery too, and a foreign one brands the page as the wrong
+      // company more loudly than any photograph.
+      logoUrl: mediaTrust.trusted && typeof tokens.logoUrl === "string" ? tokens.logoUrl : undefined,
     },
     assets: {
       hero,
@@ -149,12 +209,14 @@ export async function resolveProfileInputs(subAccountId: string): Promise<Profil
         classification: a.classification ?? "unknown",
         width: a.width ?? null,
         height: a.height ?? null,
-        isPhotograph: PHOTOGRAPHIC_CLASSES.has(a.classification ?? ""),
+        isPhotograph:
+          PHOTOGRAPHIC_CLASSES.has(a.classification ?? "") && !NON_PHOTOGRAPHIC_CLASSES.has(a.classification ?? ""),
         approved: true,
         alt: a.purpose ?? null,
       })),
     },
     offers: snapshot.offers ?? [],
+    mediaTrust,
   };
 
   const accent = firstHex(tokens.palette);

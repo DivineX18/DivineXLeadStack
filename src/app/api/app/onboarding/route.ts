@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSubAccountMember } from "@/lib/auth/require-tenancy";
 import { ascend } from "@/lib/divinex/ascend-client";
-import { getDivinexProfileSnapshot } from "@/lib/divinex/contract";
+import { getDivinexProfileSnapshot, recordProfileBinding } from "@/lib/divinex/contract";
 import { linkAscendBusinessProfile } from "@/lib/workspace/link-ascend-business-profile";
 
 /**
@@ -59,6 +59,23 @@ export async function POST(request: Request): Promise<NextResponse> {
     businessProfileId,
     actingAsUid: access.uid,
     agencyId: access.agencyId,
+  });
+
+  // THIS IS THE MOMENT OWNERSHIP IS ACTUALLY ASSERTED. A verified member of
+  // this workspace is standing here asking for this business to be analysed,
+  // which is the only evidence of ownership the system ever gets — and until
+  // now it was thrown away, leaving generation to infer ownership later from
+  // data that could not carry it. Recorded rather than re-derived.
+  // Best-effort, like the link above: bookkeeping must not fail onboarding.
+  await recordProfileBinding(subAccountId, {
+    method: "scan_requested_in_workspace",
+    requestedByUid: access.uid,
+    requestedAt: new Date().toISOString(),
+    ...(typeof body.websiteUrl === "string" && body.websiteUrl
+      ? { declaredWebsiteUrl: body.websiteUrl }
+      : typeof body.business?.websiteUrl === "string"
+        ? { declaredWebsiteUrl: body.business.websiteUrl }
+        : {}),
   });
 
   switch (body.action) {

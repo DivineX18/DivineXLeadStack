@@ -97,6 +97,121 @@ export interface DivinexProfileSnapshot {
   };
 }
 
+/**
+ * WHO SAID THIS PROFILE BELONGS TO THIS WORKSPACE, AND ON WHAT BASIS.
+ *
+ * Nothing recorded this until now, and the absence had a cost. A profile for a
+ * document-legalisation company sat in the DivineX admin workspace, and because
+ * every stored signal was internally consistent — the doc is keyed by
+ * flowSubAccountId, so it always "matches" — generation had no way to tell that
+ * the eleven approved photographs it was handed belonged to somebody else. A
+ * school's booking page shipped with their scales-of-justice imagery.
+ *
+ * The repair is deliberately NOT a cleverer inference. Business names, asset
+ * domains and website URLs were all available and all agreed with each other;
+ * inferring ownership from them would have produced a confident wrong answer.
+ * Ownership is a FACT SOMEBODY ASSERTS, so this records the assertion:
+ * who bound this profile to this workspace, when, and by which route.
+ *
+ * Flow owns this field. Ascend owns the rest of the snapshot and republishes it
+ * wholesale, so applyProfileSnapshot carries the binding forward explicitly
+ * (see below) rather than letting the next publish erase it.
+ */
+export interface ProfileBinding {
+  /**
+   * How the association came about, strongest first:
+   *   scan_requested_in_workspace — a member of THIS workspace asked for this
+   *     business to be analysed, supplying its website themselves.
+   *   operator_confirmed          — a member of THIS workspace affirmed, after
+   *     the fact, that the profile describes their business.
+   *   imported / seeded           — it arrived from elsewhere. Nobody in this
+   *     workspace has ever claimed it.
+   */
+  method: "scan_requested_in_workspace" | "operator_confirmed" | "imported" | "seeded";
+  workspaceId: string;
+  requestedByUid?: string;
+  requestedAt?: string;
+  /** The URL the human typed, which is the whole point: it is what they SAID
+   *  their business was, rather than what we guessed from the assets. */
+  declaredWebsiteUrl?: string;
+  confirmedByUid?: string;
+  confirmedAt?: string;
+}
+
+/** The profile doc as STORED: Ascend's contract payload plus Flow's binding. */
+export type StoredDivinexProfile = DivinexProfileSnapshot & { binding?: ProfileBinding };
+
+/** Methods under which the profile's imagery may be presented as the
+ *  business's own. Everything else supplies context but not first-party media. */
+const TRUSTED_BINDING_METHODS: ReadonlySet<ProfileBinding["method"]> = new Set([
+  "scan_requested_in_workspace",
+  "operator_confirmed",
+]);
+
+export interface ProfileMediaTrust {
+  trusted: boolean;
+  /** Operator-facing, and the reason a page has no customer photography. */
+  reason: string;
+}
+
+/**
+ * MAY THIS PROFILE'S IMAGERY BE PRESENTED AS THE CUSTOMER'S OWN?
+ *
+ * Pure, so the whole rule is testable against the real contaminated fixture.
+ * Fails closed on every legacy profile — none has a binding — which is the
+ * intended outcome: a page that has never been claimed by anyone in this
+ * workspace composes from stock, generated media, or nothing at all, exactly
+ * as a workspace with no profile always has. Business CONTEXT is unaffected;
+ * only the claim "these photographs are theirs" requires provenance.
+ */
+export function resolveProfileMediaTrust(
+  stored: StoredDivinexProfile | null,
+  workspaceId: string,
+): ProfileMediaTrust {
+  if (!stored) return { trusted: false, reason: "no_profile" };
+  const b = stored.binding;
+  if (!b) {
+    return {
+      trusted: false,
+      reason: "This profile predates ownership tracking, so its images are not treated as this workspace's own.",
+    };
+  }
+  if (b.workspaceId !== workspaceId) {
+    return { trusted: false, reason: "This profile is bound to a different workspace." };
+  }
+  if (!TRUSTED_BINDING_METHODS.has(b.method)) {
+    return {
+      trusted: false,
+      reason: "Nobody in this workspace has confirmed that this profile describes their business.",
+    };
+  }
+  return { trusted: true, reason: `Bound to this workspace via ${b.method}.` };
+}
+
+/**
+ * Record a binding. Never DOWNGRADES: an imported profile that a member later
+ * confirms becomes confirmed, and a confirmed one is never quietly demoted by a
+ * later import. Best-effort by design — bookkeeping must not be able to fail
+ * the flow that triggered it.
+ */
+export async function recordProfileBinding(
+  workspaceId: string,
+  binding: Omit<ProfileBinding, "workspaceId">,
+): Promise<void> {
+  try {
+    const ref = getAdminDb().doc(`divinexProfiles/${workspaceId}`);
+    const snap = await ref.get();
+    if (!snap.exists) return;
+    const existing = (snap.data() as StoredDivinexProfile).binding;
+    if (existing && TRUSTED_BINDING_METHODS.has(existing.method) && !TRUSTED_BINDING_METHODS.has(binding.method)) {
+      return;
+    }
+    await ref.set({ binding: { ...binding, workspaceId } }, { merge: true });
+  } catch {
+    // Never throw into a caller whose real job is something else.
+  }
+}
+
 /** Apply an incoming profile contract to the snapshot cache. Returns what
  *  happened (for the receiver's response + logs). */
 export async function applyProfileSnapshot(
@@ -115,8 +230,16 @@ export async function applyProfileSnapshot(
   if (payload.profileVersion <= currentVersion) {
     return { result: "ignored_stale", reason: `have v${currentVersion}, got v${payload.profileVersion}` };
   }
+  // BINDING SURVIVES REPUBLISH. Ascend owns the contract payload and resends it
+  // whole, so a plain set() would erase Flow's record of who claimed this
+  // profile every time the business edited anything in Ascend — silently
+  // un-trusting a workspace that had properly confirmed itself. Carried forward
+  // explicitly; a profile nobody has claimed is stamped "imported", which is
+  // the truth and is not a trusted method.
+  const existingBinding = existing.exists ? (existing.data() as StoredDivinexProfile).binding : undefined;
   await ref.set({
     ...payload,
+    binding: existingBinding ?? { method: "imported", workspaceId: payload.flowSubAccountId },
     receivedAt: FieldValue.serverTimestamp(),
   });
   return { result: "applied" };
