@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { resolveShellContextForPage } from "@/lib/shell/shell-context-wrappers";
 import { AscendSectionPlaceholder } from "@/components/shell/ascend-section-placeholder";
-import { getDivinexProfileSnapshot } from "@/lib/divinex/contract";
+import { getAuthorizedProfileSnapshotOrNull } from "@/lib/divinex/authorized-profile";
 import { EmptyState, Panel, PageHeader, PrimaryAction, StatusChip } from "@/components/divinex/ui";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +35,8 @@ export default async function IntelligenceBrandPage() {
     );
   }
 
-  const snapshot = await getDivinexProfileSnapshot(saId);
+  // Renders palette, fonts and logo as "your brand" — it must be theirs.
+  const snapshot = await getAuthorizedProfileSnapshotOrNull(saId);
 
   if (!snapshot) {
     return (

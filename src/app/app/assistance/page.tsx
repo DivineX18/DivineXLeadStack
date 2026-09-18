@@ -2,7 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { ArrowRight } from "lucide-react";
 import { SERVICE_CATALOG, recommendAssistance, type AssistanceTrigger } from "@/lib/divinex/assistance";
-import { getDivinexProfileSnapshot } from "@/lib/divinex/contract";
+import { getAuthorizedProfileSnapshotOrNull } from "@/lib/divinex/authorized-profile";
 import { ascend } from "@/lib/divinex/ascend-client";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export default async function AssistancePage({
   const subAccountId = sp.w ?? cookieStore.get("active_workspace_id")?.value ?? "";
   const trigger = (sp.context as AssistanceTrigger) ?? "post_reveal";
 
-  const snapshot = subAccountId ? await getDivinexProfileSnapshot(subAccountId) : null;
+  const snapshot = subAccountId ? await getAuthorizedProfileSnapshotOrNull(subAccountId) : null;
   const business = (snapshot?.business ?? {}) as { monthlyRevenue?: string };
   const intel = snapshot?.businessProfileId
     ? (await ascend.getIntelligence(snapshot.businessProfileId)).data

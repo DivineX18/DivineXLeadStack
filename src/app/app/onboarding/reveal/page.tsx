@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Target, TrendingUp, Wrench } from "lucide-react";
 import { ascend } from "@/lib/divinex/ascend-client";
-import { getDivinexProfileSnapshot } from "@/lib/divinex/contract";
+import { getAuthorizedProfileSnapshotOrNull } from "@/lib/divinex/authorized-profile";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +25,7 @@ export default async function RevealPage({
   const subAccountId = sp.w ?? cookieStore.get("active_workspace_id")?.value ?? "";
   if (!subAccountId) redirect("/agency");
 
-  const snapshot = await getDivinexProfileSnapshot(subAccountId);
+  const snapshot = await getAuthorizedProfileSnapshotOrNull(subAccountId);
   const businessProfileId = snapshot?.businessProfileId ?? null;
   const intel = businessProfileId
     ? (await ascend.getIntelligence(businessProfileId)).data

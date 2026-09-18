@@ -260,8 +260,12 @@ export async function POST(request: Request) {
     // strategist knows the business across both products. Best-effort;
     // no snapshot = today's context exactly.
     try {
-      const { getDivinexProfileSnapshot } = await import("@/lib/divinex/contract");
-      const snap = await getDivinexProfileSnapshot(actionCtx.subAccountId!);
+      // Authorized accessor, not the raw snapshot: this block puts the
+      // business's name, website, audience, offers, brand voice and palette
+      // straight into Zeno's context, so a foreign profile here does not just
+      // mislead a page — it tells the strategist it IS another company.
+      const { getAuthorizedProfileSnapshotOrNull } = await import("@/lib/divinex/authorized-profile");
+      const snap = await getAuthorizedProfileSnapshotOrNull(actionCtx.subAccountId!);
       if (snap) {
         const business = snap.business as Record<string, unknown>;
         const brand = (snap.brand ?? {}) as { visual?: Record<string, unknown>; voice?: Record<string, unknown> };

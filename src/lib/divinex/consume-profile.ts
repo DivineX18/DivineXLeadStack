@@ -1,10 +1,6 @@
 import "server-only";
-import {
-  getDivinexProfileSnapshot,
-  resolveProfileMediaTrust,
-  type DivinexProfileSnapshot,
-  type StoredDivinexProfile,
-} from "@/lib/divinex/contract";
+import { resolveProfileMediaTrust, type DivinexProfileSnapshot, type StoredDivinexProfile } from "@/lib/divinex/contract";
+import { getAuthorizedProfileSnapshotOrNull } from "@/lib/divinex/authorized-profile";
 import type { CandidateAsset } from "@/lib/funnels/image-director";
 
 /**
@@ -107,7 +103,14 @@ function firstHex(palette: unknown): string | undefined {
  * workspace has no canonical profile — the certified default path.
  */
 export async function resolveProfileInputs(subAccountId: string): Promise<ProfileDerivedInputs | null> {
-  const snapshot: DivinexProfileSnapshot | null = await getDivinexProfileSnapshot(subAccountId);
+  // LAYER 1 — TENANT AUTHORIZATION, above the media gate below.
+  //
+  // A profile this workspace is not canonically mapped to contributes NOTHING:
+  // not identity, not offers, not brand axes, and not a candidate asset. That
+  // is a different question from Layer 2's "is this authorized profile's
+  // imagery verified first-party", and collapsing the two would either leak a
+  // stranger's business or needlessly strip a customer of their own.
+  const snapshot: DivinexProfileSnapshot | null = await getAuthorizedProfileSnapshotOrNull(subAccountId);
   if (!snapshot) return null;
 
   // CONTEXT IS NOT THE SAME CLAIM AS PHOTOGRAPHY.
