@@ -5005,8 +5005,17 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           : undefined;
       // Media strategy — an honest labeled placeholder when the archetype
       // expects real media but none was supplied (never a fabricated
-      // screenshot/photo). Only kicks in when a strategy was actually
-      // resolved; a plain (no-archetype) funnel behaves exactly as before.
+      // screenshot/photo).
+      //
+      // The old note here said this "only kicks in when a strategy was actually
+      // resolved; a plain (no-archetype) funnel behaves exactly as before". That
+      // stopped being true at bbdfef8, which made the archetype derive from the
+      // business category instead of an allowlist. There is no longer a
+      // no-archetype path: a strategy is ALWAYS resolved (an omitted archetype
+      // now yields local_service via inferAuthenticityCategory), so every funnel
+      // reaches this. The `designStrategy?.` optional chaining below is
+      // vestigial, kept only because removing it is noise, not because the
+      // undefined case is reachable.
       const MEDIA_PLACEHOLDER_LABELS: Partial<Record<MediaStrategyId, string>> = {
         founder_photo: "Add your photo",
         team_photo: "Add a team photo",
@@ -5061,7 +5070,37 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // stays a clean headline with room for the operator's real logo
       // above it, and the operator can keep adding photos independently.
       const MULTI_PHOTO_STRATEGIES: MediaStrategyId[] = ["service_photo", "team_photo", "community_photo"];
-      const wantsGallerySection = !!resolvedMediaStrategy && MULTI_PHOTO_STRATEGIES.includes(resolvedMediaStrategy);
+      /**
+       * A GALLERY IS A CONTENT TYPE, NOT MEDIA OVERFLOW.
+       *
+       * The media strategy alone used to decide this, and "team_photo" is a
+       * plausible strategy for almost any business with people in it — so a
+       * school booking a demo call got a four-up photo grid under its hero,
+       * for no better reason than that an archetype had said "team photos".
+       *
+       * Several pictures shown TOGETHER only communicate something when the
+       * offer is itself partly visual and cumulative: work you can see, places
+       * you can walk into, things you can hold. A legal practice, a tax firm, a
+       * consultancy, a SaaS product or a programme booking is none of those; a
+       * grid there is decoration standing where an argument should be.
+       *
+       * So the strategy now says how photography is USED, and the business says
+       * whether a collection means anything. Both must agree.
+       */
+      const GALLERY_JUSTIFYING_CATEGORIES = new Set<import("@/lib/funnels/authenticity").AuthenticityCategory>([
+        // Work you can see: jobs completed, before-and-after, the van and the
+        // crew on site. The archetypal "show me what you've done" business.
+        "local_service_trade",
+        // Things you can hold, photographed from more than one angle.
+        "physical_product",
+        // Events, community, the room full of people — a collection genuinely
+        // carries what one frame cannot.
+        "nonprofit",
+      ]);
+      const wantsGallerySection =
+        !!resolvedMediaStrategy &&
+        MULTI_PHOTO_STRATEGIES.includes(resolvedMediaStrategy) &&
+        GALLERY_JUSTIFYING_CATEGORIES.has(authenticityCategory);
       const heroMediaPlaceholder =
         !heroMediaUrl && resolvedMediaStrategy && !wantsGallerySection
           ? MEDIA_PLACEHOLDER_LABELS[resolvedMediaStrategy]
@@ -5947,6 +5986,38 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           const c = s.config as Record<string, unknown>;
           if (typeof c.mediaUrl === "string") placedUrls.add(c.mediaUrl);
           if (typeof c.photoUrl === "string") placedUrls.add(c.photoUrl);
+          if (typeof c.imageUrl === "string") placedUrls.add(c.imageUrl);
+          // EVERY MEDIA-BEARING LOCATION, not just the two scalar ones.
+          //
+          // This set existed to stop one asset being used twice, and it read
+          // `mediaUrl` and `photoUrl` only — so the images the Image Director
+          // had already put in the gallery were invisible to it. On RWAR that
+          // let ONE file (a Hague-Convention map) take the hero, the first
+          // gallery tile and the problem beat: three placements of one picture
+          // on a ten-section page, by a mechanism whose entire job was to
+          // prevent exactly that.
+          const gallery = c.images;
+          if (Array.isArray(gallery)) {
+            for (const img of gallery) {
+              const url = (img as { url?: unknown })?.url;
+              if (typeof url === "string") placedUrls.add(url);
+            }
+          }
+          const items = c.items;
+          if (Array.isArray(items)) {
+            for (const it of items) {
+              const url = (it as { imageUrl?: unknown })?.imageUrl;
+              if (typeof url === "string") placedUrls.add(url);
+            }
+          }
+          const beat = c.beatVisual;
+          if (beat && typeof (beat as { url?: unknown }).url === "string") {
+            placedUrls.add((beat as { url: string }).url);
+          }
+          const showcase = c.proofShowcase;
+          if (showcase && typeof (showcase as { url?: unknown }).url === "string") {
+            placedUrls.add((showcase as { url: string }).url);
+          }
         }
         const ownedPool = (profileInputs?.assets.visualCandidates ?? []).filter(
           (a) => a.approved && a.isPhotograph && !placedUrls.has(a.url),
