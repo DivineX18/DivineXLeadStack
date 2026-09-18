@@ -49,6 +49,7 @@ const unverif = (l: string, why: string) => {
 const HARNESS = "list stays loading here AND on production's pre-repair code; needs a real interactive login to settle";
 
 const { getAdminAuth } = await import("../src/lib/firebase/admin.ts");
+const ownerRecord = await getAdminAuth().getUser(OWNER);
 const ct = await getAdminAuth().createCustomToken(OWNER);
 const r = await fetch(
   `https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${process.env.NEXT_PUBLIC_FIREBASE_API_KEY}`,
@@ -103,11 +104,16 @@ await ctx.addInitScript(
   {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
     user: {
-      uid: signIn.localId,
-      email: signIn.email ?? null,
+      // accounts:signInWithCustomToken does NOT return localId — the first
+      // version of this took it from there, got undefined, and persisted a
+      // user record with no uid. The SDK discards such a record, so the
+      // browser stayed signed out and every list-render check below was
+      // measuring a signed-out page. The uid comes from the Admin SDK.
+      uid: ownerRecord.uid,
+      email: ownerRecord.email ?? null,
       emailVerified: true,
       isAnonymous: false,
-      providerData: [{ providerId: "password", uid: signIn.email ?? signIn.localId, displayName: null, email: signIn.email ?? null, phoneNumber: null, photoURL: null }],
+      providerData: [{ providerId: "password", uid: ownerRecord.email ?? ownerRecord.uid, displayName: ownerRecord.displayName ?? null, email: ownerRecord.email ?? null, phoneNumber: null, photoURL: null }],
       stsTokenManager: {
         refreshToken: signIn.refreshToken,
         accessToken: signIn.idToken,
@@ -125,18 +131,33 @@ const p = await ctx.newPage();
 
 const SPINNER_GRACE = 12000;
 const text = async () => (await p.locator("body").innerText()).replace(/\s+/g, " ");
-/** The list resolved iff it shows real content or an honest state — never a
- *  bare spinner. "Funnels" alone is the section header and proves nothing. */
-const listResolved = (t: string) =>
-  /New funnel/.test(t) && (/Preview/.test(t) || /No funnels yet/.test(t) || /locked by your agency/.test(t) || /couldn't load/i.test(t));
+/**
+ * RESOLVED MEANS THE SPINNER IS GONE, and something honest is in its place.
+ *
+ * The first version of this tested body TEXT for /Preview/ — and the Ascend
+ * Create page's own description reads "Preview any draft before it goes live",
+ * so every list-render check passed against the page's marketing copy while the
+ * list underneath was still spinning. A predicate that can be satisfied by
+ * prose is not a certification. This counts DOM instead: a real funnel row
+ * links to /preview/funnel/{id}, and the three honest terminal states are
+ * distinctive elements, and a spinning indicator disqualifies all of them.
+ */
+async function listResolved(): Promise<boolean> {
+  const spinning = await p.locator("svg.animate-spin").count();
+  if (spinning > 0) return false;
+  const rows = await p.locator('a[href^="/preview/funnel/"]').count();
+  if (rows > 0) return true;
+  const t = await text();
+  return /No funnels yet/.test(t) || /locked by your agency/.test(t) || /couldn't load/i.test(t);
+}
 
 try {
   // ── ASCEND ──────────────────────────────────────────────────────────────
   await p.goto(`${BASE}/create`, { waitUntil: "domcontentloaded", timeout: 120000 });
   await p.waitForTimeout(SPINNER_GRACE);
   let t = await text();
-  check("A1. ASCEND: /create loads the Funnels list", listResolved(t), t.slice(t.indexOf("Funnels"), t.indexOf("Funnels") + 90));
-  check("A2. ASCEND: it is not stuck on a spinner", listResolved(t) && !/^\s*$/.test(t));
+  check("A1. ASCEND: /create loads the Funnels list", await listResolved(), t.slice(t.indexOf("Funnels"), t.indexOf("Funnels") + 90));
+  check("A2. ASCEND: it is not stuck on a spinner", (await p.locator("svg.animate-spin").count()) === 0);
   check("A3. ASCEND: the Ascend shell is rendered (lifecycle nav present)", /Intelligence/.test(t) && /Performance/.test(t));
 
   await p.locator("a:has-text('Orders')").first().click();
@@ -149,13 +170,13 @@ try {
   const backPath = new URL(p.url()).pathname;
   t = await text();
   check("A6. ASCEND: back from Orders STAYS in Ascend (the reported defect)", backPath === "/create", backPath);
-  check("A7. ASCEND: and shows the Funnels list, not a spinner", listResolved(t));
+  check("A7. ASCEND: and shows the Funnels list, not a spinner", await listResolved());
   check("A8. ASCEND: still the Ascend shell", /Intelligence/.test(t) && /Performance/.test(t));
 
   await p.reload({ waitUntil: "domcontentloaded", timeout: 120000 });
   await p.waitForTimeout(SPINNER_GRACE);
   t = await text();
-  check("A9. ASCEND: hard refresh preserves the intended UI", new URL(p.url()).pathname === "/create" && listResolved(t));
+  check("A9. ASCEND: hard refresh preserves the intended UI", new URL(p.url()).pathname === "/create" && await listResolved());
 
   await p.goBack({ waitUntil: "domcontentloaded" });
   await p.waitForTimeout(SPINNER_GRACE);
@@ -163,13 +184,13 @@ try {
   await p.goForward({ waitUntil: "domcontentloaded" });
   await p.waitForTimeout(SPINNER_GRACE);
   t = await text();
-  check("A11. ASCEND: browser forward returns to Ascend Funnels", new URL(p.url()).pathname === "/create" && listResolved(t), p.url());
+  check("A11. ASCEND: browser forward returns to Ascend Funnels", new URL(p.url()).pathname === "/create" && await listResolved(), p.url());
 
   // ── FLOW ────────────────────────────────────────────────────────────────
   await p.goto(`${BASE}/sa/${SA}/funnels`, { waitUntil: "domcontentloaded", timeout: 120000 });
   await p.waitForTimeout(SPINNER_GRACE);
   t = await text();
-  if (listResolved(t)) { check("F1. FLOW: /sa/{id}/funnels loads the list", true); check("F2. FLOW: it is not stuck on a spinner", true); }
+  if (await listResolved()) { check("F1. FLOW: /sa/{id}/funnels loads the list", true); check("F2. FLOW: it is not stuck on a spinner", true); }
   else { unverif("F1/F2. FLOW: list render at /sa/{id}/funnels", HARNESS); }
   check("F3. FLOW: Flow chrome, not the Ascend lifecycle nav", !/Performance/.test(t) || /Contacts|Pipeline/.test(t));
 
@@ -181,13 +202,13 @@ try {
   await p.waitForTimeout(SPINNER_GRACE);
   t = await text();
   check("F5. FLOW: back from Orders STAYS in Flow", new URL(p.url()).pathname === `/sa/${SA}/funnels`, p.url());
-  if (listResolved(t)) check("F6. FLOW: and shows the list, not a spinner", true); else unverif("F6. FLOW: list render after returning from Orders", HARNESS);
+  if (await listResolved()) check("F6. FLOW: and shows the list, not a spinner", true); else unverif("F6. FLOW: list render after returning from Orders", HARNESS);
 
   await p.reload({ waitUntil: "domcontentloaded", timeout: 120000 });
   await p.waitForTimeout(SPINNER_GRACE);
   t = await text();
   check("F7. FLOW: hard refresh preserves the intended ROUTE", new URL(p.url()).pathname === `/sa/${SA}/funnels`, p.url());
-  if (!listResolved(t)) unverif("F7b. FLOW: list render after hard refresh", HARNESS);
+  if (!await listResolved()) unverif("F7b. FLOW: list render after hard refresh", HARNESS);
 
   await p.goBack({ waitUntil: "domcontentloaded" });
   await p.waitForTimeout(SPINNER_GRACE);
@@ -196,7 +217,7 @@ try {
   await p.waitForTimeout(SPINNER_GRACE);
   t = await text();
   check("F9. FLOW: browser forward returns to Flow Funnels", new URL(p.url()).pathname === `/sa/${SA}/funnels`, p.url());
-  if (!listResolved(t)) unverif("F9b. FLOW: list render after forward", HARNESS);
+  if (!await listResolved()) unverif("F9b. FLOW: list render after forward", HARNESS);
 } finally {
   await b.close();
 }
