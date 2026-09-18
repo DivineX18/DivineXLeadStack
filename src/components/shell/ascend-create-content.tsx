@@ -42,7 +42,13 @@ export function AscendCreateContent({
   websiteMaxSites,
   title = "Create",
   description = "Build funnels and websites — the same proven builders, native to Ascend.",
-  funnelBaseHref = "/create/funnels",
+  // The canonical Ascend funnel editor is /create/funnel/{id} (singular). The
+  // plural default sent every click through the /create/funnels/{id} legacy
+  // shim, which exists only to redirect old links and costs a round trip; and
+  // /create/funnels itself has no index page, so the default was one careless
+  // `${baseHref}` away from a 404. The only real caller already passes the
+  // singular form — this just stops the default disagreeing with it.
+  funnelBaseHref = "/create/funnel",
 }: {
   saId: string;
   isAdmin: boolean;
