@@ -19,7 +19,20 @@ export function PhotoGallerySection({
   // Asset-fallback rule: with no REAL images the composition adapts — the
   // section renders nothing rather than a giant placeholder dead zone.
   if (images.length === 0) return null;
-  const layout = config.layout ?? "grid";
+  const requested = config.layout ?? "grid";
+
+  // BEFORE AND AFTER ARE FACTS, NOT A LAYOUT.
+  //
+  // The badges may only appear when the DATA says the two photographs are the
+  // same subject before and after the work. Position in the array does not say
+  // that. Neither does the layout, which an archetype picks sight-unseen, nor
+  // the filename, nor the images looking alike, nor the business owning them.
+  // Absent an explicit claim we fall back to an ordinary grid: the operator
+  // loses a visual flourish, which costs far less than a page asserting a
+  // transformation that may never have happened.
+  const provenBeforeAfter =
+    requested === "before_after" && images.length >= 2 && images[0]?.role === "before" && images[1]?.role === "after";
+  const layout = requested === "before_after" && !provenBeforeAfter ? "grid" : requested;
 
   return (
     <section className="px-4" style={{ paddingBlock: "var(--flow-py, 3rem)" }}>

@@ -682,11 +682,23 @@ export interface ImageTextConfig {
  *  fabricated/stock imagery. */
 export interface PhotoGalleryConfig {
   headline?: string;
-  images: { url: string; caption?: string }[];
+  /**
+   * `role` is the ONLY thing that may put a "Before" or "After" badge on a
+   * photograph. It exists because the renderer used to derive those labels
+   * from array position whenever the layout happened to be "before_after" —
+   * and the layout is chosen by ARCHETYPE, not by evidence. A trade business
+   * got `galleryLayout: "before_after"` automatically, its own approved photos
+   * auto-filled the gallery with captions deliberately omitted (the pipeline
+   * states outright that it knows the images are theirs but not what each
+   * depicts), and the page then told visitors that two unrelated photographs
+   * were the same job before and after. Nobody asserted that. The page did.
+   */
+  images: { url: string; caption?: string; role?: "before" | "after" }[];
   /** "grid" (default) = even columns. "masonry" = varied-height columns
    *  for a less uniform feel. "carousel" = horizontal scroll-snap, best
-   *  for 5+ images. "before_after" = exactly two images side by side
-   *  labeled Before/After. */
+   *  for 5+ images. "before_after" = two images side by side, labeled ONLY
+   *  when they carry explicit before/after roles; otherwise it renders as an
+   *  ordinary grid rather than manufacturing the claim. */
   layout?: "grid" | "masonry" | "carousel" | "before_after";
   placeholderLabel?: string;
   /** Builder-only shooting brief — see HeroConfig.mediaPlaceholderBrief. */
