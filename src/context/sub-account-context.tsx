@@ -17,7 +17,20 @@ import type { SubAccountDoc, SubAccountRole } from "@/types";
 export interface SubAccountContextValue {
   subAccountId: string;
   subAccount: SubAccountDoc | null;
+  /** Everything a consumer might need: auth, the sub-account doc AND the
+   *  caller's memberships. Correct for anything deriving a ROLE. */
   loading: boolean;
+  /**
+   * Whether the SUB-ACCOUNT DOCUMENT alone is still resolving.
+   *
+   * Deliberately separate from `loading`. A consumer that only wants a field
+   * off the workspace doc — a feature gate, say — must not be made to wait for
+   * the membership snapshot too: `loading` stays true until memberships land,
+   * and a consumer that treats it as "the doc hasn't arrived" will render a
+   * spinner long after the doc is sitting right there. The Funnels list did
+   * exactly that, and on the Flow route it never finished.
+   */
+  subAccountLoading: boolean;
   /**
    * The caller's effective role inside this sub-account. Agency owners are
    * resolved to "admin" automatically.
@@ -133,6 +146,7 @@ export function SubAccountProvider({
     // Include membershipsLoaded so consumers don't read a stale myRole /
     // isAdmin (both derived from `membership`) before memberships arrive.
     loading: authLoading || subLoading || !membershipsLoaded,
+    subAccountLoading: authLoading || subLoading,
     myRole,
     isAdmin,
     agencyId: subAccount?.agencyId ?? claimAgencyId,

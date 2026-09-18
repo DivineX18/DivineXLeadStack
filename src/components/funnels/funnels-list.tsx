@@ -149,7 +149,12 @@ export function FunnelsList({
   // PRESENTATION decision only: /api/sub-accounts/[id]/funnels re-checks
   // funnelsEnabledByAgency server-side on every call, so nothing here is
   // authorization and an optimistic client gate could not grant access.
-  const { saPath, subAccount, loading: workspaceLoading } = useSubAccount();
+  // subAccountLoading, NOT the aggregate `loading`. The aggregate also waits on
+  // the caller's MEMBERSHIP snapshot, which this list has no use for — it reads
+  // one boolean off the workspace doc. Gating on it left the Flow route
+  // spinning with the document already resolved, which is the same bug this
+  // component just came out of, one layer up.
+  const { saPath, subAccount, subAccountLoading: workspaceLoading } = useSubAccount();
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);

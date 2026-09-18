@@ -133,6 +133,21 @@ check(
     /let cancelled = false;/.test(list) && /if \(cancelled\) return;/.test(list) && /cancelled = true;/.test(list),
   );
   check("7c. the effect re-runs when the workspace changes", /\}, \[saId, gate, workspaceUnreadable, reloadToken\]\);/.test(list));
+  // Caught on staging, in a browser, after the deterministic suite was already
+  // green: gating on the provider's AGGREGATE `loading` also waits for the
+  // membership snapshot, which this list never needed. The Flow route sat
+  // spinning with the workspace document already resolved — the same defect one
+  // layer up, reintroduced by the fix for it.
+  check(
+    "7d. the list waits for the workspace DOC, not for memberships too",
+    /subAccountLoading: workspaceLoading/.test(list) && !/loading: workspaceLoading/.test(list),
+  );
+  const ctx2 = read("src/context/sub-account-context.tsx");
+  check(
+    "7e. and the provider exposes the two separately",
+    /subAccountLoading: authLoading \|\| subLoading,/.test(ctx2) &&
+      /loading: authLoading \|\| subLoading \|\| !membershipsLoaded,/.test(ctx2),
+  );
 }
 
 // ── The client gate is presentation only; the server still enforces ───────
