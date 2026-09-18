@@ -125,7 +125,12 @@ const RWAR_PROFILE = {
   const contract = read("src/lib/divinex/contract.ts");
   check(
     "5a. applyProfileSnapshot carries an existing binding forward",
-    /const existingBinding = existing\.exists/.test(contract) && /binding: existingBinding \?\?/.test(contract),
+    // The CONTRACT, not one spelling of it: the binding written back must come
+    // from the previously STORED document and never from the incoming payload,
+    // or a republish could hand a workspace a trust level the sender chose.
+    /const existingBinding = existingData\?\.binding|const existingBinding = existing\.exists/.test(contract) &&
+      /binding: existingBinding \?\?/.test(contract) &&
+      !/binding: payload\.binding/.test(contract),
   );
   check(
     "5b. an unclaimed profile is stamped 'imported', which is not trusted",

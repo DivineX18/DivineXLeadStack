@@ -2,6 +2,7 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
+import { resolveAuthorizedBusinessProfileId, sameProfileId } from "@/lib/divinex/profile-authorization";
 
 /**
  * DIVINEX PROFILE CONTRACT — Flow side (Unification Slice 1).
@@ -224,11 +225,55 @@ export async function applyProfileSnapshot(
   const subSnap = await db.doc(`subAccounts/${payload.flowSubAccountId}`).get();
   if (!subSnap.exists) return { result: "rejected", reason: "unknown_sub_account" };
 
+  // A SIGNATURE PROVES WHO SENT IT, NOT THAT THEY PICKED THE RIGHT TENANT.
+  //
+  // This used to accept any correctly-signed payload that named an existing
+  // sub-account, so the sender alone decided which workspace a business profile
+  // landed in. Ascend's publisher resolves that destination through an owner
+  // fallback — "some workspace mapping belonging to this profile's owner" — so
+  // every profile the same person owns routes to the same workspace. That is
+  // how a document-legalisation company's profile came to occupy the DivineX
+  // workspace, which is canonically mapped to a different profile entirely.
+  //
+  // Flow now checks the relationship itself rather than inheriting the
+  // sender's opinion of it. Fails closed: an unmapped workspace accepts
+  // nothing, because "we have no record of what belongs here" is not a reason
+  // to accept whatever arrives.
+  const authorized = await resolveAuthorizedBusinessProfileId(payload.flowSubAccountId);
+  if (!authorized.authorized) {
+    return { result: "rejected", reason: `workspace_not_mapped:${authorized.reason}` };
+  }
+  if (!sameProfileId(payload.businessProfileId, authorized.businessProfileId)) {
+    return {
+      result: "rejected",
+      reason: `profile_not_mapped_to_workspace (mapped=${authorized.businessProfileId}, got=${payload.businessProfileId})`,
+    };
+  }
+
   const ref = db.doc(`divinexProfiles/${payload.flowSubAccountId}`);
   const existing = await ref.get();
-  const currentVersion = existing.exists ? ((existing.data()!.profileVersion as number) ?? -1) : -1;
-  if (payload.profileVersion <= currentVersion) {
-    return { result: "ignored_stale", reason: `have v${currentVersion}, got v${payload.profileVersion}` };
+  const existingData = existing.exists ? (existing.data() as StoredDivinexProfile) : null;
+
+  // VERSION ORDER BELONGS TO A PROFILE IDENTITY, NOT TO A SLOT.
+  //
+  // The comparison was `payload.profileVersion <= currentVersion` regardless of
+  // WHICH profile each version counted. Two profiles' counters were therefore
+  // read as one series: a legitimate profile at v4 would be discarded as
+  // "stale" against a foreign profile's v16, and the workspace would keep the
+  // wrong business indefinitely with the rejection logged as routine.
+  //
+  // Monotonicity still applies within one profile, which is what it was for.
+  // Across a genuine mapping change the incoming profile begins its own series
+  // — safe now only because the authorization check above has already proved
+  // the new profile is the one this workspace is mapped to. Identity first,
+  // then ordering. No migration: the discriminator is the businessProfileId
+  // already stored on every snapshot.
+  const sameSeries = existingData !== null && sameProfileId(existingData.businessProfileId, payload.businessProfileId);
+  if (sameSeries) {
+    const currentVersion = (existingData!.profileVersion as number) ?? -1;
+    if (payload.profileVersion <= currentVersion) {
+      return { result: "ignored_stale", reason: `have v${currentVersion}, got v${payload.profileVersion}` };
+    }
   }
   // BINDING SURVIVES REPUBLISH. Ascend owns the contract payload and resends it
   // whole, so a plain set() would erase Flow's record of who claimed this
@@ -236,7 +281,7 @@ export async function applyProfileSnapshot(
   // un-trusting a workspace that had properly confirmed itself. Carried forward
   // explicitly; a profile nobody has claimed is stamped "imported", which is
   // the truth and is not a trusted method.
-  const existingBinding = existing.exists ? (existing.data() as StoredDivinexProfile).binding : undefined;
+  const existingBinding = existingData?.binding;
   await ref.set({
     ...payload,
     binding: existingBinding ?? { method: "imported", workspaceId: payload.flowSubAccountId },
