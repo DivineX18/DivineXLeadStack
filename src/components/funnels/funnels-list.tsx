@@ -23,13 +23,13 @@ import {
   Plus,
   Radio,
   ReceiptText,
+  RefreshCw,
   Tag,
+  TriangleAlert,
   Trash2,
   Users,
   CalendarCheck,
 } from "lucide-react";
-import { doc, onSnapshot } from "firebase/firestore";
-import { getFirebaseDb } from "@/lib/firebase/client";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -101,6 +101,25 @@ interface Row {
   status: FunnelStatus;
 }
 
+/**
+ * LOADING AND FAILURE ARE DIFFERENT THINGS.
+ *
+ * They were the same value here, and that is the whole defect. The list held
+ * `rows: Row[] | null` and a `gate: boolean | null`, and BOTH the "haven't
+ * heard back yet" state and the "the read failed" state were `null` — so a
+ * Firestore listener error, a rejected fetch and a 403 were all indistinguish-
+ * able from a request still in flight. The component rendered a spinner and
+ * kept rendering it, silently, for as long as the page stayed open. An operator
+ * sat looking at a workspace with funnels in it and was told nothing at all.
+ *
+ * A spinner is a PROMISE that something is still coming. Making failure
+ * representable is what lets us stop breaking that promise.
+ */
+type ListState =
+  | { status: "loading" }
+  | { status: "ready"; rows: Row[] }
+  | { status: "error"; message: string };
+
 export function FunnelsList({
   saId,
   baseHref = `/sa/${saId}/funnels`,
@@ -113,30 +132,83 @@ export function FunnelsList({
    *  existing CRM-only page, which never passes this prop. */
   baseHref?: string;
 }) {
-  const { saPath } = useSubAccount();
+  // ONE SUBSCRIPTION TO THIS WORKSPACE, NOT TWO.
+  //
+  // This component used to open its own onSnapshot on subAccounts/{saId} purely
+  // to read one boolean. SubAccountProvider — which is already mounted above
+  // every mount of this list, in both shells — subscribes to that same document
+  // and has all the things the private copy lacked: it waits for Firebase Auth
+  // before subscribing, re-subscribes on [user, subAccountId], and unsubscribes
+  // on change. The private copy subscribed at mount whether or not auth had
+  // hydrated, and a single permission-denied killed the listener permanently
+  // with nothing to restart it. That is the spinner.
+  //
+  // So the fix is not a more careful second listener. It is not having one.
+  // The gate stays live (the provider's listener is still a subscription, so an
+  // agency flipping the gate still reaches an open page), and this remains a
+  // PRESENTATION decision only: /api/sub-accounts/[id]/funnels re-checks
+  // funnelsEnabledByAgency server-side on every call, so nothing here is
+  // authorization and an optimistic client gate could not grant access.
+  const { saPath, subAccount, loading: workspaceLoading } = useSubAccount();
   const router = useRouter();
-  const [rows, setRows] = useState<Row[] | null>(null);
   const [creating, setCreating] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
-  const [gate, setGate] = useState<boolean | null>(null);
+  const [state, setState] = useState<ListState>({ status: "loading" });
+  const [reloadToken, setReloadToken] = useState(0);
+
+  // null means "not known yet" and ONLY that. The provider reports a workspace
+  // it could not read as (loading: false, subAccount: null), which is a real
+  // failure and is handled as one below rather than folded back into "loading".
+  const gate: boolean | null = workspaceLoading || !subAccount ? null : subAccount.funnelsEnabledByAgency === true;
+  const workspaceUnreadable = !workspaceLoading && !subAccount;
 
   useEffect(() => {
-    return onSnapshot(
-      doc(getFirebaseDb(), "subAccounts", saId),
-      (snap) => setGate(snap.data()?.funnelsEnabledByAgency === true),
-      () => setGate(null),
-    );
-  }, [saId]);
+    if (workspaceUnreadable) {
+      setState({
+        status: "error",
+        message: "We couldn't read this workspace. Check your connection, then try again.",
+      });
+      return;
+    }
+    if (gate !== true) return; // still resolving, or locked — both rendered below
 
-  async function load() {
-    const res = await fetch(`/api/sub-accounts/${saId}/funnels`);
-    const d = (await res.json().catch(() => ({}))) as { funnels?: Row[] };
-    setRows(d.funnels ?? []);
-  }
-  useEffect(() => {
-    if (gate) void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saId, gate]);
+    // A NEWER WORKSPACE'S ANSWER MUST WIN. Switching workspace (or retrying)
+    // starts a second request while the first is still open; without this flag
+    // whichever happened to land last would set the list, so a slow response
+    // for the workspace you just left could overwrite the one you are on.
+    let cancelled = false;
+    setState({ status: "loading" });
+    void (async () => {
+      try {
+        const res = await fetch(`/api/sub-accounts/${saId}/funnels`);
+        if (cancelled) return;
+        if (!res.ok) {
+          // A non-ok response used to fall through `.catch(() => ({}))` into
+          // `setRows([])`, so a 403 rendered "No funnels yet. Create your first
+          // one." — telling an operator their funnels did not exist.
+          setState({
+            status: "error",
+            message:
+              res.status === 403
+                ? "Funnels isn't enabled for this workspace."
+                : `We couldn't load your funnels (error ${res.status}).`,
+          });
+          return;
+        }
+        const d = (await res.json()) as { funnels?: Row[] };
+        if (cancelled) return;
+        setState({ status: "ready", rows: d.funnels ?? [] });
+      } catch {
+        if (cancelled) return;
+        setState({ status: "error", message: "We couldn't reach the server. Check your connection, then try again." });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [saId, gate, workspaceUnreadable, reloadToken]);
+
+  const rows = state.status === "ready" ? state.rows : null;
 
   async function create(genre: FunnelGenre) {
     setCreating(true);
@@ -156,14 +228,17 @@ export function FunnelsList({
   }
 
   async function remove(id: string) {
-    setRows((r) => r?.filter((x) => x.id !== id) ?? null);
-    const res = await fetch(`/api/sub-accounts/${saId}/funnels/${id}`, {
-      method: "DELETE",
-    });
-    if (!res.ok) {
+    setState((s) => (s.status === "ready" ? { status: "ready", rows: s.rows.filter((x) => x.id !== id) } : s));
+    try {
+      const res = await fetch(`/api/sub-accounts/${saId}/funnels/${id}`, { method: "DELETE" });
+      if (res.ok) return;
       toast.error("Couldn't delete");
-      void load();
+    } catch {
+      toast.error("Couldn't delete");
     }
+    // Put the optimistically-removed row back by re-reading, rather than
+    // leaving the operator looking at a list the server does not agree with.
+    setReloadToken((t) => t + 1);
   }
 
   if (gate === false) {
@@ -178,6 +253,23 @@ export function FunnelsList({
         <p className="mt-1 text-sm text-muted-foreground">
           Ask your agency administrator to enable Funnels for this sub-account.
         </p>
+      </div>
+    );
+  }
+
+  // A FAILURE THE OPERATOR CAN ACT ON, instead of a spinner that never stops.
+  if (state.status === "error") {
+    return (
+      <div className="rounded-2xl border border-dashed bg-card p-10 text-center">
+        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+          <TriangleAlert className="h-6 w-6" />
+        </span>
+        <h2 className="mt-4 text-base font-semibold">We couldn&apos;t load your funnels</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{state.message}</p>
+        <Button variant="outline" className="mt-4" onClick={() => setReloadToken((t) => t + 1)}>
+          <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+          Try again
+        </Button>
       </div>
     );
   }
