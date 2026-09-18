@@ -205,16 +205,66 @@ try {
     createdFunnelIds.push(result.ref!.id);
     const snap = await db.doc(`funnels/${result.ref!.id}`).get();
     const sections = snap.data()!.sections as { type: string; config: Record<string, unknown> }[];
+    // CONTRACT UPDATED 2026-09-18, after both checks below failed at a clean
+    // baseline and were traced to ONE deliberate change: bbdfef8 made the
+    // archetype DERIVE FROM THE BUSINESS CATEGORY instead of being picked from
+    // a three-item allowlist that silently funnelled 80 of 109 funnels into
+    // direct_response. Omitting visual_archetype now resolves to local_service,
+    // not direct_response, and every difference below follows from that.
+    //
+    // Both old assertions measured the OLD archetype's incidental properties
+    // rather than the contract named in their own titles, so both were rewritten
+    // to assert the contract. Neither was loosened to go green: 4k now checks
+    // something strictly stronger, and 4l now checks the integrity property that
+    // actually matters.
+    const designStrategy = snap.data()!.designStrategy as
+      | { visualArchetype?: string; paletteId?: string; ctaStrategy?: string; mediaStrategy?: string }
+      | undefined;
+
+    // 4k WAS: `!!cta.popupLayout`. That is a property of HIGH-DENSITY
+    // archetypes only — check 4i, twelve lines above, asserts as CORRECT that a
+    // low-density archetype keeps a plain centered popup. The two contradicted
+    // each other, and 4i is the one matching the shipped decision. So the proxy
+    // is gone and the title's actual claim is tested instead.
+    check(
+      "4k. Omitting an archetype still yields real design intelligence",
+      !!designStrategy?.visualArchetype && !!designStrategy?.paletteId && !!designStrategy?.ctaStrategy,
+      JSON.stringify({ a: designStrategy?.visualArchetype, p: designStrategy?.paletteId, c: designStrategy?.ctaStrategy }),
+    );
+    // 4i's low-density rule, restated here so a future change that reintroduced
+    // split_benefits for local_service would be caught rather than welcomed.
     const ctaBearing = sections.find((s) => (s.config as { cta?: { style?: string } }).cta?.style === "popup_form");
     const cta = ctaBearing?.config.cta as { popupLayout?: string } | undefined;
-    // CONTRACT UPDATED 2026-08-30. There is no longer a "legacy" path that
-    // skips design intelligence: omitting visual_archetype now resolves to
-    // direct_response, so every funnel gets a real strategy. Verified: a
-    // no-archetype build stores designStrategy.visualArchetype
-    // "direct_response" and a popupLayout of "split_benefits". Asserting the
-    // absence would force the product back to a path that no longer exists.
-    check("4k. Omitting an archetype still yields real design intelligence", !!cta?.popupLayout, String(cta?.popupLayout));
-    check("4l. No-archetype legacy path never gets a gallery section", !sections.some((s) => s.type === "photo_gallery"));
+    check(
+      "4k2. A low-density archetype still keeps the plain centered popup",
+      !!ctaBearing && cta?.popupLayout === undefined,
+      String(cta?.popupLayout),
+    );
+
+    // 4l WAS: "never gets a gallery section" — which passed only INCIDENTALLY,
+    // because the old direct_response fallback recommended `video`. It never
+    // protected an integrity property; it observed an unrelated default. A
+    // local_service business is one of the few for which a gallery genuinely
+    // means something, so the gallery is now correct and the real contract is
+    // that it can never become a dead zone or an unearned claim.
+    const gallery = sections.find((s) => s.type === "photo_gallery");
+    const galleryImages = (gallery?.config.images as unknown[] | undefined) ?? [];
+    check(
+      "4l. A gallery appears only where the business context justifies one",
+      !gallery || designStrategy?.mediaStrategy === "service_photo",
+      `mediaStrategy=${designStrategy?.mediaStrategy} gallery=${!!gallery}`,
+    );
+    check(
+      "4l2. An auto-composed gallery is never filled with untrusted imagery",
+      galleryImages.length === 0,
+      `images=${galleryImages.length}`,
+    );
+    check(
+      "4l3. An empty gallery renders nothing rather than a dead zone",
+      readFileSync(new URL("../src/components/funnels/sections/photo-gallery-section.tsx", import.meta.url), "utf8").includes(
+        "if (images.length === 0) return null;",
+      ),
+    );
   }
 } finally {
   for (const id of createdFunnelIds) await db.doc(`funnels/${id}`).delete().catch(() => {});
