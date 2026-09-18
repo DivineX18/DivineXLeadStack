@@ -78,6 +78,51 @@ function ratio(a: CandidateAsset): number {
 }
 
 /**
+ * IS THIS ACTUALLY A PHOTOGRAPH, OR HAVE WE ONLY BEEN TOLD SO?
+ *
+ * `isPhotograph` arrives from discovery's classification, and discovery can be
+ * wrong in a way that no amount of downstream grading notices. The RWAR page
+ * shipped a Hague-Convention COUNTRY MAP as its hero, its first gallery tile
+ * and its problem beat, because discovery had filed that diagram under
+ * "customer" — a photographic class — so every consumer downstream treated the
+ * claim as fact.
+ *
+ * The repair is not to guess harder at what the file depicts. It is to stop
+ * treating an unsubstantiated claim as a substantiated one, and to let each
+ * pool decide how much substantiation it needs:
+ *
+ *   "not_photo"   discovery says drawn, or says nothing we recognise.
+ *   "unverified"  a photographic class, but no dimensions to corroborate it.
+ *                 Real photographs land here constantly (discovery often
+ *                 cannot measure a remote file), so this is NOT a rejection —
+ *                 it is "usable where shape does not have to be trusted".
+ *   "confirmed"   a photographic class AND dimensions consistent with a real
+ *                 photograph rather than an icon or a banner strip.
+ *
+ * Deliberately no filename, domain or extension heuristics: those would be the
+ * special-casing this repair exists to avoid, and they break the moment a
+ * business serves photographs from a CDN path that looks like anything else.
+ */
+export type PhotographConfidence = "confirmed" | "unverified" | "not_photo";
+
+/** Below this in either axis it is an icon or a thumbnail, not a photograph. */
+const PHOTO_MIN_EDGE = 400;
+/** Beyond this it is a banner strip or a tall infographic, not a photograph. */
+const PHOTO_MAX_RATIO = 4;
+const PHOTO_MIN_RATIO = 0.25;
+
+export function photographConfidence(a: CandidateAsset): PhotographConfidence {
+  if (!a.isPhotograph) return "not_photo";
+  const w = a.width ?? 0;
+  const h = a.height ?? 0;
+  if (w <= 0 || h <= 0) return "unverified";
+  if (w < PHOTO_MIN_EDGE || h < PHOTO_MIN_EDGE) return "not_photo";
+  const r = w / h;
+  if (r > PHOTO_MAX_RATIO || r < PHOTO_MIN_RATIO) return "not_photo";
+  return "confirmed";
+}
+
+/**
  * Grade one candidate. Generic-looking first-party photography is graded
  * HONESTLY as generic — the whole point is that we would rather use fewer,
  * stronger images than every image the business happens to own.
@@ -172,6 +217,38 @@ export function planPageVisuals(input: {
     }
   }
 
+  // ── 2b. NARRATIVE BEATS GET THEIR IMAGE BEFORE ANY POOL DOES ───────────
+  //
+  // This ordering IS the repair. Every slot above gates on metadata (a hero
+  // needs a known landscape frame; a benefit needs a high grade), and the
+  // gallery below gated on nothing but a count — so on a library whose assets
+  // carry no dimensions, every single asset failed every gate above and fell
+  // into the gallery. The RWAR page is that arithmetic: four images, all of
+  // them stacked in one grid under the hero, six sections left text-only, and
+  // nothing anywhere deciding that was a bad page.
+  //
+  // A narrative beat composes a visual BESIDE a claim, at the section's own
+  // width, so it does not need the shape guarantees a hero or a grid does.
+  // That makes it the right home for an "unverified" photograph, and the right
+  // claim on the budget ahead of a pool.
+  //
+  // Strictly bounded: these are the split-composition hosts that
+  // visual-placement.ts already admits. Nothing here adds imagery to a section
+  // type that is meant to stay text-led, and none of these is required to
+  // receive an image — a beat with nothing left in the pool stays text-led,
+  // which is a real outcome and not a shortfall.
+  for (const beatType of ["problem_solution", "callout"] as const) {
+    if (!input.sectionTypes.includes(beatType)) continue;
+    const beatAsset = remaining.find((x) => photographConfidence(x.a) !== "not_photo");
+    if (!beatAsset) continue;
+    remaining.splice(remaining.indexOf(beatAsset), 1);
+    budget--;
+    slots.push({
+      sectionType: beatType,
+      resolution: { kind: "asset", role: "benefit", url: beatAsset.a.url, grade: beatAsset.grade },
+    });
+  }
+
   // Benefit items read better with one image each — but only where a
   // genuinely good asset exists. A weak image beside a strong claim
   // undermines it, so a generic-grade asset is not spent here.
@@ -188,8 +265,20 @@ export function planPageVisuals(input: {
   }
 
   // ── 3. Gallery only if there is genuinely a BODY of work to show ────────
+  //
+  // A gallery asserts something the other slots do not: that these pictures
+  // are worth looking at TOGETHER, as a body of work. That claim can only be
+  // made about photographs we are actually sure are photographs — so this is
+  // the one pool that demands "confirmed" rather than merely "not ruled out".
+  //
+  // It also stops the gallery being the place unplaceable assets accumulate.
+  // Everything above accepts an unverified photograph; if the gallery did too,
+  // it would keep collecting whatever the earlier gates rejected, which is
+  // precisely how four country-maps-and-documents ended up in a grid on a
+  // school's booking page.
   if (input.sectionTypes.includes("photo_gallery")) {
-    const forGallery = remaining.slice(0, Math.max(0, Math.min(budget, 4)));
+    const galleryEligible = remaining.filter((x) => photographConfidence(x.a) === "confirmed");
+    const forGallery = galleryEligible.slice(0, Math.max(0, Math.min(budget, 4)));
     if (forGallery.length >= MIN_GALLERY_IMAGES) {
       for (const g of forGallery) {
         remaining.splice(remaining.indexOf(g), 1);
