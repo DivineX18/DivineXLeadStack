@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireSubAccountMember } from "@/lib/auth/require-tenancy";
 import { ascend } from "@/lib/divinex/ascend-client";
-import { getDivinexProfileSnapshot, recordProfileBinding } from "@/lib/divinex/contract";
+import { recordProfileBinding } from "@/lib/divinex/contract";
+import { resolveAuthorizedBusinessProfileId, sameProfileId } from "@/lib/divinex/profile-authorization";
 import { linkAscendBusinessProfile } from "@/lib/workspace/link-ascend-business-profile";
 
 /**
@@ -34,19 +35,49 @@ export async function POST(request: Request): Promise<NextResponse> {
   const access = await requireSubAccountMember(request, subAccountId);
   if (access instanceof NextResponse) return access;
 
-  // Resolve the canonical profile id: snapshot first (fast), else ask
-  // Ascend to find-or-create it for this workspace.
-  let businessProfileId = body.businessProfileId ?? null;
-  if (!businessProfileId) {
-    const snapshot = await getDivinexProfileSnapshot(subAccountId);
-    businessProfileId = snapshot?.businessProfileId ?? null;
-  }
-  if (!businessProfileId) {
+  // THE PROFILE ID IS RESOLVED SERVER-SIDE. THE CLIENT DOES NOT CHOOSE IT.
+  //
+  // This route previously took `body.businessProfileId` straight from the
+  // request and ran getProfile / patchProfile / discover / reviewAssets /
+  // publish against it, having checked only that the caller belonged to their
+  // OWN workspace. Profile ids are small sequential integers, so membership in
+  // any workspace granted read and write access to every business profile on
+  // the platform — including re-scanning one against an arbitrary URL, which is
+  // how a profile's website, brand tokens and assets get overwritten.
+  //
+  // The snapshot fallback that used to sit here was a second way in: a stored
+  // snapshot can carry a FOREIGN profile id (that is the live DivineX state,
+  // mapped to one profile and holding another), so trusting it would launder
+  // the wrong id into an authorized-looking one.
+  //
+  // Authority is now Flow's canonical workspace mapping and nothing else.
+  const auth = await resolveAuthorizedBusinessProfileId(subAccountId);
+  let businessProfileId: number | null = auth.authorized ? auth.businessProfileId : null;
+
+  // Bootstrap ONLY when the workspace genuinely has no mapped profile yet.
+  // ascend.resolve is keyed on the workspace id alone — no client input reaches
+  // it — so find-or-create cannot be steered at someone else's profile.
+  if (businessProfileId === null) {
     const resolved = await ascend.resolve({ flowSubAccountId: subAccountId });
     if (!resolved.ok || !resolved.data?.businessProfileId) {
       return NextResponse.json({ error: resolved.error ?? "resolve_failed" }, { status: 502 });
     }
     businessProfileId = resolved.data.businessProfileId;
+  }
+
+  // A client-supplied id is a CLAIM to be checked, never a selector. Kept for
+  // compatibility with existing callers; a mismatch is refused rather than
+  // silently corrected, because a caller asking for a profile it may not have
+  // is something an operator should see, not something to paper over.
+  if (
+    body.businessProfileId !== undefined &&
+    body.businessProfileId !== null &&
+    !sameProfileId(body.businessProfileId, businessProfileId)
+  ) {
+    return NextResponse.json(
+      { error: "forbidden_profile", message: "That business profile does not belong to this workspace." },
+      { status: 403 },
+    );
   }
 
   // The id above is what the intelligence layer needs and never had. Writing it

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSubAccountMember } from "@/lib/auth/require-tenancy";
-import { reconcileProfileFromAscend, getDivinexProfileSnapshot } from "@/lib/divinex/contract";
+import { reconcileProfileFromAscend } from "@/lib/divinex/contract";
+import { resolveAuthorizedBusinessProfileId, sameProfileId } from "@/lib/divinex/profile-authorization";
 
 /**
  * Operator-invoked reconcile: pull the CURRENT canonical profile from
@@ -16,21 +17,34 @@ export async function POST(
   const access = await requireSubAccountMember(request, subAccountId);
   if (access instanceof NextResponse) return access;
 
+  // SAME BOUNDARY AS ONBOARDING. This route took `businessProfileId` from the
+  // request body and pulled THAT profile out of Ascend, so workspace
+  // membership was again enough to reach any business profile by id. It also
+  // fell back to the stored snapshot's id, which can itself be foreign — the
+  // live DivineX workspace is mapped to one profile and stores another, so
+  // that fallback would have reconciled the wrong business on purpose.
+  //
+  // The id now comes from Flow's canonical mapping. A body-supplied id is
+  // accepted only when it agrees.
   let bodyProfileId: number | null = null;
   try {
     const body = (await request.json()) as { businessProfileId?: number };
     if (Number.isInteger(body.businessProfileId)) bodyProfileId = body.businessProfileId!;
   } catch {
-    // empty body is fine — use the stored snapshot's id
+    // empty body is fine — the mapping supplies the id
   }
-  const existing = await getDivinexProfileSnapshot(subAccountId);
-  const businessProfileId = bodyProfileId ?? existing?.businessProfileId ?? null;
-  if (!businessProfileId) {
+
+  const auth = await resolveAuthorizedBusinessProfileId(subAccountId);
+  if (!auth.authorized) {
+    return NextResponse.json({ error: "not_linked", message: auth.message }, { status: 409 });
+  }
+  if (bodyProfileId !== null && !sameProfileId(bodyProfileId, auth.businessProfileId)) {
     return NextResponse.json(
-      { error: "No snapshot yet — pass businessProfileId for the first pull." },
-      { status: 400 },
+      { error: "forbidden_profile", message: "That business profile does not belong to this workspace." },
+      { status: 403 },
     );
   }
+  const businessProfileId = auth.businessProfileId;
   const result = await reconcileProfileFromAscend(businessProfileId);
   return NextResponse.json(result, { status: result.ok ? 200 : 502 });
 }
