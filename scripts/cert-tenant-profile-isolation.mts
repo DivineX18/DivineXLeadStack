@@ -26,6 +26,19 @@ const SA = "MEYB8CbWlE5fxAn3TJOp";
 /** A profile this workspace is demonstrably not mapped to. */
 const FOREIGN_PROFILE = 27;
 const NONEXISTENT_PROFILE = 987654321;
+/**
+ * PRODUCTION RUNS READS AND REFUSALS ONLY.
+ *
+ * The write-verb negatives below (discover, publish, reconcile with a foreign
+ * id) are how you prove a MUTATION path refuses, and they are certified on
+ * staging and by the deterministic suite. Firing them at production to watch
+ * them fail is proving a security property by attempting the thing the
+ * property forbids — and a regression would mean the attempt succeeded.
+ * They are skipped when CERT_MODE=production; the read-claim negative, the
+ * nonexistent-id negative and the context-isolation checks all still run,
+ * because a refusal on a read has no side effect at all.
+ */
+const READS_ONLY = process.env.CERT_MODE === "production";
 
 let bad = 0;
 const check = (l: string, ok: boolean, n = "") => {
@@ -62,6 +75,7 @@ const post = async (path: string, body: unknown) => {
   check("U2. and the response carries no foreign business content", !/apostille/i.test(a.text), a.text.slice(0, 80));
 
   // "discover" is the WRITE action — the one that overwrites website/brand/assets.
+  if (!READS_ONLY) {
   const b = await post("/api/app/onboarding", {
     subAccountId: SA,
     action: "discover",
@@ -75,9 +89,15 @@ const post = async (path: string, body: unknown) => {
 
   const d = await post(`/api/sub-accounts/${SA}/divinex/reconcile`, { businessProfileId: FOREIGN_PROFILE });
   check("U5. reconcile with a foreign profile id -> 403", d.status === 403, `${d.status} ${d.text}`);
+  } else {
+    console.log("SKIP U3/U4/U5 (write-verb negatives) — reads-only mode; certified on staging + deterministic suite");
+  }
 
   const e = await post("/api/app/onboarding", { subAccountId: SA, action: "start", businessProfileId: NONEXISTENT_PROFILE });
-  check("U6. a nonexistent profile id is refused safely, not probed", e.status === 403, `${e.status} ${e.text}`);
+  check("U6. a nonexistent profile id is refused safely", e.status === 403, `${e.status} ${e.text}`);
+  // A 403 forbidden_profile is decided from Flow's own mapping. A 502 would
+  // mean we asked Ascend whether the id exists, which is itself a probe.
+  check("U7. and refused LOCALLY — Ascend is never asked whether it exists", /forbidden_profile/.test(e.text) && e.status !== 502);
 }
 
 // ── CONTEXT ISOLATION on the real contaminated workspace ─────────────────
