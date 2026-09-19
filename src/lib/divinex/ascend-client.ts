@@ -20,9 +20,22 @@ export function ascendConfigured(): boolean {
   return !!SECRET();
 }
 
+/**
+ * The workspace this call is being made ON BEHALF OF.
+ *
+ * The Bearer secret proves Flow is the caller; it says nothing about which
+ * tenant Flow is acting for, and for a long time Ascend's profile routes had
+ * no way to ask. Naming the workspace on every profile-scoped call is what
+ * lets Ascend authorize the workspace/profile pair against its own mapping
+ * table instead of trusting the id in our URL. Both sides now fail closed
+ * independently — Flow refuses to send a foreign id, Ascend refuses to act on
+ * one — so a bug on either side is contained by the other.
+ */
+const WORKSPACE_HEADER = "x-divinex-workspace";
+
 async function call<T>(
   path: string,
-  init?: { method?: string; body?: unknown; timeoutMs?: number },
+  init?: { method?: string; body?: unknown; timeoutMs?: number; workspaceId?: string },
 ): Promise<{ ok: boolean; data?: T; error?: string }> {
   if (!ascendConfigured()) return { ok: false, error: "ascend_not_configured" };
   try {
@@ -30,6 +43,7 @@ async function call<T>(
       method: init?.method ?? "GET",
       headers: {
         Authorization: `Bearer ${SECRET()}`,
+        ...(init?.workspaceId ? { [WORKSPACE_HEADER]: init.workspaceId } : {}),
         ...(init?.body ? { "Content-Type": "application/json" } : {}),
       },
       ...(init?.body ? { body: JSON.stringify(init.body) } : {}),
@@ -81,13 +95,22 @@ export const ascend = {
       body: input,
     }),
 
-  /** Canonical profile read (also the reconcile source). */
-  getProfile: (businessProfileId: number) =>
-    call<AscendProfileContract>(`/api/divinex/profile/${businessProfileId}`),
+  /**
+   * Canonical profile read (also the reconcile source).
+   *
+   * Every profile-scoped method below takes the WORKSPACE first and the
+   * profile second, deliberately: the workspace is the authority and the
+   * profile id is the claim being made about it. Making it a required
+   * parameter rather than an option means a call site cannot quietly omit it
+   * and fall back to service-only trust — the compiler refuses.
+   */
+  getProfile: (workspaceId: string, businessProfileId: number) =>
+    call<AscendProfileContract>(`/api/divinex/profile/${businessProfileId}`, { workspaceId }),
 
   /** The ONE canonical write path — onboarding answers, confirmations,
    *  extracted facts. Ascend merges provenance and auto-publishes. */
   patchProfile: (
+    workspaceId: string,
     businessProfileId: number,
     body: {
       business?: Record<string, unknown>;
@@ -95,34 +118,44 @@ export const ascend = {
       brandVoice?: Record<string, unknown>;
       provenance?: Record<string, { status: string; source?: string; confidence?: number }>;
     },
-  ) => call<{ ok: boolean }>(`/api/divinex/profile/${businessProfileId}`, { method: "PATCH", body }),
+  ) =>
+    call<{ ok: boolean }>(`/api/divinex/profile/${businessProfileId}`, {
+      method: "PATCH",
+      body,
+      workspaceId,
+    }),
 
   /** Website brand discovery — extracted facts + candidate assets. */
-  discover: (businessProfileId: number, websiteUrl?: string) =>
+  discover: (workspaceId: string, businessProfileId: number, websiteUrl?: string) =>
     call<{ ok: boolean; discovery?: Record<string, unknown>; error?: string }>(
       `/api/divinex/discover/${businessProfileId}`,
-      { method: "POST", body: { websiteUrl }, timeoutMs: 90_000 },
+      { method: "POST", body: { websiteUrl }, timeoutMs: 90_000, workspaceId },
     ),
 
   /** Customer approval/correction of harvested assets. */
   reviewAssets: (
+    workspaceId: string,
     businessProfileId: number,
     decisions: { id: number; status: "approved" | "rejected"; classification?: string }[],
   ) =>
     call<{ ok: boolean; updated: number }>(`/api/divinex/assets/${businessProfileId}/review`, {
       method: "POST",
       body: { decisions },
+      workspaceId,
     }),
 
   /** Explicit publish (used after a batch of writes when we want to be sure
    *  the Flow snapshot is current before a reveal/build). */
-  publish: (businessProfileId: number) =>
-    call<{ ok: boolean; version?: number }>(`/api/divinex/publish/${businessProfileId}`, { method: "POST" }),
+  publish: (workspaceId: string, businessProfileId: number) =>
+    call<{ ok: boolean; version?: number }>(`/api/divinex/publish/${businessProfileId}`, {
+      method: "POST",
+      workspaceId,
+    }),
 
   /** Growth intelligence for the reveal (Slice 5). Truthful subset only —
    *  a miss returns ok:false and the reveal degrades honestly. */
-  getIntelligence: (businessProfileId: number) =>
-    call<Record<string, unknown>>(`/api/divinex/intelligence/${businessProfileId}`),
+  getIntelligence: (workspaceId: string, businessProfileId: number) =>
+    call<Record<string, unknown>>(`/api/divinex/intelligence/${businessProfileId}`, { workspaceId }),
 
   /**
    * ASSET STUDIO — generate one of Ascend's mature deliverables (VSL script,

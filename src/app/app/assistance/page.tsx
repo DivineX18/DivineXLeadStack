@@ -25,7 +25,7 @@ export default async function AssistancePage({
   const snapshot = subAccountId ? await getAuthorizedProfileSnapshotOrNull(subAccountId) : null;
   const business = (snapshot?.business ?? {}) as { monthlyRevenue?: string };
   const intel = snapshot?.businessProfileId
-    ? (await ascend.getIntelligence(snapshot.businessProfileId)).data
+    ? (await ascend.getIntelligence(subAccountId, snapshot.businessProfileId)).data
     : null;
   const scan = (intel as { available?: boolean; scan?: { primaryConstraint?: string; overallScore?: number } } | null)?.scan;
 

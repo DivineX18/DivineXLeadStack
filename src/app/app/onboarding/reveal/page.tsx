@@ -28,7 +28,7 @@ export default async function RevealPage({
   const snapshot = await getAuthorizedProfileSnapshotOrNull(subAccountId);
   const businessProfileId = snapshot?.businessProfileId ?? null;
   const intel = businessProfileId
-    ? (await ascend.getIntelligence(businessProfileId)).data
+    ? (await ascend.getIntelligence(subAccountId, businessProfileId)).data
     : null;
   const scan = (intel as { available?: boolean; scan?: Record<string, unknown> } | null)?.available
     ? ((intel as { scan: Record<string, unknown> }).scan)

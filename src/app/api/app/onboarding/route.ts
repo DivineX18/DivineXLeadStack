@@ -115,7 +115,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   switch (body.action) {
     case "start": {
-      const profile = await ascend.getProfile(businessProfileId);
+      const profile = await ascend.getProfile(subAccountId, businessProfileId);
       return NextResponse.json({ businessProfileId, profile: profile.data ?? null });
     }
     case "answer": {
@@ -126,11 +126,11 @@ export async function POST(request: Request): Promise<NextResponse> {
         provenance: { [key]: { status: "supplied" } },
       };
       patch[group] = { [key]: body.value };
-      const res = await ascend.patchProfile(businessProfileId, patch);
+      const res = await ascend.patchProfile(subAccountId, businessProfileId, patch);
       return NextResponse.json({ ok: res.ok, businessProfileId });
     }
     case "discover": {
-      const res = await ascend.discover(businessProfileId, body.websiteUrl);
+      const res = await ascend.discover(subAccountId, businessProfileId, body.websiteUrl);
       return NextResponse.json({ ok: res.ok, ...(res.data ?? {}), error: res.error }, { status: res.ok ? 200 : 502 });
     }
     case "confirm_brand": {
@@ -138,7 +138,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       const provenance: Record<string, { status: string }> = {};
       for (const key of Object.keys(body.brandVisual ?? {})) provenance[key] = { status: "confirmed" };
       for (const key of Object.keys(body.business ?? {})) provenance[key] = { status: "confirmed" };
-      const res = await ascend.patchProfile(businessProfileId, {
+      const res = await ascend.patchProfile(subAccountId, businessProfileId, {
         business: body.business,
         brandVisual: body.brandVisual,
         provenance: { ...provenance, brandVisual: { status: "confirmed" } },
@@ -146,15 +146,15 @@ export async function POST(request: Request): Promise<NextResponse> {
       return NextResponse.json({ ok: res.ok });
     }
     case "review_assets": {
-      const res = await ascend.reviewAssets(businessProfileId, body.decisions ?? []);
+      const res = await ascend.reviewAssets(subAccountId, businessProfileId, body.decisions ?? []);
       return NextResponse.json({ ok: res.ok, updated: res.data?.updated ?? 0 });
     }
     case "complete": {
-      await ascend.patchProfile(businessProfileId, {
+      await ascend.patchProfile(subAccountId, businessProfileId, {
         business: { onboardingCompleted: true },
         provenance: { onboardingCompleted: { status: "supplied" } },
       });
-      const published = await ascend.publish(businessProfileId);
+      const published = await ascend.publish(subAccountId, businessProfileId);
       return NextResponse.json({ ok: true, profileVersion: published.data?.version ?? null });
     }
     default:
