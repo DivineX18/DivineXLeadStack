@@ -130,6 +130,28 @@ export interface ProfileBinding {
    */
   method: "scan_requested_in_workspace" | "operator_confirmed" | "imported" | "seeded";
   workspaceId: string;
+  /**
+   * WHICH PROFILE WAS CLAIMED — not merely which workspace did the claiming.
+   *
+   * Without this, a binding proved "somebody in workspace W asked for a scan"
+   * and nothing more, while being stored on a document whose CONTENTS may be a
+   * different profile entirely. That is not hypothetical: a certification probe
+   * ran onboarding for a workspace authorized for profile 3, and the trusted
+   * binding landed on the document holding profile 27 — a document-legalisation
+   * company's profile — making its photography trusted by Layer 2.
+   *
+   * Layer 1 caught it, because the workspace is mapped to 3 and the snapshot is
+   * 27, so the whole snapshot is refused before media trust is ever consulted.
+   * But a second layer that is only correct because the first one holds is not a
+   * second layer. Trust now requires workspace identity AND profile identity AND
+   * a trusted method.
+   *
+   * Absent on every binding written before this contract. Those are genuinely
+   * ambiguous — nothing on them records which profile was meant — so they
+   * resolve UNTRUSTED rather than being backfilled from the snapshot or the
+   * mapping, either of which would be inventing the very fact in question.
+   */
+  businessProfileId: number;
   requestedByUid?: string;
   requestedAt?: string;
   /** The URL the human typed, which is the whole point: it is what they SAID
@@ -180,6 +202,19 @@ export function resolveProfileMediaTrust(
   if (b.workspaceId !== workspaceId) {
     return { trusted: false, reason: "This profile is bound to a different workspace." };
   }
+  // IDENTITY, NOT JUST METHOD. A binding authorises ONE profile's imagery.
+  if (b.businessProfileId === undefined || b.businessProfileId === null) {
+    return {
+      trusted: false,
+      reason: "This claim predates profile-level ownership tracking, so its images are not treated as this workspace's own.",
+    };
+  }
+  if (!sameProfileId(b.businessProfileId, stored.businessProfileId)) {
+    return {
+      trusted: false,
+      reason: "This workspace's claim covers a different business profile than the one stored here.",
+    };
+  }
   if (!TRUSTED_BINDING_METHODS.has(b.method)) {
     return {
       trusted: false,
@@ -197,6 +232,12 @@ export function resolveProfileMediaTrust(
  */
 export async function recordProfileBinding(
   workspaceId: string,
+  /**
+   * `businessProfileId` MUST be the caller's SERVER-AUTHORIZED profile id.
+   * Deliberately required rather than defaulted or read from the stored
+   * snapshot: the snapshot is exactly what cannot be trusted to say which
+   * profile a workspace meant to claim.
+   */
   binding: Omit<ProfileBinding, "workspaceId">,
 ): Promise<void> {
   try {
@@ -284,7 +325,14 @@ export async function applyProfileSnapshot(
   const existingBinding = existingData?.binding;
   await ref.set({
     ...payload,
-    binding: existingBinding ?? { method: "imported", workspaceId: payload.flowSubAccountId },
+    binding:
+      existingBinding ?? {
+        method: "imported",
+        workspaceId: payload.flowSubAccountId,
+        // Its ACTUAL identity, so the record is true. "imported" is not a
+        // trusted method, so this states what arrived without claiming it.
+        businessProfileId: payload.businessProfileId,
+      },
     receivedAt: FieldValue.serverTimestamp(),
   });
   return { result: "applied" };

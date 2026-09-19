@@ -70,9 +70,9 @@ const RWAR_PROFILE = {
     "2a. flowSubAccountId matching the workspace grants nothing on its own",
     RWAR_PROFILE.flowSubAccountId === WS && !resolveProfileMediaTrust(RWAR_PROFILE, WS).trusted,
   );
-  const imported = { ...RWAR_PROFILE, binding: { method: "imported" as const, workspaceId: WS } };
+  const imported = { ...RWAR_PROFILE, binding: { method: "imported" as const, workspaceId: WS, businessProfileId: 27 } };
   check("2b. an 'imported' binding is not a claim of ownership", !resolveProfileMediaTrust(imported, WS).trusted);
-  const seeded = { ...RWAR_PROFILE, binding: { method: "seeded" as const, workspaceId: WS } };
+  const seeded = { ...RWAR_PROFILE, binding: { method: "seeded" as const, workspaceId: WS, businessProfileId: 27 } };
   check("2c. nor is 'seeded'", !resolveProfileMediaTrust(seeded, WS).trusted);
 }
 
@@ -83,6 +83,7 @@ const RWAR_PROFILE = {
     binding: {
       method: "scan_requested_in_workspace" as const,
       workspaceId: WS,
+      businessProfileId: 27, // the profile this snapshot actually holds
       requestedByUid: "uid_member",
       requestedAt: "2026-09-18T00:00:00.000Z",
       declaredWebsiteUrl: "https://rwarstaracademy.com",
@@ -91,7 +92,7 @@ const RWAR_PROFILE = {
   check("3a. a workspace member's own scan IS trusted", resolveProfileMediaTrust(scanned, WS).trusted);
   const confirmed = {
     ...RWAR_PROFILE,
-    binding: { method: "operator_confirmed" as const, workspaceId: WS, confirmedByUid: "uid_member", confirmedAt: "x" },
+    binding: { method: "operator_confirmed" as const, workspaceId: WS, businessProfileId: 27, confirmedByUid: "uid_member", confirmedAt: "x" },
   };
   check("3b. an operator's explicit confirmation IS trusted", resolveProfileMediaTrust(confirmed, WS).trusted);
   check(
@@ -129,12 +130,12 @@ const RWAR_PROFILE = {
     // from the previously STORED document and never from the incoming payload,
     // or a republish could hand a workspace a trust level the sender chose.
     /const existingBinding = existingData\?\.binding|const existingBinding = existing\.exists/.test(contract) &&
-      /binding: existingBinding \?\?/.test(contract) &&
+      /binding:\s*\n?\s*existingBinding \?\?/.test(contract) &&
       !/binding: payload\.binding/.test(contract),
   );
   check(
     "5b. an unclaimed profile is stamped 'imported', which is not trusted",
-    /binding: existingBinding \?\? \{ method: "imported"/.test(contract),
+    /binding:\s*\n?\s*existingBinding \?\?\s*\{\s*\n?\s*method: "imported"/.test(contract),
   );
   check(
     "5c. a trusted binding can never be silently downgraded",
@@ -173,6 +174,69 @@ const RWAR_PROFILE = {
     "7e. the auto-fill still attaches no captions, so it cannot assert one either",
     /Captions omitted deliberately/.test(read("src/lib/ai-suite/capabilities.ts")),
   );
+}
+
+// ── PHASE 7. A BINDING AUTHORISES A PROFILE, NOT JUST A WORKSPACE ────────
+//
+// The released Layer 1 refuses the whole snapshot when the workspace is mapped
+// to one profile and stores another, so none of this is currently reachable in
+// production. That is exactly why it is tested here: a second layer that is
+// only correct because the first one holds is not a second layer. Every case
+// below evaluates Layer 2 DIRECTLY, with Layer 1 deliberately out of the way.
+{
+  const bind = (over: Record<string, unknown>) => ({
+    method: "scan_requested_in_workspace" as const,
+    workspaceId: WS,
+    businessProfileId: 27,
+    ...over,
+  });
+  const withSnapshot = (profileId: number, binding: unknown) =>
+    ({ ...RWAR_PROFILE, businessProfileId: profileId, binding }) as unknown as StoredDivinexProfile;
+
+  check("7A. trusted method + workspace match + profile match -> trusted", resolveProfileMediaTrust(withSnapshot(27, bind({})), WS).trusted);
+  check("7B. workspace mismatch -> untrusted", !resolveProfileMediaTrust(withSnapshot(27, bind({ workspaceId: "other_ws" })), WS).trusted);
+  check("7C. profile mismatch -> untrusted", !resolveProfileMediaTrust(withSnapshot(27, bind({ businessProfileId: 3 })), WS).trusted);
+  check("7D. missing profile id -> untrusted", !resolveProfileMediaTrust(withSnapshot(27, { method: "scan_requested_in_workspace", workspaceId: WS }), WS).trusted);
+  check("7E. malformed profile id -> untrusted",
+    !resolveProfileMediaTrust(withSnapshot(27, bind({ businessProfileId: "not-an-id" })), WS).trusted &&
+    !resolveProfileMediaTrust(withSnapshot(27, bind({ businessProfileId: 0 })), WS).trusted);
+  check("7F. untrusted method with every identity matching -> still untrusted",
+    !resolveProfileMediaTrust(withSnapshot(27, bind({ method: "imported" })), WS).trusted);
+  check("7G. a LEGACY trusted-method binding with no profile id -> untrusted",
+    !resolveProfileMediaTrust(withSnapshot(27, { method: "operator_confirmed", workspaceId: WS }), WS).trusted);
+  check("7H. a profile-3 claim cannot trust profile 27", !resolveProfileMediaTrust(withSnapshot(27, bind({ businessProfileId: 3 })), WS).trusted);
+  check("7I. a profile-27 claim cannot trust profile 3", !resolveProfileMediaTrust(withSnapshot(3, bind({ businessProfileId: 27 })), WS).trusted);
+  check("7J. a mapping change does not transfer media trust — the old claim names the old profile",
+    !resolveProfileMediaTrust(withSnapshot(3, bind({ businessProfileId: 27 })), WS).trusted &&
+    resolveProfileMediaTrust(withSnapshot(3, bind({ businessProfileId: 3 })), WS).trusted);
+
+  // ── THE EXACT PRODUCTION STATE, as read from the live document ─────────
+  // mapping=3, snapshot=27, binding says scan_requested_in_workspace with no
+  // profile identity. Layer 1 is bypassed here on purpose.
+  const LIVE_DIVINEX = withSnapshot(27, { method: "scan_requested_in_workspace", workspaceId: WS });
+  check("7-LIVE. the real DivineX binding does NOT trust profile 27, with Layer 1 bypassed",
+    !resolveProfileMediaTrust(LIVE_DIVINEX, WS).trusted,
+    resolveProfileMediaTrust(LIVE_DIVINEX, WS).reason);
+  check("7-LIVE2. and it will become untrusted WITHOUT any data mutation",
+    resolveProfileMediaTrust(LIVE_DIVINEX, WS).reason.includes("predates profile-level ownership tracking"));
+}
+
+// ── PHASE 7 STRUCTURAL. No future writer may omit the identity ───────────
+{
+  const contract = read("src/lib/divinex/contract.ts");
+  check("7K/8a. businessProfileId is REQUIRED on the binding contract (not optional)",
+    /businessProfileId: number;/.test(contract) && !/businessProfileId\?: number/.test(contract));
+  check("8b. the trust resolver compares binding identity to the stored snapshot",
+    /sameProfileId\(b\.businessProfileId, stored\.businessProfileId\)/.test(contract));
+  check("8c. an absent identity is rejected before the comparison",
+    /b\.businessProfileId === undefined \|\| b\.businessProfileId === null/.test(contract));
+  check("7N/8d. the 'imported' stamp records its ACTUAL identity",
+    /method: "imported",[\s\S]{0,400}businessProfileId: payload\.businessProfileId/.test(contract));
+  const onboarding = read("src/app/api/app/onboarding/route.ts");
+  check("7K. the scan claim records the SERVER-AUTHORIZED id",
+    /method: "scan_requested_in_workspace",[\s\S]{0,260}\n\s*businessProfileId,/.test(onboarding));
+  check("7L. and never derives it from the stored snapshot",
+    !/businessProfileId: snapshot|businessProfileId: stored/.test(onboarding));
 }
 
 console.log(failures === 0 ? `\nverify-profile-media-trust: all checks passed` : `\nverify-profile-media-trust: ${failures} FAILED`);

@@ -39,6 +39,16 @@ const NONEXISTENT_PROFILE = 987654321;
  * because a refusal on a read has no side effect at all.
  */
 const READS_ONLY = process.env.CERT_MODE === "production";
+/**
+ * The authorized probe below calls onboarding `start`, which by design records
+ * a ProfileBinding. Under the profile-identity contract that stamps the
+ * SERVER-AUTHORIZED id — which is correct, and which would overwrite the
+ * legacy no-identity binding on the DivineX document. That binding is the
+ * exact production fixture the Layer 2 repair is meant to be proven against,
+ * and staging shares one Firestore with production, so writing it from either
+ * destroys the evidence. Set when the run must not disturb it.
+ */
+const NO_BINDING_WRITE = process.env.CERT_NO_BINDING_WRITE === "1";
 
 let bad = 0;
 const check = (l: string, ok: boolean, n = "") => {
@@ -118,6 +128,9 @@ const post = async (path: string, body: unknown) => {
   // NXDOMAIN from here, so an upstream failure (502) is expected and is NOT a
   // boundary failure. What must never happen is 403 — that would mean the
   // workspace was refused its OWN profile, i.e. fail-closed taken too far.
+  if (NO_BINDING_WRITE) {
+    console.log("SKIP A1/A2 (authorized onboarding probe) — would rewrite the legacy binding fixture; proven on the previous production run");
+  } else {
   const a = await post("/api/app/onboarding", { subAccountId: SA, action: "start" });
   check(
     "A1. the workspace is NOT refused its own mapped profile (no 403)",
@@ -125,6 +138,7 @@ const post = async (path: string, body: unknown) => {
     `${a.status} ${a.text.slice(0, 120)}`,
   );
   check("A2. and no foreign content is returned either way", !/apostille/i.test(a.text));
+  }
 }
 
 console.log(bad === 0 ? `\ncert-tenant-profile-isolation: all checks passed` : `\ncert-tenant-profile-isolation: ${bad} FAILED`);

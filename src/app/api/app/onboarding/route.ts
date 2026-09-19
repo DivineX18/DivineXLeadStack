@@ -100,6 +100,10 @@ export async function POST(request: Request): Promise<NextResponse> {
   // Best-effort, like the link above: bookkeeping must not fail onboarding.
   await recordProfileBinding(subAccountId, {
     method: "scan_requested_in_workspace",
+    // The SERVER-AUTHORIZED id resolved above, never the stored snapshot's.
+    // With mapping=3 and a stored snapshot of 27, this claim covers profile 3
+    // and therefore cannot make profile 27's imagery trusted.
+    businessProfileId,
     requestedByUid: access.uid,
     requestedAt: new Date().toISOString(),
     ...(typeof body.websiteUrl === "string" && body.websiteUrl
