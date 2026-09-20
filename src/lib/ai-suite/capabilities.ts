@@ -108,6 +108,7 @@ import {
 import { ratingStripConfig, reviewProofFromStore } from "@/lib/funnels/review-proof";
 import { evidenceStripConfig, verifiedEvidenceFromStore } from "@/lib/funnels/evidence-proof";
 import { assetKey } from "@/lib/funnels/asset-identity";
+import { mediaFitFor } from "@/lib/funnels/asset-suitability";
 import {
   buildCopyGrounding,
   isUnsupportedTrustClaim,
@@ -6056,6 +6057,26 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         );
         const availableOwned = () => ownedCandidates.filter((a) => !placedUrls.has(assetKey(a.url)));
 
+        /**
+         * RELEVANCE IS NOT COMPATIBILITY.
+         *
+         * The beat slot crops to fill. That reframes a photograph and destroys
+         * a diagram, and a wide process graphic shipped through it with its
+         * words sliced at both edges. Only an asset with positive evidence of
+         * being a photograph earns the crop.
+         *
+         * A stock photograph resolved from the search pool is a photograph by
+         * construction, so it keeps `cover`. Anything first-party is judged on
+         * its metadata, and anything we cannot identify at all renders at its
+         * own shape — "we could not tell" must never resolve to "slice it".
+         */
+        const fitForResolvedUrl = (url: string | undefined, photoPool: { url: string }[]): "cover" | "intrinsic" => {
+          if (!url) return "intrinsic";
+          const owned = ownedCandidates.find((a) => assetKey(a.url) === assetKey(url));
+          if (owned) return mediaFitFor(owned);
+          return photoPool.some((p) => assetKey(p.url) === assetKey(url)) ? "cover" : "intrinsic";
+        };
+
         // Resolved in PAGE ORDER, so shape progression and side alternation are
         // properties of the page rather than of whichever beat ran first.
         // Stock photographs placed so far, with the provider identity that lets
@@ -6162,6 +6183,12 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
                       mediaUrl: resolved.url,
                       mediaIsStock: resolved.source === "contextual_photo",
                       mediaAlt: resolved.alt ?? "",
+                      // The fold hands this to the hero's own media slot, and
+                      // one hero layout (background_image) is full-bleed
+                      // object-cover. Carrying the suitability verdict with the
+                      // asset lets that layout decline to crop something whose
+                      // content would not survive it.
+                      mediaFit: fitForResolvedUrl(resolved.url, photos),
                       // Both halves of the unresolved state have to go. Clearing
                       // only the label left the BRIEF behind, so a hero that had
                       // just been filled still carried "a wide photograph of the
@@ -6189,6 +6216,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
                         ...(resolved.url ? { url: resolved.url, alt: resolved.alt ?? "" } : {}),
                         caption: captionFor(beat.concept),
                         side,
+                        // RELEVANCE IS NOT COMPATIBILITY. This slot crops to
+                        // fill, which reframes a photograph and mutilates a
+                        // diagram — a wide process graphic shipped here with
+                        // its words sliced through at both edges. Only an asset
+                        // with positive evidence of being a photograph earns
+                        // the crop; everything else, including anything we
+                        // simply cannot tell, renders at its own shape.
+                        fit: fitForResolvedUrl(resolved.url, photos),
                       },
                       ...(anchored ? { beatVisualAnchored: true } : {}),
                     },

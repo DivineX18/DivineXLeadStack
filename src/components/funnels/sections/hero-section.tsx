@@ -2,6 +2,7 @@ import { Check, Play, User } from "lucide-react";
 import type { HeroConfig } from "@/types/funnels";
 import type { LeadForm } from "@/types/forms";
 import { CtaButton } from "./cta-button";
+import { resolveMediaFit } from "@/lib/funnels/asset-suitability";
 
 /**
  * ABOVE-THE-FOLD DECISION COMPLETENESS.
@@ -224,7 +225,14 @@ export function HeroSection({
     </div>
   );
 
-  if (layout === "background_image" && config.mediaUrl) {
+  // A FULL-BLEED BACKGROUND IS THE MOST DESTRUCTIVE CROP ON THE PAGE.
+  //
+  // It scales an image to cover the whole fold, so anything whose meaning sits
+  // near an edge — a diagram, a screenshot, a chart — loses it entirely. This
+  // layout is therefore only available to an asset proven safe to crop; anything
+  // else falls through to the split layout below, which frames the image with
+  // `object-contain` and removes nothing.
+  if (layout === "background_image" && config.mediaUrl && resolveMediaFit(config.mediaFit) === "cover") {
     return (
       <section className={`relative overflow-hidden ${FOLD_SECTION}`}>
         {config.mediaType === "video" ? (

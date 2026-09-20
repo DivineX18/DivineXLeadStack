@@ -234,6 +234,13 @@ export interface HeroConfig {
    *  with your real photo" so operators know to personalize. Cleared when
    *  the operator sets their own media. */
   mediaIsStock?: boolean;
+  /**
+   * Whether this hero's image may be cropped to fill. `cover` only when the
+   * planner proved the asset safe to crop; anything else (including absent,
+   * which every pre-contract funnel is) must not be destructively cropped.
+   * See lib/funnels/asset-suitability.ts.
+   */
+  mediaFit?: "cover" | "intrinsic";
   /** Meaningful alt text for the hero image. Empty string means deliberately
    *  decorative; ABSENT means nobody decided, which is the bug this closes. */
   mediaAlt?: string;
@@ -557,6 +564,16 @@ export interface BeatVisualConfig {
   /** Which side the visual takes at desktop width. Assigned across the page so
    *  two split beats cannot both open on the same side. */
   side?: "left" | "right";
+  /**
+   * How to present the image. `cover` crops it to fill a fixed box and is only
+   * ever set for an asset PROVEN safe to crop; `intrinsic` renders it at its
+   * own aspect ratio, removing nothing.
+   *
+   * Absent means intrinsic — every funnel generated before this contract
+   * carries no `fit`, and those pages must stop slicing their images too.
+   * See lib/funnels/asset-suitability.ts.
+   */
+  fit?: "cover" | "intrinsic";
 }
 
 export interface ProblemSolutionConfig {

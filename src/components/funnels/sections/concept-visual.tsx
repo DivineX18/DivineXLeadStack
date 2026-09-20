@@ -1,4 +1,5 @@
 import type { ConstructedShape } from "@/lib/funnels/visual-source";
+import { resolveMediaFit } from "@/lib/funnels/asset-suitability";
 
 /**
  * CONSTRUCTED VISUALS — rung 3 of the source hierarchy.
@@ -222,11 +223,24 @@ export function BeatVisual({
   accentColor,
   className = "",
 }: {
-  visual: { shape?: string; caption: string; url?: string; alt?: string };
+  visual: { shape?: string; caption: string; url?: string; alt?: string; fit?: unknown };
   accentColor: string;
   className?: string;
 }) {
   if (visual.url) {
+    // THE LAST GATE BEFORE AN IMAGE IS CUT.
+    //
+    // This slot was `aspect-[4/3] object-cover` unconditionally, which reframes
+    // a photograph and mutilates anything whose meaning is in its pixels. A
+    // wide process diagram shipped through here with its words sliced through
+    // at both edges.
+    //
+    // `cover` is now used only when the planner proved the asset safe to crop.
+    // Anything else — including every funnel generated before the contract
+    // existed, which carries no `fit` at all — renders at its own aspect ratio,
+    // removing nothing. Defaulting the unknown case to the destructive
+    // treatment is what made a planner mistake reach a customer.
+    const fit = resolveMediaFit(visual.fit);
     return (
       <figure className={`m-0 ${className}`}>
         <div
@@ -238,7 +252,7 @@ export function BeatVisual({
             src={visual.url}
             alt={visual.alt ?? ""}
             loading="lazy"
-            className="aspect-[4/3] w-full object-cover"
+            className={fit === "cover" ? "aspect-[4/3] w-full object-cover" : "h-auto w-full object-contain"}
           />
         </div>
       </figure>
