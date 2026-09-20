@@ -146,10 +146,25 @@ export async function resolveProfileInputs(subAccountId: string): Promise<Profil
     : [];
   const byClass = (cls: string) => approved.filter((a) => a.classification === cls).map((a) => a.fileUrl);
 
-  const evidenceLogos = approved
-    .filter((a) => EVIDENCE_CLASSES.has(a.classification ?? ""))
-    .slice(0, 8)
-    .map((a) => ({ url: a.fileUrl, label: a.classification === "certification" ? "Certification" : "Partner" }));
+  /**
+   * ALWAYS EMPTY, AND DELIBERATELY STILL HERE.
+   *
+   * This used to select approved assets whose discovery classification was
+   * partner / certification / evidence and hand them out as third-party marks
+   * labelled "Partner". Generation backfilled them into the evidence strip,
+   * and seven graphics from the customer's own website were published under
+   * "AS SEEN IN" — publications that had never featured them.
+   *
+   * The classifier guesses what a picture LOOKS like. Approval means the asset
+   * may be used. Neither is the business asserting that someone else endorsed
+   * them, so no combination of the two can produce a third-party claim.
+   * Verified evidence is operator-entered and lives in its own store
+   * (lib/funnels/evidence-proof.ts); nothing may be inferred here.
+   *
+   * The field stays so its consumers keep their shape and so this note sits
+   * where the next person looks for the inference.
+   */
+  const evidenceLogos: { url: string; label: string }[] = [];
 
   const teamShots = [...byClass("founder"), ...byClass("team")];
   const environmentShots = byClass("environment");

@@ -1,5 +1,6 @@
 import { Star } from "lucide-react";
 import type { ProofStripConfig } from "@/types/funnels";
+import { renderableEvidenceStrip } from "@/lib/funnels/evidence-proof";
 
 export function ProofStripSection({ config }: { config: ProofStripConfig }) {
   if (config.variant === "rating" && config.rating) {
@@ -44,14 +45,29 @@ export function ProofStripSection({ config }: { config: ProofStripConfig }) {
     );
   }
 
-  if (config.variant === "logos" && config.logos && config.logos.length > 0) {
+  // THE LAST GATE BEFORE A THIRD-PARTY CLAIM REACHES A VISITOR.
+  //
+  // This block used to render whatever logos it was handed, under `heading ||
+  // "As seen in"`. Both halves were load-bearing in the failure: an upstream
+  // backfill supplied first-party website graphics as "evidence", and the
+  // default heading turned them into a press claim nobody had made. A generic
+  // fallback is never safe here, because the fallback IS the strongest
+  // available assertion.
+  //
+  // So the strip re-establishes its own right to exist rather than trusting
+  // the config: every mark must carry a verified category, the categories must
+  // agree, and the heading must be the one that category earns. Anything else
+  // renders nothing — including legacy strips written before this contract,
+  // whose basis cannot be established after the fact.
+  const evidence = renderableEvidenceStrip(config as Parameters<typeof renderableEvidenceStrip>[0]);
+  if (evidence) {
     return (
       <section className="px-4 py-8">
         <p className="mb-4 text-center text-xs font-semibold uppercase tracking-widest opacity-40">
-          {config.heading || "As seen in"}
+          {evidence.heading}
         </p>
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-x-12 gap-y-6 opacity-60 grayscale transition-opacity hover:opacity-80">
-          {config.logos.map((logo, i) => (
+          {evidence.logos.map((logo, i) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img key={i} src={logo.url} alt={logo.alt} loading="lazy" className="h-6 sm:h-7" />
           ))}

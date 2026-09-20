@@ -19,6 +19,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     action?: string;
     subAccountId?: string;
     businessProfileId?: number;
+    /** From an authenticated Growth Scan claim — see the convergence branch. */
+    convergenceToken?: string;
     field?: string;
     value?: unknown;
     websiteUrl?: string;
@@ -58,9 +60,29 @@ export async function POST(request: Request): Promise<NextResponse> {
   // ascend.resolve is keyed on the workspace id alone — no client input reaches
   // it — so find-or-create cannot be steered at someone else's profile.
   if (businessProfileId === null) {
-    const resolved = await ascend.resolve({ flowSubAccountId: subAccountId });
+    // CONVERGENCE — if this customer scanned their business before signing up,
+    // the claim handed them evidence of which profile is theirs. Passing it
+    // here is what makes the diagnosis follow them: without it, find-or-create
+    // mints a fresh profile and the Growth Scan they were shown stays on the
+    // old one, mapped to nothing.
+    //
+    // It is evidence, not authority. Ascend re-verifies the signature, that the
+    // profile belongs to the identity in the token, that the profile is not
+    // already another workspace's, and that this workspace does not already
+    // hold a different one — and refuses on any of them. Flow's own contribution
+    // is the membership check already performed above: a caller can only ever
+    // converge INTO a workspace they belong to.
+    const convergenceToken =
+      typeof body.convergenceToken === "string" && body.convergenceToken.trim()
+        ? body.convergenceToken.trim()
+        : undefined;
+    const resolved = await ascend.resolve({ flowSubAccountId: subAccountId, ...(convergenceToken ? { convergenceToken } : {}) });
     if (!resolved.ok || !resolved.data?.businessProfileId) {
-      return NextResponse.json({ error: resolved.error ?? "resolve_failed" }, { status: 502 });
+      // A convergence failure is surfaced rather than silently downgraded to
+      // find-or-create. Quietly creating a duplicate business after being told
+      // which one was meant is the exact defect this path exists to remove.
+      const reason = resolved.data?.error ?? resolved.error ?? "resolve_failed";
+      return NextResponse.json({ error: reason }, { status: 502 });
     }
     businessProfileId = resolved.data.businessProfileId;
   }

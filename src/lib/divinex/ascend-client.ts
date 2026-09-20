@@ -89,11 +89,23 @@ export const ascend = {
   /** Find-or-create the canonical profile for a Flow workspace (identity
    *  seam — Flow-first customers get a profile + mapping in the SAME
    *  linkage authority). */
-  resolve: (input: { flowSubAccountId: string; businessName?: string; email?: string }) =>
-    call<{ ok: boolean; businessProfileId?: number; created?: boolean }>("/api/divinex/resolve", {
-      method: "POST",
-      body: input,
-    }),
+  resolve: (input: {
+    flowSubAccountId: string;
+    businessName?: string;
+    email?: string;
+    /**
+     * Evidence from an authenticated Growth Scan claim that this customer owns
+     * a specific existing business profile. Present only when someone scanned
+     * before signing up; without it, find-or-create behaves exactly as before.
+     * It is what stops onboarding minting a SECOND profile and stranding the
+     * diagnosis the customer was already shown.
+     */
+    convergenceToken?: string;
+  }) =>
+    call<{ ok: boolean; businessProfileId?: number; created?: boolean; converged?: boolean; error?: string }>(
+      "/api/divinex/resolve",
+      { method: "POST", body: input },
+    ),
 
   /**
    * Canonical profile read (also the reconcile source).

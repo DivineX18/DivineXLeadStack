@@ -106,6 +106,8 @@ import {
   CHECKOUT_PENDING_NOTE,
 } from "@/lib/funnels/conversion-action";
 import { ratingStripConfig, reviewProofFromStore } from "@/lib/funnels/review-proof";
+import { evidenceStripConfig, verifiedEvidenceFromStore } from "@/lib/funnels/evidence-proof";
+import { assetKey } from "@/lib/funnels/asset-identity";
 import {
   buildCopyGrounding,
   isUnsupportedTrustClaim,
@@ -5663,10 +5665,21 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         // to a bad page (the Apostille failure). There is now a single
         // composition authority, not two that can disagree.
         //
-        // Marks and seals ride the evidence strip and are never photography.
-        if (!args.suppliedEvidenceLogos && profileInputs.assets.evidenceLogos.length > 0) {
-          args.suppliedEvidenceLogos = profileInputs.assets.evidenceLogos.map((l) => ({ url: l.url, alt: l.label }));
-        }
+        // A CLASSIFICATION IS NOT A PROVENANCE.
+        //
+        // This is where the fabricated "AS SEEN IN" strip came from. When the
+        // model correctly declined to claim third-party evidence (null — it had
+        // been told never to invent one), this backfilled the field from any
+        // approved asset the discovery classifier had labelled partner /
+        // certification / evidence, and the strip then rendered under a press
+        // heading. Seven images scraped from the customer's own site became
+        // seven publications that had featured them.
+        //
+        // The model was right and the server overrode it. Nothing replaces this
+        // — no filename, alt-text, placement or confidence heuristic, because
+        // every one of those is a guess about a picture rather than a statement
+        // by the business. Verified evidence now comes from the operator-entered
+        // store alone; see lib/funnels/evidence-proof.ts.
 
         const visualPlan = planPageVisuals({
           sectionTypes: sectionsToSave.map((sec) => sec.type),
@@ -5680,6 +5693,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           // its own merits from the assets available; a text-led hero is a
           // real outcome, but it must be chosen, not inherited.
           heroPrefersText: false,
+          // The hero may already be spoken for by a model-supplied image. The
+          // planner used to be blind to that: it picked a hero in ignorance,
+          // found none that met its shape gates, and left the image that was
+          // ALREADY in the hero sitting in the candidate pool for a later
+          // section to place again.
+          heroAlreadyUrl:
+            (sectionsToSave.find((sec) => sec.type === "hero")?.config as HeroConfig | undefined)?.mediaUrl ?? null,
         });
 
         // Hero is applied to the SECTION, not to args. The hero section is
@@ -5984,9 +6004,9 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         const placedUrls = new Set<string>();
         for (const s of sectionsToSave) {
           const c = s.config as Record<string, unknown>;
-          if (typeof c.mediaUrl === "string") placedUrls.add(c.mediaUrl);
-          if (typeof c.photoUrl === "string") placedUrls.add(c.photoUrl);
-          if (typeof c.imageUrl === "string") placedUrls.add(c.imageUrl);
+          if (typeof c.mediaUrl === "string") placedUrls.add(assetKey(c.mediaUrl));
+          if (typeof c.photoUrl === "string") placedUrls.add(assetKey(c.photoUrl));
+          if (typeof c.imageUrl === "string") placedUrls.add(assetKey(c.imageUrl));
           // EVERY MEDIA-BEARING LOCATION, not just the two scalar ones.
           //
           // This set existed to stop one asset being used twice, and it read
@@ -6000,28 +6020,41 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           if (Array.isArray(gallery)) {
             for (const img of gallery) {
               const url = (img as { url?: unknown })?.url;
-              if (typeof url === "string") placedUrls.add(url);
+              if (typeof url === "string") placedUrls.add(assetKey(url));
             }
           }
           const items = c.items;
           if (Array.isArray(items)) {
             for (const it of items) {
               const url = (it as { imageUrl?: unknown })?.imageUrl;
-              if (typeof url === "string") placedUrls.add(url);
+              if (typeof url === "string") placedUrls.add(assetKey(url));
             }
           }
           const beat = c.beatVisual;
           if (beat && typeof (beat as { url?: unknown }).url === "string") {
-            placedUrls.add((beat as { url: string }).url);
+            placedUrls.add(assetKey((beat as { url: string }).url));
           }
           const showcase = c.proofShowcase;
           if (showcase && typeof (showcase as { url?: unknown }).url === "string") {
-            placedUrls.add((showcase as { url: string }).url);
+            placedUrls.add(assetKey((showcase as { url: string }).url));
           }
         }
-        const ownedPool = (profileInputs?.assets.visualCandidates ?? []).filter(
-          (a) => a.approved && a.isPhotograph && !placedUrls.has(a.url),
+        // A POOL SNAPSHOT TAKEN BEFORE THE LOOP CANNOT DEDUPE INSIDE IT.
+        //
+        // This was a single array, filtered against `placedUrls` once, here.
+        // The loop below then adds every placement to `placedUrls` — and hands
+        // each beat the same unchanged array. So beat one took an asset, and
+        // beat two was offered it again, and beat three after that. One image
+        // took the hero fold, the problem beat and the benefits beat on an
+        // eight-section page, by a mechanism whose whole purpose was to stop
+        // exactly that. The set grew; the pool never shrank.
+        //
+        // Recomputed per beat against the live set instead, so a placement is
+        // visible to the very next decision.
+        const ownedCandidates = (profileInputs?.assets.visualCandidates ?? []).filter(
+          (a) => a.approved && a.isPhotograph,
         );
+        const availableOwned = () => ownedCandidates.filter((a) => !placedUrls.has(assetKey(a.url)));
 
         // Resolved in PAGE ORDER, so shape progression and side alternation are
         // properties of the page rather than of whichever beat ran first.
@@ -6071,14 +6104,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               photoPurpose = brief.purpose;
               const found = await searchSubjectImages(brief.subject, 12);
               photos = found
-                .filter((f) => !placedUrls.has(f.url))
+                .filter((f) => !placedUrls.has(assetKey(f.url)))
                 .map((f) => ({ url: f.url, alt: f.alt, providerId: f.providerId, photographerId: f.photographerId }));
             }
           }
 
           const resolved = resolveVisualSource(beat, {
             category: authenticityCategory,
-            firstParty: composition ? ownedPool.map((a) => ({ url: a.url, alt: a.alt ?? undefined, approved: true })) : [],
+            firstParty: composition ? availableOwned().map((a) => ({ url: a.url, alt: a.alt ?? undefined, approved: true })) : [],
             photos,
             photoPurpose,
             hostComposition: composition,
@@ -6100,7 +6133,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             // place here, and text-led is a decision rather than a gap.
             continue;
           }
-          if (resolved.url) placedUrls.add(resolved.url);
+          if (resolved.url) placedUrls.add(assetKey(resolved.url));
           if (resolved.source === "contextual_photo" && resolved.url) {
             const placedPhoto = photos.find((p) => p.url === resolved.url);
             if (placedPhoto) placedStockPhotos.push(placedPhoto);
@@ -6129,7 +6162,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
                       mediaUrl: resolved.url,
                       mediaIsStock: resolved.source === "contextual_photo",
                       mediaAlt: resolved.alt ?? "",
+                      // Both halves of the unresolved state have to go. Clearing
+                      // only the label left the BRIEF behind, so a hero that had
+                      // just been filled still carried "a wide photograph of the
+                      // business at work" — the preview then asked the operator
+                      // for a photo it was already showing them.
                       mediaPlaceholderLabel: "",
+                      mediaPlaceholderBrief: "",
                     },
                   } as FunnelSection)
                 : s,
@@ -6396,17 +6435,24 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         }
       }
 
-      // SUPPLIED EVIDENCE (Evidence/Trust system): real logos/certs/press the
-      // user explicitly provided render as a grayscale evidence strip below
-      // the hero (after the rating strip when both exist). Never invented —
-      // the validate layer only admits real https URLs from the tool args.
-      const evidenceLogos = args.suppliedEvidenceLogos as { url: string; alt: string }[] | null;
-      if (evidenceLogos) {
-        const logosConfig = {
-          variant: "logos" as const,
-          logos: evidenceLogos,
-          ...(args.suppliedEvidenceHeading ? { heading: args.suppliedEvidenceHeading as string } : {}),
-        };
+      // VERIFIED EVIDENCE — read from the operator's own store, exactly like
+      // the rating strip above it.
+      //
+      // It used to be read from the tool args, guarded only by "the URL is a
+      // real https URL". A real URL proves the image exists; it proves nothing
+      // about the endorsement the image asserts. That is how a strip of
+      // first-party website graphics came to be published under "As seen in".
+      //
+      // The model is deliberately not in this path. A logo relayed through chat
+      // is the same class of claim as a rating relayed through chat, which
+      // review-proof.ts already refuses for the same reason. No store entry, no
+      // strip — the page renders nothing rather than an endorsement nobody
+      // verified. The heading is derived from the stored category and is never
+      // supplied alongside it.
+      const logosConfig = evidenceStripConfig(
+        verifiedEvidenceFromStore(subSnap.data()?.evidenceProof),
+      );
+      if (logosConfig) {
         const existingLogoStrip = sectionsToSave.findIndex(
           (x) => x.type === "proof_strip" && (x.config as { variant?: string }).variant !== "rating",
         );
@@ -6418,6 +6464,15 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           const strip = { id: `evidence-${Date.now()}`, type: "proof_strip" as const, config: logosConfig, argumentRole: "proof" };
           sectionsToSave = [...sectionsToSave.slice(0, afterRating), strip, ...sectionsToSave.slice(afterRating)];
         }
+      } else {
+        // NO VERIFIED EVIDENCE MEANS NO STRIP — including one a framework
+        // template scaffolded with an empty `logos` array. Leaving it in place
+        // is how an empty band, or worse a band some later pass helpfully
+        // fills, reaches a page. The rating variant is untouched: it has its
+        // own verified contract and is not in question here.
+        sectionsToSave = sectionsToSave.filter(
+          (x) => !(x.type === "proof_strip" && (x.config as { variant?: string }).variant !== "rating"),
+        );
       }
 
       // STORY-FOLD LAW: every rendered beat gets a distinct surface, so no two

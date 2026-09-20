@@ -20,6 +20,8 @@
  * the whole strategy testable against an adversarial asset library.
  */
 
+import { assetKey } from "@/lib/funnels/asset-identity";
+
 /** What a slot is FOR — decided before we know what will fill it. */
 export type VisualRole = "hero" | "story_portrait" | "benefit" | "gallery" | "proof";
 
@@ -158,6 +160,17 @@ export function planPageVisuals(input: {
   heroBrief?: string | null;
   /** Some archetypes deliberately lead with a clean headline. */
   heroPrefersText?: boolean;
+  /**
+   * An asset ALREADY occupying the hero, decided before this plan ran — a
+   * model-supplied image or an operator's own edit.
+   *
+   * Without it the planner chose a hero in ignorance, found none, and left the
+   * real hero image sitting in the candidate pool for a later section to place
+   * a second time. Treating the hero as consumed is the point: downstream
+   * slots must never re-spend an image the page has already shown at its
+   * largest and most prominent.
+   */
+  heroAlreadyUrl?: string | null;
 }): VisualPlan {
   const notes: string[] = [];
   // "poor" is excluded from PLACEMENT, not merely ranked last. A weak image
@@ -169,9 +182,15 @@ export function planPageVisuals(input: {
     .filter((x) => x.grade !== "unusable" && x.grade !== "first_party_poor")
     .sort((x, y) => RANK[y.grade] - RANK[x.grade] || (y.a.width ?? 0) - (x.a.width ?? 0));
 
-  // Deduplicate by URL. A real site serves one image from several entries.
+  // Deduplicate by ASSET, not by URL. A real site serves one upload from
+  // several URLs — WordPress alone emits a size variant and an edit revision
+  // per image — so a string comparison sees four assets where a visitor sees
+  // one picture four times. See asset-identity.ts.
   const seen = new Set<string>();
-  const pool = usable.filter((x) => (seen.has(x.a.url) ? false : (seen.add(x.a.url), true)));
+  const pool = usable.filter((x) => {
+    const k = assetKey(x.a.url);
+    return seen.has(k) ? false : (seen.add(k), true);
+  });
 
   const rejected = input.assets.length - pool.length;
   if (rejected > 0) notes.push(`${rejected} asset(s) excluded: marks, seals, unapproved, low quality, too small or duplicate.`);
@@ -181,7 +200,12 @@ export function planPageVisuals(input: {
     (x) => (x.a.width ?? 0) >= HERO_MIN_WIDTH && ratio(x.a) >= HERO_MIN_RATIO && ratio(x.a) <= HERO_MAX_RATIO,
   );
   let hero: SlotResolution;
-  if (input.heroPrefersText) {
+  if (input.heroAlreadyUrl) {
+    // Already decided elsewhere. Reported as an asset purely so `heroUrl`
+    // below marks it consumed; nothing downstream re-places it.
+    hero = { kind: "asset", role: "hero", url: input.heroAlreadyUrl, grade: "first_party_high" };
+    notes.push("Hero was already set before planning; treated as consumed.");
+  } else if (input.heroPrefersText) {
     hero = { kind: "intentionally_none", role: "hero", reason: "This page leads with the headline and offer; imagery follows below." };
     notes.push("Hero is intentionally text-led.");
   } else if (heroCandidate) {
@@ -197,7 +221,8 @@ export function planPageVisuals(input: {
   const heroUrl = hero.kind === "asset" ? hero.url : null;
 
   // ── 2. Which sections actually BENEFIT from imagery ────────────────────
-  const remaining = pool.filter((x) => x.a.url !== heroUrl);
+  const heroKey = assetKey(heroUrl);
+  const remaining = pool.filter((x) => heroKey === "" || assetKey(x.a.url) !== heroKey);
   let budget = MAX_IMAGES_PER_PAGE - (heroUrl ? 1 : 0);
   const slots: VisualPlan["slots"] = [];
   const take = () => (budget > 0 && remaining.length ? (budget--, remaining.shift()!) : null);

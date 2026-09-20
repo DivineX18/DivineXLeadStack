@@ -303,7 +303,11 @@ export interface ProofStripConfig {
      *  never imply a source the business did not name. */
     source?: string;
   };
-  logos?: { url: string; alt: string }[];
+  /** Third-party marks. `category` is REQUIRED and is what the heading is
+   *  derived from — an uncategorised mark makes an unknown claim, and the
+   *  renderer refuses it (see lib/funnels/evidence-proof.ts). Never assembled
+   *  from asset classification: that was the fabricated-"As seen in" defect. */
+  logos?: { url: string; alt: string; category?: "partner" | "press" | "certification" | "award" }[];
   /** Evidence-strip heading over the logos row — "Trusted by", "As featured
    *  in", "Certifications & memberships". Defaults to "As seen in". */
   heading?: string;
