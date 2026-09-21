@@ -119,12 +119,27 @@ async function finalize(params: {
 }): Promise<void> {
   const { subAccountId, agencyId, uid, clerkUserId, provisionedByAscend } = params;
 
-  await getAdminDb()
-    .doc(`subAccounts/${subAccountId}`)
-    .set(
-      { ascendOperations: grant(clerkUserId, provisionedByAscend), updatedAt: FieldValue.serverTimestamp() },
-      { merge: true },
-    );
+  const subRef = getAdminDb().doc(`subAccounts/${subAccountId}`);
+
+  // NEVER DOWNGRADE provisionedByAscend ON A REPLAY.
+  //
+  // The replay branch calls this with `false`, because it cannot tell from
+  // an identity link alone who originally created the workspace. Writing
+  // that over an existing `true` would quietly convert an Ascend-created
+  // workspace into one Ascend merely attached to — and the withdrawal rule
+  // in evaluate-workspace-entitlements only lapses the former, so a
+  // cancelled subscription would keep full Flow access forever. Once true,
+  // it stays true; only the original creation can set it.
+  const prior = (await subRef.get()).data()?.ascendOperations as { provisionedByAscend?: boolean } | undefined;
+  const effectiveProvisionedByAscend = prior?.provisionedByAscend === true || provisionedByAscend;
+
+  await subRef.set(
+    {
+      ascendOperations: grant(clerkUserId, effectiveProvisionedByAscend),
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
 
   const existing = await getMappingBySubAccountId(subAccountId);
   if (!existing) {
