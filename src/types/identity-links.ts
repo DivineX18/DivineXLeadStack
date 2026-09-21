@@ -11,6 +11,7 @@ export type IdentityLinkStatus = "active" | "revoked" | "superseded";
 export type IdentityLinkSource =
   | "sso_bridge_jit" // created inline by the live SSO callback's JIT path
   | "migration_backfill" // created by the offline backfill script
+  | "ascend_provisioning" // created by the signed Ascend Operations provisioning endpoint
   | "manual_admin"; // created by an explicit admin action (not built yet)
 
 export type IdentityLinkMigrationState = "not_started" | "in_progress" | "complete" | "failed";

@@ -74,6 +74,30 @@ export interface AgencyDoc {
   agencyAssistantEnabled?: boolean;
 }
 
+/**
+ * The record that an Ascend purchase, not Flow billing, is what entitles a
+ * workspace to Operations. Written only by the signed Ascend provisioning
+ * endpoint (`/api/webhooks/divinex/operations-workspace`); never by a human
+ * or by any client.
+ */
+export interface AscendOperationsGrant {
+  /** `revoked` keeps the audit trail instead of deleting the grant, so a
+   *  lapsed Ascend subscription is visibly lapsed rather than merely absent. */
+  status: "active" | "revoked";
+  /** The Ascend-side identity this grant belongs to. */
+  clerkUserId: string;
+  /** Which Ascend product paid for it. */
+  product: "growth_system";
+  /** True when Ascend provisioning CREATED this workspace, false when it
+   *  attached to a workspace the customer already owned as a Flow customer.
+   *  Distinguishes "Ascend supplies all access here" from "this is a paying
+   *  Flow customer who also bought Ascend", which must not be downgraded if
+   *  the Ascend side later lapses. */
+  provisionedByAscend: boolean;
+  grantedAt: unknown;
+  updatedAt: unknown;
+}
+
 export interface SubAccountDoc {
   id: string;
   agencyId: string;
@@ -349,6 +373,28 @@ export interface SubAccountDoc {
    * not a payment failure.
    */
   ascendIntelligenceEnabledByAgency?: boolean;
+  /**
+   * WHO SUPPLIES OPERATIONS ACCESS TO THIS WORKSPACE.
+   *
+   * An Ascend ($197 growth_system) customer's CRM access is paid for on the
+   * Ascend side, so no Flow Client Billing record is ever created for them.
+   * Absent billing otherwise reads as `comped` (billing/status.ts), which
+   * would make "Ascend supplied this" and "an operator hand-comped this"
+   * indistinguishable — and would let a revoked Ascend subscription keep
+   * full Flow access forever. This field is the explicit statement that
+   * Ascend is the source, so revocation has something concrete to flip.
+   *
+   * It is deliberately NOT `ascendIntelligenceEnabledByAgency`: that field
+   * is an agency's commercial plan decision about a workspace it owns, and
+   * reusing it for an individual customer's purchase would conflate two
+   * unrelated authorities. Both are honoured independently when deciding
+   * `effectiveTier` (see evaluate-workspace-entitlements.ts).
+   *
+   * Absent on every workspace that predates Ascend provisioning and on
+   * every standalone Flow customer, which is correct: their access comes
+   * from Flow's own billing.
+   */
+  ascendOperations?: AscendOperationsGrant;
   /**
    * Per-feature "hide vs. show as Locked" control for the sidebar-gated features
    * (Broadcasts, Website, Social Planner, Community, Get Leads). They ONLY take

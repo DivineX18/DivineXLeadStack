@@ -11,6 +11,7 @@ export function deriveIdentitySource(hasIdentityLink: boolean, linkSource: Ident
   if (!hasIdentityLink) return "native_signup";
   if (linkSource === "sso_bridge_jit") return "sso_jit_provisioned";
   if (linkSource === "migration_backfill") return "migration_backfilled";
+  if (linkSource === "ascend_provisioning") return "ascend_provisioned";
   // "manual_admin" or any future/unrecognized source -- fail closed to
   // "unknown" rather than guessing which bucket it belongs in.
   return "unknown";

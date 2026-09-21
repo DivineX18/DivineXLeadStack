@@ -4,6 +4,7 @@ import { getAdminDb } from "@/lib/firebase/admin";
 import { getMappingBySubAccountId } from "@/lib/workspace/workspace-mappings-service";
 import { effectiveBillingState } from "@/lib/billing/status";
 import type { SubAccountBilling } from "@/types/billing";
+import type { AscendOperationsGrant } from "@/types/tenancy";
 import type { RequiredFeatureGate } from "@/types/workspace-permissions";
 import { WORKSPACE_ENTITLEMENT_REGISTRY } from "@/lib/entitlements/workspace-entitlement-registry";
 import { evaluateModuleEntitlement } from "@/lib/entitlements/workspace-entitlement-decision";
@@ -83,6 +84,7 @@ export async function evaluateWorkspaceEntitlements(
     status?: string;
     billing?: SubAccountBilling;
     ascendIntelligenceEnabledByAgency?: boolean;
+    ascendOperations?: AscendOperationsGrant;
   };
 
   if (sub.status === "archived") {
@@ -118,9 +120,30 @@ export async function evaluateWorkspaceEntitlements(
   // returns null and generation falls back to certified no-profile behaviour.
   // It is no longer an access gate.
   const ascendGateOn = sub.ascendIntelligenceEnabledByAgency === true;
-  const effectiveTier: WorkspaceTier = ascendGateOn ? "full_ascend" : "crm_only";
+  // An individual customer's own Ascend (growth_system) purchase is a
+  // separate authority from an agency's plan decision about a workspace it
+  // owns. Either one grants the tier and neither overrides the other, so a
+  // direct customer never depends on an agency flag nobody sets for them.
+  const ascendPurchaseActive = sub.ascendOperations?.status === "active";
+  const effectiveTier: WorkspaceTier =
+    ascendGateOn || ascendPurchaseActive ? "full_ascend" : "crm_only";
 
-  const billingState = sub.billing ? effectiveBillingState(sub.billing) : "comped";
+  // Absent billing means `comped` only while nobody has claimed to be
+  // supplying access. Once Ascend provisioned this workspace, a grant that
+  // is no longer active has to actually withdraw access — otherwise a
+  // cancelled $197 subscription would keep full Flow forever, because no
+  // Flow billing record was ever written for it.
+  //
+  // A workspace Ascend merely ATTACHED to (provisionedByAscend: false) is a
+  // paying Flow customer in their own right; losing Ascend must never
+  // disturb the product they already bought.
+  const ascendSuppliedAccessWithdrawn =
+    sub.ascendOperations?.provisionedByAscend === true && sub.ascendOperations.status !== "active";
+  const billingState = sub.billing
+    ? effectiveBillingState(sub.billing)
+    : ascendSuppliedAccessWithdrawn
+      ? "lapsed"
+      : "comped";
   const billingLapsed = billingState === "lapsed" && !callerIsAgencyOwner;
   if (billingLapsed) {
     return denyAll(workspaceId, "billing_inactive", input.module, effectiveTier, billingState);

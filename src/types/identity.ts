@@ -39,6 +39,7 @@ export type IdentitySource =
   | "native_signup" // no identityLinks record -- signed up directly in Flow
   | "sso_jit_provisioned" // identityLinks record with linkSource "sso_bridge_jit"
   | "migration_backfilled" // identityLinks record with linkSource "migration_backfill"
+  | "ascend_provisioned" // identityLinks record with linkSource "ascend_provisioning"
   | "unknown"; // an identityLinks record exists with an unrecognized linkSource -- fail closed to "unknown", never guess
 
 // ── Session ──────────────────────────────────────────────────────────────
