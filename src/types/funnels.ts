@@ -156,35 +156,53 @@ export interface ApprovalMetadata {
   publishedAt?: string;
 }
 
-export type FunnelSectionType =
-  | "hero"
-  | "proof_strip"
-  | "offer"
-  | "story"
-  | "faq"
-  | "cta_banner"
-  | "countdown"
-  | "agenda"
-  | "ticket_tiers"
-  | "guarantee"
-  | "trust_badges"
-  | "checkout"
-  | "upsell_offer"
-  | "video"
-  | "benefits_grid"
-  | "problem_solution"
-  | "before_after"
-  | "included"
-  | "value_stack"
-  | "comparison"
-  | "testimonials"
-  | "stats"
-  | "callout"
-  | "team"
-  | "business_footer"
-  | "image_text"
-  | "photo_gallery"
-  | "multi_step_form";
+/**
+ * THE SINGLE SOURCE OF TRUTH FOR SECTION TYPES — runtime array first, type
+ * derived from it.
+ *
+ * This used to be a bare type union, with the save route keeping its own
+ * hand-written copy to validate against at runtime (types vanish after
+ * compilation, so it needed *a* list). The two drifted: `value_stack` and
+ * `multi_step_form` were added here and never added there, so every funnel
+ * containing one was rejected with a 400 on save — for every funnel type,
+ * while the builder happily offered those sections and the renderer happily
+ * rendered them. A VA lost a day to it.
+ *
+ * Deriving the type from the array makes that drift impossible rather than
+ * merely unlikely: there is nowhere left to forget.
+ */
+export const FUNNEL_SECTION_TYPES = [
+  "hero",
+  "proof_strip",
+  "offer",
+  "story",
+  "faq",
+  "cta_banner",
+  "countdown",
+  "agenda",
+  "ticket_tiers",
+  "guarantee",
+  "trust_badges",
+  "checkout",
+  "upsell_offer",
+  "video",
+  "benefits_grid",
+  "problem_solution",
+  "before_after",
+  "included",
+  "value_stack",
+  "comparison",
+  "testimonials",
+  "stats",
+  "callout",
+  "team",
+  "business_footer",
+  "image_text",
+  "photo_gallery",
+  "multi_step_form",
+] as const;
+
+export type FunnelSectionType = (typeof FUNNEL_SECTION_TYPES)[number];
 
 /**
  * Shared CTA-experience config, embedded (optional) on any section that
@@ -807,13 +825,19 @@ export type FunnelSectionConfig =
  *  set). Absent = today's rhythm-by-index behavior, so stored funnels are
  *  untouched. "photographic" renders the dark-immersive fallback until a
  *  real section image is wired (never a fabricated stock photo). */
-export type SectionCanvas =
-  | "clean"
-  | "warm_paper"
-  | "brand_tint"
-  | "dark_immersive"
-  | "high_contrast_cta"
-  | "photographic";
+/** Same rule as FUNNEL_SECTION_TYPES above: the save route needs a runtime
+ *  list to validate against, so it gets this one rather than a second copy
+ *  that can drift out of step with the renderer. */
+export const SECTION_CANVASES = [
+  "clean",
+  "warm_paper",
+  "brand_tint",
+  "dark_immersive",
+  "high_contrast_cta",
+  "photographic",
+] as const;
+
+export type SectionCanvas = (typeof SECTION_CANVASES)[number];
 
 export interface FunnelSection {
   id: string;

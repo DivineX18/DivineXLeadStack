@@ -7,7 +7,13 @@ import {
   updateFunnelServerSide,
   type FunnelPatch,
 } from "@/lib/server/funnels-service";
-import type { FunnelSection, FunnelSectionType } from "@/types/funnels";
+import {
+  FUNNEL_SECTION_TYPES,
+  SECTION_CANVASES,
+  type FunnelSection,
+  type FunnelSectionType,
+  type SectionCanvas,
+} from "@/types/funnels";
 import { DESIGN_PACKS } from "@/lib/funnels/design-packs";
 import {
   VISUAL_ARCHETYPE_IDS,
@@ -23,41 +29,12 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const SECTION_TYPES: FunnelSectionType[] = [
-  "hero",
-  "proof_strip",
-  "offer",
-  "story",
-  "faq",
-  "cta_banner",
-  "countdown",
-  "agenda",
-  "ticket_tiers",
-  "guarantee",
-  "trust_badges",
-  "checkout",
-  "upsell_offer",
-  "video",
-  "benefits_grid",
-  "problem_solution",
-  "before_after",
-  "included",
-  "comparison",
-  "testimonials",
-  "stats",
-  "callout",
-  "team",
-  "image_text",
-  "photo_gallery",
-  "business_footer",
-];
-
-/** The renderer's own canvas vocabulary — mirrors SectionCanvas in
- *  types/funnels.ts so an unknown value can never reach the renderer. */
-const SECTION_CANVASES = [
-  "clean", "warm_paper", "brand_tint", "dark_immersive", "high_contrast_cta", "photographic",
-] as const;
-type SectionCanvas = (typeof SECTION_CANVASES)[number];
+/* The section-type and canvas allowlists are imported from types/funnels.ts,
+ * not restated here. Hand-written copies of those lists drifted: value_stack
+ * and multi_step_form existed in the type, in the builder and in the
+ * renderer, but never made it into this route's copy — so every funnel
+ * carrying one was rejected 400 on save, regardless of funnel type. The type
+ * is now derived from the runtime array, so there is only one list. */
 
 /** Defensive sanitize of a client-supplied sections array — authed staff,
  *  but keep the shape honest so a malformed save can't poison the renderer. */
@@ -70,7 +47,7 @@ function sanitizeSections(raw: unknown): FunnelSection[] | null {
       !s ||
       typeof s.id !== "string" ||
       typeof s.type !== "string" ||
-      !SECTION_TYPES.includes(s.type as FunnelSectionType) ||
+      !(FUNNEL_SECTION_TYPES as readonly string[]).includes(s.type as string) ||
       !s.config ||
       typeof s.config !== "object"
     ) {

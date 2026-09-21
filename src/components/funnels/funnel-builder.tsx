@@ -415,11 +415,23 @@ export function FunnelBuilder({
           sections,
         }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        // SAY WHAT IS WRONG.
+        //
+        // This used to be `throw new Error()`, which discarded the server's
+        // reply — so a missing form, a dead button, an unfilled section and a
+        // rejected section type all surfaced as the same "Couldn't save the
+        // funnel." The publish guards in funnels-service.ts are written to
+        // tell an operator exactly what to fix, and every one of those
+        // sentences was being thrown away before anyone could read it.
+        const detail = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(detail?.error?.trim() || "");
+      }
       if (patchStatus) setStatus(patchStatus);
       toast.success("Saved.");
-    } catch {
-      toast.error("Couldn't save the funnel.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      toast.error(message || "Couldn't save the funnel.", message ? { duration: 10_000 } : undefined);
     } finally {
       setSaving(false);
     }
