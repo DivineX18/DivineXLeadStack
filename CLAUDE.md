@@ -1057,9 +1057,28 @@ Neither token is a JWT. The authorization code (leg 1→3) is an opaque random h
 
 ### Known V1 limitations
 
-- **No self-service workspace-mapping UI on either side.** Ascend's `divinex_workspace_mappings` table has no admin UI, API route, or seed script that writes to it — its own schema comment says it's "populated by hand via a one-off script." This means the bridge only works for manually-provisioned users today, not the general customer population.
+- ~~**No self-service workspace-mapping UI on either side.**~~ **FIXED (2026-09-21).** This was worse than a missing UI — it was a deadlock. `/sso/operations/start` refused without an `active` mapping row, and every code path that created one ran *downstream* of a successful handoff, so an Ascend ($197 `growth_system`) customer could never make the first crossing. `provisioning_allowed`, the flag the JIT path required, was never written `true` by any code in either repo, so that fallback was dead too. See **Ascend Operations provisioning** below.
 - **One-directional only** — see above.
 - **Identity payload isn't independently signed** — Phase 3's JSON response relies on TLS + the shared-secret-gated POST, not a JWS/JWT.
+
+### Ascend Operations provisioning (the unified $197 account)
+
+**Provisioning has an owner: Ascend orchestrates, Flow executes.** Ascend is the only component that knows a `growth_system` purchase happened, but it cannot write Firestore — so it calls `POST /api/webhooks/divinex/operations-workspace` (public path; security is the same HMAC signature + timestamp window as `divinex/profile`), which runs [src/lib/workspace/provision-ascend-operations.ts](src/lib/workspace/provision-ascend-operations.ts). Flow returns the Firebase uid, Ascend stores it on `divinex_workspace_mappings.leadstack_firebase_uid`, and **every later SSO crossing therefore takes the pre-existing returning-user branch**. JIT provisioning is retired rather than repaired: nothing reads `provisioning_allowed` any more.
+
+Triggered from two places on the Ascend side, both of which re-check the `growth_operations` entitlement inside the provisioner itself:
+1. The Stripe webhook, on a `growth_system` grant. Deliberately best-effort — a Flow outage must never fail a webhook whose entitlement write already committed.
+2. **`/sso/operations/start`, for a caller who has already passed the entitlement gate.** This is what makes the route self-healing: a missed webhook, a Flow outage during checkout, and every customer who bought before this existed all resolve on their own next click.
+
+Resolution order (idempotent at every step — a replayed webhook creates nothing new):
+1. **Active `identityLinks` record** → reuse that Firebase user and the workspace they already own.
+2. **A Firebase user with the same email** → an existing Flow customer buying Ascend. The *only* place an email is consulted, and only to find a candidate: both sides independently verified that mailbox (Clerk verified it; Firebase holds it), and the result is written as an explicit audited `identityLinks` row with `linkSource: "ascend_provisioning"`. Every later crossing resolves through that row, never through email.
+3. **Otherwise** → create their OWN agency + "Main" sub-account, exactly like a standalone Flow signup. Sharing one DivineX agency would put every customer in a tenant whose agency-owner shortcut can read all of them.
+
+**`SubAccountDoc.ascendOperations`** (`AscendOperationsGrant`) is the explicit statement that Ascend, not Flow Client Billing, supplies this workspace's access. Without it, absent billing reads as `comped` ([lib/billing/status.ts](src/lib/billing/status.ts)) and a cancelled $197 subscription would keep full Flow forever. It is deliberately **not** `ascendIntelligenceEnabledByAgency` — that is an agency's plan decision about a workspace it owns, whereas this is an individual customer's purchase. [evaluate-workspace-entitlements.ts](src/lib/entitlements/evaluate-workspace-entitlements.ts) honours both independently: either grants `effectiveTier: "full_ascend"`, and only a workspace with `provisionedByAscend: true` is withdrawn from when the grant goes non-active (a paying Flow customer who also bought Ascend keeps the product they bought). **`provisionedByAscend` is raised once and never lowered by a replay** — the replay branch cannot tell who created the workspace, and downgrading it would reopen exactly the hole the field closes.
+
+New workspaces start with **funnels + websites ON** (so Zeno-generated assets have a destination) and **every spend-capable channel OFF** (broadcasts, WhatsApp, outbound voice, Meta, social, API, Get Leads, funnel checkout, email domain), with **`automationsPaused: true`**.
+
+The $77 Zeno (`ascend_pro`) boundary is unchanged: it grants no `growth_operations`, the provisioner refuses it before Flow is contacted, and the Ascend sidebar no longer advertises Operations to customers who lack the entitlement. Regression coverage lives in the Ascend repo (`artifacts/api-server/src/tests/operationsProvisioning.test.ts` + `unifiedAccountContract.test.ts`, mutation-tested).
 
 ### Env vars (add to the Environment Variables section's tables when reorganizing)
 
