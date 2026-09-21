@@ -96,6 +96,14 @@ export interface AscendOperationsGrant {
   provisionedByAscend: boolean;
   grantedAt: unknown;
   updatedAt: unknown;
+  /**
+   * When the grant was withdrawn, or null while active. Kept as a timestamp
+   * rather than a flag because it is also the ordering guard: a provisioning
+   * call signed BEFORE this moment is stale and must not resurrect a
+   * legitimately revoked workspace. Only a request signed after it — which
+   * means Ascend re-checked a live entitlement — may reactivate.
+   */
+  revokedAt?: unknown | null;
 }
 
 export interface SubAccountDoc {

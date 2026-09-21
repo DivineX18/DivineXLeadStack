@@ -45,6 +45,10 @@ export type AscendProvisionInput = {
   name: string | null;
   businessName: string | null;
   ascendBusinessProfileId: number | null;
+  /** The signed request's timestamp, used to order a provisioning call
+   *  against a prior revocation. Supplied by the endpoint from the same
+   *  header the signature already covers, so it cannot be forged separately. */
+  requestSignedAtMs: number;
 };
 
 export type AscendProvisionOutcome =
@@ -93,7 +97,83 @@ function grant(clerkUserId: string, provisionedByAscend: boolean): AscendOperati
     provisionedByAscend,
     grantedAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
+    // Reactivation clears the withdrawal, so a resubscribed customer is not
+    // left looking permanently revoked.
+    revokedAt: null,
   };
+}
+
+export type AscendRevokeOutcome =
+  | { ok: true; result: "revoked" | "already_revoked" | "no_grant"; subAccountId?: string }
+  | { ok: false; reason: string };
+
+/**
+ * WITHDRAW THE GRANT WITHOUT DESTROYING ANYTHING.
+ *
+ * Ascend revoked both entitlement keys, which already stops any NEW crossing
+ * at /sso/operations/start. What it could not do is reach into Firestore, so
+ * `ascendOperations.status` stayed "active" and the workspace kept reading as
+ * full_ascend and comped — a direct Flow login would have walked straight
+ * past an ended subscription.
+ *
+ * Only the status flips. The workspace, its data, the membership, the
+ * identity link and the mapping all survive, because a customer who
+ * resubscribes must land back in the workspace they already had rather than
+ * a fresh empty one.
+ *
+ * Note what is deliberately NOT withdrawn: a workspace Ascend merely
+ * ATTACHED to (`provisionedByAscend: false`) belongs to a paying Flow
+ * customer. Losing Ascend drops their tier to crm_only, which is correct,
+ * but evaluate-workspace-entitlements only lapses billing for workspaces
+ * Ascend actually created — so the product they bought separately is
+ * untouched.
+ */
+export async function revokeAscendOperationsWorkspace(params: {
+  clerkUserId: string;
+}): Promise<AscendRevokeOutcome> {
+  const { clerkUserId } = params;
+  if (!clerkUserId) return { ok: false, reason: "missing_identity" };
+
+  const link = await getIdentityLinkByClerkId(clerkUserId);
+  // No link means Ascend never provisioned anything for this identity, so
+  // there is nothing here to withdraw. Reported, not treated as an error, so
+  // a webhook for a Zeno-only customer is a harmless no-op.
+  if (!link || link.status !== "active") return { ok: true, result: "no_grant" };
+
+  const owned = await findOwnedWorkspace(link.firebaseUid);
+  if (!owned) return { ok: true, result: "no_grant" };
+
+  const subRef = getAdminDb().doc(`subAccounts/${owned.subAccountId}`);
+  const prior = (await subRef.get()).data()?.ascendOperations as AscendOperationsGrant | undefined;
+  if (!prior) return { ok: true, result: "no_grant" };
+
+  // FAIL CLOSED ON IDENTITY MISMATCH. The grant names the Ascend identity it
+  // belongs to; anything else asking for its withdrawal is refused rather
+  // than served, so one customer's cancellation can never reach into
+  // another customer's workspace.
+  if (prior.clerkUserId !== clerkUserId) {
+    return { ok: false, reason: "grant_identity_mismatch" };
+  }
+
+  // Idempotent: a replayed revoke is a no-op, not a second withdrawal.
+  if (prior.status === "revoked") {
+    return { ok: true, result: "already_revoked", subAccountId: owned.subAccountId };
+  }
+
+  await subRef.set(
+    {
+      ascendOperations: {
+        ...prior,
+        status: "revoked",
+        updatedAt: FieldValue.serverTimestamp(),
+        revokedAt: FieldValue.serverTimestamp(),
+      },
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  return { ok: true, result: "revoked", subAccountId: owned.subAccountId };
 }
 
 /** The workspace this uid owns or administers, if any. Membership index only
@@ -116,7 +196,10 @@ async function finalize(params: {
   clerkUserId: string;
   provisionedByAscend: boolean;
   ascendBusinessProfileId: number | null;
-}): Promise<void> {
+  /** When Ascend signed this request. The ordering guard against a stale
+   *  provisioning call resurrecting a revoked workspace. */
+  requestSignedAtMs: number;
+}): Promise<{ ok: true } | { ok: false; reason: string }> {
   const { subAccountId, agencyId, uid, clerkUserId, provisionedByAscend } = params;
 
   const subRef = getAdminDb().doc(`subAccounts/${subAccountId}`);
@@ -130,8 +213,22 @@ async function finalize(params: {
   // in evaluate-workspace-entitlements only lapses the former, so a
   // cancelled subscription would keep full Flow access forever. Once true,
   // it stays true; only the original creation can set it.
-  const prior = (await subRef.get()).data()?.ascendOperations as { provisionedByAscend?: boolean } | undefined;
+  const prior = (await subRef.get()).data()?.ascendOperations as AscendOperationsGrant | undefined;
   const effectiveProvisionedByAscend = prior?.provisionedByAscend === true || provisionedByAscend;
+
+  // A STALE CALL MUST NOT RESURRECT A REVOKED WORKSPACE.
+  //
+  // Ascend re-checks a live entitlement immediately before signing, so a
+  // request signed AFTER the withdrawal is a legitimate resubscription and
+  // reactivates. One signed before it is either a replay or a request that
+  // was already in flight when the subscription ended, and neither is
+  // authority to restore access. Fail closed on the ordering.
+  if (prior?.status === "revoked") {
+    const revokedAtMs = toMillis(prior.revokedAt);
+    if (revokedAtMs !== null && params.requestSignedAtMs <= revokedAtMs) {
+      return { ok: false, reason: "stale_provisioning_after_revoke" };
+    }
+  }
 
   await subRef.set(
     {
@@ -160,6 +257,17 @@ async function finalize(params: {
   if (mapping && mapping.status === "pending_provision") {
     await updateMappingStatus(mapping.workspaceId, "active", "system:ascend-provisioning");
   }
+  return { ok: true };
+}
+
+/** Firestore hands back a Timestamp; a serverTimestamp sentinel that has not
+ *  resolved yet reads as null, which correctly means "no ordering to enforce". */
+function toMillis(v: unknown): number | null {
+  if (v && typeof (v as { toMillis?: () => number }).toMillis === "function") {
+    return (v as { toMillis: () => number }).toMillis();
+  }
+  if (typeof v === "number") return v;
+  return null;
 }
 
 export async function provisionAscendOperationsWorkspace(
@@ -189,14 +297,16 @@ export async function provisionAscendOperationsWorkspace(
     }
     const owned = await findOwnedWorkspace(existingUid);
     if (!owned) return { ok: false, reason: "linked_identity_without_workspace" };
-    await finalize({
+    const fin = await finalize({
       subAccountId: owned.subAccountId,
       agencyId: owned.agencyId,
       uid: existingUid,
       clerkUserId,
       provisionedByAscend: false,
       ascendBusinessProfileId: input.ascendBusinessProfileId,
+      requestSignedAtMs: input.requestSignedAtMs,
     });
+    if (!fin.ok) return { ok: false, reason: fin.reason };
     return {
       ok: true,
       result: "existing",
@@ -234,14 +344,16 @@ export async function provisionAscendOperationsWorkspace(
     });
     if (!linked.ok) return { ok: false, reason: linked.reason };
 
-    await finalize({
+    const fin = await finalize({
       subAccountId: owned.subAccountId,
       agencyId: owned.agencyId,
       uid: existingRecord.uid,
       clerkUserId,
       provisionedByAscend: false,
       ascendBusinessProfileId: input.ascendBusinessProfileId,
+      requestSignedAtMs: input.requestSignedAtMs,
     });
+    if (!fin.ok) return { ok: false, reason: fin.reason };
     return {
       ok: true,
       result: "attached",
@@ -384,14 +496,16 @@ export async function provisionAscendOperationsWorkspace(
   });
   if (!linked.ok) return { ok: false, reason: linked.reason };
 
-  await finalize({
+  const fin = await finalize({
     subAccountId,
     agencyId,
     uid,
     clerkUserId,
     provisionedByAscend: true,
     ascendBusinessProfileId: input.ascendBusinessProfileId,
+    requestSignedAtMs: input.requestSignedAtMs,
   });
+  if (!fin.ok) return { ok: false, reason: fin.reason };
 
   return { ok: true, result: "created", subAccountId, agencyId, firebaseUid: uid, role: "admin" };
 }
