@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { updateProfile } from "firebase/auth";
 import {
   Mail,
@@ -72,9 +73,8 @@ export default function MySettingsPage() {
       await updateUserDoc(user.uid, { displayName: trimmed });
       toast.success("Profile updated");
       setProfile((p) => (p ? { ...p, displayName: trimmed } : p));
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to update profile. Please try again.");
+    } catch (err) { console.error(err);
+      toast.error(describeError(err, "Failed to update profile. Please try again."), { duration: 12_000 });
     } finally {
       setSavingProfile(false);
     }

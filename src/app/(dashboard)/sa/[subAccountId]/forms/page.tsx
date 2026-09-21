@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import {
   FileText,
   Plus,
@@ -65,7 +66,7 @@ export default function FormsPage() {
       window.location.href = saPath(`/forms/${id}`);
     } catch (err) {
       console.error(err);
-      toast.error("Couldn't create form. Try again.");
+      toast.error(describeError(err, "Couldn't create form. Try again."), { duration: 12_000 });
     } finally {
       setCreating(false);
     }
@@ -85,7 +86,7 @@ export default function FormsPage() {
       window.location.href = saPath(`/forms/${id}`);
     } catch (err) {
       console.error(err);
-      toast.error("Couldn't create contact form. Try again.");
+      toast.error(describeError(err, "Couldn't create contact form. Try again."), { duration: 12_000 });
     } finally {
       setCreating(false);
     }
@@ -98,7 +99,7 @@ export default function FormsPage() {
       toast.success("Form deleted");
     } catch (err) {
       console.error(err);
-      toast.error("Couldn't delete form.");
+      toast.error(describeError(err, "Couldn't delete form."), { duration: 12_000 });
     }
   }
 

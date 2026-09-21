@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import {
   Sheet,
   SheetContent,
@@ -155,9 +156,8 @@ export function EditDealDialog({
       }
       toast.success("Deal updated");
       onOpenChange(false);
-    } catch (err) {
-      console.error(err);
-      toast.error("Couldn't update deal. Try again.");
+    } catch (err) { console.error(err);
+      toast.error(describeError(err, "Couldn't update deal. Try again."), { duration: 12_000 });
     } finally {
       setSaving(false);
     }

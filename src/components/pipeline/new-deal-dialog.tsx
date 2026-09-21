@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { Plus } from "lucide-react";
 import {
   Sheet,
@@ -161,9 +162,8 @@ export function NewDealDialog({
       }
       toast.success("Deal created");
       setOpen(false);
-    } catch (err) {
-      console.error(err);
-      toast.error("Couldn't create deal. Try again.");
+    } catch (err) { console.error(err);
+      toast.error(describeError(err, "Couldn't create deal. Try again."), { duration: 12_000 });
     } finally {
       setSaving(false);
     }

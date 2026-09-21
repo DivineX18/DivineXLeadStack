@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { Loader2, Plus, SlidersHorizontal, Trash2 } from "lucide-react";
 import { useSubAccount } from "@/context/sub-account-context";
 import { subscribeToCustomFields } from "@/lib/firestore/custom-fields";
@@ -94,8 +95,7 @@ export function SubAccountCustomFieldsSection() {
       setType("text");
       setOptionsText("");
       setRequired(false);
-    } catch {
-      toast.error("Couldn't add the field. Please try again.");
+    } catch (err) { toast.error(describeError(err, "Couldn't add the field. Please try again."), { duration: 12_000 });
     } finally {
       setSaving(false);
     }
@@ -125,8 +125,7 @@ export function SubAccountCustomFieldsSection() {
         return;
       }
       toast.success("Custom field deleted.");
-    } catch {
-      toast.error("Couldn't delete the field. Please try again.");
+    } catch (err) { toast.error(describeError(err, "Couldn't delete the field. Please try again."), { duration: 12_000 });
     } finally {
       setDeletingId(null);
     }

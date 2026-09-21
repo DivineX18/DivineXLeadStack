@@ -3,6 +3,7 @@
 import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { ArrowLeft, Check, Loader2, UserX } from "lucide-react";
 import { useSubAccount } from "@/context/sub-account-context";
 import {
@@ -72,8 +73,7 @@ export default function CommunityRosterPage({
         demote: "Moderator role removed",
       };
       toast.success(messages[action]);
-    } catch {
-      toast.error("Action failed");
+    } catch (err) { toast.error(describeError(err, "Action failed"), { duration: 12_000 });
     } finally {
       setBusy(null);
     }
@@ -87,8 +87,7 @@ export default function CommunityRosterPage({
       });
       if (!res.ok) throw new Error();
       toast.success("Marked paid — access granted");
-    } catch {
-      toast.error("Couldn't mark paid");
+    } catch (err) { toast.error(describeError(err, "Couldn't mark paid"), { duration: 12_000 });
     } finally {
       setBusy(null);
     }

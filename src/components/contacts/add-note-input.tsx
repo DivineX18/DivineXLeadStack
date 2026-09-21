@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,9 +23,8 @@ export function AddNoteInput({ contactId }: { contactId: string }) {
     try {
       await addNote(contactId, trimmed, user.uid);
       setContent("");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to save note.");
+    } catch (err) { console.error(err);
+      toast.error(describeError(err, "Failed to save note."), { duration: 12_000 });
     } finally {
       setSaving(false);
     }

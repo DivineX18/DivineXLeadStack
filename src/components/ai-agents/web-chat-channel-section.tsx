@@ -9,6 +9,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import {
   ArrowRight,
   Check,
@@ -131,8 +132,7 @@ export function WebChatChannelSection() {
       setCopied(true);
       toast.success("Snippet copied");
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error("Couldn't copy — try selecting + copying manually");
+    } catch (err) { toast.error(describeError(err, "Couldn't copy — try selecting + copying manually"), { duration: 12_000 });
     }
   }
 
@@ -185,8 +185,7 @@ export function WebChatChannelSection() {
       }
       if (data.config) setConfig(data.config);
       toast.success("Web Chat settings saved");
-    } catch {
-      toast.error("Network error — try again");
+    } catch (err) { toast.error(describeError(err, "Network error — try again"), { duration: 12_000 });
     } finally {
       setSaving(false);
     }

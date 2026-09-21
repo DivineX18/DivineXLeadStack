@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { ChevronDown, ChevronUp, GitBranch, Loader2 } from "lucide-react";
 import { useSubAccount } from "@/context/sub-account-context";
 import { usePipelineStages } from "@/hooks/use-pipeline-stages";
@@ -102,8 +103,7 @@ export function SubAccountPipelineSection() {
         return;
       }
       toast.success("Pipeline updated.");
-    } catch {
-      toast.error("Couldn't save the pipeline. Please try again.");
+    } catch (err) { toast.error(describeError(err, "Couldn't save the pipeline. Please try again."), { duration: 12_000 });
     } finally {
       setSaving(false);
     }
@@ -134,8 +134,7 @@ export function SubAccountPipelineSection() {
         return;
       }
       toast.success("Pipeline reset to defaults.");
-    } catch {
-      toast.error("Couldn't reset the pipeline. Please try again.");
+    } catch (err) { toast.error(describeError(err, "Couldn't reset the pipeline. Please try again."), { duration: 12_000 });
     } finally {
       setResetting(false);
     }

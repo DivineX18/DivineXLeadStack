@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -117,9 +118,8 @@ export function ContactForm({
         payload.territoryId = territoryId;
       }
       await onSubmit(payload);
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to save contact. Please try again.");
+    } catch (err) { console.error(err);
+      toast.error(describeError(err, "Failed to save contact. Please try again."), { duration: 12_000 });
     } finally {
       setSaving(false);
     }

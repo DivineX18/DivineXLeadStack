@@ -15,6 +15,7 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/format";
 import {
@@ -140,9 +141,8 @@ export function PipelineBoard({
       await patchDealStage(deal.id, nextStageId);
       const label = stages.find((s) => s.id === nextStageId)?.label;
       toast.success(`Moved to ${label}`);
-    } catch (err) {
-      console.error(err);
-      toast.error("Couldn't move deal. Try again.");
+    } catch (err) { console.error(err);
+      toast.error(describeError(err, "Couldn't move deal. Try again."), { duration: 12_000 });
     }
   }
 
@@ -153,9 +153,8 @@ export function PipelineBoard({
       toast.success(
         `Moved to ${stages.find((s) => s.id === "lost")?.label ?? "Lost"}`,
       );
-    } catch (err) {
-      console.error(err);
-      toast.error("Couldn't move deal. Try again.");
+    } catch (err) { console.error(err);
+      toast.error(describeError(err, "Couldn't move deal. Try again."), { duration: 12_000 });
     } finally {
       setPendingLost(null);
     }
@@ -217,9 +216,8 @@ export function PipelineBoard({
             toast.success(
               `Moved to ${stages.find((s) => s.id === stageId)?.label}`,
             );
-          } catch (err) {
-            console.error(err);
-            toast.error("Couldn't move deal. Try again.");
+          } catch (err) { console.error(err);
+            toast.error(describeError(err, "Couldn't move deal. Try again."), { duration: 12_000 });
           }
         }}
       />

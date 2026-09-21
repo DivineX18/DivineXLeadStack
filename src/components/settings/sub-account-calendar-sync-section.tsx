@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { CalendarCheck, Copy, Loader2 } from "lucide-react";
 import { useSubAccount } from "@/context/sub-account-context";
 import { Button } from "@/components/ui/button";
@@ -64,8 +65,7 @@ export function SubAccountCalendarSyncSection() {
     try {
       await navigator.clipboard.writeText(value);
       toast.success("Calendar URL copied.");
-    } catch {
-      toast.error("Clipboard blocked — select the URL and copy manually.");
+    } catch (err) { toast.error(describeError(err, "Clipboard blocked — select the URL and copy manually."), { duration: 12_000 });
     }
   }
 

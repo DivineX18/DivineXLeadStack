@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { Globe, Lock, Loader2, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase/client";
@@ -105,8 +106,7 @@ export function FunnelDomainsSection({
       );
       if (!res.ok) throw new Error();
       void load();
-    } catch {
-      toast.error("Couldn't remove domain");
+    } catch (err) { toast.error(describeError(err, "Couldn't remove domain"), { duration: 12_000 });
     } finally {
       setBusyDomain(null);
     }

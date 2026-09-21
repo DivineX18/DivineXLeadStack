@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { Trash2 } from "lucide-react";
 import {
   Sheet,
@@ -131,9 +132,8 @@ export function TaskDialog({
         toast.success("Task created");
       }
       onOpenChange(false);
-    } catch (err) {
-      console.error(err);
-      toast.error("Couldn't save task. Try again.");
+    } catch (err) { console.error(err);
+      toast.error(describeError(err, "Couldn't save task. Try again."), { duration: 12_000 });
     } finally {
       setSaving(false);
     }
@@ -147,9 +147,8 @@ export function TaskDialog({
       await deleteTask(task.id);
       toast.success("Task deleted");
       onOpenChange(false);
-    } catch (err) {
-      console.error(err);
-      toast.error("Couldn't delete task.");
+    } catch (err) { console.error(err);
+      toast.error(describeError(err, "Couldn't delete task."), { duration: 12_000 });
     } finally {
       setDeleting(false);
     }

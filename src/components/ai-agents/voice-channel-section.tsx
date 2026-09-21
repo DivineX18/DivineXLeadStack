@@ -9,6 +9,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { ArrowRight, Inbox, Loader2, PhoneCall } from "lucide-react";
 import { useSubAccount } from "@/context/sub-account-context";
 import { Button } from "@/components/ui/button";
@@ -214,8 +215,7 @@ export function VoiceChannelSection() {
           ? "Voice channel saved — Vapi assistant synced"
           : "Voice channel saved",
       );
-    } catch {
-      toast.error("Network error — try again");
+    } catch (err) { toast.error(describeError(err, "Network error — try again"), { duration: 12_000 });
     } finally {
       setSaving(false);
     }

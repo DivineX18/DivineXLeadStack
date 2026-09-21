@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import {
   CheckCircle2,
   Clock,
@@ -466,8 +467,7 @@ export function SetupEnvForm() {
       setExportCopied(true);
       toast.success("Copied to clipboard");
       setTimeout(() => setExportCopied(false), 2000);
-    } catch {
-      toast.error("Couldn't copy — select the text and copy manually.");
+    } catch (err) { toast.error(describeError(err, "Couldn't copy — select the text and copy manually."), { duration: 12_000 });
     }
   }
 

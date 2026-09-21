@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import {
   BookOpen,
   Eye,
@@ -226,8 +227,7 @@ export function FunnelsList({
       const d = (await res.json()) as { id?: string };
       if (!res.ok || !d.id) throw new Error();
       router.push(`${baseHref}/${d.id}`);
-    } catch {
-      toast.error("Couldn't create funnel");
+    } catch (err) { toast.error(describeError(err, "Couldn't create funnel"), { duration: 12_000 });
       setCreating(false);
     }
   }
@@ -238,8 +238,7 @@ export function FunnelsList({
       const res = await fetch(`/api/sub-accounts/${saId}/funnels/${id}`, { method: "DELETE" });
       if (res.ok) return;
       toast.error("Couldn't delete");
-    } catch {
-      toast.error("Couldn't delete");
+    } catch (err) { toast.error(describeError(err, "Couldn't delete"), { duration: 12_000 });
     }
     // Put the optimistically-removed row back by re-reading, rather than
     // leaving the operator looking at a list the server does not agree with.

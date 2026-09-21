@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -196,8 +197,7 @@ export function SubAccountApiKeysSection() {
     try {
       await navigator.clipboard.writeText(secret);
       toast.success("Copied to clipboard.");
-    } catch {
-      toast.error("Clipboard blocked — select the key and copy manually.");
+    } catch (err) { toast.error(describeError(err, "Clipboard blocked — select the key and copy manually."), { duration: 12_000 });
     }
   }
 

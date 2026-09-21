@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import {
   CalendarClock,
   Copy,
@@ -83,8 +84,7 @@ export default function BookingListPage() {
       if (body.warning) toast.warning(body.warning);
       // Land in the new draft's editor so the operator can rename + publish.
       router.push(saPath(`/booking/${body.slug}`));
-    } catch {
-      toast.error("Couldn't duplicate the booking page. Please try again.");
+    } catch (err) { toast.error(describeError(err, "Couldn't duplicate the booking page. Please try again."), { duration: 12_000 });
     } finally {
       setDuplicatingSlug(null);
     }

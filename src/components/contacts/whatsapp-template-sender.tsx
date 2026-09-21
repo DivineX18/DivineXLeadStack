@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { Loader2, Send } from "lucide-react";
 import { useSubAccount } from "@/context/sub-account-context";
 import { Button } from "@/components/ui/button";
@@ -45,8 +46,7 @@ export function WhatsappTemplateSender({
         (t) => t.status === "approved",
       );
       setTemplates(approved);
-    } catch {
-      toast.error("Couldn't load templates.");
+    } catch (err) { toast.error(describeError(err, "Couldn't load templates."), { duration: 12_000 });
     } finally {
       setLoading(false);
     }

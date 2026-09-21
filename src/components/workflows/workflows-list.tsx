@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import {
   CalendarCheck,
   ChevronDown,
@@ -109,8 +110,7 @@ export function WorkflowsList({ saId }: { saId: string }) {
       const d = (await res.json()) as { id?: string };
       if (!res.ok || !d.id) throw new Error();
       router.push(`/sa/${saId}/workflows/${d.id}`);
-    } catch {
-      toast.error("Couldn't create workflow");
+    } catch (err) { toast.error(describeError(err, "Couldn't create workflow"), { duration: 12_000 });
       setCreating(false);
     }
   }

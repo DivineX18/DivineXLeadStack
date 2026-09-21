@@ -4,6 +4,7 @@ import { useSubAccount } from "@/context/sub-account-context";
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import {
   ChevronDown,
   ChevronUp,
@@ -2934,8 +2935,7 @@ function PostPurchaseFlowPanel({
       const d = (await res.json()) as { id?: string };
       if (!res.ok || !d.id) throw new Error();
       onLink(d.id);
-    } catch {
-      toast.error("Couldn't create the step.");
+    } catch (err) { toast.error(describeError(err, "Couldn't create the step."), { duration: 12_000 });
     } finally {
       setCreating(false);
     }

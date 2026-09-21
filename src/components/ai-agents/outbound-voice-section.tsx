@@ -9,6 +9,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import {
   collection,
   onSnapshot,
@@ -231,8 +232,7 @@ export function OutboundVoiceSection() {
       }
       if (data.config) setConfig(data.config);
       toast.success("Outbound settings saved");
-    } catch {
-      toast.error("Network error — try again");
+    } catch (err) { toast.error(describeError(err, "Network error — try again"), { duration: 12_000 });
     } finally {
       setSaving(false);
     }
@@ -263,8 +263,7 @@ export function OutboundVoiceSection() {
           : null,
       );
       startTestProgress();
-    } catch {
-      toast.error("Network error — try again");
+    } catch (err) { toast.error(describeError(err, "Network error — try again"), { duration: 12_000 });
     } finally {
       setTesting(false);
     }
@@ -293,8 +292,7 @@ export function OutboundVoiceSection() {
       toast.success("Call ended.");
       stopTestProgress();
       setTestControlUrl(null);
-    } catch {
-      toast.error("Network error — the call will stop at 20s.");
+    } catch (err) { toast.error(describeError(err, "Network error — the call will stop at 20s."), { duration: 12_000 });
     } finally {
       setEnding(false);
     }

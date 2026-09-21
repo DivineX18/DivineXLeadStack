@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { ArrowLeft, Ban, Loader2, PhoneOff, PhoneOutgoing } from "lucide-react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { useSubAccount } from "@/context/sub-account-context";
 import { getFirebaseDb } from "@/lib/firebase/client";
 import { Button } from "@/components/ui/button";
@@ -87,8 +88,7 @@ export default function VoiceCampaignDetailPage() {
       toast.success(
         `Campaign stopped${parts.length ? ` — ${parts.join(", ")}` : ""}.`,
       );
-    } catch {
-      toast.error("Network error — try again.");
+    } catch (err) { toast.error(describeError(err, "Network error — try again."), { duration: 12_000 });
     } finally {
       setCancellingMode(null);
     }

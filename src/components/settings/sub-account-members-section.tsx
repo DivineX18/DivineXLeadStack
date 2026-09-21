@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import {
   collection,
   onSnapshot,
@@ -204,8 +205,7 @@ export function SubAccountMembersSection() {
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Invite link copied");
-    } catch {
-      toast.error("Could not copy — your browser blocked clipboard access");
+    } catch (err) { toast.error(describeError(err, "Could not copy — your browser blocked clipboard access"), { duration: 12_000 });
     }
   }
 

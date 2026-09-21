@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { Bell, Loader2, Smartphone, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -214,9 +215,8 @@ export function NotificationsSection() {
       setState("ready");
       await refreshDevices();
       toast.success("Notifications disabled on this device");
-    } catch (err) {
-      console.error(err);
-      toast.error("Couldn't disable notifications on this device");
+    } catch (err) { console.error(err);
+      toast.error(describeError(err, "Couldn't disable notifications on this device"), { duration: 12_000 });
     } finally {
       setBusy(false);
     }
@@ -239,8 +239,7 @@ export function NotificationsSection() {
         setState("ready");
       }
       await refreshDevices();
-    } catch {
-      toast.error("Couldn't remove that device");
+    } catch (err) { toast.error(describeError(err, "Couldn't remove that device"), { duration: 12_000 });
     }
   }
 

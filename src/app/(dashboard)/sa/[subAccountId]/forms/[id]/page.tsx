@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import {
   ArrowLeft,
   AtSign,
@@ -322,9 +323,8 @@ export default function FormBuilderPage() {
     setSaving(true);
     try {
       await updateForm(form.id, patch);
-    } catch (err) {
-      console.error(err);
-      toast.error("Couldn't save. Try again.");
+    } catch (err) { console.error(err);
+      toast.error(describeError(err, "Couldn't save. Try again."), { duration: 12_000 });
     } finally {
       setSaving(false);
     }

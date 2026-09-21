@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import {
   Bookmark,
   Facebook,
@@ -128,8 +129,7 @@ export function SocialPostComposer({
       reset();
       onOpenChange(false);
       onCreated?.();
-    } catch {
-      toast.error("Couldn't save the post. Please try again.");
+    } catch (err) { toast.error(describeError(err, "Couldn't save the post. Please try again."), { duration: 12_000 });
     } finally {
       setSaving(null);
     }

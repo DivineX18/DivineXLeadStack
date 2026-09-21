@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { FileText, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 
 /**
  * UNIFIED CREATE — the Asset Studio surface.
@@ -121,8 +122,7 @@ export function AscendAssetsSection({ saId, isAdmin }: { saId: string; isAdmin: 
         }
       }
       toast.error("That's taking longer than expected. Check your assets shortly — it may still arrive.");
-    } catch {
-      toast.error("Couldn't reach the generator. Try again in a moment.");
+    } catch (err) { toast.error(describeError(err, "Couldn't reach the generator. Try again in a moment."), { duration: 12_000 });
     } finally {
       setGenerating(null);
     }

@@ -6,6 +6,7 @@ import {
   type FormEvent,
 } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import {
   Trash2,
   MapPin,
@@ -190,9 +191,8 @@ export function EventDialog({
         toast.success("Event created");
       }
       onOpenChange(false);
-    } catch (err) {
-      console.error(err);
-      toast.error("Couldn't save event. Try again.");
+    } catch (err) { console.error(err);
+      toast.error(describeError(err, "Couldn't save event. Try again."), { duration: 12_000 });
     } finally {
       setSaving(false);
     }
@@ -206,9 +206,8 @@ export function EventDialog({
       await deleteEvent(event.id);
       toast.success("Event deleted");
       onOpenChange(false);
-    } catch (err) {
-      console.error(err);
-      toast.error("Couldn't delete event.");
+    } catch (err) { console.error(err);
+      toast.error(describeError(err, "Couldn't delete event."), { duration: 12_000 });
     } finally {
       setDeleting(false);
     }

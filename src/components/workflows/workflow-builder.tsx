@@ -4,6 +4,7 @@ import { createContext, useContext, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import {
   ArrowLeft,
   Bell,
@@ -218,8 +219,7 @@ export function WorkflowBuilder({
       setStatus(effective);
       toast.success("Workflow saved");
       router.refresh();
-    } catch {
-      toast.error("Couldn't save workflow");
+    } catch (err) { toast.error(describeError(err, "Couldn't save workflow"), { duration: 12_000 });
     } finally {
       setSaving(false);
     }

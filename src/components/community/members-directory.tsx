@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { CalendarDays, Search, Tag } from "lucide-react";
 import { MemberAvatar } from "@/components/community/member-avatar";
 import { ActionsMenu, type MenuItem } from "@/components/community/actions-menu";
@@ -132,8 +133,7 @@ export function MembersDirectory({
         remove: "Member removed",
       };
       toast.success(msg[action]);
-    } catch {
-      toast.error("Action failed");
+    } catch (err) { toast.error(describeError(err, "Action failed"), { duration: 12_000 });
     } finally {
       setBusy(null);
     }

@@ -7,6 +7,7 @@ import {
   type FormEvent,
 } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { Eye, Loader2, RefreshCcw, Sparkles, User } from "lucide-react";
 import { useSubAccount } from "@/context/sub-account-context";
 import { Button } from "@/components/ui/button";
@@ -159,8 +160,7 @@ export function AgentProfileSection() {
         setWebsiteUrl(data.profile.websiteUrl ?? "");
       }
       toast.success("Agent profile saved");
-    } catch {
-      toast.error("Network error — try again");
+    } catch (err) { toast.error(describeError(err, "Network error — try again"), { duration: 12_000 });
     } finally {
       setSaving(false);
     }
@@ -190,8 +190,7 @@ export function AgentProfileSection() {
           ? `Captured ${data.chars} chars (homepage was longer — trimmed).`
           : `Captured ${data.chars} chars from the homepage.`,
       );
-    } catch {
-      toast.error("Network error — try again");
+    } catch (err) { toast.error(describeError(err, "Network error — try again"), { duration: 12_000 });
     } finally {
       setRefreshingKb(false);
     }

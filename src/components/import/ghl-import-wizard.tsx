@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import {
   ArrowRight,
   CheckCircle2,
@@ -110,8 +111,7 @@ export function GhlImportWizard() {
         return;
       }
       await loadPreview();
-    } catch {
-      toast.error("Couldn't connect. Please try again.");
+    } catch (err) { toast.error(describeError(err, "Couldn't connect. Please try again."), { duration: 12_000 });
     } finally {
       setBusy(false);
     }
@@ -196,8 +196,7 @@ export function GhlImportWizard() {
       setJobId(data.jobId);
       setJob(null);
       setStep("run");
-    } catch {
-      toast.error("Couldn't start the import. Please try again.");
+    } catch (err) { toast.error(describeError(err, "Couldn't start the import. Please try again."), { duration: 12_000 });
     } finally {
       setBusy(false);
     }

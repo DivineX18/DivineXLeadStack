@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ImageIcon, Link2, Loader2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 
 /**
  * SHARED MEDIA PICKER.
@@ -109,8 +110,7 @@ export function MediaPicker({
       onSelect(d.url);
       onClose();
       void loadLibrary();
-    } catch {
-      toast.error("Couldn't upload that file.");
+    } catch (err) { toast.error(describeError(err, "Couldn't upload that file."), { duration: 12_000 });
     } finally {
       setBusy(false);
     }

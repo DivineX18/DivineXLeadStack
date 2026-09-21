@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import {
   AlertTriangle,
   CalendarDays,
@@ -95,8 +96,7 @@ export default function SocialPlannerPage() {
         return;
       }
       toast.success("Post deleted.");
-    } catch {
-      toast.error("Couldn't delete the post. Please try again.");
+    } catch (err) { toast.error(describeError(err, "Couldn't delete the post. Please try again."), { duration: 12_000 });
     } finally {
       setDeletingId(null);
     }

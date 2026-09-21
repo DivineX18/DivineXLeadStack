@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { CheckCircle2, Circle, ExternalLink, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -78,8 +79,7 @@ export function LessonPlayer({
         toast.success("Course complete! 🎉");
         router.refresh();
       }
-    } catch {
-      toast.error("Couldn't save progress");
+    } catch (err) { toast.error(describeError(err, "Couldn't save progress"), { duration: 12_000 });
     } finally {
       setSaving(false);
     }

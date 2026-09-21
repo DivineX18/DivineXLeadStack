@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { BookOpen, Loader2 } from "lucide-react";
 import type { DesignFeedback, DesignPrinciple, FunnelDesignReview } from "@/types/design-intelligence";
 
@@ -55,8 +56,7 @@ export function DesignIntelligenceSection() {
       if (!res.ok) throw new Error();
       setPrinciples((prev) => prev?.map((p) => (p.id === id ? { ...p, active } : p)) ?? null);
       toast.success(active ? "Principle re-activated." : "Principle deactivated.");
-    } catch {
-      toast.error("Couldn't update — try again.");
+    } catch (err) { toast.error(describeError(err, "Couldn't update — try again."), { duration: 12_000 });
     } finally {
       setBusyId(null);
     }

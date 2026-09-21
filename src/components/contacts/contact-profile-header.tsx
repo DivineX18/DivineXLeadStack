@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import {
   Mail,
   Phone,
@@ -199,8 +200,7 @@ export function ContactProfileHeader({ contact }: { contact: Contact }) {
       } else {
         setDeleteState({ phase: "blocked", blockers: data.blockers ?? [] });
       }
-    } catch {
-      toast.error("Couldn't check this contact's links.");
+    } catch (err) { toast.error(describeError(err, "Couldn't check this contact's links."), { duration: 12_000 });
       setDeleteOpen(false);
     }
   }

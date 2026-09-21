@@ -9,6 +9,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { Loader2, MessageSquare } from "lucide-react";
 import { useSubAccount } from "@/context/sub-account-context";
 import { Button } from "@/components/ui/button";
@@ -128,8 +129,7 @@ export function SmsChannelSection() {
       }
       if (data.config) setConfig(data.config);
       toast.success("SMS channel saved");
-    } catch {
-      toast.error("Network error — try again");
+    } catch (err) { toast.error(describeError(err, "Network error — try again"), { duration: 12_000 });
     } finally {
       setSaving(false);
     }

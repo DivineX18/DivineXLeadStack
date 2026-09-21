@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import { ArrowLeft, Camera, Loader2 } from "lucide-react";
 
 const BIO_MAX = 300;
@@ -68,8 +69,7 @@ export function ProfileEditor({
       if (!res.ok) throw new Error();
       toast.success("Profile saved");
       router.refresh();
-    } catch {
-      toast.error("Couldn't save profile");
+    } catch (err) { toast.error(describeError(err, "Couldn't save profile"), { duration: 12_000 });
     } finally {
       setSaving(false);
     }

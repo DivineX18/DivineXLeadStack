@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { describeError } from "@/lib/errors/describe";
 import {
   AlertTriangle,
   ChevronDown,
@@ -128,8 +129,7 @@ export function SubAccountApiRecipesSection() {
     try {
       await navigator.clipboard.writeText(text);
       toast.success("Copied.");
-    } catch {
-      toast.error("Clipboard blocked — copy manually.");
+    } catch (err) { toast.error(describeError(err, "Clipboard blocked — copy manually."), { duration: 12_000 });
     }
   }
 
