@@ -110,5 +110,11 @@ services:
       # customer-facing domains, both served by this app.
       - key: ASCEND_INTELLIGENCE_API_URL
         value: https://divinex-business-intelligence.onrender.com/api
+      # The SSO exchange leg. Explicit here so it deploys with the service
+      # rather than depending on a dashboard value that has drifted before;
+      # lib/auth/ascend-exchange-url.ts additionally refuses a localhost
+      # value, because that drift took Operations down in production.
+      - key: ASCEND_SSO_EXCHANGE_URL
+        value: https://divinex-business-intelligence.onrender.com/api/sso/operations/exchange
       - key: ASCEND_INTELLIGENCE_API_SECRET
         sync: false

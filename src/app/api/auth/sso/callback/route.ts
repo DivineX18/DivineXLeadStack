@@ -5,6 +5,8 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { issueSsoBridgeToken } from "@/lib/auth/sso-bridge-token";
 import { resolveOrProvisionFirebaseUser } from "@/lib/auth/sso-jit-provisioning";
+import { publicUrl } from "@/lib/shell/public-origin";
+import { resolveAscendExchangeUrl } from "@/lib/auth/ascend-exchange-url";
 import { createIdentityLinkIdempotent } from "@/lib/auth/identity-links-service";
 import { createMappingIdempotent, getMappingBySubAccountId, updateMappingStatus } from "@/lib/workspace/workspace-mappings-service";
 import type { SubAccountDoc, SubAccountRole } from "@/types/tenancy";
@@ -74,7 +76,10 @@ async function auditSuccess(uid: string, subAccountId: string) {
 }
 
 function errorRedirect(request: Request, reason: string): NextResponse {
-  const url = new URL(ERROR_PAGE, request.url);
+  // NOT `request.url`. Behind Render's proxy that is the container's own
+  // loopback address, so this emitted https://localhost:10000/... and a real
+  // customer's browser refused the connection. See lib/shell/public-origin.
+  const url = publicUrl(request, ERROR_PAGE);
   url.searchParams.set("reason", reason);
   return NextResponse.redirect(url);
 }
@@ -87,7 +92,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     return errorRedirect(request, "missing_code");
   }
 
-  const exchangeUrl = process.env.ASCEND_SSO_EXCHANGE_URL;
+  const exchangeUrl = resolveAscendExchangeUrl();
   const sharedSecret = process.env.ASCEND_SSO_SHARED_SECRET;
   if (!exchangeUrl || !sharedSecret) {
     console.error("[sso/callback] ASCEND_SSO_EXCHANGE_URL/ASCEND_SSO_SHARED_SECRET not configured");
@@ -226,7 +231,9 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   await auditSuccess(uid, leadstackSubAccountId);
 
-  const response = NextResponse.redirect(new URL("/auth/sso/finish", request.url));
+  // Same defect as the error path, and worse: this is the SUCCESS leg, so a
+  // customer whose SSO worked perfectly was still handed a loopback URL.
+  const response = NextResponse.redirect(publicUrl(request, "/auth/sso/finish"));
   response.cookies.set(BRIDGE_COOKIE, token, {
     httpOnly: true,
     secure: true,
