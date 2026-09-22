@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { startPublicGrowthScan } from "@/lib/intelligence/public-growth-scan";
+import { resolveProductSurface } from "@/lib/landing/resolve-product-surface";
 
 export const dynamic = "force-dynamic";
 
@@ -39,11 +40,22 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "That doesn't look like a website address. Try something like yourbusiness.com" }, { status: 400 });
   }
 
+  // The host decides the commercial contract, and it is decided HERE, before
+  // the scan crosses into the intelligence service — never reconstructed
+  // afterwards from APP_URL or from wherever the customer happens to be when
+  // they come back. app.divinex.io is the Ascend front door and must sell
+  // Ascend; every other host keeps selling Zeno exactly as before.
+  //
+  // Read from the request's own host, so a client cannot nominate a product.
+  const surface = await resolveProductSurface();
+  const acquisitionProduct = surface === "unified" ? "growth_system" : "ascend_pro";
+
   const result = await startPublicGrowthScan({
     name: name || email.split("@")[0],
     email,
     businessType,
     websiteUrl: normalizedUrl,
+    acquisitionProduct,
   });
 
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });

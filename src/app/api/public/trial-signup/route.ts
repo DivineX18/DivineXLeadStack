@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { BillingError } from "@/lib/server/billing-service";
 import { createPublicSignupCheckoutSession } from "@/lib/server/public-signup-service";
+import { startAscendSoloCheckout } from "@/lib/intelligence/ascend-solo-checkout";
+import { resolveProductSurface } from "@/lib/landing/resolve-product-surface";
 import {
   markTrialSignupCheckoutStarted,
   parseTrialSignup,
@@ -71,6 +73,29 @@ export async function POST(request: Request) {
   // Recorded BEFORE checkout so an abandonment at the card is still a lead.
   // That is the entire point of splitting the step.
   const leadId = await recordTrialSignup(parsed.value);
+
+  // ASCEND SOLO IS SOLD BY BI, NOT BY FLOW CLIENT BILLING.
+  //
+  // This surface used to buy a Flow `unified` plan at $197 — a second,
+  // independent Ascend Solo subscription that granted no BI entitlement, so
+  // it reached none of the provisioning, mapping or Operations SSO the
+  // product is. The presentation here is unchanged; only the purchase moves
+  // to the canonical owner.
+  //
+  // Flow's own surface (crm) is untouched and keeps buying Flow plans.
+  if ((await resolveProductSurface()) === "unified") {
+    const checkout = await startAscendSoloCheckout({
+      email: parsed.value.email,
+      name: [parsed.value.firstName, parsed.value.lastName].filter(Boolean).join(" ") || null,
+      successUrl: `${base}/pricing/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${base}/start?cancelled=1`,
+    });
+    if (!checkout.ok) {
+      return NextResponse.json({ error: checkout.error }, { status: checkout.status });
+    }
+    await markTrialSignupCheckoutStarted(leadId);
+    return NextResponse.json({ url: checkout.url });
+  }
 
   try {
     const { url } = await createPublicSignupCheckoutSession({

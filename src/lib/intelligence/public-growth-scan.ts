@@ -37,6 +37,18 @@ export interface ScanStartInput {
   email: string;
   businessType: string;
   websiteUrl?: string | null;
+  /**
+   * WHICH COMMERCIAL CONTRACT THIS SCAN IS AN ACQUISITION FOR.
+   *
+   * Decided from the HOST here, on the server, and sent with the scan — not
+   * inferred downstream. Nothing about a scan used to record where it came
+   * from, so by the time a visitor reached checkout the Ascend Growth Scan on
+   * app.divinex.io and the Zeno scan were indistinguishable and everyone was
+   * sold Zeno at $77. Ascend was unbuyable through its own front door.
+   *
+   * Omitted means Zeno, which is what every scan predating this got.
+   */
+  acquisitionProduct?: "growth_system" | "ascend_pro";
 }
 
 export type ScanStartResult =
@@ -61,6 +73,7 @@ export async function startPublicGrowthScan(input: ScanStartInput): Promise<Scan
         email: input.email,
         businessType: input.businessType,
         ...(input.websiteUrl ? { websiteUrl: input.websiteUrl } : {}),
+        ...(input.acquisitionProduct ? { acquisitionProduct: input.acquisitionProduct } : {}),
       }),
       signal: AbortSignal.timeout(45_000),
     });
