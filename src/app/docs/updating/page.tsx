@@ -38,7 +38,7 @@ export default async function UpdatingDocsPage() {
       <header className="border-b">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2 text-lg font-bold">
-            <LogoMark size={20} idSuffix="-docs" />
+            <LogoMark size={20} idSuffix="-docs" name={brand.name} />
             {brand.name}
           </Link>
           <Button render={<Link href="/" />} variant="outline" size="sm">

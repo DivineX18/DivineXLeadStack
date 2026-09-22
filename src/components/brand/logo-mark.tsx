@@ -20,6 +20,17 @@ interface LogoMarkProps {
   className?: string;
   /** Optional unique suffix when multiple instances render in one document — keeps the gradient defs from colliding across SSR + hydration. */
   idSuffix?: string;
+  /**
+   * The brand name to take the monogram from.
+   *
+   * Defaults to the build-time CUSTOM_BRAND, which is Flow — so on the
+   * Ascend host the mark read "F" beside the word "Ascend". One deployment
+   * serves both products and only the NAME is host-swapped
+   * (brandForProduct), so any caller that has already resolved the brand for
+   * its surface should pass it through rather than letting the glyph fall
+   * back to the other product's initial.
+   */
+  name?: string;
 }
 
 export function LogoMark(props: LogoMarkProps) {
@@ -28,9 +39,9 @@ export function LogoMark(props: LogoMarkProps) {
 }
 
 /** Neutral buyer-default badge — mirrors scripts/pwa-default-icon.svg. Renders a single-letter monogram from the resolved brand name, so it never leaks a hardcoded product name. */
-function BrandMark({ size = 20, className, idSuffix = "" }: LogoMarkProps) {
+function BrandMark({ size = 20, className, idSuffix = "", name }: LogoMarkProps) {
   const gradId = `mycrm-grad${idSuffix}`;
-  const monogram = (CUSTOM_BRAND.name.trim()[0] ?? "F").toUpperCase();
+  const monogram = ((name ?? CUSTOM_BRAND.name).trim()[0] ?? "F").toUpperCase();
   return (
     <svg
       width={size}

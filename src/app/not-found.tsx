@@ -15,7 +15,7 @@ export default async function NotFound() {
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-md space-y-6 text-center">
         <Link href="/" className="inline-flex items-center gap-2">
-          <LogoMark size={24} idSuffix="-404" />
+          <LogoMark size={24} idSuffix="-404" name={brand.name} />
           <span className="text-2xl font-bold">{brand.name}</span>
         </Link>
         <div className="space-y-2">

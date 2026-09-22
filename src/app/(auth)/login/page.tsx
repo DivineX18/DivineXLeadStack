@@ -11,7 +11,7 @@ export default async function LoginPage() {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
           <Link href="/" className="inline-flex items-center gap-2">
-            <LogoMark size={24} idSuffix="-login" />
+            <LogoMark size={24} idSuffix="-login" name={brand.name} />
             <h1 className="text-2xl font-bold">{brand.name}</h1>
           </Link>
           <p className="mt-2 text-sm text-muted-foreground">

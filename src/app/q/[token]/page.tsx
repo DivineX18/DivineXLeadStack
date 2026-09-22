@@ -111,7 +111,7 @@ export default async function PublicQuotePage({ params }: PageProps) {
               className="h-6 w-auto max-w-[140px] object-contain"
             />
           ) : (
-            <LogoMark size={18} idSuffix="-public-quote" />
+            <LogoMark size={18} idSuffix="-public-quote" name={brand.name} />
           )}
           <span className="font-medium">{businessName}</span>
           <span className="text-muted-foreground">·</span>

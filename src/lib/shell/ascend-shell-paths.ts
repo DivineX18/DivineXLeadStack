@@ -20,39 +20,50 @@
 /** Bare-path-only maps: the section index exists under /app, but deeper
  *  sub-paths (e.g. a detail page) do NOT — so only the exact bare path is
  *  rewritten; anything deeper falls through to the legacy /sa route. */
+/** Bare-path-only maps: the section index exists under /app, but deeper
+ *  sub-paths (e.g. a detail page) do NOT — so only the exact bare path is
+ *  rewritten; anything deeper falls through to the legacy /sa route.
+ *
+ *  EVERY ENTRY HERE WAS VERIFIED AGAINST THE ROUTE TREE. Most of these sat
+ *  in PREFIX_MAP while having no detail route under /app, which is how a VA
+ *  clicking Edit on a form reached "Page not found": /forms/{id} was
+ *  rewritten to /app/create/forms/{id}, and only /app/create/forms/page.tsx
+ *  exists. The file's own contract — "a link can never 404" — depends on an
+ *  entry living here rather than in the prefix table when the subtree has no
+ *  /app routes. */
 const EXACT_MAP: Record<string, string> = {
   "/dashboard": "/",
   "/ai-suite": "/scale",
   "/website": "/create",
-  "/funnels": "/create",
+  // Index exists under /app; no detail route, so deep links fall through.
+  "/forms": "/create/forms",
+  "/booking": "/create/booking",
+  "/products": "/create/products",
+  "/quotes": "/create/quotes",
+  "/templates": "/create/templates",
+  "/funnels/orders": "/create/orders",
+  "/pipeline": "/grow/pipeline",
+  "/conversations": "/grow/conversations",
+  "/tasks": "/grow/tasks",
+  "/calendar": "/grow/calendar",
+  "/ai-agents": "/agents",
+  "/reports": "/performance",
+  "/dashboard/settings": "/settings",
 };
 
-/** Step C — features that now have real /app adapters mounting the SAME Flow
- *  page component (see components/shell/unified-feature.tsx). Registered as
- *  prefixes below so detail routes resolve too where the Flow route tree has
- *  them; the fallback still guarantees no 404. */
-
-/** Prefix maps: both the index AND its sub-paths have real /app routes,
- *  so the whole subtree is rewritten. `to` replaces `from`. */
+/** Prefix maps: both the index AND its sub-paths have real /app routes, so
+ *  the whole subtree is rewritten. `to` replaces `from`.
+ *
+ *  Only four subtrees qualify, each confirmed to carry a detail segment.
+ *  Several former entries pointed at directories that do not exist at all
+ *  (/leads/contacts, /leads/pipeline, /create/broadcasts, /create/workflows)
+ *  — those sections live under /grow and /launch — so the rewrite produced a
+ *  404 for the INDEX as well as for detail pages. */
 const PREFIX_MAP: Array<{ from: string; to: string }> = [
-  { from: "/dashboard/settings", to: "/settings" },
-  { from: "/contacts", to: "/leads/contacts" },
-  { from: "/funnels", to: "/create/funnels" },
-  { from: "/broadcasts", to: "/create/broadcasts" },
-  { from: "/workflows", to: "/create/workflows" },
-  // The Create -> Orders escape: this is the entry that fixes it.
-  { from: "/funnels/orders", to: "/create/orders" },
-  { from: "/forms", to: "/create/forms" },
-  { from: "/booking", to: "/create/booking" },
-  { from: "/products", to: "/create/products" },
-  { from: "/quotes", to: "/create/quotes" },
-  { from: "/templates", to: "/create/templates" },
-  { from: "/pipeline", to: "/leads/pipeline" },
-  { from: "/conversations", to: "/leads/conversations" },
-  { from: "/tasks", to: "/leads/tasks" },
-  { from: "/calendar", to: "/leads/calendar" },
-  { from: "/ai-agents", to: "/agents" },
-  { from: "/reports", to: "/performance" },
+  { from: "/contacts", to: "/grow/contacts" },      // [id]
+  { from: "/funnels", to: "/create/funnels" },      // [funnelId]
+  { from: "/broadcasts", to: "/launch/broadcasts" },// [broadcastId]
+  { from: "/workflows", to: "/launch/workflows" },  // [workflowId]
 ];
 
 /**
