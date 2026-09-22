@@ -35,12 +35,9 @@ const EXACT_MAP: Record<string, string> = {
   "/dashboard": "/",
   "/ai-suite": "/scale",
   "/website": "/create",
-  // Index exists under /app; no detail route, so deep links fall through.
-  "/forms": "/create/forms",
-  "/booking": "/create/booking",
+  // Index only: Products has no detail route in Flow either, so there is
+  // nothing deeper for a link to reach.
   "/products": "/create/products",
-  "/quotes": "/create/quotes",
-  "/templates": "/create/templates",
   "/funnels/orders": "/create/orders",
   "/pipeline": "/grow/pipeline",
   "/conversations": "/grow/conversations",
@@ -54,14 +51,23 @@ const EXACT_MAP: Record<string, string> = {
 /** Prefix maps: both the index AND its sub-paths have real /app routes, so
  *  the whole subtree is rewritten. `to` replaces `from`.
  *
- *  Only four subtrees qualify, each confirmed to carry a detail segment.
- *  Several former entries pointed at directories that do not exist at all
- *  (/leads/contacts, /leads/pipeline, /create/broadcasts, /create/workflows)
- *  — those sections live under /grow and /launch — so the rewrite produced a
- *  404 for the INDEX as well as for detail pages. */
+ *  A section belongs here only once every page beneath it exists under /app.
+ *  Getting that wrong has failed in both directions. Entries once pointed at
+ *  directories that do not exist at all (/leads/contacts, /leads/pipeline,
+ *  /create/broadcasts, /create/workflows — those sections live under /grow
+ *  and /launch), 404ing the INDEX as well as detail pages. And /forms claimed
+ *  a subtree that was only an index, so editing a form 404'd. Demoting it to
+ *  an exact entry stopped the 404 but dumped the operator into Flow's own
+ *  chrome; the real fix was building the missing in-shell route.
+ *
+ *  ascendShellRouting.test.ts enforces both halves against the real tree. */
 const PREFIX_MAP: Array<{ from: string; to: string }> = [
   { from: "/contacts", to: "/grow/contacts" },      // [id]
+  { from: "/forms", to: "/create/forms" },          // [id]
   { from: "/funnels", to: "/create/funnels" },      // [funnelId]
+  { from: "/quotes", to: "/create/quotes" },        // [id], new
+  { from: "/templates", to: "/create/templates" },  // [templateId], new
+  { from: "/booking", to: "/create/booking" },      // [slug], new
   { from: "/broadcasts", to: "/launch/broadcasts" },// [broadcastId]
   { from: "/workflows", to: "/launch/workflows" },  // [workflowId]
 ];

@@ -15,7 +15,10 @@ import type { Contact } from "@/types/contacts";
 import type { Quote } from "@/types/quotes";
 
 interface PageProps {
-  params: Promise<{ subAccountId: string; id: string }>;
+  // Only `id` is read here; the workspace comes from useSubAccount(). Not
+  // declaring `subAccountId` is what lets the /app/create/quotes/[id]
+  // adapter mount this same component in the Ascend shell.
+  params: Promise<{ id: string }>;
 }
 
 /**

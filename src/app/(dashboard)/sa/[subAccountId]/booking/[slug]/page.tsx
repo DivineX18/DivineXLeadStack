@@ -31,7 +31,9 @@ import type { CalendarEvent } from "@/types/events";
  * live doc via onSnapshot so a teammate's edit reflects live.
  */
 export default function EditBookingPagePage() {
-  const params = useParams<{ subAccountId: string; slug: string }>();
+  // The workspace comes from useSubAccount(), never from the route — which
+  // is why this editor also mounts under /app/create/booking/[slug].
+  const params = useParams<{ slug: string }>();
   const slug = params.slug;
   const { subAccountId, saPath, isAdmin } = useSubAccount();
   const [page, setPage] = useState<BookingPage | null>(null);
