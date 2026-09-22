@@ -14,6 +14,7 @@ import { formatCurrency, formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Quote, QuoteStatus } from "@/types/quotes";
 import type { TenantScope } from "@/types";
+import { useWorkspaceHref } from "@/lib/shell/use-workspace-href";
 
 /**
  * Sub-account-wide quote list. Subscribes to all quotes in the active
@@ -50,6 +51,7 @@ interface QuoteListProps {
 }
 
 export function QuoteList({ scope, contactNames }: QuoteListProps) {
+  const href = useWorkspaceHref(scope.subAccountId);
   const { ready: filterReady, filter: territoryFilter } =
     useEffectiveTerritoryFilter();
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -196,7 +198,7 @@ export function QuoteList({ scope, contactNames }: QuoteListProps) {
               return (
                 <li key={q.id}>
                   <Link
-                    href={`/sa/${scope.subAccountId}/quotes/${q.id}`}
+                    href={href(`/quotes/${q.id}`)}
                     className="grid grid-cols-2 gap-2 px-4 py-3 text-sm transition-colors hover:bg-muted/30 sm:grid-cols-[1fr_6rem_2fr_1fr_8rem_8rem] sm:items-center"
                   >
                     <div className="font-mono text-xs font-semibold text-foreground sm:text-sm">

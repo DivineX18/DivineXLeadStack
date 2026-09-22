@@ -12,6 +12,7 @@ import { computeQuoteTotals, effectiveQuoteStatus } from "@/lib/quotes/calc";
 import { formatCurrency, formatRelativeTime } from "@/lib/format";
 import type { Quote } from "@/types/quotes";
 import type { TenantScope } from "@/types";
+import { useWorkspaceHref } from "@/lib/shell/use-workspace-href";
 
 /**
  * Section card for the contact profile page. Lists quotes for a single
@@ -28,6 +29,7 @@ interface ContactQuotesProps {
 }
 
 export function ContactQuotes({ contactId, scope }: ContactQuotesProps) {
+  const href = useWorkspaceHref(scope.subAccountId);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,7 +46,7 @@ export function ContactQuotes({ contactId, scope }: ContactQuotesProps) {
     return unsubscribe;
   }, [contactId, scope]);
 
-  const newHref = `/sa/${scope.subAccountId}/quotes/new?contactId=${contactId}`;
+  const newHref = href(`/quotes/new?contactId=${contactId}`);
 
   return (
     <Card className="p-5">
@@ -85,7 +87,7 @@ export function ContactQuotes({ contactId, scope }: ContactQuotesProps) {
             return (
               <li key={q.id}>
                 <Link
-                  href={`/sa/${scope.subAccountId}/quotes/${q.id}`}
+                  href={href(`/quotes/${q.id}`)}
                   className="flex items-center justify-between gap-3 py-2.5 text-sm transition-colors hover:bg-muted/30"
                 >
                   <div className="min-w-0">

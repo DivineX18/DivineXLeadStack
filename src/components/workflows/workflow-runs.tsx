@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { NODE_LABELS } from "@/lib/workflows/catalog";
 import type { WorkflowNodeType, WorkflowRunStatus } from "@/types/workflows";
+import { useWorkspaceHref } from "@/lib/shell/use-workspace-href";
 
 interface RunRow {
   id: string;
@@ -44,6 +45,7 @@ export function WorkflowRuns({
   saId: string;
   workflowId: string;
 }) {
+  const href = useWorkspaceHref(saId);
   const [runs, setRuns] = useState<RunRow[] | null>(null);
   const [open, setOpen] = useState<Set<string>>(new Set());
 
@@ -63,7 +65,7 @@ export function WorkflowRuns({
     <div className="mx-auto max-w-2xl space-y-4">
       <div className="flex items-center justify-between">
         <Link
-          href={`/sa/${saId}/workflows/${workflowId}`}
+          href={href(`/workflows/${workflowId}`)}
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" /> Back to builder

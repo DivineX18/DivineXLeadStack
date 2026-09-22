@@ -30,6 +30,7 @@ import {
 import { WorkflowStatusBadge } from "./workflow-status-badge";
 import { TRIGGER_LABELS } from "@/lib/workflows/catalog";
 import type { WorkflowStatus, WorkflowTriggerType } from "@/types/workflows";
+import { useWorkspaceHref } from "@/lib/shell/use-workspace-href";
 
 type WorkflowTemplate =
   | "speed-to-lead"
@@ -86,6 +87,7 @@ interface Row {
 
 export function WorkflowsList({ saId }: { saId: string }) {
   const router = useRouter();
+  const href = useWorkspaceHref(saId);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [creating, setCreating] = useState(false);
 
@@ -109,7 +111,7 @@ export function WorkflowsList({ saId }: { saId: string }) {
       });
       const d = (await res.json()) as { id?: string };
       if (!res.ok || !d.id) throw new Error();
-      router.push(`/sa/${saId}/workflows/${d.id}`);
+      router.push(href(`/workflows/${d.id}`));
     } catch (err) { toast.error(describeError(err, "Couldn't create workflow"), { duration: 12_000 });
       setCreating(false);
     }
@@ -190,7 +192,7 @@ export function WorkflowsList({ saId }: { saId: string }) {
         <div className="divide-y overflow-hidden rounded-xl border bg-card">
           {rows.map((w) => (
             <div key={w.id} className="flex items-center gap-3 p-4 hover:bg-muted/40">
-              <Link href={`/sa/${saId}/workflows/${w.id}`} className="min-w-0 flex-1">
+              <Link href={href(`/workflows/${w.id}`)} className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="truncate font-medium">{w.name}</span>
                   <WorkflowStatusBadge status={w.status} />

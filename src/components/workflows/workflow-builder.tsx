@@ -58,6 +58,7 @@ import {
   type WhatsappTemplateOption,
 } from "./node-config-dialog";
 import { TestDialog } from "./test-dialog";
+import { useWorkspaceHref } from "@/lib/shell/use-workspace-href";
 import type {
   WorkflowNodeType,
   WorkflowStatus,
@@ -165,6 +166,7 @@ export function WorkflowBuilder({
   whatsappTemplates: WhatsappTemplateOption[];
 }) {
   const router = useRouter();
+  const href = useWorkspaceHref(saId);
   const [name, setName] = useState(initial.name);
   const [status, setStatus] = useState<WorkflowStatus>(initial.status);
   const [trigger, setTrigger] = useState<WorkflowTrigger>(initial.trigger);
@@ -230,7 +232,7 @@ export function WorkflowBuilder({
       <div className="mx-auto max-w-2xl space-y-4 pb-24">
         <div className="flex items-center justify-between gap-3">
           <Link
-            href={`/sa/${saId}/workflows`}
+            href={href("/workflows")}
             className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm"
           >
             <ArrowLeft className="h-4 w-4" /> Workflows
@@ -241,7 +243,7 @@ export function WorkflowBuilder({
               variant="ghost"
               size="sm"
               render={
-                <Link href={`/sa/${saId}/workflows/${initial.id}/runs`} />
+                <Link href={href(`/workflows/${initial.id}/runs`)} />
               }
             >
               Runs
