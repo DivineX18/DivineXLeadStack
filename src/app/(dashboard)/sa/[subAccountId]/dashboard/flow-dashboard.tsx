@@ -268,8 +268,11 @@ export function FlowDashboard() {
               bg="bg-sky-500/10"
               loading={loading}
             />
+            {/* /automations was removed when Workflows replaced it; this tile
+                still pointed there, so the first tile on the workspace home
+                page 404'd. Workflows is where these live now. */}
             <StatCard
-              href={saPath("/automations")}
+              href={saPath("/workflows")}
               icon={<Zap className="h-4 w-4" />}
               label="Automations"
               value={

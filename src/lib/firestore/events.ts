@@ -3,6 +3,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   onSnapshot,
   query,
   serverTimestamp,
@@ -120,6 +121,10 @@ export async function updateEvent(
   id: string,
   data: Partial<EventFormData>,
 ): Promise<void> {
+  const ref = doc(getFirebaseDb(), EVENTS, id);
+  const currentContactId = ((await getDoc(ref)).data()?.contactId ?? null) as
+    | string
+    | null;
   const patch: Record<string, unknown> = { updatedAt: serverTimestamp() };
   if (data.title !== undefined) patch.title = data.title;
   if (data.startAt !== undefined)
@@ -127,15 +132,19 @@ export async function updateEvent(
   if (data.endAt !== undefined) patch.endAt = Timestamp.fromDate(data.endAt);
   if (data.contactId !== undefined) {
     patch.contactId = data.contactId;
-    // Re-derive territory when the linked contact changes so the event
-    // follows the new account's territory (Global when unlinked).
-    patch.territoryId =
-      (await territoryIdForContact(data.contactId)) ?? GLOBAL_TERRITORY_ID;
+    // Only when the linked contact actually CHANGED. Rewriting territoryId on
+    // every edit failed `territoryIdUnchangedOrAdmin` for non-admins whenever
+    // the re-derived value differed from the stored one, so a collaborator
+    // could not edit an event at all. Same defect as tasks.ts.
+    if (data.contactId !== currentContactId) {
+      patch.territoryId =
+        (await territoryIdForContact(data.contactId)) ?? GLOBAL_TERRITORY_ID;
+    }
   }
   if (data.location !== undefined) patch.location = data.location;
   if (data.notes !== undefined) patch.notes = data.notes;
   if (data.meetingUrl !== undefined) patch.meetingUrl = data.meetingUrl;
-  await updateDoc(doc(getFirebaseDb(), EVENTS, id), patch);
+  await updateDoc(ref, patch);
 }
 
 export async function deleteEvent(id: string): Promise<void> {

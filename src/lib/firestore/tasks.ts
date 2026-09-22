@@ -3,6 +3,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   onSnapshot,
   query,
   serverTimestamp,
@@ -44,11 +45,20 @@ function dueToPatch(data: Partial<TaskFormData>): Record<string, unknown> {
 
 async function patchWithTerritory(
   data: Partial<TaskFormData>,
+  currentContactId: string | null,
 ): Promise<Record<string, unknown>> {
   const patch = dueToPatch(data);
-  // Re-derive territory when the linked contact changes so the task
-  // follows the new account's territory (Global when unlinked).
-  if (data.contactId !== undefined) {
+  // Re-derive territory ONLY when the linked contact actually CHANGED.
+  //
+  // This used to fire whenever `contactId` was merely PRESENT in the patch,
+  // and the task dialog always sends it — so every edit rewrote
+  // `territoryId`. The `territoryIdUnchangedOrAdmin` rule then rejected the
+  // write for any non-admin whenever the re-derived value differed from what
+  // was stored, which it does on any legacy task holding no territoryId
+  // (null stored, "global" written). A collaborator could not rename a task.
+  // The rule does not consult `territoryScopingEnabled`, so it bit even with
+  // scoping switched off.
+  if (data.contactId !== undefined && data.contactId !== currentContactId) {
     patch.territoryId =
       (await territoryIdForContact(data.contactId)) ?? GLOBAL_TERRITORY_ID;
   }
@@ -191,8 +201,11 @@ export async function updateTask(
   id: string,
   data: Partial<TaskFormData>,
 ): Promise<void> {
-  await updateDoc(doc(getFirebaseDb(), TASKS, id), {
-    ...(await patchWithTerritory(data)),
+  const ref = doc(getFirebaseDb(), TASKS, id);
+  const snap = await getDoc(ref);
+  const currentContactId = (snap.data()?.contactId ?? null) as string | null;
+  await updateDoc(ref, {
+    ...(await patchWithTerritory(data, currentContactId)),
     updatedAt: serverTimestamp(),
   });
 }

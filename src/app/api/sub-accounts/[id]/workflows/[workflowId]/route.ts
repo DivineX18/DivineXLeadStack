@@ -6,26 +6,17 @@ import {
   updateWorkflowServerSide,
   type WorkflowPatch,
 } from "@/lib/server/workflows-service";
-import type { WorkflowNode, WorkflowNodeType } from "@/types/workflows";
+import { WORKFLOW_NODE_TYPES, type WorkflowNode } from "@/types/workflows";
 
 export const dynamic = "force-dynamic";
 
-const NODE_TYPES: WorkflowNodeType[] = [
-  "send_email",
-  "send_sms",
-  "whatsapp_template",
-  "wait",
-  "if_else",
-  "goal",
-  "add_tag",
-  "remove_tag",
-  "move_stage",
-  "update_field",
-  "create_task",
-  "create_deal",
-  "notify",
-  "webhook",
-];
+/* The node-type allowlist is imported from types/workflows.ts, not restated
+ * here. A hand-written copy drifted: `wait_until` existed in the union, the
+ * add-step menu, the executor registry and the builder's icons, but never in
+ * this route's copy — so one such step made the whole nodes map invalid and
+ * the workflow permanently unsavable. Zeno generates those nodes, so
+ * AI-built workflows rejected the first human edit. The type is now derived
+ * from the runtime array, so there is only one list. */
 
 /** Defensive sanitize of a client-supplied nodes map (authed staff, but keep
  *  the shape honest so a malformed save can't poison the engine). */
@@ -34,7 +25,7 @@ function sanitizeNodes(raw: unknown): Record<string, WorkflowNode> | null {
   const out: Record<string, WorkflowNode> = {};
   for (const [id, v] of Object.entries(raw as Record<string, unknown>)) {
     const n = v as Partial<WorkflowNode>;
-    if (!n || typeof n.type !== "string" || !NODE_TYPES.includes(n.type)) {
+    if (!n || typeof n.type !== "string" || !(WORKFLOW_NODE_TYPES as readonly string[]).includes(n.type)) {
       return null;
     }
     out[id] = {

@@ -66,22 +66,44 @@ export interface WorkflowTrigger {
 
 /* --------------------------------- Nodes ------------------------------- */
 
-export type WorkflowNodeType =
-  | "wait_until"
-  | "send_email"
-  | "send_sms"
-  | "whatsapp_template"
-  | "wait"
-  | "if_else"
-  | "goal"
-  | "add_tag"
-  | "remove_tag"
-  | "move_stage"
-  | "update_field"
-  | "create_task"
-  | "create_deal"
-  | "notify"
-  | "webhook";
+/**
+ * THE SINGLE SOURCE OF TRUTH FOR NODE TYPES — runtime array first, type
+ * derived from it.
+ *
+ * This was a bare type union, and because types vanish at compile time the
+ * save route kept its own hand-written copy to validate against. They
+ * drifted: `wait_until` was in the union, in the add-step menu
+ * (catalog.ts ADDABLE_TYPES), in the executor registry (engine.ts REGISTRY)
+ * and in the builder's icon map — but never in the route's copy. One
+ * `wait_until` step made the entire nodes map fail validation, so the
+ * workflow became permanently unsavable with a bare "Couldn't save
+ * workflow". Zeno GENERATES these nodes for anchored follow-ups
+ * (compose-strategy.ts), so an AI-built workflow rejected the first human
+ * edit it received.
+ *
+ * Identical to the funnel-section bug (see FUNNEL_SECTION_TYPES in
+ * types/funnels.ts). Deriving the type from the array makes the drift a
+ * compile error instead of a 400: there is nowhere left to forget.
+ */
+export const WORKFLOW_NODE_TYPES = [
+  "wait_until",
+  "send_email",
+  "send_sms",
+  "whatsapp_template",
+  "wait",
+  "if_else",
+  "goal",
+  "add_tag",
+  "remove_tag",
+  "move_stage",
+  "update_field",
+  "create_task",
+  "create_deal",
+  "notify",
+  "webhook",
+] as const;
+
+export type WorkflowNodeType = (typeof WORKFLOW_NODE_TYPES)[number];
 
 export interface WorkflowNode {
   id: string;
