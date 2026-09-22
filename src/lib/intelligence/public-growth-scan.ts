@@ -91,15 +91,47 @@ export async function startPublicGrowthScan(input: ScanStartInput): Promise<Scan
   }
 
   if (!res.ok || !body?.shareToken) {
-    // Never surface the upstream body verbatim: it can carry validation
-    // internals, and on a proxy error it can be an HTML page.
+    // SAY WHY, WHEN WE KNOW WHY.
+    //
+    // A 429 here used to render as "We're running a lot of scans right now.
+    // Please try again in a few minutes." — which is a volume excuse, and the
+    // upstream almost never means volume. It sends 429 for two unrelated
+    // reasons, and the common one is that this email has already used its one
+    // free scan. Telling that person to wait a few minutes is false: waiting
+    // never helps, and the actual next step (create an account) was hidden
+    // from them. A real customer stopped at Step 1 of a launch test because
+    // of this wording.
+    //
+    // The upstream body is still never echoed verbatim — it can carry
+    // validation internals or an HTML error page. Instead the known codes are
+    // recognised and answered in our own words; anything unrecognised keeps
+    // the generic message, which is then honest rather than a guess.
+    if (res.status === 429) {
+      if (body?.error === "anonymous_limit") {
+        return {
+          ok: false,
+          status: 429,
+          error:
+            "You've already used the free scan for this email address. Create a free account to run more scans.",
+        };
+      }
+      if (body?.error === "limit_exceeded") {
+        return {
+          ok: false,
+          status: 429,
+          error: "You've used all the Growth Scans included in your plan for this period.",
+        };
+      }
+      return {
+        ok: false,
+        status: 429,
+        error: "We're running a lot of scans right now. Please try again in a few minutes.",
+      };
+    }
     return {
       ok: false,
-      status: res.status === 429 ? 429 : 502,
-      error:
-        res.status === 429
-          ? "We're running a lot of scans right now. Please try again in a few minutes."
-          : "We couldn't start the scan. Please check the website address and try again.",
+      status: 502,
+      error: "We couldn't start the scan. Please check the website address and try again.",
     };
   }
   return { ok: true, shareToken: body.shareToken };
