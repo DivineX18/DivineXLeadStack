@@ -1102,22 +1102,35 @@ service cloud.firestore {
     }
 
     match /forms/{formId} {
-      // Forms are configuration; admin-only to mutate (they wire up public
-      // pages). Reads are visible to every active member of the sub-account
-      // because the dashboard pages list them.
+      // FORM MANAGEMENT IS ORDINARY WORKSPACE WORK, NOT AN ADMIN PRIVILEGE.
+      //
+      // These were admin-only to mutate while the Forms UI carried no role
+      // gate at all, so a collaborator saw "New form", the builder and the
+      // delete control and every one of them was refused — and the form
+      // builder saves on each keystroke, so typing a name produced one
+      // denial per character. Building and running lead-capture forms is the
+      // day-to-day job of the person assigned to a workspace.
+      //
+      // `canAccessSub` is WORKSPACE-SCOPED, not a promotion: it requires an
+      // ACTIVE `subAccountMembers` doc in THIS sub-account (or agency
+      // ownership of THIS agency). A collaborator gains nothing in any other
+      // workspace, and no agency-level capability. `tenantFieldsLockedOnUpdate`
+      // still pins subAccountId/agencyId, so a member cannot move a form into
+      // a workspace they don't belong to, and create is checked against the
+      // TARGET workspace in the incoming document.
       allow read: if canAccessSub(
         resource.data.subAccountId,
         resource.data.agencyId
       );
-      allow create: if canAdminSub(
+      allow create: if canAccessSub(
         request.resource.data.subAccountId,
         request.resource.data.agencyId
       );
-      allow update: if canAdminSub(
+      allow update: if canAccessSub(
         resource.data.subAccountId,
         resource.data.agencyId
       ) && tenantFieldsLockedOnUpdate();
-      allow delete: if canAdminSub(
+      allow delete: if canAccessSub(
         resource.data.subAccountId,
         resource.data.agencyId
       );
