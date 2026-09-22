@@ -21,6 +21,35 @@ import "server-only";
  * them is restated or overridden here.
  */
 
+/**
+ * THE ASCEND SOLO OFFER — ONE CONTRACT FOR BOTH DISPLAY AND PURCHASE.
+ *
+ * `/start` used to read its price and trial length from Flow's legacy
+ * `unified` Client Billing plan while buying something else entirely, so the
+ * page showed one product's numbers and charged another's. That is exactly
+ * how a display and a checkout drift apart unnoticed.
+ *
+ * These values mirror BI's canonical `PRODUCTS.growth_system`
+ * (`defaultAmount: 19700`) and `TRIAL_DAYS_BY_PRODUCT.growth_system` (14).
+ * They are restated here rather than fetched because `/start` is a
+ * cold-traffic page and a cross-service call on it would make the front door
+ * fail whenever the intelligence service hiccups — a worse failure than the
+ * one being fixed.
+ *
+ * Restating carries a divergence risk, so it is PINNED BY TEST: the
+ * acquisition suite asserts these numbers against BI's own source, and CI
+ * fails if either side moves without the other. BI remains the authority;
+ * this is a mirror with an alarm on it, not a second source of truth.
+ */
+export const ASCEND_SOLO_OFFER = {
+  /** The canonical BI product this page sells. */
+  product: "growth_system",
+  name: "Ascend Solo",
+  priceMonthlyCents: 19_700,
+  currency: "usd",
+  trialDays: 14,
+} as const;
+
 /** The BI service base. Already includes the `/api` prefix (see render.yaml). */
 function baseUrl(): string | null {
   const raw = process.env.ASCEND_INTELLIGENCE_API_URL;
@@ -62,7 +91,7 @@ export async function startAscendSoloCheckout(input: {
       body: JSON.stringify({
         email: input.email,
         ...(input.name ? { name: input.name } : {}),
-        product: "growth_system",
+        product: ASCEND_SOLO_OFFER.product,
         successPath: input.successUrl,
         cancelPath: input.cancelUrl,
       }),

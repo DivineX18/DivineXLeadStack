@@ -3,6 +3,7 @@ import { getPublicPlans } from "@/lib/server/public-signup-service";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import { brandForProduct, resolveProductSurface } from "@/lib/landing/resolve-product-surface";
 import { TrialSignupForm } from "@/components/landing-custom/trial-signup-form";
+import { ASCEND_SOLO_OFFER } from "@/lib/intelligence/ascend-solo-checkout";
 import { FunnelPageView } from "@/components/analytics/funnel-page-view";
 
 export const metadata = {
@@ -23,12 +24,36 @@ export default async function StartTrialPage() {
   // them. Without this the Ascend host could offer a Flow plan's trial and
   // send the customer to the wrong subscription entirely.
   const product = await resolveProductSurface();
-  const { plans } = await getPublicPlans(product);
-  const trialPlan = plans.find((p) => (p.trialDays ?? 0) > 0) ?? null;
+  const isAscend = product === "unified";
 
-  // No plan carries a trial (Stripe unconfigured, or plans not created). Rather
-  // than render a form that cannot finish, this page simply does not exist.
-  if (!trialPlan) notFound();
+  // THE PAGE SHOWS WHAT IT SELLS.
+  //
+  // On the Ascend surface the purchase goes to BI's canonical growth_system
+  // (see lib/intelligence/ascend-solo-checkout.ts), but this page used to
+  // read its price and trial length from Flow's legacy `unified` Client
+  // Billing plan — one product on screen, a different one charged. Worse, the
+  // page only existed at all while that legacy plan stayed publicly
+  // self-serve, so retiring the duplicate checkout would have 404'd the
+  // Ascend front door.
+  //
+  // Ascend now presents from the same offer contract that performs the
+  // purchase, and no longer depends on that plan for anything. Flow's own
+  // surface is untouched and still reads its own plans.
+  const offer = isAscend
+    ? {
+        id: ASCEND_SOLO_OFFER.product,
+        name: ASCEND_SOLO_OFFER.name,
+        priceMonthlyCents: ASCEND_SOLO_OFFER.priceMonthlyCents,
+        currency: ASCEND_SOLO_OFFER.currency,
+        trialDays: ASCEND_SOLO_OFFER.trialDays,
+      }
+    : ((await getPublicPlans(product)).plans.find((p) => (p.trialDays ?? 0) > 0) ?? null);
+
+  // Flow: no plan carries a trial (Stripe unconfigured, or plans not created).
+  // Rather than render a form that cannot finish, this page does not exist.
+  // Ascend's offer is server-owned, so it is always present.
+  if (!offer) notFound();
+  const trialPlan = offer;
 
   const brand = brandForProduct(await resolveCustomBrand(), product);
   const price = (trialPlan.priceMonthlyCents / 100).toLocaleString(undefined, {
@@ -59,7 +84,9 @@ export default async function StartTrialPage() {
         </div>
 
         <p className="mt-5 text-center text-sm text-muted-foreground">
-          {trialPlan.trialDays} days free. Card required to activate your trial. Cancel anytime.
+          {isAscend
+            ? `$0 today. Card required. ${price}/mo after ${trialPlan.trialDays} days. Cancel anytime during the trial.`
+            : `${trialPlan.trialDays} days free. Card required to activate your trial. Cancel anytime.`}
         </p>
 
         <p className="mt-2 text-center text-xs text-muted-foreground/70">
