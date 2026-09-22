@@ -22,6 +22,26 @@ import "server-only";
  *  rather than a customer domain: this is a server-to-server call. */
 const CANONICAL = "https://divinex-business-intelligence.onrender.com/api/sso/operations/exchange";
 
+/**
+ * Only the intelligence service answers this endpoint, so the host is an
+ * ALLOW-LIST rather than a loopback denylist.
+ *
+ * Refusing loopback alone was not enough. After that shipped, production
+ * still returned `network_error` for a deliberately invalid code — which a
+ * reachable Ascend answers with `exchange_rejected` — so the configured
+ * value was a plausible-looking https URL that simply does not answer. A
+ * Render dashboard value also outranks render.yaml on an existing service,
+ * which is exactly how it drifted and stayed drifted.
+ *
+ * `divinex-business-intelligence.onrender.com` is the canonical BI service
+ * and `ascend.divinex.io` is its customer-facing domain. Nothing else can be
+ * correct here, so nothing else is accepted.
+ */
+const ALLOWED_HOSTS = new Set([
+  "divinex-business-intelligence.onrender.com",
+  "ascend.divinex.io",
+]);
+
 function usable(raw: string | undefined): string | null {
   const v = raw?.trim();
   if (!v) return null;
@@ -32,9 +52,7 @@ function usable(raw: string | undefined): string | null {
     return null;
   }
   if (u.protocol !== "https:") return null;
-  const h = u.hostname.toLowerCase();
-  // The exact shapes that produced the outage.
-  if (h === "localhost" || h === "127.0.0.1" || h === "0.0.0.0" || h.endsWith(".local")) return null;
+  if (!ALLOWED_HOSTS.has(u.hostname.toLowerCase())) return null;
   return v;
 }
 
