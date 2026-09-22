@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { BillingError } from "@/lib/server/billing-service";
 import { createPublicSignupCheckoutSession } from "@/lib/server/public-signup-service";
-import { startAscendSoloCheckout } from "@/lib/intelligence/ascend-solo-checkout";
+import { ascendAcquisitionHandoffUrl } from "@/lib/intelligence/ascend-acquisition-handoff";
 import { resolveProductSurface } from "@/lib/landing/resolve-product-surface";
 import {
   markTrialSignupCheckoutStarted,
@@ -74,27 +74,38 @@ export async function POST(request: Request) {
   // That is the entire point of splitting the step.
   const leadId = await recordTrialSignup(parsed.value);
 
-  // ASCEND SOLO IS SOLD BY BI, NOT BY FLOW CLIENT BILLING.
+  // ASCEND IS BOUGHT BY AN IDENTITY, NOT BY AN EMAIL.
   //
-  // This surface used to buy a Flow `unified` plan at $197 — a second,
-  // independent Ascend Solo subscription that granted no BI entitlement, so
-  // it reached none of the provisioning, mapping or Operations SSO the
-  // product is. The presentation here is unchanged; only the purchase moves
-  // to the canonical owner.
+  // This surface used to post the address from this very form to BI's
+  // anonymous pay-first checkout. That endpoint carries no session, so the
+  // webhook completing it resolved the owner by looking the typed address up
+  // in Clerk and CREATED a new account when nothing matched. A customer who
+  // already had an Ascend account and typed a different address got a second
+  // identity holding the subscription, both entitlements, the Flow workspace
+  // and the canonical mapping, while their own account showed nothing.
   //
-  // Flow's own surface (crm) is untouched and keeps buying Flow plans.
+  // Flow cannot detect that from here — Clerk is a single-domain instance, so
+  // a session on the Ascend app is invisible to a page served from this one.
+  // So `/start` stops selling. It keeps the presentation and the lead capture
+  // and hands the visitor to the authenticated Ascend application, which
+  // establishes the Clerk identity FIRST and only then creates the
+  // subscription against it.
+  //
+  // The lead is still recorded above, before the handoff, so an abandonment
+  // after this point is still a lead — that was the reason for splitting the
+  // step and it is unchanged.
+  //
+  // Flow's own surface (crm) is untouched and keeps buying Flow plans through
+  // Client Billing.
   if ((await resolveProductSurface()) === "unified") {
-    const checkout = await startAscendSoloCheckout({
-      email: parsed.value.email,
-      name: [parsed.value.firstName, parsed.value.lastName].filter(Boolean).join(" ") || null,
-      successUrl: `${base}/pricing/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${base}/start?cancelled=1`,
-    });
-    if (!checkout.ok) {
-      return NextResponse.json({ error: checkout.error }, { status: checkout.status });
-    }
+    // The claim is the customer's own Growth Scan. It must survive the
+    // handoff or their diagnosis does not follow them into the product — and
+    // it is also what tells the Ascend side this was an Ascend acquisition.
+    const claimToken = typeof (raw as Record<string, unknown>)?.claim === "string"
+      ? ((raw as Record<string, unknown>).claim as string)
+      : null;
     await markTrialSignupCheckoutStarted(leadId);
-    return NextResponse.json({ url: checkout.url });
+    return NextResponse.json({ url: ascendAcquisitionHandoffUrl({ claimToken }) });
   }
 
   try {

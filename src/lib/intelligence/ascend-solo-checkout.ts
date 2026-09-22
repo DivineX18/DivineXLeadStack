@@ -11,14 +11,9 @@ import "server-only";
  * handoff. A customer who bought the Flow one paid $197 and reached none of
  * it.
  *
- * BI is now the canonical owner, so the Ascend `/start` surface hands off
- * here. The presentation stays Flow-side; only the purchase moves.
- *
- * This deliberately uses BI's EXISTING public self-serve checkout — the same
- * endpoint the Ascend pricing page already used — rather than introducing a
- * second way to create a subscription. Price, trial length, trial settings and
- * entitlement grants are whatever that contract already says; nothing about
- * them is restated or overridden here.
+ * BI is now the canonical owner. This module is what `/start` DISPLAYS; the
+ * purchase itself happens on the Ascend application, against the Clerk
+ * identity, via lib/intelligence/ascend-acquisition-handoff.ts.
  */
 
 /**
@@ -50,66 +45,17 @@ export const ASCEND_SOLO_OFFER = {
   trialDays: 14,
 } as const;
 
-/** The BI service base. Already includes the `/api` prefix (see render.yaml). */
-function baseUrl(): string | null {
-  const raw = process.env.ASCEND_INTELLIGENCE_API_URL;
-  return raw ? raw.replace(/\/$/, "") : null;
-}
-
-export function ascendSoloCheckoutConfigured(): boolean {
-  return !!baseUrl();
-}
-
-export type AscendCheckoutResult =
-  | { ok: true; url: string }
-  | { ok: false; status: number; error: string };
-
-/**
- * Start the canonical Ascend Solo ($197, 14-day card-required trial)
- * subscription for a visitor who has not signed in yet.
+/*
+ * THE CHECKOUT CALL THAT USED TO LIVE HERE IS GONE.
  *
- * `product` is fixed to `growth_system` in this module rather than accepted
- * as an argument: this is the Ascend Solo path, and a caller must not be able
- * to nominate a different product through it.
+ * `startAscendSoloCheckout()` posted this page's form email to BI's anonymous
+ * pay-first endpoint, which made a typed address the owner of the
+ * subscription. Ascend purchasing now runs behind the Clerk identity: `/start`
+ * hands off to the authenticated Ascend application instead of buying. See
+ * lib/intelligence/ascend-acquisition-handoff.ts.
+ *
+ * What remains here is PRESENTATION ONLY — the numbers `/start` displays,
+ * still pinned by test to BI's canonical growth_system product so the page
+ * cannot advertise something different from what the authenticated checkout
+ * charges.
  */
-export async function startAscendSoloCheckout(input: {
-  email: string;
-  name?: string | null;
-  successUrl: string;
-  cancelUrl: string;
-}): Promise<AscendCheckoutResult> {
-  const base = baseUrl();
-  if (!base) {
-    return { ok: false, status: 503, error: "Ascend checkout isn't configured on this deployment yet." };
-  }
-
-  let res: Response;
-  try {
-    res = await fetch(`${base}/stripe/checkout/public`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: input.email,
-        ...(input.name ? { name: input.name } : {}),
-        product: ASCEND_SOLO_OFFER.product,
-        successPath: input.successUrl,
-        cancelPath: input.cancelUrl,
-      }),
-      signal: AbortSignal.timeout(25_000),
-    });
-  } catch {
-    return { ok: false, status: 502, error: "Couldn't reach checkout. Try again in a moment." };
-  }
-
-  const body = (await res.json().catch(() => null)) as { url?: string; error?: string } | null;
-  if (!res.ok || !body?.url) {
-    // Surface BI's own message when it gave one — those are written for the
-    // customer (e.g. payments not configured) — but never a raw error page.
-    return {
-      ok: false,
-      status: res.status === 503 ? 503 : 502,
-      error: body?.error?.trim() || "Couldn't start your trial. Try again in a moment.",
-    };
-  }
-  return { ok: true, url: body.url };
-}
