@@ -26,6 +26,8 @@ interface FeatureEntry {
 
 /** Capture → follow up → convert → automate → measure. */
 const FLOW_PRIMARY: FeatureEntry[] = [
+  { label: "Unlimited contacts", gate: null },
+  { label: "Unlimited visitors", gate: null },
   { label: "Zeno Growth Strategist", gate: "aiSuiteEnabledByAgency" },
   { label: "CRM & sales pipelines", gate: null },
   { label: "Funnels & landing pages", gate: "funnelsEnabledByAgency" },
@@ -40,6 +42,8 @@ const FLOW_PRIMARY: FeatureEntry[] = [
 
 /** Intelligence first, then the execution it feeds. */
 const UNIFIED_PRIMARY: FeatureEntry[] = [
+  { label: "Unlimited contacts", gate: null },
+  { label: "Unlimited visitors", gate: null },
   // Ordered by what a buyer is paying to GET, not by what makes Ascend
   // architecturally interesting. The things that earn revenue lead; the
   // diagnosis that decides what to build sits mid-list as the differentiator;
@@ -68,16 +72,32 @@ const UNIFIED_PRIMARY: FeatureEntry[] = [
 const SECONDARY: FeatureEntry[] = [
   { label: "Social planner", gate: "socialPlannerEnabledByAgency" },
   { label: "Facebook & Instagram inbox", gate: "metaInboxEnabledByAgency" },
-  { label: "Custom domains", gate: "customDomainsEnabledByAgency" },
+  { label: "Unlimited custom domains", gate: "customDomainsEnabledByAgency" },
   { label: "Funnel checkout", gate: "funnelCheckoutEnabledByAgency" },
   { label: "Missed-call text back", gate: "missedCallTextBackEnabledByAgency" },
   { label: "WhatsApp channel", gate: "whatsappEnabledByAgency" },
   { label: "Automated outbound calling", gate: "outboundVoiceEnabledByAgency" },
-  { label: "Community & courses", gate: "communityEnabledByAgency" },
+  { label: "Unlimited courses & community", gate: "communityEnabledByAgency" },
   { label: "Dedicated sending domain", gate: "emailDomainEnabledByAgency" },
   { label: "API access", gate: "apiAccessEnabledByAgency" },
 ];
 
+/*
+ * ABUNDANCE WHERE IT IS FREE, METERING WHERE IT IS NOT.
+ *
+ * Only five things carry a ceiling anywhere in this product: workspaces,
+ * websites, broadcast email, asset generations and Growth Scans. Those are
+ * the four that cost real money plus the one that is the pricing lever.
+ * Contacts, visitors, team members, custom domains, courses, pipelines,
+ * forms and workflows have no limit in any code path, so saying "unlimited"
+ * about them is a statement of fact rather than a promise we are hoping to
+ * keep. Competitors meter most of them, which makes stating it plainly worth
+ * more than leaving it unsaid.
+ *
+ * Anything added here must be genuinely uncapped. If a ceiling is ever
+ * introduced for one of these, the line moves into quantifiedLines and
+ * carries its number like the rest.
+ */
 /** Enough to show what the plan is; the rest condenses into one line. */
 const HIGHLIGHT_COUNT = 8;
 

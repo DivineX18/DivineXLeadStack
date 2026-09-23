@@ -143,6 +143,8 @@ export const ASCEND_SOLO_CARD = {
     // Funnels carry no counter anywhere in the product, so this is a real
     // capability rather than a generous-sounding cap nobody enforces.
     "Unlimited funnels & landing pages",
+    "Unlimited contacts",
+    "Unlimited visitors",
     `${ASCEND_SOLO_WORKSPACE_LIMITS.maxWebsites} websites`,
     `${ASCEND_SOLO_WORKSPACE_LIMITS.maxAiGenerationsPerMonth} marketing assets a month in Asset Studio`,
     `${ASCEND_SOLO_WORKSPACE_LIMITS.maxGrowthScansPerMonth} Growth Scans a month`,
