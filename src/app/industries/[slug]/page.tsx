@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import { OrganizationSchema } from "@/components/landing-custom/site-schema";
 import { FaqAccordion } from "@/components/landing-custom/faq-accordion";
+import { IndustryHelps } from "@/components/landing-custom/industry-helps";
 import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
@@ -81,6 +82,26 @@ export default async function IndustryDetailPage({ params }: PageProps) {
           </div>
         </section>
 
+        {/* The industry in a picture, before the argument in words. These
+            pages were entirely type, so every one of them looked the same as
+            the last and nothing said "this is about YOUR business" above the
+            fold. Same asset the landing page rotates through, so a visitor who
+            clicked from there lands on the image they just saw. */}
+        <section className="pb-4">
+          <div className="container mx-auto px-4">
+            <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl border shadow-sm">
+              <div className="relative aspect-[21/9] w-full bg-muted">
+                <img
+                  src={`/industries/${industry.slug}.jpg`}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="py-16 md:py-20">
           <div className="container mx-auto px-4">
             <div className="mx-auto max-w-2xl text-center">
@@ -108,14 +129,7 @@ export default async function IndustryDetailPage({ params }: PageProps) {
                 Built to fit how {industry.shortName} actually work
               </h2>
             </div>
-            <div className="mx-auto mt-10 grid max-w-4xl gap-6 sm:grid-cols-2">
-              {industry.howItHelps.map(({ title, body }) => (
-                <div key={title} className="rounded-2xl border bg-card p-6">
-                  <h3 className="text-sm font-semibold">{title}</h3>
-                  <p className="mt-1.5 text-sm text-muted-foreground">{body}</p>
-                </div>
-              ))}
-            </div>
+            <IndustryHelps items={industry.howItHelps} />
           </div>
         </section>
 
