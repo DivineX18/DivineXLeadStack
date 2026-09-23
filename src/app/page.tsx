@@ -39,6 +39,8 @@ import { Pricing as CustomPricing } from "@/components/landing-custom/pricing";
 import { FAQ as CustomFAQ } from "@/components/landing-custom/faq";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
+import { IndustryShowcase } from "@/components/landing-custom/industry-showcase";
+import { INDUSTRIES } from "@/data/industries";
 import { FunnelPageView } from "@/components/analytics/funnel-page-view";
 
 /**
@@ -120,6 +122,20 @@ export default async function HomePage() {
           )}
           <BusinessOperatingSystem />
           {product === "unified" && <AscendFollowUp />}
+          {/* Ascend surface only. The Flow homepage is a different funnel with
+              its own audience section, and mixing the two would make neither
+              readable. Data comes from the SAME INDUSTRIES source the
+              /industries pages use, so the landing page can never advertise a
+              segment that has no page behind it. */}
+          {product === "unified" && (
+            <IndustryShowcase
+              industries={INDUSTRIES.map((i) => ({
+                slug: i.slug,
+                name: i.name,
+                heroSubtitle: i.heroSubtitle,
+              }))}
+            />
+          )}
           <CustomPricing plans={plans} configured={billingStripeIsConfigured()} />
           <CustomFAQ brand={brand} />
           <CustomCTA brand={brand} pricingHref="#pricing" product={product} />
