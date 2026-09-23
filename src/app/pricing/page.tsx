@@ -4,6 +4,7 @@ import { resolveProductSurface, brandForProduct } from "@/lib/landing/resolve-pr
 import { billingStripeIsConfigured } from "@/lib/server/billing-service";
 import { OrganizationSchema, ProductSchema } from "@/components/landing-custom/site-schema";
 import { FaqAccordion, type FaqItem } from "@/components/landing-custom/faq-accordion";
+import type { PublicPlanSummary } from "@/types/billing";
 import {
   Users2,
   KanbanSquare,
@@ -45,12 +46,31 @@ const INCLUDED = [
   { icon: Bot, label: "AI agents", body: "Channel-by-channel AI availability varies by plan — every plan includes the core CRM above." },
 ];
 
+/**
+ * The trial answer is DERIVED FROM THE PLANS ON THE PAGE, not written down.
+ *
+ * This page serves both hosts, so a hardcoded answer naming one product's
+ * trial is wrong on the other surface the moment it is written — a Flow
+ * visitor reading about Ascend Solo, or either surface still promising a
+ * trial after the plan carrying it changes. Reading the rendered plans means
+ * the answer cannot say something the cards above it contradict.
+ */
+function trialFaqAnswer(plans: PublicPlanSummary[]): string {
+  const withTrial = plans.filter((p) => (p.trialDays ?? 0) > 0);
+  if (withTrial.length === 0) {
+    return "None of the plans above start with a free trial at the moment. Get in touch and we'll walk you through the platform before you commit to anything.";
+  }
+  const named = withTrial
+    .map((p) => `${p.name} starts with ${p.trialDays} days free`)
+    .join(", and ");
+  const rest =
+    plans.length > withTrial.length
+      ? " The other plans above bill from the start; if you'd like to see one before committing, get in touch and we'll walk you through it."
+      : "";
+  return `Yes — ${named}. You enter a card when you start, so there's no second signup step when the trial converts, and you aren't charged until the trial ends. Cancel any time before then and you pay nothing.${rest}`;
+}
+
 const BILLING_FAQS: FaqItem[] = [
-  {
-    question: "Is there a free trial?",
-    answer:
-      "If a free tier is available it'll show as one of the plan cards above — otherwise, reach out and we'll walk you through the platform before you commit to anything.",
-  },
   {
     question: "Can I switch plans later?",
     answer:
@@ -77,7 +97,9 @@ const BILLING_FAQS: FaqItem[] = [
 // actually asks (imports, data safety) — not a repeat of the full homepage
 // FAQ, which duplicated content already covered on /faq and made this
 // section read as padding rather than a focused pre-purchase check.
-const PRICING_PAGE_FAQS: FaqItem[] = [
+function pricingPageFaqs(plans: PublicPlanSummary[]): FaqItem[] {
+  return [
+  { question: "Is there a free trial?", answer: trialFaqAnswer(plans) },
   ...BILLING_FAQS,
   {
     question: "What happens to my existing contacts when I sign up?",
@@ -89,7 +111,8 @@ const PRICING_PAGE_FAQS: FaqItem[] = [
     answer:
       "Your workspace is yours alone — only you and the people you invite can access it. Data is encrypted at rest, and you can export everything as a CSV whenever you want.",
   },
-];
+  ];
+}
 
 const CONSOLIDATES = [
   { icon: MessageSquareText, label: "A separate texting/AI-answering tool", body: "SMS, WhatsApp, and web chat auto-replies are part of the platform, not a bolt-on line item." },
@@ -114,10 +137,11 @@ export default async function PricingPage() {
   // The Unified site must call itself Unified, not Flow. Logo untouched.
   const brand = brandForProduct(rawBrand, product);
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
+  const faqs = pricingPageFaqs(plans);
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: PRICING_PAGE_FAQS.map((f) => ({
+    mainEntity: faqs.map((f) => ({
       "@type": "Question",
       name: f.question,
       acceptedAnswer: { "@type": "Answer", text: f.answer },
@@ -218,7 +242,7 @@ export default async function PricingPage() {
               </p>
             </div>
             <div className="mx-auto mt-10">
-              <FaqAccordion items={PRICING_PAGE_FAQS} />
+              <FaqAccordion items={faqs} />
             </div>
           </div>
         </section>

@@ -59,3 +59,64 @@ export const ASCEND_SOLO_OFFER = {
  * cannot advertise something different from what the authenticated checkout
  * charges.
  */
+
+/**
+ * ASCEND SOLO AS A PRICING CARD.
+ *
+ * The public pricing page renders Flow Client Billing plans, and Ascend Solo
+ * is deliberately not one of them any more, so the Ascend ladder opened at
+ * Team ($397) with its entry tier missing entirely and no trial offered
+ * anywhere — the only `unified` plan still carrying a trial is the retired
+ * duplicate, and it is switched off on purpose.
+ *
+ * Solo is therefore presented from THIS contract, the same one `/start`
+ * displays and the same one the authenticated checkout charges, rather than
+ * by re-enabling that duplicate plan. `ctaHref` sends the button to `/start`,
+ * which remains the only place a trial can begin.
+ *
+ * WHAT THIS CARD MAY CLAIM. A Solo workspace is provisioned by
+ * `lib/workspace/provision-ascend-operations.ts`, which turns funnels and
+ * websites ON and every spend-capable channel OFF. So broadcasts, WhatsApp,
+ * outbound calling, the social planner, the Meta inbox, custom domains,
+ * funnel checkout, a dedicated sending domain and API access are absent here
+ * by design, not by oversight — they are real Team/Agency differentiators and
+ * listing them on Solo would be selling something the provisioner does not
+ * grant. Labels are reused verbatim from `lib/billing/plan-presentation.ts`
+ * so the three cards read as one ladder rather than three authors.
+ */
+export const ASCEND_SOLO_CARD = {
+  id: ASCEND_SOLO_OFFER.product,
+  name: ASCEND_SOLO_OFFER.name,
+  description:
+    "Everything one operator needs: the intelligence that finds the constraint, and the CRM that acts on it.",
+  priceMonthlyCents: ASCEND_SOLO_OFFER.priceMonthlyCents,
+  currency: ASCEND_SOLO_OFFER.currency,
+  trialDays: ASCEND_SOLO_OFFER.trialDays,
+  ctaHref: "/start",
+  highlights: [
+    "Funnels & landing pages",
+    "Automated lead follow-up",
+    "CRM & sales pipelines",
+    "Forms & lead capture",
+    "Booking & scheduling",
+    "Growth Intelligence",
+    "Marketing Content & Assets",
+    "Zeno Growth Strategist",
+  ],
+  alsoIncluded: [
+    "Workflows & automations",
+    "Growth Scans & prioritized recommendations",
+    "Website builder",
+    "Reporting & conversion measurement",
+    "Single sign-on between Ascend and the CRM",
+  ],
+  allowances: [
+    { label: "Business workspace", value: "1" },
+    { label: "Growth Scans / month", value: "15" },
+    {
+      label: "Marketing Content & Assets",
+      value: "50 creations/mo",
+      note: "Lead magnets, page copy, VSLs, scripts, proposals, content plans & more.",
+    },
+  ],
+} as const;

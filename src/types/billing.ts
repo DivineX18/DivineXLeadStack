@@ -223,6 +223,19 @@ export interface PublicPlanSummary {
    * is the kind of surprise that produces chargebacks.
    */
   trialDays: number | null;
+  /**
+   * Where this card's button goes INSTEAD of Flow's self-serve checkout.
+   *
+   * Null for every Client Billing plan, which is the normal case: the button
+   * posts the plan id to `/api/public/checkout` and Stripe takes it from
+   * there. It is set only for an offer that is displayed here but purchased
+   * somewhere else entirely — Ascend Solo, whose subscription belongs to the
+   * intelligence service and is bought against the Clerk identity, not
+   * against a Flow plan doc. Routing that card through Flow's checkout is
+   * precisely the duplicate-subscription bug that was removed; a card with
+   * an href can never reach it.
+   */
+  ctaHref?: string | null;
 }
 
 /**

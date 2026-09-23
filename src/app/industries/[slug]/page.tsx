@@ -83,19 +83,26 @@ export default async function IndustryDetailPage({ params }: PageProps) {
               <span className="font-serif font-normal italic">{industry.heroTitleB}</span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-white/80">{industry.heroSubtitle}</p>
+            {/* A visitor who arrived on an industry page has already told us
+                who they are, so they are warmer than the cold homepage
+                traffic the Growth Scan is the primary ask for. The trial
+                leads here; plans stay one click away for anyone who wants
+                to compare before starting. `/start` remains the only place
+                a trial can begin. */}
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Button render={<Link href="/pricing" />} size="lg" className="px-6 text-base">
-                See plans
+              <Button render={<Link href="/start" />} size="lg" className="px-6 text-base">
+                Start your 14-day free trial
               </Button>
               <Button
-                render={<Link href="/platform" />}
+                render={<Link href="/pricing" />}
                 variant="outline"
                 size="lg"
                 className="border-white/25 bg-white/10 px-6 text-base text-white hover:bg-white/20 hover:text-white"
               >
-                See how it works
+                See plans
               </Button>
             </div>
+            <p className="mt-4 text-sm text-white/60">No charge for 14 days. Cancel any time before it ends.</p>
           </div>
         </section>
 

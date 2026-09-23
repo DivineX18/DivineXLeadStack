@@ -232,24 +232,39 @@ export function Pricing({
                     )}
                   </CardContent>
                   <CardFooter>
-                    <Button
-                      type="button"
-                      variant={highlighted ? "default" : "outline"}
-                      className="w-full"
-                      disabled={starting}
-                      onClick={() => handleGetStarted(plan.id)}
-                    >
-                      {starting ? (
-                        <>
-                          <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                          Starting checkout…
-                        </>
-                      ) : plan.trialDays ? (
-                        `Start ${plan.trialDays}-day free trial`
-                      ) : (
-                        "Get started"
-                      )}
-                    </Button>
+                    {/* An offer purchased elsewhere links out and never
+                        touches Flow's self-serve checkout — see `ctaHref`
+                        on PublicPlanSummary. */}
+                    {plan.ctaHref ? (
+                      <Button
+                        render={<a href={plan.ctaHref} />}
+                        variant={highlighted ? "default" : "outline"}
+                        className="w-full"
+                      >
+                        {plan.trialDays
+                          ? `Start ${plan.trialDays}-day free trial`
+                          : "Get started"}
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant={highlighted ? "default" : "outline"}
+                        className="w-full"
+                        disabled={starting}
+                        onClick={() => handleGetStarted(plan.id)}
+                      >
+                        {starting ? (
+                          <>
+                            <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                            Starting checkout…
+                          </>
+                        ) : plan.trialDays ? (
+                          `Start ${plan.trialDays}-day free trial`
+                        ) : (
+                          "Get started"
+                        )}
+                      </Button>
+                    )}
                   </CardFooter>
                 </Card>
               );

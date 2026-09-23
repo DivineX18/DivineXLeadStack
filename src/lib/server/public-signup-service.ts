@@ -31,6 +31,7 @@ import {
   type PlanProduct,
 } from "@/types/billing";
 import { buildPlanPresentation } from "@/lib/billing/plan-presentation";
+import { ASCEND_SOLO_CARD } from "@/lib/intelligence/ascend-solo-checkout";
 
 /**
  * Public self-serve signup (pay → get your own workspace, no agency-owner
@@ -117,6 +118,27 @@ export async function getPublicPlans(product: PlanProduct = "flow"): Promise<{
       return summary;
     })
     .sort((a, b) => a.priceMonthlyCents - b.priceMonthlyCents);
+
+  // ASCEND'S ENTRY TIER IS NOT A CLIENT BILLING PLAN.
+  //
+  // Solo is sold by the intelligence service as `growth_system`; the Flow
+  // plan that used to mirror it is a retired duplicate and stays switched
+  // off. Injected HERE, in the one function every public surface reads,
+  // rather than at each page, so the homepage teaser, /pricing and the
+  // Product schema cannot disagree about what the ladder starts at.
+  //
+  // Scoped to the unified surface, so Flow's own pricing is untouched. It
+  // cannot leak into a checkout either: the card carries `ctaHref`, and
+  // `createPublicSignupCheckoutSession` resolves a real plan doc and 404s
+  // for anything else.
+  if (product === "unified") {
+    plans.unshift({
+      ...ASCEND_SOLO_CARD,
+      highlights: [...ASCEND_SOLO_CARD.highlights],
+      alsoIncluded: [...ASCEND_SOLO_CARD.alsoIncluded],
+      allowances: ASCEND_SOLO_CARD.allowances.map((a) => ({ ...a })),
+    });
+  }
 
   return { agencyId, plans };
 }
