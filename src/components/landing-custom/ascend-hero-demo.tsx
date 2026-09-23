@@ -27,8 +27,9 @@ import { cn } from "@/lib/utils";
  *    illustrative, so nothing here reads as a real customer's result.
  *  - No revenue, no lift, no counts, no testimonial. The only number is a
  *    score, which is the product's own output, on an obviously fictional site.
- *  - It plays ONCE and holds on the finished frame. A looping dashboard stops
- *    explaining after the first pass and becomes a screensaver.
+ *  - It holds on the finished frame for six seconds before repeating. A
+ *    dashboard that restarts the instant it lands becomes a screensaver; one
+ *    that plays once is never seen at all, which is what happened here.
  *  - Reduced motion jumps to that finished frame, which is authored to carry
  *    the whole story on its own.
  */
@@ -81,34 +82,87 @@ export function AscendHeroDemo() {
     }
 
     const timers: ReturnType<typeof setTimeout>[] = [];
+    let frame = 0;
+    let cancelled = false;
+
+    /**
+     * ONE PASS OF THE SCAN, PACED TO BE WATCHED.
+     *
+     * The beats were 250ms / 1800ms / 3000ms / 4000ms — the whole story told
+     * in four seconds, most of it while a visitor is still reading the
+     * headline. Measured on production it finished before it could be
+     * perceived, so the panel read as a static screenshot of a finished
+     * report, which is exactly what it was mistaken for.
+     *
+     * Each beat now holds long enough to register as a step:
+     *   scanning ~2.2s -> score lands and counts ~2.2s -> constraint ~1.8s
+     *   -> ranked fixes. About 6.6s of meaningful sequence.
+     */
+    const play = () => {
+      if (cancelled) return;
+      setBeat(0);
+      setCount(0);
+
+      timers.push(setTimeout(() => setBeat(1), 400)); // scanning the site
+      timers.push(
+        setTimeout(() => {
+          setBeat(2); // the score lands, and counts up to it
+          const start = performance.now();
+          const tick = (now: number) => {
+            if (cancelled) return;
+            const p = Math.min(1, (now - start) / 1400);
+            // Ease-out so it decelerates into the number rather than stopping dead.
+            setCount(Math.round(SCORE * (1 - Math.pow(1 - p, 3))));
+            if (p < 1) frame = requestAnimationFrame(tick);
+          };
+          frame = requestAnimationFrame(tick);
+        }, 2600),
+      );
+      timers.push(setTimeout(() => setBeat(3), 4800)); // the constraint is named
+      timers.push(setTimeout(() => setBeat(4), 6600)); // what to fix first
+
+      /**
+       * THEN IT HOLDS, AND ONLY THEN REPEATS.
+       *
+       * The finished frame is the one that carries the argument, so it stays
+       * up for six seconds before anything moves again. A panel that restarts
+       * the moment it lands stops explaining and becomes a screensaver, which
+       * is why the previous version deliberately played once — the problem was
+       * never the loop, it was that nobody saw the first pass.
+       */
+      timers.push(setTimeout(play, 12_600));
+    };
+
+    /**
+     * The observer is an optimisation, not a gate. It used to require 30% of
+     * the panel to be visible before anything started, and on a laptop the
+     * panel begins below the fold — so a visitor looking straight at the hero
+     * could sit in front of an idle frame indefinitely. Now: play when seen,
+     * and play anyway shortly after mount if the observer never fires.
+     */
     const io = new IntersectionObserver(
       (entries) => {
         if (!entries[0]?.isIntersecting || played.current) return;
         played.current = true;
         io.disconnect();
-
-        timers.push(setTimeout(() => setBeat(1), 250)); // scanning
-        timers.push(
-          setTimeout(() => {
-            setBeat(2); // the score lands, and counts up to it
-            const start = performance.now();
-            const tick = (now: number) => {
-              const p = Math.min(1, (now - start) / 900);
-              // Ease-out so it decelerates into the number rather than stopping dead.
-              setCount(Math.round(SCORE * (1 - Math.pow(1 - p, 3))));
-              if (p < 1) requestAnimationFrame(tick);
-            };
-            requestAnimationFrame(tick);
-          }, 1800),
-        );
-        timers.push(setTimeout(() => setBeat(3), 3000)); // the constraint is named
-        timers.push(setTimeout(() => setBeat(4), 4000)); // what to fix first
+        play();
       },
-      { threshold: 0.3 },
+      { threshold: 0.05 },
     );
     io.observe(node);
-    return () => {
+
+    const fallback = setTimeout(() => {
+      if (played.current) return;
+      played.current = true;
       io.disconnect();
+      play();
+    }, 600);
+    timers.push(fallback);
+
+    return () => {
+      cancelled = true;
+      io.disconnect();
+      if (frame) cancelAnimationFrame(frame);
       timers.forEach(clearTimeout);
     };
   }, []);

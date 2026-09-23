@@ -71,7 +71,7 @@ export function AscendFind() {
   return (
     <section className="border-t py-20 md:py-28">
       <div className="container mx-auto px-4">
-        <div className="grid items-center gap-12 lg:grid-cols-2">
+        <div className="grid items-start gap-12 lg:grid-cols-2">
           <div className="mx-auto max-w-lg lg:mx-0">
             <h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
               Find what&rsquo;s costing you leads.
@@ -123,6 +123,16 @@ export function AscendFind() {
   );
 }
 
+/*
+ * TOP-ALIGNED, NOT CENTRED (both sections below).
+ *
+ * `items-center` floated each column against the other's height, so the prose
+ * and the panel beside it started at different vertical positions and the row
+ * read as two unrelated blocks that happened to share a line. `items-start`
+ * gives both columns one baseline. No effect below `lg`, where the grid
+ * collapses to a single column anyway.
+ */
+
 const ASSETS = [
   { icon: FileText, label: "Landing page" },
   { icon: Mail, label: "Email sequence" },
@@ -135,7 +145,7 @@ export function AscendCreate() {
   return (
     <section className="border-t bg-muted/20 py-20 md:py-28">
       <div className="container mx-auto px-4">
-        <div className="grid items-center gap-12 lg:grid-cols-2">
+        <div className="grid items-start gap-12 lg:grid-cols-2">
           <div ref={ref} className="order-2 lg:order-1">
             <div className="grid items-center gap-4 sm:grid-cols-[1fr_auto_1fr]">
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">

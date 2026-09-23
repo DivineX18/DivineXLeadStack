@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { ContactBeacon } from "./contact-beacon";
 import type { ResolvedBrand } from "@/config/landing";
 import type { PlanProduct } from "@/types/billing";
 
@@ -37,7 +38,11 @@ export function CTA({
             The scan is free and takes a few minutes. You&rsquo;ll know your biggest constraint
             before you decide anything.
           </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <div className="mt-10">
+          <ContactBeacon />
+        </div>
+
+        <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button render={<a href={scanHref} />} size="lg" className="px-6 text-base">
               Run My Free Growth Scan
             </Button>

@@ -1,5 +1,4 @@
-import { Users, Search, PenLine, Inbox, Repeat, CircleCheck } from "lucide-react";
-import { StepFlow } from "./step-flow";
+import { LifecycleFlow } from "./lifecycle-flow";
 
 /**
  * The section that earns the hero.
@@ -13,15 +12,6 @@ import { StepFlow } from "./step-flow";
  * Deliberately no product names here. A first-time visitor should understand
  * what Ascend does before being asked to learn how it is assembled.
  */
-
-const STEPS = [
-  { icon: Users, label: "Traffic", detail: "You already have it" },
-  { icon: Search, label: "Understand", detail: "What's costing you leads" },
-  { icon: PenLine, label: "Create", detail: "Build the fix" },
-  { icon: Inbox, label: "Capture", detail: "Pages, forms, booking" },
-  { icon: Repeat, label: "Follow up", detail: "Automatically" },
-  { icon: CircleCheck, label: "Customer", detail: "" },
-];
 
 export function AscendLifecycle() {
   return (
@@ -39,7 +29,7 @@ export function AscendLifecycle() {
         </div>
 
         <div className="mt-14">
-          <StepFlow steps={STEPS} emphasizeIndex={1} />
+          <LifecycleFlow />
         </div>
 
         <p className="mx-auto mt-10 max-w-xl text-center text-sm text-muted-foreground">
