@@ -63,41 +63,38 @@ export default async function IndustryDetailPage({ params }: PageProps) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <CustomNavbar brand={brand} />
       <main className="flex-1">
-        <section className="py-20 text-center md:py-24">
-          <div className="container mx-auto px-4">
-            <p className="text-sm font-semibold uppercase tracking-wide text-primary">{industry.heroEyebrow}</p>
-            <h1 className="mx-auto mt-2 max-w-3xl text-balance text-4xl font-semibold tracking-tighter sm:text-5xl">
+        <section className="relative isolate overflow-hidden py-24 text-center md:py-32">
+          <img
+            src={`/industries/${industry.slug}.jpg`}
+            alt=""
+            aria-hidden="true"
+            fetchPriority="high"
+            className="absolute inset-0 -z-20 h-full w-full object-cover"
+          />
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 -z-10 bg-[linear-gradient(to_bottom,rgba(6,8,10,0.82),rgba(6,8,10,0.62)_45%,rgba(6,8,10,0.94))]"
+          />
+
+          <div className="container relative mx-auto px-4">
+            <p className="text-sm font-semibold uppercase tracking-wide text-emerald-400">{industry.heroEyebrow}</p>
+            <h1 className="mx-auto mt-2 max-w-3xl text-balance text-4xl font-semibold tracking-tighter text-white drop-shadow-sm sm:text-5xl">
               {industry.heroTitleA}{" "}
               <span className="font-serif font-normal italic">{industry.heroTitleB}</span>
             </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">{industry.heroSubtitle}</p>
+            <p className="mx-auto mt-6 max-w-2xl text-lg text-white/80">{industry.heroSubtitle}</p>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button render={<Link href="/pricing" />} size="lg" className="px-6 text-base">
                 See plans
               </Button>
-              <Button render={<Link href="/platform" />} variant="outline" size="lg" className="px-6 text-base">
+              <Button
+                render={<Link href="/platform" />}
+                variant="outline"
+                size="lg"
+                className="border-white/25 bg-white/10 px-6 text-base text-white hover:bg-white/20 hover:text-white"
+              >
                 See how it works
               </Button>
-            </div>
-          </div>
-        </section>
-
-        {/* The industry in a picture, before the argument in words. These
-            pages were entirely type, so every one of them looked the same as
-            the last and nothing said "this is about YOUR business" above the
-            fold. Same asset the landing page rotates through, so a visitor who
-            clicked from there lands on the image they just saw. */}
-        <section className="pb-4">
-          <div className="container mx-auto px-4">
-            <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl border shadow-sm">
-              <div className="relative aspect-[21/9] w-full bg-muted">
-                <img
-                  src={`/industries/${industry.slug}.jpg`}
-                  alt=""
-                  aria-hidden="true"
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
-              </div>
             </div>
           </div>
         </section>
