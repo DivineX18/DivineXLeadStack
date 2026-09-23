@@ -94,29 +94,32 @@ export const ASCEND_SOLO_CARD = {
   trialDays: ASCEND_SOLO_OFFER.trialDays,
   ctaHref: "/start",
   highlights: [
-    "Funnels & landing pages",
-    "Automated lead follow-up",
+    // SOURCED, NOT ESTIMATED. The workspace count is what
+    // provision-ascend-operations.ts actually creates (one). The website
+    // figure is MAX_WEBSITES_PER_SUBACCOUNT, the cap a workspace carries
+    // when no plan overrides it. The asset and scan figures are BI's own
+    // `professional` plan_limits row (assetLimit 50, auditLimit 15), which
+    // is the row growth_system resolves to through PRODUCT_TO_PLAN — so they
+    // are the allowances this subscription is actually metered against
+    // rather than a neighbouring tier's numbers borrowed by analogy.
+    "1 business workspace",
+    "5 websites & funnels",
+    "50 marketing assets a month in Asset Studio",
+    "15 Growth Scans a month",
     "CRM & sales pipelines",
     "Forms & lead capture",
     "Booking & scheduling",
+    "Automated lead follow-up",
     "Growth Intelligence",
-    "Marketing Content & Assets",
     "Zeno Growth Strategist",
   ],
   alsoIncluded: [
     "Workflows & automations",
-    "Growth Scans & prioritized recommendations",
     "Website builder",
     "Reporting & conversion measurement",
     "Single sign-on between Ascend and the CRM",
   ],
-  allowances: [
-    { label: "Business workspace", value: "1" },
-    { label: "Growth Scans / month", value: "15" },
-    {
-      label: "Marketing Content & Assets",
-      value: "50 creations/mo",
-      note: "Lead magnets, page copy, VSLs, scripts, proposals, content plans & more.",
-    },
-  ],
+  // The numbers live in the list now, so there is no second grid to keep in
+  // step with it.
+  allowances: [],
 } as const;

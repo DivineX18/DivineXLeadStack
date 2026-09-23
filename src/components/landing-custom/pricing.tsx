@@ -213,31 +213,6 @@ export function Pricing({
                     <div className="mt-5">{cta}</div>
                   </CardHeader>
                   <CardContent className="flex-1 space-y-5">
-                    {/* "How much can I use?" sits ABOVE the feature list,
-                        because between two tiers that share a capability set
-                        the allowances are the entire reason to move up. */}
-                    {plan.allowances.length > 0 && (
-                      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg bg-muted/50 p-3">
-                        {plan.allowances.map((a) => (
-                          <div
-                            key={a.label}
-                            className={`flex flex-col${a.note ? " col-span-2" : ""}`}
-                          >
-                            <dt className="text-[11px] leading-tight text-muted-foreground">
-                              {a.label}
-                            </dt>
-                            <dd className="text-sm font-semibold tabular-nums">
-                              {a.value}
-                            </dd>
-                            {a.note && (
-                              <p className="mt-0.5 text-[11px] font-normal leading-snug text-muted-foreground">
-                                {a.note}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </dl>
-                    )}
                     <ul className="space-y-3">
                       {plan.highlights.map((feature) => (
                         <li
@@ -288,8 +263,9 @@ export function Pricing({
                 </span>
                 <CardTitle className="text-lg text-slate-50">Done With You</CardTitle>
                 <CardDescription className="text-slate-300">
-                  We build and run it with you, rather than handing you the
-                  software and wishing you luck.
+                  Software solves the tooling problem. It does not solve the
+                  nobody-has-time-to-build-this problem. This is the plan where
+                  we do the building with you.
                 </CardDescription>
                 <div className="mt-4 flex items-baseline gap-1">
                   <span className="text-4xl font-bold tracking-tight text-slate-50">
@@ -298,7 +274,8 @@ export function Pricing({
                   <span className="text-slate-400">/yr</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Annual engagement · scoped on a call before anything is charged
+                  A year of working together · scoped on a call before anything
+                  is charged
                 </p>
                 <div className="mt-5">
                   <Button
@@ -313,10 +290,13 @@ export function Pricing({
               <CardContent className="flex-1">
                 <ul className="space-y-3">
                   {[
-                    "Direct 1:1 work with our team",
-                    "Private onboarding",
-                    "Priority support",
-                    "Scoped with you before you commit",
+                    "A strategist who knows your business by name",
+                    "We run your Growth Scans and agree what to fix first",
+                    "We build the funnels, pages and email sequences with you",
+                    "Your CRM, pipeline and follow-up set up and tested",
+                    "Private onboarding, then regular working sessions",
+                    "Priority support, straight to the people who built it",
+                    "Scoped on a call before you commit to anything",
                   ].map((feature) => (
                     <li key={feature} className="flex items-start gap-2 text-sm">
                       <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/10 text-slate-50">
@@ -326,6 +306,11 @@ export function Pricing({
                     </li>
                   ))}
                 </ul>
+                <p className="mt-5 text-xs leading-relaxed text-slate-400">
+                  Best fit if you already know what needs building and simply do
+                  not have the hours to build it. If a plan above would serve
+                  you better, we will tell you on the call.
+                </p>
               </CardContent>
               <CardFooter>
                 <Button

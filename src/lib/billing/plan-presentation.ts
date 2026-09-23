@@ -143,16 +143,72 @@ export function buildAllowances(limits: PlanLimits | undefined): PlanAllowance[]
   return out;
 }
 
+/**
+ * THE NUMBERS BELONG IN THE LIST, NOT IN A TABLE ABOVE IT.
+ *
+ * "Funnels & landing pages" tells a buyer we have the feature, not whether
+ * they get five or a hundred — and the answer sat in a separate grid they had
+ * to cross-reference to find out. These lines fold the two together, so one
+ * read down a single column answers both "what do I get" and "how much of
+ * it".
+ *
+ * Each quantified line REPLACES the qualitative one it measures, reported via
+ * `covered`, so nothing is stated twice. A capability whose meter is absent
+ * keeps its plain label: a limit we cannot source is left unstated rather
+ * than guessed, and a gate that is off contributes nothing either way, so no
+ * line can ever promise an allowance for something the plan does not include.
+ */
+function quantifiedLines(
+  limits: PlanLimits | undefined,
+  gates: Record<string, boolean>,
+): { lines: string[]; covered: Set<string> } {
+  const lines: string[] = [];
+  const covered = new Set<string>();
+  const l = limits;
+  if (!l) return { lines, covered };
+
+  const on = (gate: string) => gates[gate] === true;
+  const has = (v: number | null | undefined): v is number => v !== null && v !== undefined;
+
+  if (has(l.maxSubAccounts)) {
+    lines.push(`${n(l.maxSubAccounts)} business workspace${l.maxSubAccounts === 1 ? "" : "s"}`);
+  }
+  if (has(l.maxWebsites) && on("funnelsEnabledByAgency")) {
+    lines.push(`${n(l.maxWebsites)} websites & funnels`);
+    covered.add("Funnels & landing pages");
+  }
+  if (has(l.maxAiGenerationsPerMonth) && on("aiSuiteEnabledByAgency")) {
+    lines.push(`${n(l.maxAiGenerationsPerMonth)} marketing assets a month in Asset Studio`);
+    covered.add("Marketing Content & Assets");
+  }
+  if (has(l.maxGrowthScansPerMonth) && l.maxGrowthScansPerMonth > 0) {
+    lines.push(`${n(l.maxGrowthScansPerMonth)} Growth Scans a month`);
+    // The metered line says everything the qualitative one did, and says how
+    // many. Keeping both put "30 Growth Scans a month" and "Growth Scans &
+    // prioritized recommendations" in the same column.
+    covered.add("Growth Scans & prioritized recommendations");
+  }
+  if (has(l.maxEmailsPerMonth) && on("broadcastsEnabledByAgency")) {
+    lines.push(`${n(l.maxEmailsPerMonth)} broadcast emails a month`);
+    covered.add("Email broadcasts");
+  }
+  return { lines, covered };
+}
+
 export function buildPlanPresentation(
   product: PlanProduct,
   gates: Record<string, boolean>,
   limits: PlanLimits | undefined,
 ): PlanPresentation {
   const included = (e: FeatureEntry) => e.gate === null || gates[e.gate] === true;
-  const primary = (product === "unified" ? UNIFIED_PRIMARY : FLOW_PRIMARY).filter(included);
-  const secondary = SECONDARY.filter(included);
+  const { lines, covered } = quantifiedLines(limits, gates);
+  const uncovered = (e: FeatureEntry) => !covered.has(e.label);
+  const primary = (product === "unified" ? UNIFIED_PRIMARY : FLOW_PRIMARY)
+    .filter(included)
+    .filter(uncovered);
+  const secondary = SECONDARY.filter(included).filter(uncovered);
 
-  const highlights = primary.slice(0, HIGHLIGHT_COUNT).map((e) => e.label);
+  const highlights = [...lines, ...primary.slice(0, HIGHLIGHT_COUNT).map((e) => e.label)];
   const alsoIncluded = [
     ...primary.slice(HIGHLIGHT_COUNT).map((e) => e.label),
     ...secondary.map((e) => e.label),

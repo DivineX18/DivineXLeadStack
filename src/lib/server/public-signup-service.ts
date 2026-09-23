@@ -136,7 +136,7 @@ export async function getPublicPlans(product: PlanProduct = "flow"): Promise<{
       ...ASCEND_SOLO_CARD,
       highlights: [...ASCEND_SOLO_CARD.highlights],
       alsoIncluded: [...ASCEND_SOLO_CARD.alsoIncluded],
-      allowances: ASCEND_SOLO_CARD.allowances.map((a) => ({ ...a })),
+      allowances: [],
     });
   }
 
