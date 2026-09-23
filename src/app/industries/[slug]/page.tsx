@@ -73,7 +73,7 @@ export default async function IndustryDetailPage({ params }: PageProps) {
           />
           <div
             aria-hidden="true"
-            className="absolute inset-0 -z-10 bg-[linear-gradient(to_bottom,rgba(6,8,10,0.82),rgba(6,8,10,0.62)_45%,rgba(6,8,10,0.94))]"
+            className="absolute inset-0 -z-10 bg-[linear-gradient(to_bottom,rgba(6,8,10,0.70),rgba(6,8,10,0.44)_45%,rgba(6,8,10,0.86))]"
           />
 
           <div className="container relative mx-auto px-4">
