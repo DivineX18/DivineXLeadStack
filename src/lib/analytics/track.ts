@@ -30,7 +30,14 @@ export type FunnelEvent =
   | "start_page_viewed" // G
   | "checkout_started" // H
   | "trial_activated" // I
-  | "paid_conversion"; // J
+  | "paid_conversion" // J
+  // Guided product tour. Lifecycle only — which tour, which version, which
+  // step. Never anything the customer typed or the product computed.
+  | "tour_started"
+  | "tour_step_viewed"
+  | "tour_skipped"
+  | "tour_completed"
+  | "tour_restarted";
 
 export interface FunnelEventProps {
   /** "ascend" | "flow" — which product surface the visitor is on. */
@@ -41,11 +48,23 @@ export interface FunnelEventProps {
   plan?: string;
   /** Scan lifecycle only: "started" | "completed" | "failed". Never a result. */
   scan_status?: string;
+  /** Which tour, e.g. "flow-only" | "flow-operations". */
+  tour_id?: string;
+  /** Tour version as a string, so it stays low-cardinality in reporting. */
+  tour_version?: string;
+  /** Which product experience the tour is explaining. */
+  experience?: string;
+  /** Anchor id of the step, e.g. "nav-contacts". Chosen by this code, never
+   *  by a customer. */
+  step_id?: string;
 }
 
 /** Properties are allow-listed by KEY, so a caller cannot widen the payload by
  *  passing extra fields, and by TYPE, so an object can never be smuggled in. */
-const ALLOWED: (keyof FunnelEventProps)[] = ["product", "source", "plan", "scan_status"];
+const ALLOWED: (keyof FunnelEventProps)[] = [
+  "product", "source", "plan", "scan_status",
+  "tour_id", "tour_version", "experience", "step_id",
+];
 
 export function trackFunnelEvent(event: FunnelEvent, props: FunnelEventProps = {}): void {
   if (typeof window === "undefined") return;

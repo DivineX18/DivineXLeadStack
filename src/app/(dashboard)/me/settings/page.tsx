@@ -20,6 +20,7 @@ import { CUSTOM_BRAND } from "@/config/landing";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { NotificationsSection } from "@/components/settings/notifications-section";
 import { PasswordSection } from "@/components/settings/password-section";
+import { ProductTourSection } from "@/components/settings/product-tour-section";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -158,6 +159,12 @@ export default function MySettingsPage() {
 
       {/* Push notifications (PWA) */}
       <NotificationsSection />
+
+      {/* Which tour this starts depends on the workspace; this page is not
+          workspace-scoped, so it offers the standalone Flow orientation.
+          A customer who crossed over from Intelligence gets the continuation
+          automatically on arrival in their workspace. */}
+      <ProductTourSection ascendGrantActive={false} />
 
       {/* Appearance */}
       <section className="rounded-2xl border bg-card p-5">

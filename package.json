@@ -33,6 +33,7 @@
     "@upstash/qstash": "^2.10.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "driver.js": "^1.8.0",
     "firebase": "^12.10.0",
     "firebase-admin": "^13.7.0",
     "libphonenumber-js": "^1.13.2",

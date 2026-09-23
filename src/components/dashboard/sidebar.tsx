@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { resolveReturnNavigation } from "@/lib/shell/intelligence-home";
+import { ProductTour } from "@/components/shell/product-tour";
 import { doc, onSnapshot } from "firebase/firestore";
 import {
   Home,
@@ -450,10 +451,15 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
                       unreadConversations > 0
                     ? unreadConversations
                     : null;
+              // Stable tour anchor derived from the item's own href, so the
+              // nav table needs no parallel list to keep in sync. Only the
+              // handful the tours name are ever looked up.
+              const tourAnchor = `nav${item.href.replace(/\//g, "-")}`;
               return (
                 <Link
                   key={item.href}
                   href={fullHref}
+                  data-tour={tourAnchor}
                   className={cn(
                     "flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                     isActive
@@ -494,6 +500,11 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
         )}
       </nav>
 
+      {/* Renders null. Mounted here because this is the one place that both
+          has the nav the tour anchors to and has already resolved whether
+          Ascend grants this workspace Operations. */}
+      <ProductTour ascendGrantActive={ascendGrantActive} />
+
       <div className="border-t p-4 space-y-1">
         {/* Version 1 SSO return link — a plain external <a>, not a client
          *  <Link>, since this leaves the app entirely. Doesn't bypass
@@ -514,6 +525,7 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
           return (
             <a
               href={ret.href}
+              data-tour="nav-intelligence-return"
               className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
               <ExternalLink className="h-4 w-4" />
