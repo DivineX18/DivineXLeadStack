@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { resolveReturnNavigation } from "@/lib/shell/intelligence-home";
 import { doc, onSnapshot } from "firebase/firestore";
 import {
   Home,
@@ -177,6 +178,10 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
   const [getLeadsHidden, setGetLeadsHidden] = useState(false);
   const [aiSuiteHidden, setAiSuiteHidden] = useState(false);
   const [funnelsHidden, setFunnelsHidden] = useState(false);
+  // Whether Ascend currently grants this workspace Operations. Read from the
+  // SAME subscription as the feature gates below — no extra query — and used
+  // only to decide where the return link goes.
+  const [ascendGrantActive, setAscendGrantActive] = useState(false);
   useEffect(() => {
     const linkSubIdLocal = activeSubId ?? memberships[0]?.subAccountId ?? null;
     if (!linkSubIdLocal) {
@@ -187,6 +192,7 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
       setAiSuiteGate(null);
       setGetLeadsGate(null);
       setFunnelsGate(null);
+      setAscendGrantActive(false);
       return;
     }
     return onSnapshot(
@@ -202,6 +208,10 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
         setAiSuiteGate(data?.aiSuiteEnabledByAgency === true);
         setGetLeadsGate(data?.getLeadsEnabledByAgency === true);
         setFunnelsGate(data?.funnelsEnabledByAgency === true);
+        // ACTIVE only. A revoked grant means the Ascend subscription ended,
+        // and routing them to Intelligence they can no longer reach would be
+        // worse than leaving the existing destination alone.
+        setAscendGrantActive(data?.ascendOperations?.status === "active");
         // Default (unset) → hidden. Only an explicit `false` shows the Locked row.
         setBroadcastsHidden(data?.broadcastsHiddenWhenDisabled !== false);
         setWebsiteHidden(data?.websiteHiddenWhenDisabled !== false);
@@ -487,14 +497,30 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
       <div className="border-t p-4 space-y-1">
         {/* Version 1 SSO return link — a plain external <a>, not a client
          *  <Link>, since this leaves the app entirely. Doesn't bypass
-         *  Ascend's own auth/entitlement checks; it just points there. */}
-        <a
-          href={process.env.NEXT_PUBLIC_ASCEND_APP_URL ?? "https://app.divinex.io"}
-          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-        >
-          <ExternalLink className="h-4 w-4" />
-          DivineX Home
-        </a>
+         *  Ascend's own auth/entitlement checks; it just points there.
+         *
+         *  An Ascend-provisioned workspace returns to INTELLIGENCE on
+         *  ascend.divinex.io. It used to send everyone to app.divinex.io,
+         *  which is the Flow-hosted /app shell — so a customer who had just
+         *  crossed from their Zeno dashboard into Operations came back to a
+         *  DIFFERENT Ascend home than the one they left, with none of their
+         *  Growth Score or history. Two competing homes for one product.
+         *
+         *  Standalone Flow workspaces are unchanged: no grant, same link,
+         *  same label. See lib/shell/intelligence-home.ts for why this does
+         *  not reuse NEXT_PUBLIC_ASCEND_APP_URL. */}
+        {(() => {
+          const ret = resolveReturnNavigation(ascendGrantActive);
+          return (
+            <a
+              href={ret.href}
+              className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <ExternalLink className="h-4 w-4" />
+              {ret.label}
+            </a>
+          );
+        })()}
         <Button
           variant="ghost"
           className="w-full justify-start gap-3"
