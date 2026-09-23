@@ -290,6 +290,7 @@ export function Pricing({
               <CardContent className="flex-1">
                 <ul className="space-y-3">
                   {[
+                    "Everything in Agency, unlimited funnels & landing pages included",
                     "A strategist who knows your business by name",
                     "We run your Growth Scans and agree what to fix first",
                     "We build the funnels, pages and email sequences with you",

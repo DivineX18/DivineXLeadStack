@@ -173,9 +173,23 @@ function quantifiedLines(
   if (has(l.maxSubAccounts)) {
     lines.push(`${n(l.maxSubAccounts)} business workspace${l.maxSubAccounts === 1 ? "" : "s"}`);
   }
-  if (has(l.maxWebsites) && on("funnelsEnabledByAgency")) {
-    lines.push(`${n(l.maxWebsites)} websites & funnels`);
+  // FUNNELS AND WEBSITES ARE NOT THE SAME COUNT, AND ONLY ONE OF THEM HAS ONE.
+  //
+  // The old combined "Websites & funnels" line implied `maxWebsites` capped
+  // both. It never did: that ceiling is enforced only in websites-service,
+  // and the funnel create route carries no quota check at all. So the line
+  // was simultaneously understating funnels, which are genuinely uncapped,
+  // and overstating the cap's reach. Split, each half is true.
+  //
+  // Websites keep the cap deliberately — a website build spends the shared
+  // gitpage quota, which is the one count here that actually costs money.
+  if (on("funnelsEnabledByAgency")) {
+    lines.push("Unlimited funnels & landing pages");
     covered.add("Funnels & landing pages");
+  }
+  if (has(l.maxWebsites) && on("websiteEnabledByAgency")) {
+    lines.push(`${n(l.maxWebsites)} websites`);
+    covered.add("Website builder");
   }
   if (has(l.maxAiGenerationsPerMonth) && on("aiSuiteEnabledByAgency")) {
     lines.push(`${n(l.maxAiGenerationsPerMonth)} marketing assets a month in Asset Studio`);

@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { PlanLimits } from "@/types/billing";
+
 /**
  * ONE COMMERCIAL ASCEND SOLO SUBSCRIPTION, OWNED BY BI.
  *
@@ -61,6 +63,41 @@ export const ASCEND_SOLO_OFFER = {
  */
 
 /**
+ * WHAT A SOLO WORKSPACE IS ACTUALLY ALLOWED, NOT JUST WHAT IT IS SOLD.
+ *
+ * An Ascend-provisioned workspace carries no `billing.planId`, because Ascend
+ * grants it rather than Client Billing selling it. `resolvePlanLimits` reads
+ * an absent plan as unlimited — correct and deliberate for the comped, legacy
+ * and agency-owner workspaces that clause exists for, and wrong here, because
+ * this one belongs to a paying $197 customer.
+ *
+ * It did not leak only because three gates ship off, so the metered Flow
+ * routes were unreachable and the real ceiling lived on BI. That is one
+ * checkbox in the agency Manage dialog away from unlimited Growth Scans,
+ * unlimited asset generations and unlimited broadcast email on a $197
+ * subscription — and flipping one of those gates for a customer who asks for
+ * the Ascend shell inside Flow is an entirely reasonable thing for an
+ * operator to do. The ceiling should not depend on nobody doing it.
+ *
+ * Scans and assets mirror BI's `professional` row, the row growth_system
+ * resolves to, so the two systems meter the same customer to the same number
+ * instead of disagreeing. Email mirrors the figure already authored for this
+ * price point. Websites is MAX_WEBSITES_PER_SUBACCOUNT, which is what the
+ * workspace would get anyway.
+ *
+ * Declared next to the card below ON PURPOSE: what we advertise and what we
+ * enforce are two statements of the same fact, and keeping them apart is how
+ * they drift.
+ */
+export const ASCEND_SOLO_WORKSPACE_LIMITS = {
+  maxSubAccounts: 1,
+  maxWebsites: 5,
+  maxEmailsPerMonth: 25_000,
+  maxAiGenerationsPerMonth: 50,
+  maxGrowthScansPerMonth: 15,
+} satisfies PlanLimits;
+
+/**
  * ASCEND SOLO AS A PRICING CARD.
  *
  * The public pricing page renders Flow Client Billing plans, and Ascend Solo
@@ -102,10 +139,13 @@ export const ASCEND_SOLO_CARD = {
     // is the row growth_system resolves to through PRODUCT_TO_PLAN — so they
     // are the allowances this subscription is actually metered against
     // rather than a neighbouring tier's numbers borrowed by analogy.
-    "1 business workspace",
-    "5 websites & funnels",
-    "50 marketing assets a month in Asset Studio",
-    "15 Growth Scans a month",
+    `${ASCEND_SOLO_WORKSPACE_LIMITS.maxSubAccounts} business workspace`,
+    // Funnels carry no counter anywhere in the product, so this is a real
+    // capability rather than a generous-sounding cap nobody enforces.
+    "Unlimited funnels & landing pages",
+    `${ASCEND_SOLO_WORKSPACE_LIMITS.maxWebsites} websites`,
+    `${ASCEND_SOLO_WORKSPACE_LIMITS.maxAiGenerationsPerMonth} marketing assets a month in Asset Studio`,
+    `${ASCEND_SOLO_WORKSPACE_LIMITS.maxGrowthScansPerMonth} Growth Scans a month`,
     "CRM & sales pipelines",
     "Forms & lead capture",
     "Booking & scheduling",
@@ -115,7 +155,6 @@ export const ASCEND_SOLO_CARD = {
   ],
   alsoIncluded: [
     "Workflows & automations",
-    "Website builder",
     "Reporting & conversion measurement",
     "Single sign-on between Ascend and the CRM",
   ],

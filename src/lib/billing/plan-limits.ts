@@ -3,6 +3,7 @@ import "server-only";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import type { BillingPlanDoc, PlanLimits } from "@/types/billing";
+import { ASCEND_SOLO_WORKSPACE_LIMITS } from "@/lib/intelligence/ascend-solo-checkout";
 import type { SubAccountDoc } from "@/types";
 
 /**
@@ -122,6 +123,24 @@ export async function resolvePlanLimits(
 
     const billing = data.billing as { planId?: string | null } | null | undefined;
     const agencyId = data.agencyId as string | undefined;
+
+    // ONE EXCEPTION TO THE GRANDFATHER CLAUSE.
+    //
+    // An Ascend-provisioned workspace has no plan because Ascend granted it
+    // rather than Client Billing selling it — so it fell through to unlimited
+    // alongside the comped and legacy workspaces that clause is actually for.
+    // This one is a paying $197 customer, and the only thing standing between
+    // it and unlimited Growth Scans, asset generations and broadcast email
+    // was three agency gates happening to be off.
+    //
+    // Checked BEFORE the planId test would reject it, and AFTER nothing:
+    // a workspace that later takes a real Flow plan is matched by the branch
+    // below and that plan wins, so buying Flow on top of Ascend is unaffected.
+    if (!billing?.planId && data.ascendOperations != null) {
+      const grant = data.ascendOperations as { provisionedByAscend?: boolean };
+      if (grant.provisionedByAscend === true) return ASCEND_SOLO_WORKSPACE_LIMITS;
+    }
+
     // Comped / legacy / agency-owner workspaces carry no plan and stay
     // unlimited — the grandfather clause, stated once here.
     if (!billing?.planId || !agencyId) return NO_LIMITS;
