@@ -123,6 +123,41 @@ export function Pricing({
                     plan.priceMonthlyCents % 100 === 0 ? 0 : 2,
                   )}`;
               const starting = startingPlanId === plan.id;
+              // DEFINED ONCE, RENDERED TWICE. These cards run long enough
+              // that the button scrolls off before the feature list ends, so
+              // it sits above the list and again below it. Building it here
+              // rather than writing it out twice means the two copies cannot
+              // drift into offering different things.
+              const cta = plan.ctaHref ? (
+                <Button
+                  render={<a href={plan.ctaHref} />}
+                  variant={highlighted ? "default" : "outline"}
+                  className="w-full"
+                >
+                  {plan.trialDays
+                    ? `Start ${plan.trialDays}-day free trial`
+                    : "Get started"}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant={highlighted ? "default" : "outline"}
+                  className="w-full"
+                  disabled={starting}
+                  onClick={() => handleGetStarted(plan.id)}
+                >
+                  {starting ? (
+                    <>
+                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                      Starting checkout…
+                    </>
+                  ) : plan.trialDays ? (
+                    `Start ${plan.trialDays}-day free trial`
+                  ) : (
+                    "Get started"
+                  )}
+                </Button>
+              );
               return (
                 <Card
                   key={plan.id}
@@ -175,6 +210,7 @@ export function Pricing({
                           : "Billed monthly · cancel anytime"}
                       </p>
                     )}
+                    <div className="mt-5">{cta}</div>
                   </CardHeader>
                   <CardContent className="flex-1 space-y-5">
                     {/* "How much can I use?" sits ABOVE the feature list,
@@ -231,81 +267,74 @@ export function Pricing({
                       </p>
                     )}
                   </CardContent>
-                  <CardFooter>
-                    {/* An offer purchased elsewhere links out and never
-                        touches Flow's self-serve checkout — see `ctaHref`
-                        on PublicPlanSummary. */}
-                    {plan.ctaHref ? (
-                      <Button
-                        render={<a href={plan.ctaHref} />}
-                        variant={highlighted ? "default" : "outline"}
-                        className="w-full"
-                      >
-                        {plan.trialDays
-                          ? `Start ${plan.trialDays}-day free trial`
-                          : "Get started"}
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant={highlighted ? "default" : "outline"}
-                        className="w-full"
-                        disabled={starting}
-                        onClick={() => handleGetStarted(plan.id)}
-                      >
-                        {starting ? (
-                          <>
-                            <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                            Starting checkout…
-                          </>
-                        ) : plan.trialDays ? (
-                          `Start ${plan.trialDays}-day free trial`
-                        ) : (
-                          "Get started"
-                        )}
-                      </Button>
-                    )}
-                  </CardFooter>
+                  <CardFooter>{cta}</CardFooter>
                 </Card>
               );
             })}
-            <Card className="flex flex-col justify-between border-dashed transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
+            {/* THE LAST CARD IS NOT A BIGGER SOFTWARE TIER.
+                It is a done-with-you engagement, so it is deliberately
+                styled apart from the ladder rather than as its final rung —
+                a dark card reads as "different thing", which is what stops
+                a visitor comparing its annual figure against a monthly one
+                beside it as though they were the same kind of number.
+
+                It takes an application, not a payment. Nothing here starts
+                a checkout: a 1:1 engagement that a stranger could buy
+                unseen would commit us to delivery we had never scoped. */}
+            <Card className="flex flex-col justify-between border-transparent bg-slate-950 text-slate-50 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl dark:border-slate-800">
               <CardHeader>
-                <span className="mb-1 flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <span className="mb-1 flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-slate-50">
                   <Headset className="h-4 w-4" />
                 </span>
-                <CardTitle className="text-lg">Enterprise</CardTitle>
-                <CardDescription>
-                  Higher volume, custom limits, or a white-label reseller setup.
+                <CardTitle className="text-lg text-slate-50">Done With You</CardTitle>
+                <CardDescription className="text-slate-300">
+                  We build and run it with you, rather than handing you the
+                  software and wishing you luck.
                 </CardDescription>
                 <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-2xl font-bold tracking-tight">
-                    Let&apos;s talk
+                  <span className="text-4xl font-bold tracking-tight text-slate-50">
+                    $5,997
                   </span>
+                  <span className="text-slate-400">/yr</span>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Annual engagement · scoped on a call before anything is charged
+                </p>
+                <div className="mt-5">
+                  <Button
+                    type="button"
+                    className="w-full bg-white text-slate-950 hover:bg-slate-200"
+                    onClick={openCrispChat}
+                  >
+                    Book a call
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent className="flex-1">
                 <ul className="space-y-3">
-                  {["Custom contact & usage limits", "Dedicated onboarding", "Priority support"].map(
-                    (feature) => (
-                      <li key={feature} className="flex items-start gap-2 text-sm">
-                        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <Check className="h-3 w-3" />
-                        </span>
-                        <span>{feature}</span>
-                      </li>
-                    ),
-                  )}
+                  {[
+                    "Direct 1:1 work with our team",
+                    "Private onboarding",
+                    "Priority support",
+                    "Scoped with you before you commit",
+                  ].map((feature) => (
+                    <li key={feature} className="flex items-start gap-2 text-sm">
+                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/10 text-slate-50">
+                        <Check className="h-3 w-3" />
+                      </span>
+                      <span>{feature}</span>
+                    </li>
+                  ))}
                 </ul>
               </CardContent>
               <CardFooter>
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full"
+                  className="w-full border-white/25 bg-transparent text-slate-50 hover:bg-white/10 hover:text-slate-50"
                   onClick={openCrispChat}
                 >
-                  Contact sales
+                  Book a call
                 </Button>
               </CardFooter>
             </Card>
