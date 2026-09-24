@@ -33,7 +33,7 @@ export default async function TermsPage() {
       <article className="prose dark:prose-invert mt-8 max-w-none">
         <h1>Terms of Service</h1>
         <p className="text-sm text-muted-foreground">
-          Last updated: July 26, 2026
+          Last updated: September 24, 2026
         </p>
 
         <h2>1. Acceptance of Terms</h2>
@@ -117,7 +117,8 @@ export default async function TermsPage() {
         <h3>4.3 Renewal &amp; cancellation</h3>
         <p>
           Subscriptions renew automatically each month unless cancelled
-          before the renewal date. <strong>You may cancel at any time</strong>{" "}
+          before the renewal date. Except where a minimum initial term applies
+          (Section 4.7), <strong>you may cancel at any time</strong>{" "}
           through your account billing settings or by contacting support;
           cancellation takes effect at the end of the current billing
           period, and you will retain access until then. See our{" "}
@@ -146,6 +147,32 @@ export default async function TermsPage() {
           the charge already made for the current period is not refunded.
           See our full <Link href="/refund-policy">Refund Policy</Link> for
           details and exceptions required by law.
+        </p>
+
+        <h3>4.6 Free trials</h3>
+        <p>
+          Some plans are offered with a free trial of the length stated on the
+          pricing page at the time you sign up (currently 14 days).{" "}
+          <strong>A payment method is required to start a trial.</strong> Unless
+          you cancel before the trial ends, your subscription begins
+          automatically when the trial ends and your payment method is charged
+          the plan price shown at sign-up. You may cancel at any point during
+          the trial through your account billing settings or by contacting
+          support, and you will not be charged.
+        </p>
+
+        <h3>4.7 Minimum initial term</h3>
+        <p>
+          Some plans and service engagements are offered with a minimum initial
+          term, which is stated on the pricing page at the time of purchase
+          (currently: Done With You, three months).{" "}
+          <strong>
+            Where a minimum initial term applies, cancellation under Section
+            4.3 takes effect at the end of that initial term
+          </strong>{" "}
+          rather than at the end of the current billing period. After the
+          initial term ends, the subscription continues month-to-month and
+          Section 4.3 applies without qualification.
         </p>
 
         <h2>5. Your Responsibilities &amp; Acceptable Use</h2>
