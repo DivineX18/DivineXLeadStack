@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
+import { resolveProductSurface, brandForProduct } from "@/lib/landing/resolve-product-surface";
 import { OrganizationSchema } from "@/components/landing-custom/site-schema";
 import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
@@ -8,7 +9,9 @@ import { Footer as CustomFooter } from "@/components/landing-custom/footer";
 import { INDUSTRIES } from "@/data/industries";
 
 export async function generateMetadata() {
-  const brand = await resolveCustomBrand();
+  // Host-aware, exactly as / and /pricing already resolve it. Without
+  // this the Ascend host served Flow's name, tagline and closing CTA.
+  const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   return {
     title: `Industries — ${brand.name} CRM for Coaches, Agencies, Trades & More`,
     description: `${brand.name} adapted to how different industries actually sell: coaches, agencies, home services and trades, real estate, and local service businesses.`,
@@ -17,7 +20,9 @@ export async function generateMetadata() {
 }
 
 export default async function IndustriesPage() {
-  const brand = await resolveCustomBrand();
+  // Host-aware, exactly as / and /pricing already resolve it. Without
+  // this the Ascend host served Flow's name, tagline and closing CTA.
+  const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
 
   return (
@@ -59,7 +64,7 @@ export default async function IndustriesPage() {
           </div>
         </section>
 
-        <CustomCTA brand={brand} />
+        <CustomCTA brand={brand} product={await resolveProductSurface()} />
       </main>
       <CustomFooter brand={brand} />
     </div>

@@ -23,8 +23,11 @@ export function Footer({ brand }: { brand: ResolvedBrand }) {
                 {brand.name}
               </span>
             </Link>
+            {/* The period is appended only when the tagline lacks one.
+                Ascend's tagline already ends in a full stop, so the hardcoded
+                one rendered "Then fix it.." in the footer of every page. */}
             <p className="mt-3 text-sm text-muted-foreground">
-              {brand.tagline}.
+              {/[.!?]$/.test(brand.tagline) ? brand.tagline : `${brand.tagline}.`}
             </p>
           </div>
 

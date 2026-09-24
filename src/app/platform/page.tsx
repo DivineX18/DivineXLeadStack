@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Inbox, MessageCircle, Users2, Receipt, LineChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
+import { resolveProductSurface, brandForProduct } from "@/lib/landing/resolve-product-surface";
 import { OrganizationSchema } from "@/components/landing-custom/site-schema";
 import { FaqAccordion, type FaqItem } from "@/components/landing-custom/faq-accordion";
 import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
@@ -9,7 +10,9 @@ import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
 
 export async function generateMetadata() {
-  const brand = await resolveCustomBrand();
+  // Host-aware, exactly as / and /pricing already resolve it. Without
+  // this the Ascend host served Flow's name, tagline and closing CTA.
+  const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   return {
     title: `Platform — ${brand.name} Growth Operations Platform`,
     description: `How ${brand.name} works: capture leads, respond instantly with AI agents, organize the follow-up in a real pipeline, get paid, and see what's working — one growth operations platform, not five tools stitched together.`,
@@ -83,7 +86,9 @@ const STAGES = [
 ];
 
 export default async function PlatformPage() {
-  const brand = await resolveCustomBrand();
+  // Host-aware, exactly as / and /pricing already resolve it. Without
+  // this the Ascend host served Flow's name, tagline and closing CTA.
+  const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
   const faqSchema = {
     "@context": "https://schema.org",
@@ -211,7 +216,7 @@ export default async function PlatformPage() {
         </section>
 
         <div id="pricing-cta">
-          <CustomCTA brand={brand} />
+          <CustomCTA brand={brand} product={await resolveProductSurface()} />
         </div>
       </main>
       <CustomFooter brand={brand} />

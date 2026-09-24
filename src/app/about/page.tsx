@@ -3,6 +3,7 @@ import { ArrowUpRight, Check, X } from "lucide-react";
 
 import { LANDING_VARIANT } from "@/config/landing";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
+import { resolveProductSurface, brandForProduct } from "@/lib/landing/resolve-product-surface";
 import { OrganizationSchema } from "@/components/landing-custom/site-schema";
 import { Navbar as LeadStackNavbar } from "@/components/landing/navbar";
 import { Footer as LeadStackFooter } from "@/components/landing/footer";
@@ -21,7 +22,9 @@ import { ChatCta, ChatLink } from "./chat-cta";
 
 export async function generateMetadata() {
   if (LANDING_VARIANT !== "leadstack") {
-    const brand = await resolveCustomBrand();
+    // Host-aware, exactly as / and /pricing already resolve it. Without
+    // this the Ascend host served Flow's name, tagline and closing CTA.
+    const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
     return {
       title: `About — ${brand.name}`,
       description: `${brand.name} is DivineX's growth operations platform — built to run the day-to-day of a growing business: leads, follow-up, pipeline, and getting paid, in one place.`,
@@ -98,7 +101,9 @@ const PRINCIPLES = [
 
 export default async function AboutPage() {
   if (LANDING_VARIANT !== "leadstack") {
-    const brand = await resolveCustomBrand();
+    // Host-aware, exactly as / and /pricing already resolve it. Without
+    // this the Ascend host served Flow's name, tagline and closing CTA.
+    const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
 
     return (
@@ -246,7 +251,7 @@ export default async function AboutPage() {
             </div>
           </section>
 
-          <CustomCTA brand={brand} />
+          <CustomCTA brand={brand} product={await resolveProductSurface()} />
         </main>
         <CustomFooter brand={brand} />
       </div>

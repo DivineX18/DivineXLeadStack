@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
+import { resolveProductSurface, brandForProduct } from "@/lib/landing/resolve-product-surface";
 import { OrganizationSchema } from "@/components/landing-custom/site-schema";
 import { FaqAccordion, type FaqItem } from "@/components/landing-custom/faq-accordion";
 import { ChannelDemo } from "@/components/landing-custom/channel-demo";
@@ -29,7 +30,9 @@ import {
 } from "lucide-react";
 
 export async function generateMetadata() {
-  const brand = await resolveCustomBrand();
+  // Host-aware, exactly as / and /pricing already resolve it. Without
+  // this the Ascend host served Flow's name, tagline and closing CTA.
+  const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   return {
     title: `Features — ${brand.name} CRM, Pipeline & AI Agent Tools`,
     description: `Every real, shipped ${brand.name} feature: AI agents across web chat, SMS, WhatsApp and voice, contacts and sales pipeline, quotes and invoicing, lead capture forms, booking pages, and a public API.`,
@@ -158,7 +161,9 @@ function FeatureGroup({
 }
 
 export default async function FeaturesPage() {
-  const brand = await resolveCustomBrand();
+  // Host-aware, exactly as / and /pricing already resolve it. Without
+  // this the Ascend host served Flow's name, tagline and closing CTA.
+  const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
   const faqSchema = {
     "@context": "https://schema.org",
@@ -247,7 +252,7 @@ export default async function FeaturesPage() {
           </div>
         </section>
 
-        <CustomCTA brand={brand} />
+        <CustomCTA brand={brand} product={await resolveProductSurface()} />
       </main>
       <CustomFooter brand={brand} />
     </div>

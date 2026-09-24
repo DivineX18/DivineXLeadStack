@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
+import { resolveProductSurface, brandForProduct } from "@/lib/landing/resolve-product-surface";
 import { OrganizationSchema } from "@/components/landing-custom/site-schema";
 import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
@@ -8,7 +9,9 @@ import { FaqAccordion, type FaqItem } from "@/components/landing-custom/faq-acco
 import { HOMEPAGE_FAQS } from "@/components/landing-custom/faq";
 
 export async function generateMetadata() {
-  const brand = await resolveCustomBrand();
+  // Host-aware, exactly as / and /pricing already resolve it. Without
+  // this the Ascend host served Flow's name, tagline and closing CTA.
+  const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   return {
     title: `FAQ — ${brand.name}`,
     description: `Answers about getting started, billing, the AI agents, team access, and support on ${brand.name}.`,
@@ -50,7 +53,9 @@ const MORE_FAQS: FaqItem[] = [
 ];
 
 export default async function FaqPage() {
-  const brand = await resolveCustomBrand();
+  // Host-aware, exactly as / and /pricing already resolve it. Without
+  // this the Ascend host served Flow's name, tagline and closing CTA.
+  const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
   const allFaqs = [...HOMEPAGE_FAQS, ...MORE_FAQS];
   const faqSchema = {

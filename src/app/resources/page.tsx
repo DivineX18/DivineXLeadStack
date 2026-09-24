@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
+import { resolveProductSurface, brandForProduct } from "@/lib/landing/resolve-product-surface";
 import { OrganizationSchema } from "@/components/landing-custom/site-schema";
 import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
@@ -8,7 +9,9 @@ import { Footer as CustomFooter } from "@/components/landing-custom/footer";
 import { RESOURCE_POSTS } from "@/data/resources-posts";
 
 export async function generateMetadata() {
-  const brand = await resolveCustomBrand();
+  // Host-aware, exactly as / and /pricing already resolve it. Without
+  // this the Ascend host served Flow's name, tagline and closing CTA.
+  const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   return {
     title: `Resources — ${brand.name} Guides on CRM, Pipeline & Follow-Up`,
     description: `Practical guides on lead follow-up, pipeline design, AI-assisted response, and appointment scheduling — from the team behind ${brand.name}.`,
@@ -17,7 +20,9 @@ export async function generateMetadata() {
 }
 
 export default async function ResourcesPage() {
-  const brand = await resolveCustomBrand();
+  // Host-aware, exactly as / and /pricing already resolve it. Without
+  // this the Ascend host served Flow's name, tagline and closing CTA.
+  const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
   const sorted = [...RESOURCE_POSTS].sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1));
 
@@ -64,7 +69,7 @@ export default async function ResourcesPage() {
           </div>
         </section>
 
-        <CustomCTA brand={brand} />
+        <CustomCTA brand={brand} product={await resolveProductSurface()} />
       </main>
       <CustomFooter brand={brand} />
     </div>
