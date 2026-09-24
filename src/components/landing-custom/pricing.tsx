@@ -284,8 +284,8 @@ export function Pricing({
                   <span className="text-slate-400">/mo</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Ad budget is separate, from $1,500/mo · scoped on a call
-                  before anything is charged
+                  3-month minimum · ad budget separate, from $1,500/mo ·
+                  scoped on a call before anything is charged
                 </p>
                 <div className="mt-5">
                   <Button
@@ -324,6 +324,11 @@ export function Pricing({
                     card says exactly that rather than leaving a buyer to
                     discover the arrangement after they have signed. */}
                 <p className="mt-5 text-xs leading-relaxed text-slate-400">
+                  Three months minimum, because that is how long it takes to
+                  build, test and scale. Anything shorter is a launch, not a
+                  result, and we would rather say so now than at day 30.
+                </p>
+                <p className="mt-3 text-xs leading-relaxed text-slate-400">
                   Ad budget is paid straight to the platforms and is not part of
                   this fee. We work with businesses spending at least $1,500 a
                   month on ads. Traffic execution is delivered by our partner
