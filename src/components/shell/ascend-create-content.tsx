@@ -36,6 +36,41 @@ import type { WebsiteDoc } from "@/types/website";
  * The original /sa/{id}/funnels and /sa/{id}/website pages are completely
  * untouched — this is an additive second consumer of the same components.
  */
+
+/**
+ * CREATE IS A HUB, NOT A SCROLL.
+ *
+ * Every creation surface used to render at once, stacked: the full funnel
+ * inventory, the asset library, a links block, and the website builder, whose
+ * long sectioned form is per-site. Answering "what do I want to build?" meant
+ * scrolling past three things you did not want first.
+ *
+ * Progressive disclosure fixes the information architecture without touching
+ * any creation system. Each panel mounts only when its category is chosen, so
+ * FunnelsList, AscendAssetsSection and WebsiteBuilder are the same proven
+ * components with the same gates, props and routes as before. Nothing was
+ * removed; the funnel/website/asset/links surfaces are all still here.
+ *
+ * LEAD MAGNETS EARNS ITS OWN TAB FOR A DISCOVERABILITY REASON, NOT A
+ * TECHNICAL ONE. A lead magnet IS a funnel: `lead_magnet` is one of the
+ * funnel genres, with two templates ("Guide download", "Buyer waitlist"), and
+ * uploading a PDF to it wires `leadMagnetAsset` into the follow-up email. No
+ * entitlement gates it separately — funnelsEnabledByAgency covers it, and
+ * that is on. But the word "Lead Magnet" appeared nowhere on this page: it
+ * was a genre inside a "New funnel" dropdown and a card inside a template
+ * gallery hidden behind a "Start from a template" toggle. A customer looking
+ * for the thing by name could not find it, and reasonably concluded they did
+ * not have it. The tab names what already exists rather than adding anything.
+ */
+const CREATE_CATEGORIES = [
+  { id: "funnels", label: "Funnels", blurb: "Landing pages and funnels that capture and convert." },
+  { id: "websites", label: "Websites", blurb: "A full site, built and hosted for you." },
+  { id: "lead-magnets", label: "Lead Magnets", blurb: "Trade something useful for an email address." },
+  { id: "assets", label: "Marketing Assets", blurb: "Copy, sequences and documents drafted for review." },
+] as const;
+
+type CreateCategory = (typeof CREATE_CATEGORIES)[number]["id"];
+
 export function AscendCreateContent({
   saId,
   isAdmin,
@@ -60,6 +95,7 @@ export function AscendCreateContent({
   description?: string;
   funnelBaseHref?: string;
 }) {
+  const [category, setCategory] = useState<CreateCategory>("funnels");
   return (
     <div className="max-w-6xl space-y-8">
       <div>
@@ -73,13 +109,62 @@ export function AscendCreateContent({
           build never gains an empty ceremony above it. */}
       <CampaignPlanPanel saId={saId} isAdmin={isAdmin} />
 
-      <section className="rounded-[var(--dx-radius-lg)] border p-6" style={{ backgroundColor: "var(--dx-surface-1)", borderColor: "var(--dx-border-subtle)" }}>
-        <FunnelsList saId={saId} baseHref={funnelBaseHref} />
-      </section>
+      {/* WHAT DO YOU WANT TO BUILD? — answered before anything is listed. */}
+      <nav aria-label="What to create" className="flex flex-wrap gap-2">
+        {CREATE_CATEGORIES.map((c) => {
+          const active = c.id === category;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => setCategory(c.id)}
+              aria-current={active ? "true" : undefined}
+              className="rounded-[var(--dx-radius-md)] border px-4 py-2.5 text-left text-sm transition-colors"
+              style={{
+                backgroundColor: active ? "var(--dx-surface-2)" : "var(--dx-surface-1)",
+                borderColor: active ? "var(--dx-border-strong, var(--dx-border-subtle))" : "var(--dx-border-subtle)",
+                color: active ? "var(--dx-text-primary)" : "var(--dx-text-secondary)",
+              }}
+            >
+              <span className="font-medium">{c.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+      <p className="-mt-4 text-sm text-[var(--dx-text-muted)]">
+        {CREATE_CATEGORIES.find((c) => c.id === category)?.blurb}
+      </p>
 
-      <section className="rounded-[var(--dx-radius-lg)] border p-6" style={{ backgroundColor: "var(--dx-surface-1)", borderColor: "var(--dx-border-subtle)" }}>
-        <AscendAssetsSection saId={saId} isAdmin={isAdmin} />
-      </section>
+      {category === "funnels" && (
+        <section className="rounded-[var(--dx-radius-lg)] border p-6" style={{ backgroundColor: "var(--dx-surface-1)", borderColor: "var(--dx-border-subtle)" }}>
+          <FunnelsList saId={saId} baseHref={funnelBaseHref} />
+        </section>
+      )}
+
+      {/* NAMES WHAT ALREADY EXISTS. A lead magnet is the `lead_magnet` funnel
+          genre; this routes to the same builder with the same gate, and says
+          out loud what the PDF upload does, which was the part nobody could
+          discover. */}
+      {category === "lead-magnets" && (
+        <section className="rounded-[var(--dx-radius-lg)] border p-6" style={{ backgroundColor: "var(--dx-surface-1)", borderColor: "var(--dx-border-subtle)" }}>
+          <h2 className="text-xl font-semibold text-[var(--dx-text-primary)]">Lead magnets</h2>
+          <p className="mt-1 max-w-2xl text-sm text-[var(--dx-text-muted)]">
+            A lead magnet is an opt-in page plus the file it delivers. Start from
+            the <strong>Guide download</strong> or <strong>Buyer waitlist</strong> template
+            below, or pick <strong>Lead magnet</strong> when you create a new funnel. Upload
+            a PDF in the builder and it is attached to the follow-up email automatically.
+          </p>
+          <div className="mt-6">
+            <FunnelsList saId={saId} baseHref={funnelBaseHref} />
+          </div>
+        </section>
+      )}
+
+      {category === "assets" && (
+        <section className="rounded-[var(--dx-radius-lg)] border p-6" style={{ backgroundColor: "var(--dx-surface-1)", borderColor: "var(--dx-border-subtle)" }}>
+          <AscendAssetsSection saId={saId} isAdmin={isAdmin} />
+        </section>
+      )}
 
       {/* The rest of what a business builds. Each links to a unified route
           that mounts the SAME Flow page component (components/shell/
@@ -114,6 +199,7 @@ export function AscendCreateContent({
         </div>
       </section>
 
+      {category === "websites" && (
       <section className="rounded-[var(--dx-radius-lg)] border p-6" style={{ backgroundColor: "var(--dx-surface-1)", borderColor: "var(--dx-border-subtle)" }}>
         {isAdmin ? (
           <AscendWebsitesSection saId={saId} websiteMaxSites={websiteMaxSites} />
@@ -123,6 +209,7 @@ export function AscendCreateContent({
           </div>
         )}
       </section>
+      )}
     </div>
   );
 }
