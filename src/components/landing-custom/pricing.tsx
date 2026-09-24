@@ -274,18 +274,18 @@ export function Pricing({
                 <CardTitle className="text-lg text-slate-50">Done With You</CardTitle>
                 <CardDescription className="text-slate-300">
                   Software solves the tooling problem. It does not solve the
-                  nobody-has-time-to-build-this problem. This is the plan where
-                  we do the building with you.
+                  nobody-is-doing-this problem. This is the plan where we build
+                  it with you and bring you the traffic.
                 </CardDescription>
                 <div className="mt-4 flex items-baseline gap-1">
                   <span className="text-4xl font-bold tracking-tight text-slate-50">
-                    $5,997
+                    $2,000
                   </span>
-                  <span className="text-slate-400">/yr</span>
+                  <span className="text-slate-400">/mo</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  A year of working together · scoped on a call before anything
-                  is charged
+                  Ad budget is separate, from $1,500/mo · scoped on a call
+                  before anything is charged
                 </p>
                 <div className="mt-5">
                   <Button
@@ -301,13 +301,13 @@ export function Pricing({
                 <ul className="space-y-3">
                   {[
                     "Everything in Agency, unlimited funnels & landing pages included",
-                    "A strategist who knows your business by name",
-                    "We run your Growth Scans and agree what to fix first",
+                    "Paid ads planned, launched and managed",
+                    "SEO and content built to compound",
                     "We build the funnels, pages and email sequences with you",
+                    "We run your Growth Scans and agree what to fix first",
                     "Your CRM, pipeline and follow-up set up and tested",
+                    "A strategist who knows your business by name",
                     "Private onboarding, then regular working sessions",
-                    "Priority support, straight to the people who built it",
-                    "Scoped on a call before you commit to anything",
                   ].map((feature) => (
                     <li key={feature} className="flex items-start gap-2 text-sm">
                       <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/10 text-slate-50">
@@ -317,10 +317,22 @@ export function Pricing({
                     </li>
                   ))}
                 </ul>
+                {/* ACCOUNTABILITY STATED, NOT IMPLIED.
+                    Traffic execution is delivered by a partner team. Saying
+                    "we" about work someone else performs is only honest while
+                    we own the strategy, the reporting and the result — so the
+                    card says exactly that rather than leaving a buyer to
+                    discover the arrangement after they have signed. */}
                 <p className="mt-5 text-xs leading-relaxed text-slate-400">
-                  Best fit if you already know what needs building and simply do
-                  not have the hours to build it. If a plan above would serve
-                  you better, we will tell you on the call.
+                  Ad budget is paid straight to the platforms and is not part of
+                  this fee. We work with businesses spending at least $1,500 a
+                  month on ads. Traffic execution is delivered by our partner
+                  team; the strategy, the reporting and the result stay ours.
+                </p>
+                <p className="mt-3 text-xs leading-relaxed text-slate-400">
+                  Best fit if you know what needs building and do not have the
+                  hours to build it. If a plan above would serve you better, we
+                  will say so on the call.
                 </p>
               </CardContent>
               <CardFooter>
