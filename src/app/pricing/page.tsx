@@ -170,7 +170,7 @@ export default async function PricingPage() {
           </div>
         </section>
 
-        <CustomPricing plans={plans} configured={billingStripeIsConfigured()} />
+        <CustomPricing plans={plans} configured={billingStripeIsConfigured()} product={product} />
 
         <section className="border-t py-16 md:py-20">
           <div className="container mx-auto px-4">

@@ -15,7 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { openCrispChat } from "@/lib/crisp";
-import type { PublicPlanSummary } from "@/types/billing";
+import type { PlanProduct, PublicPlanSummary } from "@/types/billing";
 
 /**
  * Live, self-serve pricing — renders whatever plans the agency owner has
@@ -50,9 +50,12 @@ function audienceFor(planName: string): string | null {
 export function Pricing({
   plans,
   configured,
+  product = "flow",
 }: {
   plans: PublicPlanSummary[];
   configured: boolean;
+  /** Which surface this is. The last card differs by product — see below. */
+  product?: PlanProduct;
 }) {
   const [startingPlanId, setStartingPlanId] = useState<string | null>(null);
 
@@ -246,16 +249,23 @@ export function Pricing({
                 </Card>
               );
             })}
-            {/* THE LAST CARD IS NOT A BIGGER SOFTWARE TIER.
-                It is a done-with-you engagement, so it is deliberately
-                styled apart from the ladder rather than as its final rung —
-                a dark card reads as "different thing", which is what stops
-                a visitor comparing its annual figure against a monthly one
-                beside it as though they were the same kind of number.
+            {/* THE LAST CARD DIFFERS BY SURFACE.
+                Ascend gets Done With You: a done-with-you engagement, styled
+                apart from the ladder rather than as its final rung, because a
+                dark card reads as a different kind of thing and stops a
+                visitor comparing an annual figure against the monthly ones
+                beside it. It takes an application, never a payment — a 1:1
+                engagement a stranger could buy unseen would commit us to
+                delivery nobody had scoped.
 
-                It takes an application, not a payment. Nothing here starts
-                a checkout: a 1:1 engagement that a stranger could buy
-                unseen would commit us to delivery we had never scoped. */}
+                Flow gets Enterprise back. Done With You promises Growth Scans
+                and an Ascend engagement, and every Flow plan carries
+                maxGrowthScansPerMonth: 0 with no Ascend gate, so on that
+                surface it sold something the buyer cannot have. Flow's buyer
+                is also a reseller who does the building for their own
+                clients, which makes "we build it with you" a competitor's
+                pitch rather than an upgrade. White-label is their real one. */}
+            {product === "unified" ? (
             <Card className="flex flex-col justify-between border-transparent bg-slate-950 text-slate-50 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl dark:border-slate-800">
               <CardHeader>
                 <span className="mb-1 flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-slate-50">
@@ -324,6 +334,48 @@ export function Pricing({
                 </Button>
               </CardFooter>
             </Card>
+            ) : (
+            <Card className="flex flex-col justify-between border-dashed transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
+              <CardHeader>
+                <span className="mb-1 flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Headset className="h-4 w-4" />
+                </span>
+                <CardTitle className="text-lg">Enterprise</CardTitle>
+                <CardDescription>
+                  Higher volume, custom limits, or a white-label reseller setup.
+                </CardDescription>
+                <div className="mt-4 flex items-baseline gap-1">
+                  <span className="text-2xl font-bold tracking-tight">
+                    Let&apos;s talk
+                  </span>
+                </div>
+                <div className="mt-5">
+                  <Button type="button" variant="outline" className="w-full" onClick={openCrispChat}>
+                    Contact sales
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-1">
+                <ul className="space-y-3">
+                  {["Custom contact & usage limits", "White-label reseller setup", "Dedicated onboarding", "Priority support"].map(
+                    (feature) => (
+                      <li key={feature} className="flex items-start gap-2 text-sm">
+                        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <Check className="h-3 w-3" />
+                        </span>
+                        <span>{feature}</span>
+                      </li>
+                    ),
+                  )}
+                </ul>
+              </CardContent>
+              <CardFooter>
+                <Button type="button" variant="outline" className="w-full" onClick={openCrispChat}>
+                  Contact sales
+                </Button>
+              </CardFooter>
+            </Card>
+            )}
           </div>
         )}
       </div>

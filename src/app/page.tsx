@@ -136,7 +136,7 @@ export default async function HomePage() {
               }))}
             />
           )}
-          <CustomPricing plans={plans} configured={billingStripeIsConfigured()} />
+          <CustomPricing plans={plans} configured={billingStripeIsConfigured()} product={product} />
           <CustomFAQ brand={brand} />
           <CustomCTA brand={brand} pricingHref="#pricing" product={product} />
         </main>
