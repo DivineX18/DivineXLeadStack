@@ -327,19 +327,24 @@ export function Pricing({
                 </span>
                 <CardTitle className="text-lg text-slate-50">Done With You</CardTitle>
                 <CardDescription className="text-slate-300">
-                  Software solves the tooling problem. It does not solve the
-                  nobody-is-doing-this problem. This is the plan where we build
-                  it with you and bring you the traffic.
+                  We build and optimize your growth system with you, from
+                  strategy and marketing assets to funnels, automation and
+                  ongoing optimization.
                 </CardDescription>
-                <div className="mt-4 flex items-baseline gap-1">
+                {/* A FLOOR, NOT A FLAT RATE.
+                    $2,000 sets the minimum engagement and qualifies the call.
+                    Publishing it as a flat price would cap what a complex
+                    engagement can be scoped at; publishing nothing would stop
+                    it filtering anyone. "Starting at" does both jobs. */}
+                <div className="mt-4 flex items-baseline gap-1.5">
+                  <span className="text-sm text-slate-400">Starting at</span>
                   <span className="text-4xl font-bold tracking-tight text-slate-50">
                     $2,000
                   </span>
                   <span className="text-slate-400">/mo</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  3-month minimum · ad budget separate, from $1,500/mo ·
-                  scoped on a call before anything is charged
+                  3-month minimum · ad spend separate, starting at $1,500/mo
                 </p>
                 <div className="mt-5">
                   <Button
@@ -347,21 +352,18 @@ export function Pricing({
                     className="w-full bg-white text-slate-950 hover:bg-slate-200"
                     onClick={openCrispChat}
                   >
-                    Book a call
+                    Book a Strategy Call
                   </Button>
                 </div>
               </CardHeader>
               <CardContent className="flex-1">
                 <ul className="space-y-3">
                   {[
-                    "Everything in Agency, unlimited funnels & landing pages included",
-                    "Paid ads planned, launched and managed",
-                    "SEO and content built to compound",
-                    "We build the funnels, pages and email sequences with you",
-                    "We run your Growth Scans and agree what to fix first",
-                    "Your CRM, pipeline and follow-up set up and tested",
-                    "A strategist who knows your business by name",
-                    "Private onboarding, then regular working sessions",
+                    "Strategy",
+                    "Marketing Assets",
+                    "Funnels",
+                    "Automation",
+                    "Ongoing Optimization",
                   ].map((feature) => (
                     <li key={feature} className="flex items-start gap-2 text-sm">
                       <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/10 text-slate-50">
@@ -378,20 +380,11 @@ export function Pricing({
                     card says exactly that rather than leaving a buyer to
                     discover the arrangement after they have signed. */}
                 <p className="mt-5 text-xs leading-relaxed text-slate-400">
-                  Three months minimum, because that is how long it takes to
-                  build, test and scale. Anything shorter is a launch, not a
-                  result, and we would rather say so now than at day 30.
-                </p>
-                <p className="mt-3 text-xs leading-relaxed text-slate-400">
-                  Ad budget is paid straight to the platforms and is not part of
-                  this fee. We work with businesses spending at least $1,500 a
-                  month on ads. Traffic execution is delivered by our partner
-                  team; the strategy, the reporting and the result stay ours.
-                </p>
-                <p className="mt-3 text-xs leading-relaxed text-slate-400">
-                  Best fit if you know what needs building and do not have the
-                  hours to build it. If a plan above would serve you better, we
-                  will say so on the call.
+                  Final scope and investment are confirmed before anything is
+                  charged. Ad budget is paid straight to the platforms and is
+                  not part of this fee. Traffic execution is delivered by our
+                  partner team; the strategy, the reporting and the result stay
+                  ours.
                 </p>
               </CardContent>
               <CardFooter>
@@ -401,7 +394,7 @@ export function Pricing({
                   className="w-full border-white/25 bg-transparent text-slate-50 hover:bg-white/10 hover:text-slate-50"
                   onClick={openCrispChat}
                 >
-                  Book a call
+                  Book a Strategy Call
                 </Button>
               </CardFooter>
             </Card>
