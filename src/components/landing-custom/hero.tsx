@@ -20,12 +20,12 @@ const UNIFIED_COPY = {
   // the proof rather than a promise.
   headLead: "Find what's costing you leads.",
   headAccent: "Then fix it",
-  sub: "Ascend analyzes your website and marketing to identify the biggest constraint holding back conversions, shows you what to fix first, and helps you put the fix into action.",
+  sub: "Ascend identifies what's costing you leads, shows you what to fix first, and helps you put the fix into action.",
   // Describes the PRIMARY action, which is now the scan. The old line named the
   // trial's card requirement while sitting under a scan button — true of the
   // wrong thing, which is the most expensive kind of accurate copy. The trial's
   // own terms travel with the trial link instead.
-  trust: "Free. No credit card, no software setup.",
+  trust: "Free. No credit card. No software setup.",
   authority:
     "Built and calibrated using insights from 150+ real-world website analyses and established CRO/UX principles.",
 } as const;
@@ -91,11 +91,11 @@ export function Hero({
 
           {unified ? (
             <>
-              <HeroCtas trialPlanId={trialPlanId} scanHref={scanHref} />
-              {/* The card is the friction, so it is named here rather than
-                  discovered on the Stripe page. Saying it plainly is what
-                  lets the scan read as a real alternative. */}
-              <p className="mt-4 text-sm text-muted-foreground">{UNIFIED_COPY.trust}</p>
+              {/* The reassurance travels WITH the button now. As muted text
+                  below the secondary link it was answering "what does this
+                  cost me" several lines after the visitor had already decided
+                  whether to click. */}
+              <HeroCtas trialPlanId={trialPlanId} scanHref={scanHref} reassurance={UNIFIED_COPY.trust} />
               <p className="mx-auto mt-6 max-w-xl text-xs leading-relaxed text-muted-foreground/80">
                 {UNIFIED_COPY.authority}
               </p>

@@ -111,7 +111,15 @@ export default async function AscendAppLayout({ children }: { children: ReactNod
         Skip to content
       </a>
 
-      <aside className="hidden w-64 shrink-0 border-r border-[var(--dx-border-subtle)] bg-[var(--dx-surface-1)] p-4 md:flex">
+      {/* PINNED TO THE VIEWPORT, NOT THE DOCUMENT.
+          The shell is min-h-dvh, so on a long page (Intelligence, Command
+          Center) this column stretched to the full document height and the
+          mt-auto account nav inside it went with it — Command Center, Ask
+          Zeno and Switch workspace ended up below the fold, reachable only by
+          scrolling past the entire page. sticky + h-dvh makes mt-auto resolve
+          against the screen instead, and overflow-y-auto keeps the nav
+          reachable on a short viewport. */}
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 overflow-y-auto border-r border-[var(--dx-border-subtle)] bg-[var(--dx-surface-1)] p-4 md:flex">
         <AscendShellSidebarContent branding={branding} navigation={shell.navigation} capabilities={shell.capabilities} zenoHref={zenoHref} />
       </aside>
 

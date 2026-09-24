@@ -174,6 +174,13 @@ export function AscendHeroDemo() {
 
   return (
     <div ref={ref} className="mx-auto mt-16 max-w-4xl">
+      {/* One line, then the product demonstrates itself. The scan's whole
+          argument is the result on screen, so the copy around it only has to
+          say what the result is FOR. */}
+      <p className="mb-6 text-center text-xl font-semibold tracking-tight sm:text-2xl">
+        Know what to fix first, instead of guessing.
+      </p>
+
       <div className="relative overflow-hidden rounded-3xl border bg-card shadow-[0_30px_80px_-30px_rgba(0,0,0,0.45)]">
         {/* Depth behind the content, so the panel reads as a surface rather
             than a flat rectangle. */}
@@ -318,7 +325,21 @@ export function AscendHeroDemo() {
         <style>{`@keyframes heroscan{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}`}</style>
       </div>
 
-      <p className="mt-3 text-center text-xs text-muted-foreground/70">
+      {/* ZENO IS EXPLAINED THE FIRST TIME IT IS USED.
+          "Fix this with Zeno" appears inside the panel above, which is the
+          product's first mention of the name anywhere a visitor reads. Until
+          now it assumed knowledge of the DivineX product architecture that a
+          first-time visitor has no way to have. Explained once, here, so the
+          later sections can simply use the name. */}
+      <div className="mx-auto mt-6 max-w-xl text-center">
+        <p className="text-sm font-semibold">Zeno, your Growth Strategist</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Turns your Growth Scan into prioritized recommendations and
+          ready-to-review marketing assets.
+        </p>
+      </div>
+
+      <p className="mt-6 text-center text-xs text-muted-foreground/70">
         Illustrative walkthrough. Your scan reads your own site.
       </p>
     </div>

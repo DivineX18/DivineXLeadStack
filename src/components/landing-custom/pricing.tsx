@@ -47,6 +47,54 @@ function audienceFor(planName: string): string | null {
   }
 }
 
+
+/**
+ * FOUR BUCKETS, SO A FOURTEEN-ITEM LIST CAN BE SCANNED.
+ *
+ * The feature lists grew accurate and unreadable at the same time: a buyer
+ * comparing tiers was reading fourteen unsorted lines per card and holding
+ * three cards in their head. Grouping is PRESENTATION ONLY — it sorts the
+ * exact strings the plan already produced and invents nothing. A label this
+ * map does not recognise is not dropped; it falls through to the ungrouped
+ * remainder below the buckets, so a new feature can never silently vanish
+ * from a card.
+ */
+const FEATURE_GROUPS: { label: string; match: (s: string) => boolean }[] = [
+  {
+    label: "Growth",
+    match: (t) =>
+      /Growth Scans?|Growth Intelligence|Zeno|Asset Studio|marketing assets|Reporting & conversion/i.test(t),
+  },
+  {
+    label: "Marketing",
+    match: (t) =>
+      /funnels|websites?|landing pages|broadcast emails|Email broadcasts|Forms|Social planner|Facebook & Instagram|custom domains|Funnel checkout|Website builder|sending domain|courses & community|visitors/i.test(t),
+  },
+  {
+    label: "Sales & CRM",
+    match: (t) => /CRM|pipelines?|Booking|follow-up|contacts|business workspaces?/i.test(t),
+  },
+  {
+    label: "Automation",
+    match: (t) => /Workflows|automations|SMS|WhatsApp|outbound calling|Missed-call|API access/i.test(t),
+  },
+];
+
+/** Assigns each line to the FIRST bucket that claims it, so a line naming two
+ *  domains lands in one place rather than appearing twice. */
+function groupFeatures(items: string[]): { label: string; items: string[] }[] {
+  const out = FEATURE_GROUPS.map((g) => ({ label: g.label, items: [] as string[] }));
+  const rest: string[] = [];
+  for (const item of items) {
+    const i = FEATURE_GROUPS.findIndex((g) => g.match(item));
+    if (i >= 0) out[i].items.push(item);
+    else rest.push(item);
+  }
+  const groups = out.filter((g) => g.items.length > 0);
+  if (rest.length) groups.push({ label: "Also included", items: rest });
+  return groups;
+}
+
 export function Pricing({
   plans,
   configured,
@@ -216,26 +264,32 @@ export function Pricing({
                     <div className="mt-5">{cta}</div>
                   </CardHeader>
                   <CardContent className="flex-1 space-y-5">
-                    <ul className="space-y-3">
-                      {plan.highlights.map((feature) => (
-                        <li
-                          key={feature}
-                          className="flex items-start gap-2 text-sm"
-                        >
-                          <span
-                            className={cn(
-                              "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full",
-                              highlighted
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-primary/10 text-primary",
-                            )}
-                          >
-                            <Check className="h-3 w-3" />
-                          </span>
-                          <span>{feature}</span>
-                        </li>
+                    <div className="space-y-4">
+                      {groupFeatures(plan.highlights).map((group) => (
+                        <div key={group.label}>
+                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            {group.label}
+                          </p>
+                          <ul className="space-y-2">
+                            {group.items.map((feature) => (
+                              <li key={feature} className="flex items-start gap-2 text-sm">
+                                <span
+                                  className={cn(
+                                    "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full",
+                                    highlighted
+                                      ? "bg-primary text-primary-foreground"
+                                      : "bg-primary/10 text-primary",
+                                  )}
+                                >
+                                  <Check className="h-3 w-3" />
+                                </span>
+                                <span>{feature}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                     {plan.alsoIncluded.length > 0 && (
                       <p className="text-xs leading-relaxed text-muted-foreground">
                         <span className="font-medium text-foreground">

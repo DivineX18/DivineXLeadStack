@@ -73,8 +73,13 @@ export function AscendFind() {
       <div className="container mx-auto px-4">
         <div className="grid items-start gap-12 lg:grid-cols-2">
           <div className="mx-auto max-w-lg lg:mx-0">
+            {/* WAS BYTE-FOR-BYTE THE PAGE'S H1.
+                Three screens below the hero, this heading repeated it word for
+                word, so a visitor scrolling was told the same thing twice and
+                learned nothing from the second telling. The section's actual
+                subject is HOW the scan reads a site, which is new. */}
             <h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
-              Find what&rsquo;s costing you leads.
+              It reads your site the way a buyer does.
             </h2>
             <p className="mt-4 text-pretty text-lg text-muted-foreground">
               Ascend reads your business the way a buyer would. It scores what&rsquo;s working, names

@@ -19,12 +19,14 @@ export function AscendLifecycle() {
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
-            Stop guessing what your business needs next.
+            Stop guessing what to fix next.
           </h2>
+          {/* "Most marketing tools give you more things to manage" was the
+              same argument the closing line of this section already makes,
+              two paragraphs apart. One statement of it is enough. */}
           <p className="mt-4 text-pretty text-lg text-muted-foreground">
-            Most marketing tools give you more things to manage. Ascend finds where you&rsquo;re
-            losing opportunities, helps you create what&rsquo;s missing, and puts the follow-up in
-            motion.
+            Ascend finds the problem, helps you build the fix, and puts your
+            follow-up in motion.
           </p>
         </div>
 

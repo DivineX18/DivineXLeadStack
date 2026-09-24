@@ -23,9 +23,12 @@ import { trackFunnelEvent } from "@/lib/analytics/track";
 export function HeroCtas({
   trialPlanId,
   scanHref,
+  reassurance,
 }: {
   trialPlanId: string | null;
   scanHref: string;
+  /** Answers "what does this cost me" at the button, not further down. */
+  reassurance?: string;
 }) {
   return (
     <div className="mt-10 flex flex-col items-center justify-center gap-3">
@@ -46,6 +49,10 @@ export function HeroCtas({
         Run My Free Growth Scan
       </Button>
 
+      {reassurance && (
+        <p className="text-sm font-medium text-foreground/80">{reassurance}</p>
+      )}
+
       {/* The trial stays reachable — a visitor who already knows they want it
           should never have to hunt — but as a quiet text link, not a second
           button competing for the same click. Its own terms travel with it so
@@ -54,14 +61,14 @@ export function HeroCtas({
         <a
           href="/start"
           onClick={() => trackFunnelEvent("trial_cta_clicked", { product: "ascend", source: "hero" })}
-          className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+          className="text-xs text-muted-foreground/70 underline-offset-4 transition-colors hover:text-foreground hover:underline"
         >
           Or start your 14-day free trial
         </a>
       ) : (
         <a
           href="#pricing"
-          className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+          className="text-xs text-muted-foreground/70 underline-offset-4 transition-colors hover:text-foreground hover:underline"
         >
           Or see plans
         </a>
