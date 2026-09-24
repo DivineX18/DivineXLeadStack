@@ -6,6 +6,8 @@ import { requireSubAccountAdmin } from "@/lib/auth/require-tenancy";
 import { createFunnelServerSide, updateFunnelServerSide } from "@/lib/server/funnels-service";
 import { getFunnelTemplate } from "@/lib/funnels/templates";
 import type { HeroConfig } from "@/types/funnels";
+import { starterConfigFor } from "@/lib/funnels/template-starter-content";
+import type { FunnelSectionType } from "@/types/funnels";
 
 /**
  * POST — start a new funnel from a template.
@@ -47,22 +49,33 @@ export async function POST(
     ...(template.complexity ? { complexity: template.complexity } : {}),
   });
 
-  // Seed the hero with the template's starter copy so the first thing the
-  // operator sees is a real page, not a page of "Write your headline here".
-  // Only the hero: inventing copy for every section would put words in the
-  // business's mouth about things a template cannot know.
+  // SEED THE WHOLE PAGE, NOT JUST THE HERO.
+  //
+  // This used to seed the hero alone, on the reasoning that inventing copy
+  // for every section would put words in the business's mouth. That reasoning
+  // is right about FACTS and wrong about STRUCTURE, and the cost of
+  // conflating them was that every template published as a hero, an empty
+  // offer card and a "Ready? / Get started" banner — empty sections render
+  // null, so the architecture the template existed to provide was invisible.
+  //
+  // starterConfigFor() writes prompts and structure only, never anything a
+  // visitor could read as a fact about the business. Proof placeholders say
+  // "Paste a real customer quote here" precisely so an unedited page is
+  // obviously a draft to its owner rather than quietly false to a reader, and
+  // logo/badge rows stay empty because no honest placeholder logo exists.
+  //
+  // Generated pages are untouched: they never call this.
   const created = await getAdminDb().doc(`funnels/${funnelId}`).get();
   const sections = (created.data()?.sections ?? []) as { id: string; type: string; config: Record<string, unknown> }[];
-  const hero = sections.find((s) => s.type === "hero");
-  if (hero) {
-    const c = hero.config as unknown as HeroConfig;
+  if (sections.length > 0) {
     await updateFunnelServerSide({
       subAccountId,
       funnelId,
       patch: {
-      sections: sections.map((s) =>
-        s.id === hero.id
-          ? {
+        sections: sections.map((s) => {
+          if (s.type === "hero") {
+            const c = s.config as unknown as HeroConfig;
+            return {
               ...s,
               config: {
                 ...c,
@@ -70,9 +83,11 @@ export async function POST(
                 subheadline: template.subheadline,
                 ctaLabel: template.ctaLabel,
               },
-            }
-          : s,
-      ) as never,
+            };
+          }
+          const starter = starterConfigFor(s.type as FunnelSectionType, template);
+          return starter ? { ...s, config: { ...s.config, ...starter } } : s;
+        }) as never,
       },
     });
   }
