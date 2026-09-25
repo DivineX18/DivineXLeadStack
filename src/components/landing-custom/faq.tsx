@@ -21,7 +21,7 @@ export const HOMEPAGE_FAQS = [
   {
     question: "How fast can I get a website live?",
     answer:
-      "A marketing site or a focused sales page, live in 1–3 minutes once we hit build. Pick a template that fits your business, fill in the details, and it's up.",
+      "A marketing site or a focused sales page, live in minutes once we hit build. Pick a template that fits your business, fill in the details, and it's up.",
   },
   {
     question: "Is my data safe?",

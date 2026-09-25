@@ -67,13 +67,14 @@ type BuildMode = "standard_local" | "standard_vsl" | "niche";
  */
 
 /**
- * THE LABEL PROMISED 1-3 MINUTES; THE SYSTEM ALLOWS FIFTEEN.
+ * THE LABEL PROMISED 1-3 MINUTES. PRODUCTION SAYS 2-10.
  *
- * The poll route runs 45 attempts at 20s (POLL_INTERVAL_SECONDS ×
- * MAX_POLL_ATTEMPTS) and only then settles the build as failed. So a build at
- * minute five is entirely normal, while the UI had already said it should
- * have finished — leaving the operator watching a spinner with no way to tell
- * a slow build from a hung one.
+ * Measured across the 12 successful builds in production: 128s, 149s, 149s,
+ * 170s, 306s, 549s, 551s, 552s and 613s, median around seven minutes. Exactly
+ * ONE finished inside three. The poll route separately allows fifteen
+ * (MAX_POLL_ATTEMPTS 45 × POLL_INTERVAL_SECONDS 20) before settling as
+ * failed, so the old label expired while both the build and the system were
+ * behaving normally, and an operator could not tell slow from hung.
  *
  * pollAttempts is written by every poll, so it doubles as both an elapsed
  * clock and proof the checker is alive. Zero attempts on a build that claims
@@ -83,8 +84,32 @@ type BuildMode = "standard_local" | "standard_vsl" | "niche";
 function buildProgressLabel(pollAttempts: number): string {
   if (pollAttempts === 0) return "Waiting for the first status check…";
   const elapsedMin = Math.floor((pollAttempts * 20) / 60);
-  if (elapsedMin < 3) return "Building your site… (usually 1–3 min)";
-  return `Still building — about ${elapsedMin} min in. We keep checking for up to 15 minutes.`;
+  if (elapsedMin < 3) return "Building and publishing your site… (usually 2–10 min)";
+  if (elapsedMin < 10) return `Building and publishing your site… about ${elapsedMin} min in. This is normal.`;
+  return `Taking longer than usual — about ${elapsedMin} min in. We keep checking for up to 15 minutes.`;
+}
+
+
+/**
+ * "Failed during GitLab setup: invalid_token" is gitpage's own internal
+ * wording for a credential problem on ITS side — the token it uses to create
+ * the repository that hosts the site. It has now produced three failed builds
+ * in production across seven weeks, so it is a recurring upstream condition
+ * rather than a transient blip.
+ *
+ * Passing it through verbatim asks the operator to debug someone else's
+ * integration, and the Rebuild button beside it invites a retry that will
+ * fail exactly the same way until the provider fixes the token. Saying so is
+ * both more honest and cheaper: a retry spends one of the agency's 30
+ * builds/hour for nothing.
+ */
+function describeBuildFailure(raw: string | null | undefined): string {
+  const msg = raw ?? "";
+  if (/invalid_token|invalid token/i.test(msg)) {
+    return "The site host (gitpage.site) rejected its own repository credentials, so the build could not be published. This is on their side, not yours or ours — retrying will fail the same way until it is fixed. Your draft and all its content are saved.";
+  }
+  if (/taking longer than expected/i.test(msg)) return msg;
+  return msg || "gitpage didn't return a live URL.";
 }
 
 export function WebsiteBuilder({
@@ -474,7 +499,7 @@ export function WebsiteBuilder({
               <p className="mt-0.5 flex items-start gap-1.5 text-xs text-rose-700 dark:text-rose-400">
                 <AlertTriangle className="mt-px h-3 w-3 shrink-0" />
                 <span className="line-clamp-2">
-                  {doc.errorMessage ?? "gitpage didn't return a live URL."}
+                  {describeBuildFailure(doc.errorMessage)}
                 </span>
               </p>
             )}
@@ -1136,7 +1161,7 @@ export function WebsiteBuilder({
                   {status === "failed" ? "Try the build again" : "Ready to build?"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Builds typically take 1–3 minutes. We&apos;ll show progress
+                  Builds typically take 2–10 minutes. We&apos;ll show progress
                   here.
                 </p>
               </div>
