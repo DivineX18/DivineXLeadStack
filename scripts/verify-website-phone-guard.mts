@@ -14,7 +14,11 @@ let fails = 0;
 const ck = (n: string, ok: boolean, d = "") => { console.log(`${ok ? "PASS" : "FAIL"}  ${n}${d ? ` — ${d}` : ""}`); if (!ok) fails++; };
 
 ck("shared guard exists", /function dropFictionalPhone/.test(src));
-ck("website build uses it", /business_phone: dropFictionalPhone\(business\.phone\)/.test(src));
+// The guard moved INSIDE verifiedBusinessFacts() when factual identity was
+// re-sourced from the workspace record. Assert the path, not the old call site.
+ck("website build phone passes through the guard",
+  /phone = dropFictionalPhone\(str2\(accountContact\.phone\)\)/.test(src)
+  && /business_phone: verified\.phone/.test(src));
 ck("funnel CTA guard still present", /ctaPhoneNumber = \/\^\\\+\?1\?\\d\{3\}555\\d\{4\}\$\/.test\(/.test(src));
 
 // Behaviour of the regex the guard uses, applied to the real failing value.
