@@ -14,6 +14,43 @@ export interface BuilderStep {
   whenFalse?: BuilderStep[];
 }
 
+/**
+ * A GOAL-GATE IS NOT A BRANCH.
+ *
+ * The compiler puts a "has the goal tag been applied yet?" check before every
+ * post-wait touch, as `if_else` with whenTrue pointing at the terminal goal
+ * node and whenFalse carrying the rest of the sequence. It is an early exit,
+ * not a fork: one side ends the run, the other IS the main line.
+ *
+ * parseTree treats every if_else as terminal and recurses into both sides, so
+ * a linear series of four gated emails came out four levels deep. The builder
+ * then split the canvas in two at each level, which quartered and then
+ * eighthed the column width until the cards overlapped and the text could not
+ * be read.
+ *
+ * So the renderer asks this question instead of assuming. A gate draws as one
+ * line on the main column and the sequence carries straight on. Anything with
+ * real steps on both sides is a real fork and still splits.
+ */
+export function isGoalGate(step: BuilderStep): boolean {
+  if (step.type !== "if_else") return false;
+  const exit = step.whenTrue ?? [];
+  const carryOn = step.whenFalse ?? [];
+  // Exactly one terminal goal node on the exit side, and a continuation on
+  // the other. Anything the operator has added to the exit side makes it a
+  // real branch again, and it goes back to splitting.
+  return exit.length === 1 && exit[0].type === "goal" && carryOn.length > 0;
+}
+
+/** The tag a goal-gate watches for, for the label on the line. */
+export function goalGateTag(step: BuilderStep): string {
+  const conds = (step.config?.conditions ?? {}) as {
+    all?: { field?: string; op?: string; value?: unknown }[];
+  };
+  const first = (conds.all ?? []).find((c) => c.op === "has_tag");
+  return typeof first?.value === "string" ? first.value : "";
+}
+
 export function newNodeId(): string {
   return typeof crypto !== "undefined" && crypto.randomUUID
     ? crypto.randomUUID()

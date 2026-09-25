@@ -51,6 +51,8 @@ import {
   newNodeId,
   parseTree,
   type BuilderStep,
+  isGoalGate,
+  goalGateTag,
 } from "@/lib/workflows/builder-tree";
 import { ConditionsEditor } from "./conditions-editor";
 import {
@@ -343,8 +345,17 @@ export function WorkflowBuilder({
           </div>
         </div>
 
-        {/* Step chain */}
-        <Chain steps={steps} onChange={setSteps} onEdit={setEditing} />
+        {/* Step chain.
+            Deeply forked workflows get a scrollbar rather than narrower
+            cards. Branch columns hold a fixed readable width, so the only
+            way to fit more of them is to scroll, which is the honest
+            trade: a card too narrow to read its own subject line is not a
+            smaller card, it is a broken one. */}
+        <div className="overflow-x-auto pb-2">
+          <div className="min-w-fit">
+            <Chain steps={steps} onChange={setSteps} onEdit={setEditing} />
+          </div>
+        </div>
 
         <NodeConfigDialog
           step={editing}
@@ -374,6 +385,9 @@ function Chain({
   onChange: (s: BuilderStep[]) => void;
   onEdit: (s: BuilderStep) => void;
 }) {
+  // The add affordance belongs at the end of the flow. When the list ends in
+  // a gate the flow continues inside that gate's inlined continuation, which
+  // renders its own, so this list must not render a second one.
   const endsInBranch =
     steps.length > 0 && steps[steps.length - 1].type === "if_else";
 
@@ -401,8 +415,30 @@ function Chain({
             onEdit={() => onEdit(s)}
             onDelete={() => onChange(steps.filter((_, j) => j !== i))}
           />
-          {s.type === "if_else" && (
-            <div className="mt-1 ml-4 grid grid-cols-2 gap-3 border-l-2 border-dashed pl-3">
+          {/* A goal-gate exits the run; it does not fork it. Drawn as one
+              line on the main column, with the sequence carrying straight on
+              underneath, so a linear series reads as a linear series however
+              many gates it contains. */}
+          {isGoalGate(s) && (
+            <>
+              <GoalGateLine tag={goalGateTag(s)} />
+              <Chain
+                steps={s.whenFalse ?? []}
+                onChange={(ns) =>
+                  onChange(
+                    steps.map((x, j) => (j === i ? { ...x, whenFalse: ns } : x))
+                  )
+                }
+                onEdit={onEdit}
+              />
+            </>
+          )}
+          {/* A real fork, with steps on both sides. Columns hold a readable
+              width and the canvas scrolls instead: `grid-cols-2` divided the
+              available width at every level, so depth 3 was unreadable and
+              depth 4 overlapped. */}
+          {s.type === "if_else" && !isGoalGate(s) && (
+            <div className="mt-1 ml-4 flex gap-3 border-l-2 border-dashed pl-3">
               <Branch
                 label="Yes"
                 steps={s.whenTrue ?? []}
@@ -450,7 +486,7 @@ function Branch({
   onEdit: (s: BuilderStep) => void;
 }) {
   return (
-    <div>
+    <div className="w-72 shrink-0">
       <div className="text-muted-foreground mb-1 text-xs font-semibold uppercase">
         {label}
       </div>
@@ -461,6 +497,30 @@ function Branch({
 
 function Connector() {
   return <div className="bg-border mx-auto h-4 w-px" />;
+}
+
+/**
+ * A goal-gate, as one line rather than a fork.
+ *
+ * It says what ends the run and where that run goes, inline, because that is
+ * the whole content of the check. Splitting the canvas to show a single
+ * terminal node on one side cost half the width and told the reader nothing
+ * they could not be told here.
+ */
+function GoalGateLine({ tag }: { tag: string }) {
+  return (
+    <div className="my-1 flex items-center gap-2">
+      <div className="bg-border h-px flex-1" />
+      <span
+        className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400"
+        title="The run exits here when the contact already has this tag, so a converted lead stops receiving the sequence."
+      >
+        <Flag className="h-3 w-3" />
+        {tag ? `Stops here if tagged ${tag}` : "Stops here when the goal is reached"}
+      </span>
+      <div className="bg-border h-px flex-1" />
+    </div>
+  );
 }
 
 const REQUIREMENT_WARNING: Record<string, string> = {

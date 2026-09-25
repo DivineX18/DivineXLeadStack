@@ -57,6 +57,9 @@ export interface AutomationSequenceStep {
    *  of an absolute wait — a rescheduled event moves the send
    *  automatically, and a cancelled event skips it. */
   anchorOffsetHours?: number | null;
+  /** "internal" becomes a notify step to the owner rather than an email to
+   *  the lead. See PlannedMessage.audience. */
+  audience?: "lead" | "internal";
 }
 
 export interface ComposeStrategyInput {
@@ -124,6 +127,47 @@ export function synthesizeAutomationPlan(displayName: string, tag: string): Auto
   };
 }
 
+/**
+ * One sequence step becomes one node, addressed to whoever it is actually for.
+ *
+ * An internal alert compiles to a notify step aimed at the owner, NOT to an
+ * email to the lead. It also skips withUnsubscribe(): an unsubscribe link on
+ * a message to your own team is meaningless at best, and at worst it lets a
+ * colleague opt the CONTACT out by clicking it.
+ */
+function touchNode(
+  id: string,
+  step: AutomationSequenceStep,
+  defaultCommType: string,
+  displayName: string,
+): WorkflowNode {
+  if (step.audience === "internal") {
+    return {
+      id,
+      type: "notify",
+      config: {
+        recipient: "owner",
+        to: "",
+        subject: step.subject || `Internal: ${displayName}`,
+        body: step.body,
+        purpose: step.purpose,
+      },
+      next: null,
+    };
+  }
+  return {
+    id,
+    type: "send_email",
+    config: {
+      subject: step.subject,
+      body: withUnsubscribe(step.body),
+      commType: step.commType ?? defaultCommType,
+      purpose: step.purpose,
+    },
+    next: null,
+  };
+}
+
 export function composeStrategyNodes(input: ComposeStrategyInput): {
   nodes: Record<string, WorkflowNode>;
   startNodeId: string;
@@ -174,7 +218,7 @@ export function composeStrategyNodes(input: ComposeStrategyInput): {
       branches: { whenTrue: "goal", whenFalse: eId },
       next: null,
     };
-    nodes[eId] = { id: eId, type: "send_email", config: { subject: step.subject, body: withUnsubscribe(step.body), commType: step.commType ?? "nurture", purpose: step.purpose }, next: null };
+    nodes[eId] = touchNode(eId, step, "nurture", displayName);
     prevId = eId;
   });
 
@@ -210,7 +254,7 @@ export function composeStrategyNodes(input: ComposeStrategyInput): {
       branches: { whenTrue: "goal", whenFalse: eId },
       next: null,
     };
-    nodes[eId] = { id: eId, type: "send_email", config: { subject: step.subject, body: withUnsubscribe(step.body), commType: step.commType ?? "reminder", purpose: step.purpose }, next: null };
+    nodes[eId] = touchNode(eId, step, "reminder", displayName);
     prevId = eId;
   });
   // Cancellation skip-chain: a missing/cancelled anchor jumps past its own

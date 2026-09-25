@@ -24,6 +24,8 @@
 import fs from "node:fs";
 import { AI_SUITE_CAPABILITIES } from "../src/lib/ai-suite/capabilities";
 import { validateCampaignPlan, type CampaignPlan } from "../src/lib/divinex/campaign";
+import { followUpName } from "../src/lib/divinex/apply-workflow-plan";
+import { isGoalGate, goalGateTag, parseTree, type BuilderStep } from "../src/lib/workflows/builder-tree";
 import { RECORDED, resetRecorded } from "./stub-workflows-service";
 
 let fails = 0;
@@ -50,6 +52,7 @@ const MODEL_ARGS = {
     { delay_hours: 0, subject: "You're in", body: "Thanks for signing up.", purpose: "confirm", comm_type: "transactional", origin: "supplied" },
     { delay_hours: 48, subject: "One thing to try", body: "Here is the first step.", purpose: "nurture", comm_type: "nurture" },
     { delay_hours: 120, subject: "Ready to talk?", body: "Book a time that suits you.", purpose: "ask", comm_type: "sales_followup" },
+    { delay_hours: 144, subject: "Call this lead today", body: "{{contact.firstName}} has not booked. Ring them.", purpose: "internal alert", comm_type: "operational", audience: "internal" },
   ],
   segmentation: [
     { field: "budget", operator: "equals", value: "under-5k", tag: "self-serve", label: "Self serve" },
@@ -66,7 +69,7 @@ if (!first.ok) process.exit(1);
 const proposalArgs = first.args;
 ck("proposal carries the campaign name", proposalArgs.campaignName === "Spring intake follow-up");
 ck("goal tag is slugified", proposalArgs.goalTag === "booked");
-ck("all three messages survive", (proposalArgs.messages as unknown[]).length === 3);
+ck("all four messages survive", (proposalArgs.messages as unknown[]).length === 4);
 ck("handoff days read", proposalArgs.handoffDays === 5);
 ck("form id read", proposalArgs.formId === "form_abc123");
 ck("summarize works on the proposal", cap.summarize(proposalArgs).includes("Spring intake follow-up"));
@@ -168,7 +171,7 @@ console.log("\n-- 4. execute: the real capability, with only the write stubbed -
     // nodes is a Record keyed by node id, not an array.
     const nodes = Object.values(update.nodes) as { type?: string; config?: Record<string, unknown> }[];
     const emails = nodes.filter((n) => n.type === "send_email");
-    ck("every message became a real email step", emails.length === 3, `got ${emails.length}`);
+    ck("each LEAD message became a real email step", emails.length === 3, `got ${emails.length}`);
     const subjects = emails.map((e) => String(e.config?.subject ?? ""));
     ck("the customer's exact subjects are installed",
       ["You're in", "One thing to try", "Ready to talk?"].every((s) => subjects.includes(s)),
@@ -179,7 +182,86 @@ console.log("\n-- 4. execute: the real capability, with only the write stubbed -
     /draft/i.test(result?.resultText ?? ""), (result?.resultText ?? "").split("\n")[0]);
   ck("it hands back a reference to the workflow it built",
     result?.ref?.kind === "workflow" && !!result?.ref?.id, JSON.stringify(result?.ref ?? null));
+
+  console.log("\n-- 5. an internal alert is not an email to the lead --");
+  if (update?.nodes) {
+    const all = Object.values(update.nodes) as { type?: string; config?: Record<string, unknown> }[];
+    const mails = all.filter((n) => n.type === "send_email");
+    const internal = all
+      .filter((n) => n.type === "notify")
+      .find((n) => String(n.config?.subject ?? "") === "Call this lead today");
+    ck("the owner-directed message compiled to a notify step", !!internal);
+    ck("it is addressed to the owner", internal?.config?.recipient === "owner");
+    ck("and NOT to the lead as an email",
+      !mails.some((e) => String(e.config?.subject ?? "") === "Call this lead today"));
+    // An unsubscribe link on internal copy lets a colleague opt the CONTACT
+    // out by clicking it.
+    ck("internal copy carries no unsubscribe link",
+      !/unsubscribe/i.test(String(internal?.config?.body ?? "")),
+      String(internal?.config?.body ?? "").slice(0, 50));
+    ck("lead emails still carry theirs",
+      mails.every((e) => /unsubscribe/i.test(String(e.config?.body ?? ""))));
+  }
+
+  console.log("\n-- 6. the built workflow reads as ONE column, not a staircase --");
+  if (update?.nodes) {
+    const tree = parseTree(update.nodes, (update.patch?.startNodeId as string) ?? null);
+    const gates: BuilderStep[] = [];
+    // Count only REAL forks. Every goal-gate used to nest the rest of the
+    // sequence one level deeper, and the canvas halved the column width at
+    // each level until the cards overlapped.
+    const walk = (list: BuilderStep[], forks: number): number => {
+      let deepest = forks;
+      for (const st of list) {
+        if (st.type !== "if_else") continue;
+        const gate = isGoalGate(st);
+        if (gate) gates.push(st);
+        const next = forks + (gate ? 0 : 1);
+        deepest = Math.max(deepest, walk(st.whenTrue ?? [], next), walk(st.whenFalse ?? [], next));
+      }
+      return deepest;
+    };
+    const forkDepth = walk(tree, 0);
+    ck("the goal-gates are recognised as exits", gates.length >= 3, `${gates.length} gates`);
+    ck("every gate knows which tag stops the run",
+      gates.length > 0 && gates.every((g) => goalGateTag(g) === "booked"),
+      gates.map(goalGateTag).join(","));
+    const realBranches = (MODEL_ARGS.segmentation ?? []).length;
+    ck("fork depth tracks real branches, not the number of gates",
+      forkDepth === realBranches,
+      `${gates.length} gates + ${realBranches} segmentation rule(s) -> depth ${forkDepth}`);
+    ck("the gates outnumber the forks, which is the whole point",
+      gates.length > forkDepth, `${gates.length} gates vs ${forkDepth} fork(s)`);
+  }
 }
+
+console.log("\n-- 7. the canvas stops dividing itself --");
+{
+  const ui = fs.readFileSync("src/components/workflows/workflow-builder.tsx", "utf8");
+  // grid-cols-2 split the AVAILABLE width at every level, so each nested
+  // branch got half of an already-halved column. Depth 3 was unreadable and
+  // depth 4 overlapped.
+  ck("branch columns no longer divide the available width",
+    !/grid\s+grid-cols-2/.test(ui));
+  ck("a branch column holds a fixed, readable width", /w-72 shrink-0/.test(ui));
+  ck("the canvas scrolls instead of compressing", /overflow-x-auto/.test(ui));
+  ck("a goal-gate renders as one line, not a split",
+    /isGoalGate\(s\) && \(/.test(ui) && /<GoalGateLine/.test(ui));
+  ck("the gate's continuation stays in the SAME column",
+    /<GoalGateLine[\s\S]{0,400}?<Chain/.test(ui));
+  ck("a real fork still splits", /s\.type === "if_else" && !isGoalGate\(s\)/.test(ui));
+}
+
+console.log("\n-- 8. the workflow name does not repeat itself --");
+ck("a plain name gets the suffix", followUpName("Spring intake") === "Spring intake: Follow-up");
+ck("a name already ending in follow-up does not get a second one",
+  followUpName("Spring intake follow-up") === "Spring intake follow-up",
+  followUpName("Spring intake follow-up"));
+ck("case and spacing variants count as the same word",
+  followUpName("Spring Follow-Up") === "Spring Follow-Up" &&
+  followUpName("Spring follow up") === "Spring follow up");
+ck("trailing punctuation does not produce a double separator",
+  followUpName("Q1 launch:") === "Q1 launch: Follow-up", followUpName("Q1 launch:"));
 
 console.log(fails === 0 ? "\nALL PASS" : `\n${fails} FAILED`);
 process.exit(fails ? 1 : 0);

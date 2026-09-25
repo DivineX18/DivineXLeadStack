@@ -68,6 +68,19 @@ function buildSegmentationNodes(
  * Zeno-generated copy travels the same path (the compiler cannot tell them
  * apart, which is the point).
  */
+/**
+ * "<name>: Follow-up", and only one of them.
+ *
+ * The campaign is often already called something ending in "follow-up", so
+ * appending the suffix unconditionally produced "Spring intake follow-up:
+ * Follow-up" in the workflow list. A name that repeats itself reads as a
+ * bug, because it is one.
+ */
+export function followUpName(displayName: string): string {
+  const base = displayName.trim().replace(/[\s:,-]+$/, "");
+  return /follow[-\s]?up$/i.test(base) ? base : `${base}: Follow-up`;
+}
+
 export async function applyWorkflowPlan(input: {
   subAccountId: string;
   agencyId: string;
@@ -104,6 +117,7 @@ export async function applyWorkflowPlan(input: {
       purpose: m.purpose,
       commType: m.commType,
       anchorOffsetHours: m.anchorOffsetHours ?? null,
+      audience: m.audience ?? "lead",
     }));
 
   const composed = composeStrategyNodes({
@@ -133,7 +147,7 @@ export async function applyWorkflowPlan(input: {
     (await createWorkflowServerSide({
       subAccountId: input.subAccountId,
       createdByUid: input.createdByUid,
-      name: `${displayName}: follow-up`,
+      name: followUpName(displayName),
       template: "blank",
     }));
 

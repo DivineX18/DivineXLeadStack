@@ -7063,7 +7063,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     requiredRole: "subAccountAdmin",
     menuLabel: "Build the follow-up sequence for a campaign (draft)",
     description:
-      "BUILD the follow-up you designed. Use when the user approves a follow-up plan, supplies their own emails ('here are my 5 emails'), or asks to change one ('make email 2 less aggressive', 'move it to day 4', 'delete the last one'). You describe the COMPLETE DESIRED STATE of the sequence and a deterministic compiler turns it into a real DRAFT workflow with real email subjects/bodies, real waits, real segmentation branches and a real exit condition, the customer never copy/pastes your emails into the builder. EDITS: re-send the whole desired state with the change applied (include workflow_id). It overwrites, so send every message you want to keep, not just the changed one. CUSTOMER-SUPPLIED COPY IS INSTALLED VERBATIM: never rewrite emails the user gave you unless they asked. The workflow is always created as a DRAFT. It cannot contact anyone until the customer clicks Publish in Flow, so say that plainly when you report back. Timing is real: delay_hours is measured from signup. Segmentation becomes real branches: give the form field, the comparison and the tag. Every email automatically keeps the unsubscribe link and the goal-tag exit check, so a converted lead stops receiving the sequence.",
+      "BUILD the follow-up you designed. Use when the user approves a follow-up plan, supplies their own emails ('here are my 5 emails'), or asks to change one ('make email 2 less aggressive', 'move it to day 4', 'delete the last one'). You describe the COMPLETE DESIRED STATE of the sequence and a deterministic compiler turns it into a real DRAFT workflow with real email subjects/bodies, real waits, real segmentation branches and a real exit condition, the customer never copy/pastes your emails into the builder. EDITS: re-send the whole desired state with the change applied (include workflow_id). It overwrites, so send every message you want to keep, not just the changed one. CUSTOMER-SUPPLIED COPY IS INSTALLED VERBATIM: never rewrite emails the user gave you unless they asked. INTERNAL ALERTS ARE NOT EMAILS TO THE LEAD: when a message is addressed to the business owner or their team, set audience:'internal' and it compiles to an internal notification step instead of being sent to the contact. The workflow is always created as a DRAFT. It cannot contact anyone until the customer clicks Publish in Flow, so say that plainly when you report back. Timing is real: delay_hours is measured from signup. Segmentation becomes real branches: give the form field, the comparison and the tag. Every email automatically keeps the unsubscribe link and the goal-tag exit check, so a converted lead stops receiving the sequence.",
     parameters: {
       type: "object",
       properties: {
@@ -7088,6 +7088,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
                 enum: ["transactional", "operational", "reminder", "nurture", "recovery", "sales_followup", "stewardship", "reactivation"],
               },
               origin: { type: "string", enum: ["supplied", "generated"], description: "'supplied' when the customer wrote it." },
+              audience: {
+                type: "string",
+                enum: ["lead", "internal"],
+                description: "WHO RECEIVES THIS. 'lead' (default) emails the contact. 'internal' is an alert for the business owner or their team (\"new enquiry, call within the hour\") and becomes an internal notification step, NOT an email to the lead. If the customer describes a message as an alert, a heads-up, or anything addressed to their own team, set this to 'internal'.",
+              },
             },
             required: ["delay_hours", "subject", "body", "purpose", "comm_type"],
             additionalProperties: false,
@@ -7152,6 +7157,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             ? (m.comm_type ?? m.commType)
             : "nurture") as "transactional" | "nurture",
           origin: (m.origin === "supplied" ? "supplied" : "generated") as "supplied" | "generated",
+          audience: (m.audience === "internal" ? "internal" : "lead") as "lead" | "internal",
           anchorOffsetHours: null,
         }))
         .filter((m) => m.subject && m.body)

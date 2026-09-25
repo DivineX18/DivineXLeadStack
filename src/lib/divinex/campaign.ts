@@ -104,6 +104,20 @@ export interface PlannedMessage {
   /** "supplied" = the customer wrote it (installed verbatim, never
    *  rewritten); "generated" = Zeno wrote it. */
   origin: "supplied" | "generated";
+  /**
+   * WHO THIS MESSAGE IS FOR. Default "lead".
+   *
+   * Every message used to compile into an email addressed to the lead, so an
+   * internal alert the operator wrote for their own team ("new enquiry, call
+   * them within the hour") was sent to the customer instead, complete with an
+   * unsubscribe link. That is not a formatting slip: it is private operational
+   * copy delivered to the wrong person.
+   *
+   * "internal" compiles to a notify step aimed at the owner. It is stated,
+   * never guessed from the wording, because deciding who receives a message
+   * by pattern-matching its text is how the next one goes to the wrong place.
+   */
+  audience?: "lead" | "internal";
 }
 
 export interface SegmentationRule {
