@@ -65,6 +65,28 @@ type BuildMode = "standard_local" | "standard_vsl" | "niche";
  * is owned by the parent page's collection subscription and passed down — this
  * component never subscribes to Firestore itself.
  */
+
+/**
+ * THE LABEL PROMISED 1-3 MINUTES; THE SYSTEM ALLOWS FIFTEEN.
+ *
+ * The poll route runs 45 attempts at 20s (POLL_INTERVAL_SECONDS ×
+ * MAX_POLL_ATTEMPTS) and only then settles the build as failed. So a build at
+ * minute five is entirely normal, while the UI had already said it should
+ * have finished — leaving the operator watching a spinner with no way to tell
+ * a slow build from a hung one.
+ *
+ * pollAttempts is written by every poll, so it doubles as both an elapsed
+ * clock and proof the checker is alive. Zero attempts on a build that claims
+ * to be running means the callback never fired, which is worth saying plainly
+ * rather than spinning forever.
+ */
+function buildProgressLabel(pollAttempts: number): string {
+  if (pollAttempts === 0) return "Waiting for the first status check…";
+  const elapsedMin = Math.floor((pollAttempts * 20) / 60);
+  if (elapsedMin < 3) return "Building your site… (usually 1–3 min)";
+  return `Still building — about ${elapsedMin} min in. We keep checking for up to 15 minutes.`;
+}
+
 export function WebsiteBuilder({
   subAccountId,
   doc,
@@ -404,7 +426,7 @@ export function WebsiteBuilder({
                 <Loader2 className="h-3 w-3 animate-spin" />
                 {status === "queued"
                   ? "Build queued — gitpage is starting up…"
-                  : "Building your site… (1–3 min)"}
+                  : buildProgressLabel(doc.pollAttempts ?? 0)}
               </p>
             )}
             {status === "ready" && liveUrl && (
