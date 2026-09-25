@@ -739,6 +739,21 @@ function enabledGateLabels(data: Record<string, unknown>): string[] {
 }
 
 // ── the registry ───────────────────────────────────────────────────────────
+
+/**
+ * NANP 555-01xx is the reserved fictional range, and 555 exchanges generally
+ * are not assignable. A model that has no real number will reach for one, so
+ * anything matching is treated as absent rather than published. Shared
+ * deliberately: create_funnel has guarded its CTA number since the 10-funnel
+ * certification, and create_website shipping one to a live site is the same
+ * failure with a different field name.
+ */
+function dropFictionalPhone(raw: string | null | undefined): string {
+  const v = (raw ?? "").trim();
+  if (!v) return "";
+  return /^\+?1?\d{3}555\d{4}$/.test(v.replace(/[^\d]/g, "")) ? "" : v;
+}
+
 export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
   // ═══ Agency level ════════════════════════════════════════════════════════
   {
@@ -3448,7 +3463,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               business_state: business.state,
               business_country: business.country,
               business_zip: business.zip,
-              business_phone: business.phone || accountContact.phone || "",
+              // FICTIONAL-NUMBER GUARD — the funnel path has had this since the
+              // 10-funnel certification; the website path never did, and the
+              // Apex human test published "(713) 555-0147" to a live business
+              // site. NANP 555 exchanges are reserved for fiction, so a number
+              // matching one is treated as absent. A missing phone is a gap the
+              // operator fills in; a fake one is a lie a customer might dial.
+              business_phone: dropFictionalPhone(business.phone) || accountContact.phone || "",
               business_email: business.email || contactEmail,
               opening_hours: business.opening_hours,
             }
