@@ -167,6 +167,9 @@ export interface WebsiteDoc {
   contentFlags: ContentFlag[] | null;
   /** Number of times we've polled gitpage for the current job — used to cap. */
   pollAttempts: number;
+  /** First time gitpage stopped heart-beating on this build. Diagnostic
+   *  only: it never settles a build, the 15-minute cap does. */
+  slowHeartbeatSince?: unknown;
   lastBuildAt: Timestamp | FieldValue | null;
   lastBuildByUid: string | null;
   config: WebsiteConfig;

@@ -228,14 +228,33 @@ export async function POST(
     pollResult.updatedAt &&
     new Date(pollResult.updatedAt).getTime() < Date.now() - STALE_HEARTBEAT_MS
   ) {
+    // A QUIET HEARTBEAT IS NOT A DEAD BUILD.
+    //
+    // This used to settle the build as FAILED at five minutes and tell the
+    // customer to hit Rebuild. Two things were wrong with that. The backend
+    // contract is fifteen minutes (MAX_POLL_ATTEMPTS × POLL_INTERVAL_SECONDS)
+    // and polling was still perfectly healthy, so a build the provider was
+    // still working on was declared dead a third of the way in. And the
+    // advice actively caused harm: rebuilding abandons a running job, spends
+    // another of the agency's 30 builds/hour, and can leave an orphaned
+    // pipeline behind.
+    //
+    // The heartbeat check keeps its diagnostic value — it is recorded — but
+    // it no longer terminates anything. Only the fifteen-minute cap settles a
+    // build, which is the one place that decision belongs.
     await docRef.update({
-      status: "failed",
-      errorMessage:
-        "Build appears stuck (no progress for 5+ minutes). Try Rebuild.",
+      status: nextStatus,
+      slowHeartbeatSince: websiteDoc.slowHeartbeatSince ?? FieldValue.serverTimestamp(),
       pollAttempts: attempts,
       updatedAt: FieldValue.serverTimestamp(),
     });
-    return NextResponse.json({ ok: true, settled: "stuck" });
+    const keptPolling = await rescheduleNext(
+      subAccountId,
+      siteId,
+      payload.formResponseId,
+      attempts,
+    );
+    return NextResponse.json({ ok: true, settled: keptPolling ? "slow" : "reschedule-failed" });
   }
 
   await docRef.update({

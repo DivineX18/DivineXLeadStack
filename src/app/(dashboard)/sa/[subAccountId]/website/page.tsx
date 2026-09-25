@@ -13,7 +13,7 @@ import {
 } from "@/hooks/use-gitpage-status";
 import { Button } from "@/components/ui/button";
 import { WebsiteBuilder } from "@/components/website/website-builder";
-import { effectiveWebsiteCap } from "@/lib/website/limits";
+import { effectiveWebsiteCap, countConsumedWebsiteSlots } from "@/lib/website/limits";
 import type { WebsiteDoc } from "@/types/website";
 
 /**
@@ -74,7 +74,9 @@ export default function WebsitePage() {
     return [...sites].sort((a, b) => toMillis(a) - toMillis(b));
   }, [sites]);
 
-  const atCap = orderedSites.length >= maxSites;
+  // The cap meters published sites, so an unbuilt draft must not block
+  // "Add website". Matches createWebsiteForSubAccount's own check.
+  const atCap = countConsumedWebsiteSlots(orderedSites) >= maxSites;
   const maxSitesLabel = Number.isFinite(maxSites) ? String(maxSites) : "unlimited";
   const gateBlocked = gateState.kind === "subscribe-needed";
 
@@ -175,7 +177,13 @@ export default function WebsitePage() {
 
           <div className="flex items-center justify-between rounded-2xl border border-dashed bg-card/50 p-4">
             <p className="text-xs text-muted-foreground">
-              {orderedSites.length} of {maxSitesLabel} websites
+              {/* Published sites only, same helper the server enforces
+                  with. This counted DOCUMENTS, so a draft and two unbuilt
+                  attempts read as "3 of 5 websites" in a workspace owning
+                  none. The Ascend surface was fixed in 0379eee; this second
+                  counter was missed because its text says "websites" rather
+                  than "websites used". */}
+              {countConsumedWebsiteSlots(orderedSites)} of {maxSitesLabel} websites
               used.
             </p>
             <Button
