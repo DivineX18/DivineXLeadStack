@@ -49,12 +49,25 @@ export function HeroCtas({
         Run My Free Growth Scan
       </Button>
 
+      {/* RISK REVERSAL, SIZED TO BE READ.
+          At 14px and 80% opacity this was the quietest thing in the hero, and
+          it answers the only question a cold visitor has at the button: what
+          does this cost me. It now matches the button label's size at a
+          heavier weight and full contrast, so it is scanned rather than
+          skimmed past.
+
+          Deliberately NOT larger than the button label. The reassurance
+          removes the reason to hesitate; it is not the thing being asked for,
+          and a risk-reversal line that outweighs its own call to action moves
+          attention away from the click it exists to earn. */}
       {reassurance && (
-        <p className="text-sm font-medium text-foreground/80">{reassurance}</p>
+        <p className="text-base font-semibold tracking-tight text-foreground">
+          {reassurance}
+        </p>
       )}
 
       {/* The trial stays reachable — a visitor who already knows they want it
-          should never have to hunt — but as a quiet text link, not a second
+          should never have to hunt, but as a quiet text link, not a second
           button competing for the same click. Its own terms travel with it so
           the card requirement is never something discovered later. */}
       {trialPlanId ? (
