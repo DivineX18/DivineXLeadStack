@@ -3356,21 +3356,42 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         business.email ||
         accountContact.email ||
         "";
-      if (!contactEmail) {
-        throw new CapabilityUserError(
-          "I need a public contact email for the site. Tell me which to use, or save one under Settings → Account contact first.",
-        );
-      }
+      // BUILD IS NOT PUBLISH, AND THIS ACTION USED TO TREAT THEM AS ONE.
+      //
+      // websites-service already draws the line correctly:
+      // createWebsiteForSubAccount() validates nothing about the config, and
+      // validateWebsiteConfig() runs inside submitWebsiteBuildForSubAccount().
+      // The draft and the live build are genuinely separate steps.
+      //
+      // This action ignored that seam. It always did both, so it demanded
+      // everything the BUILD demands before it would create anything, and it
+      // threw before either. A customer who had described their business
+      // perfectly well was refused for a missing contact email, supplied it,
+      // and was refused again for a missing button URL. That is an
+      // interrogation, not an assistant.
+      //
+      // Missing operational details now produce a real, editable draft and a
+      // short list of what to add before publishing. Nothing is invented to
+      // satisfy a validator, and the build-time validation itself is
+      // untouched: it still runs, just at the point it is actually about.
       const bookingLink =
         typeof sub.bookingLink === "string" && /^https?:\/\//i.test(sub.bookingLink)
           ? sub.bookingLink
           : "";
-      const ctaLink = (args.ctaLink as string) || bookingLink;
-      if (!ctaLink) {
-        throw new CapabilityUserError(
-          "I need a link for the site's main button (a booking page or your website). Tell me the URL, or set a booking link in Settings first.",
-        );
-      }
+      // "Use the contact page" is a destination a customer can legitimately
+      // ask for, and the schema had no way to express it: cta_link must be an
+      // absolute URL, and a site that does not exist yet has no URL to give.
+      // A same-page anchor is the honest answer when the build includes a
+      // contact page or section.
+      const wantsContactPage =
+        (args.includeContactPage as boolean) || (args.niche as string | null) !== null;
+      const ctaLink =
+        (args.ctaLink as string) || bookingLink || (wantsContactPage ? "#contact" : "");
+
+      /** What a human still has to supply before this site should go live. */
+      const prePublish: string[] = [];
+      if (!contactEmail) prePublish.push("a public contact email");
+      if (!ctaLink) prePublish.push("a destination for the main button (a booking page or your contact page)");
 
       const buildType = args.buildType as "local" | "vsl";
       const niche = args.niche as Niche | null;
@@ -3452,6 +3473,28 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           throw err;
         }
       })();
+
+      // DRAFT ONLY when something the LIVE site needs is still missing. The
+      // slot, the copy and every choice the customer made are saved and
+      // editable; only the submit is held back.
+      if (prePublish.length > 0) {
+        const needs = prePublish.join(" and ");
+        return {
+          resultText:
+            `Created website draft ${siteId} WITHOUT submitting a build, because ${needs} is still missing. ` +
+            `The draft is saved and editable. Do NOT re-ask for information the user already gave you; ask only for ${needs}.`,
+          ref: { kind: "website", id: siteId },
+          completion: {
+            outcome:
+              "Your website draft is ready and everything you told me about the business is in it.",
+            review: prePublish.map((p) => `Before publishing, add ${p}.`),
+            nextActions: [
+              { label: "Review the draft", kind: "review" as const },
+              { label: "Add the missing details", kind: "edit" as const },
+            ],
+          },
+        };
+      }
 
       try {
         await submitWebsiteBuildForSubAccount({
