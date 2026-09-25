@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { ResolvedBrand } from "@/config/landing";
-import { Logo } from "./logo";
+import { BrandLogo } from "./brand-logo";
 
 /** Flat row stays to the three pages a prospect actually needs to decide
  * "is this for me and what does it cost": Platform, Industries, Pricing.
@@ -110,16 +110,13 @@ export function Navbar({ brand }: { brand: ResolvedBrand }) {
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2 text-xl font-bold">
-          {brand.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={brand.logoUrl}
-              alt={`${brand.name} logo`}
-              className="h-6 w-auto max-w-[120px] object-contain"
-            />
-          ) : (
-            <Logo size={24} idSuffix="-nav" />
-          )}
+          <BrandLogo
+            logoUrl={brand.logoUrl}
+            name={brand.name}
+            size={24}
+            idSuffix="-nav"
+            imgClassName="h-6 w-auto max-w-[120px] object-contain"
+          />
           <span className="bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-300 bg-clip-text text-transparent">
             {brand.name}
           </span>

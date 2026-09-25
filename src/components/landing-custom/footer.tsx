@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ResolvedBrand } from "@/config/landing";
-import { Logo } from "./logo";
+import { BrandLogo } from "./brand-logo";
 
 export function Footer({ brand }: { brand: ResolvedBrand }) {
   return (
@@ -9,16 +9,13 @@ export function Footer({ brand }: { brand: ResolvedBrand }) {
         <div className="grid gap-8 sm:grid-cols-4">
           <div className="sm:col-span-1">
             <Link href="/" className="flex items-center gap-2 text-lg font-bold">
-              {brand.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={brand.logoUrl}
-                  alt={`${brand.name} logo`}
-                  className="h-5 w-auto max-w-[100px] object-contain"
-                />
-              ) : (
-                <Logo size={20} idSuffix="-footer" />
-              )}
+              <BrandLogo
+                logoUrl={brand.logoUrl}
+                name={brand.name}
+                size={20}
+                idSuffix="-footer"
+                imgClassName="h-5 w-auto max-w-[100px] object-contain"
+              />
               <span className="bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-300 bg-clip-text text-transparent">
                 {brand.name}
               </span>

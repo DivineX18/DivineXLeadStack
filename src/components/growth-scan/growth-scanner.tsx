@@ -53,7 +53,7 @@ const WAIT_STAGES = [
   "Writing your prioritized actions…",
 ];
 
-export function GrowthScanner() {
+export function GrowthScanner({ brandName = "Ascend" }: { brandName?: string }) {
   const [phase, setPhase] = useState<Phase>({ s: "idle" });
   const [website, setWebsite] = useState("");
   const [email, setEmail] = useState("");
@@ -134,9 +134,9 @@ export function GrowthScanner() {
   // Only the ASK is held to one screen.
   if (phase.s === "ready") {
     return (
-      <main className="min-h-dvh bg-[#0b0d12] text-white">
+      <main className="flex-1">
         <div className="mx-auto w-full max-w-3xl px-5 py-14 sm:py-20">
-          <Results report={phase.report} />
+          <Results report={phase.report} brandName={brandName} />
         </div>
       </main>
     );
@@ -161,27 +161,36 @@ export function GrowthScanner() {
    * otherwise would just crush the type.
    */
   return (
-    <main className="min-h-dvh bg-[#0b0d12] text-white lg:flex lg:items-center">
+    <main className="flex-1 lg:flex lg:items-center">
       <div className="mx-auto w-full max-w-6xl px-5 py-12 sm:py-16 lg:py-10">
         <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
           {/* The argument. Second on mobile so the form is reachable first. */}
           <div className="order-2 lg:order-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Ascend</p>
-            <h1 className="mt-5 text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl">
-              Find what&apos;s costing you leads.
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              Free growth scan
+            </p>
+            {/* Same display treatment as the homepage hero: the serif italic
+                accent is the site's voice, and this page was the only one
+                not speaking it. */}
+            <h1 className="mt-5 text-4xl font-semibold leading-[1.05] tracking-tighter sm:text-5xl">
+              Find what&apos;s{" "}
+              <span className="font-serif font-normal italic">costing you leads</span>.
             </h1>
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-white/65">
-              Enter your website and Ascend will analyze your marketing, identify your biggest growth
-              constraint, and show you what to fix first.
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground">
+              Enter your website and {brandName} will analyze your marketing, identify your biggest
+              growth constraint, and show you what to fix first.
             </p>
 
-            <div className="mt-9 border-t border-white/10 pt-7">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">
-                What Ascend looks for
+            <div className="mt-9 border-t pt-7">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                What {brandName} looks for
               </h2>
               <ul className="mt-4 flex flex-wrap gap-2">
                 {SCAN_DIMENSIONS.map((d) => (
-                  <li key={d} className="rounded-full border border-white/12 px-3.5 py-1.5 text-sm text-white/70">
+                  <li
+                    key={d}
+                    className="rounded-full border bg-card px-3.5 py-1.5 text-sm text-muted-foreground"
+                  >
                     {d}
                   </li>
                 ))}
@@ -189,16 +198,16 @@ export function GrowthScanner() {
             </div>
 
             <div className="mt-8">
-              <p className="text-[15px] font-bold leading-snug">
+              <p className="text-[15px] font-semibold leading-snug">
                 Most marketing platforms start with what you want to build.
               </p>
-              <p className="mt-1 text-[15px] font-bold leading-snug text-white/55">
-                Ascend starts with what you actually need to fix.
+              <p className="mt-1 text-[15px] font-semibold leading-snug text-muted-foreground">
+                {brandName} starts with what you actually need to fix.
               </p>
-              <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold uppercase tracking-wider text-white/40">
+              <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
                 {["Diagnose", "Prioritize", "Create", "Execute", "Measure"].map((s, i) => (
                   <span key={s}>
-                    {i > 0 && <span className="mr-2 text-white/20">→</span>}
+                    {i > 0 && <span className="mr-2 text-primary/50">→</span>}
                     {s}
                   </span>
                 ))}
@@ -209,7 +218,7 @@ export function GrowthScanner() {
           {/* The ask. A panel rather than bare fields, so it reads as the one
               thing to do on this screen rather than the page continuing. */}
           <div className="order-1 lg:order-2">
-            <div className="rounded-2xl border border-white/12 bg-white/[0.04] p-6 sm:p-7">
+            <div className="rounded-2xl border bg-card p-6 shadow-sm sm:p-7">
               {phase.s === "running" || phase.s === "starting" ? (
                 <Waiting stage={phase.s === "starting" ? 0 : stage} />
               ) : (
@@ -219,15 +228,18 @@ export function GrowthScanner() {
                   <Field label="Your name" value={name} onChange={setName} placeholder="Jane" />
                   <button
                     type="submit"
-                    className="mt-2 w-full rounded-xl bg-white px-6 py-4 text-base font-bold text-[#0b0d12] transition hover:bg-white/90"
+                    className="mt-2 w-full rounded-xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground transition hover:opacity-90"
                   >
                     Run My Free Growth Scan
                   </button>
-                  <p className="pt-1 text-center text-xs text-white/45">
+                  <p className="pt-1 text-center text-xs text-muted-foreground">
                     Free growth assessment. No software setup required.
                   </p>
                   {phase.s === "error" && (
-                    <p role="alert" className="rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-200">
+                    <p
+                      role="alert"
+                      className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+                    >
                       {phase.message}
                     </p>
                   )}
@@ -249,7 +261,7 @@ function Field({
 }) {
   return (
     <label className="block text-left">
-      <span className="mb-1.5 block text-xs font-medium text-white/55">{label}</span>
+      <span className="mb-1.5 block text-xs font-medium text-muted-foreground">{label}</span>
       <input
         type={type}
         value={value}
@@ -257,7 +269,7 @@ function Field({
         autoFocus={autoFocus}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl border border-white/15 bg-white/[0.04] px-4 py-3.5 text-base text-white placeholder:text-white/30 focus:border-white/35 focus:outline-none"
+        className="w-full rounded-xl border bg-background px-4 py-3.5 text-base text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
       />
     </label>
   );
@@ -266,11 +278,11 @@ function Field({
 function Waiting({ stage }: { stage: number }) {
   return (
     <div className="mx-auto mt-12 max-w-md text-center" aria-live="polite">
-      <div className="mx-auto h-1 w-full overflow-hidden rounded-full bg-white/10">
-        <div className="h-full w-1/3 animate-[scan_1.6s_ease-in-out_infinite] rounded-full bg-white/70" />
+      <div className="mx-auto h-1 w-full overflow-hidden rounded-full bg-muted">
+        <div className="h-full w-1/3 animate-[scan_1.6s_ease-in-out_infinite] rounded-full bg-primary" />
       </div>
       <p className="mt-6 text-base font-semibold">{WAIT_STAGES[stage]}</p>
-      <p className="mt-2 text-sm text-white/50">
+      <p className="mt-2 text-sm text-muted-foreground">
         This usually takes one to three minutes. You can leave this page open.
       </p>
       <style>{`@keyframes scan{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}`}</style>
@@ -279,48 +291,52 @@ function Waiting({ stage }: { stage: number }) {
 }
 
 /** The diagnosis, in the order it actually argues. */
-function Results({ report }: { report: Report }) {
+function Results({ report, brandName }: { report: Report; brandName: string }) {
   const TRIAL_DISCLOSURE = "$0 today. Card required. $197/mo after 14 days. Cancel anytime during the trial.";
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Ascend Growth Scan</p>
-      {report.websiteUrl && <p className="mt-2 text-sm text-white/50">{report.websiteUrl}</p>}
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+        {brandName} Growth Scan
+      </p>
+      {report.websiteUrl && (
+        <p className="mt-2 text-sm text-muted-foreground">{report.websiteUrl}</p>
+      )}
 
       {report.overallScore !== null && (
         <div className="mt-7 flex items-baseline gap-3">
-          <span className="text-6xl font-extrabold tracking-tight">{report.overallScore}</span>
-          <span className="text-xl text-white/40">/ 100</span>
-          {report.scoreLabel && <span className="ml-1 text-sm font-semibold text-white/60">{report.scoreLabel}</span>}
+          <span className="text-6xl font-semibold tracking-tighter text-primary">{report.overallScore}</span>
+          <span className="text-xl text-muted-foreground">/ 100</span>
+          {report.scoreLabel && <span className="ml-1 text-sm font-semibold text-muted-foreground">{report.scoreLabel}</span>}
         </div>
       )}
 
       {report.primaryConstraint && (
-        <section className="mt-9 rounded-2xl border border-white/12 bg-white/[0.04] p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Your #1 constraint</p>
-          <p className="mt-2 text-3xl font-extrabold tracking-tight">{report.primaryConstraint}</p>
+        <section className="mt-9 rounded-2xl border bg-card p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Your #1 constraint</p>
+          <p className="mt-2 text-3xl font-semibold tracking-tighter">{report.primaryConstraint}</p>
           {/* Why it matters comes from the constraint's own finding — the
               engine's words, never a label invented here. */}
           {(() => {
             const c = report.categories.find(
               (x) => x.label.toLowerCase() === report.primaryConstraint!.toLowerCase(),
             );
-            return c?.finding ? <p className="mt-4 text-[15px] leading-relaxed text-white/70">{c.finding}</p> : null;
+            return c?.finding ? <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">{c.finding}</p> : null;
           })()}
         </section>
       )}
 
       {report.topOpportunities.length > 0 && (
         <section className="mt-10">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">What to fix first</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">What to fix first</h2>
           <ol className="mt-4 space-y-4">
             {report.topOpportunities.map((o, i) => (
               <li key={i} className="flex gap-4">
-                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-bold">
+                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                   {i + 1}
                 </span>
                 <div>
                   <p className="font-semibold leading-snug">{o.title}</p>
-                  {o.detail && <p className="mt-1 text-sm leading-relaxed text-white/60">{o.detail}</p>}
+                  {o.detail && <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{o.detail}</p>}
                 </div>
               </li>
             ))}
@@ -329,26 +345,26 @@ function Results({ report }: { report: Report }) {
       )}
 
       {report.categories.length > 0 && (
-        <section className="mt-12 border-t border-white/10 pt-8">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Every dimension scored</h2>
+        <section className="mt-12 border-t pt-8">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Every dimension scored</h2>
           <ul className="mt-4 space-y-2.5">
             {report.categories.map((c) => (
               <li key={c.key || c.label} className="flex items-center gap-3">
-                <span className="w-40 shrink-0 text-sm text-white/70">{c.label}</span>
-                <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
-                  <span className="block h-full rounded-full bg-white/55" style={{ width: `${Math.max(0, Math.min(100, c.score))}%` }} />
+                <span className="w-40 shrink-0 text-sm text-muted-foreground">{c.label}</span>
+                <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                  <span className="block h-full rounded-full bg-primary" style={{ width: `${Math.max(0, Math.min(100, c.score))}%` }} />
                 </span>
-                <span className="w-9 shrink-0 text-right text-sm tabular-nums text-white/50">{c.score}</span>
+                <span className="w-9 shrink-0 text-right text-sm tabular-nums text-muted-foreground">{c.score}</span>
               </li>
             ))}
           </ul>
         </section>
       )}
 
-      <section className="mt-14 rounded-2xl border border-white/12 bg-white/[0.05] p-7">
-        <h2 className="text-2xl font-extrabold tracking-tight">Put this recommendation into action with Ascend</h2>
-        <p className="mt-3 text-[15px] leading-relaxed text-white/65">
-          Ascend helps you create the fix, publish it, capture the leads it brings in, follow up
+      <section className="mt-14 rounded-2xl border bg-card p-7">
+        <h2 className="text-2xl font-semibold tracking-tighter">Put this recommendation into action with {brandName}</h2>
+        <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
+          {brandName} helps you create the fix, publish it, capture the leads it brings in, follow up
           automatically, and measure what changed.
         </p>
         {/* /start, not /pricing. After a personalized diagnosis, a full pricing
@@ -361,13 +377,13 @@ function Results({ report }: { report: Report }) {
         <a
           href="/start"
           onClick={() => trackFunnelEvent("trial_cta_clicked", { product: "ascend", source: "scan_results" })}
-          className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-white px-6 py-4 text-base font-bold text-[#0b0d12] transition hover:bg-white/90 sm:w-auto"
+          className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground transition hover:opacity-90 sm:w-auto"
         >
           Start My 14-Day Free Trial
         </a>
         {/* Stated in full, every time. The scan is free and needs no card; the
             trial is a different decision and does. Those never blur. */}
-        <p className="mt-3 text-xs text-white/45">{TRIAL_DISCLOSURE}</p>
+        <p className="mt-3 text-xs text-muted-foreground">{TRIAL_DISCLOSURE}</p>
       </section>
     </div>
   );

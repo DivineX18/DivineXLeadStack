@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import { GrowthScanner } from "@/components/growth-scan/growth-scanner";
+import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
+import { brandForProduct, resolveProductSurface } from "@/lib/landing/resolve-product-surface";
+import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
+import { Footer as CustomFooter } from "@/components/landing-custom/footer";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +16,18 @@ export const dynamic = "force-dynamic";
  * only appears after the scan has actually said something useful.
  *
  * This is an acquisition page, not a dashboard surface. It deliberately sits
- * outside the app shell so no Flow chrome, sidebar or workspace switcher can
- * reach it.
+ * outside the APP shell, so no sidebar or workspace switcher can reach it.
+ *
+ * It does NOT sit outside the brand. It used to render bare: no logo, no
+ * navigation, a hardcoded near-black palette and a plain white button, on a
+ * site whose every other page is light, emerald-accented and carries the
+ * mark. A cold visitor arriving from an ad had no way to tell whose page they
+ * were on, and a visitor arriving from the site's own nav watched it change
+ * identity under them. That is the most expensive place to look untrustworthy,
+ * because it is the page asking for an email address.
+ *
+ * It now uses the same navbar, the same footer and the same design tokens as
+ * the rest of the marketing site. The layout of the ask is untouched.
  */
 export const metadata: Metadata = {
   title: "Free Growth Scan. Find what's costing you leads | Ascend",
@@ -36,6 +50,16 @@ export const metadata: Metadata = {
   appleWebApp: { title: "Ascend" },
 };
 
-export default function GrowthScannerPage() {
-  return <GrowthScanner />;
+export default async function GrowthScannerPage() {
+  // Host-aware, exactly as / and /pricing resolve it: on app.divinex.io this
+  // is Ascend, on crm it is Flow. The mark and the wordmark follow.
+  const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
+
+  return (
+    <div className="marketing-accent flex min-h-dvh flex-col">
+      <CustomNavbar brand={brand} />
+      <GrowthScanner brandName={brand.name} />
+      <CustomFooter brand={brand} />
+    </div>
+  );
 }
