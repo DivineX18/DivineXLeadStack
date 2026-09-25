@@ -105,11 +105,18 @@ function buildProgressLabel(pollAttempts: number): string {
  */
 function describeBuildFailure(raw: string | null | undefined): string {
   const msg = raw ?? "";
-  if (/invalid_token|invalid token/i.test(msg)) {
-    return "The site host (gitpage.site) rejected its own repository credentials, so the build could not be published. This is on their side, not yours or ours — retrying will fail the same way until it is fixed. Your draft and all its content are saved.";
+  // UPSTREAM FAILURES ARE NOT THE CUSTOMER'S TO DEBUG.
+  //
+  // "Failed during GitLab setup: invalid_token" is the provider's internal
+  // wording for a credential on THEIR side. Shown verbatim it asks a customer
+  // to fix someone else's integration, and invites them to go changing their
+  // own content, key or settings — none of which can possibly help. The full
+  // string stays on the document for support; this is only what is rendered.
+  if (/invalid_token|invalid token|gitlab/i.test(msg)) {
+    return "We couldn't complete this website build. It's a problem on our hosting provider's side, not with your content or your account. Your website slot was not used and your draft is saved. Please try again later.";
   }
   if (/taking longer than expected/i.test(msg)) return msg;
-  return msg || "gitpage didn't return a live URL.";
+  return msg || "We couldn't complete this website build. Your website slot was not used and your draft is saved.";
 }
 
 export function WebsiteBuilder({

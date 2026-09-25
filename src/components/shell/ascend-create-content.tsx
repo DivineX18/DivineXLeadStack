@@ -9,7 +9,7 @@ import { GITPAGE_SUBSCRIBE_URL, useGitpageStatus, type GitpageGateState } from "
 import { Button } from "@/components/ui/button";
 import { FunnelsList } from "@/components/funnels/funnels-list";
 import { WebsiteBuilder } from "@/components/website/website-builder";
-import { effectiveWebsiteCap } from "@/lib/website/limits";
+import { effectiveWebsiteCap, countConsumedWebsiteSlots } from "@/lib/website/limits";
 import { AscendAssetsSection } from "@/components/shell/ascend-assets-section";
 import { CampaignPlanPanel } from "@/components/divinex/campaign-plan-panel";
 import type { WebsiteDoc } from "@/types/website";
@@ -334,7 +334,12 @@ function AscendWebsitesSection({
           ))}
           <div className="flex items-center justify-between rounded-2xl border border-dashed bg-card/50 p-4">
             <p className="text-xs text-muted-foreground">
-              {orderedSites.length} of {maxSitesLabel} websites used.
+              {/* Published sites only — an unbuilt draft and a build that
+                  failed upstream deliver nothing, so neither spends a slot.
+                  Same helper the server enforces with, so the number a
+                  customer reads can never disagree with the number that
+                  blocks them. */}
+              {countConsumedWebsiteSlots(orderedSites)} of {maxSitesLabel} websites used.
             </p>
             <Button
               type="button"

@@ -42,3 +42,41 @@ export function effectiveWebsiteCap(
   }
   return MAX_WEBSITES_PER_SUBACCOUNT;
 }
+
+/**
+ * DOES THIS SITE CONSUME ONE OF THE CUSTOMER'S WEBSITE SLOTS?
+ *
+ * Only a site that actually published does. The cap exists to meter a
+ * delivered product, and counting every DOCUMENT meant an empty draft nobody
+ * built, and a build that failed inside the provider's pipeline, each
+ * permanently spent a slot the customer never received anything for. A
+ * workspace holding one blank "Website 1" and one failed build read as "2 of
+ * 5 websites used" while owning zero websites.
+ *
+ * `liveUrl` is checked alongside the status deliberately: a site that
+ * published and later had its status muddled by a re-poll still consumed the
+ * resource, and must keep counting. That is also what stops delete-and-retry
+ * being a way around the cap — the only way to stop consuming a slot is to
+ * remove a site that really exists.
+ */
+export function consumesWebsiteSlot(
+  site: { status?: string | null; liveUrl?: string | null } | null | undefined,
+): boolean {
+  if (!site) return false;
+  return site.status === "ready" || Boolean(site.liveUrl);
+}
+
+/** How many of this workspace's sites actually count against the cap. */
+export function countConsumedWebsiteSlots(
+  sites: ReadonlyArray<{ status?: string | null; liveUrl?: string | null }>,
+): number {
+  return sites.reduce((n, s) => n + (consumesWebsiteSlot(s) ? 1 : 0), 0);
+}
+
+/**
+ * Unbuilt drafts are free but not unlimited: without a ceiling, a workspace
+ * with zero published sites could create documents forever. Headroom above
+ * the real cap leaves room for retries and abandoned attempts without ever
+ * touching the billable number, which stays exactly `effectiveWebsiteCap`.
+ */
+export const DRAFT_HEADROOM = 5;

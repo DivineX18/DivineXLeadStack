@@ -2,7 +2,7 @@ import "server-only";
 
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
-import { effectiveWebsiteCap } from "@/lib/website/limits";
+import { effectiveWebsiteCap, consumesWebsiteSlot, countConsumedWebsiteSlots, DRAFT_HEADROOM } from "@/lib/website/limits";
 import { resolvePlanLimits } from "@/lib/billing/plan-limits";
 import {
   validateWebsiteConfig,
@@ -111,11 +111,24 @@ export async function createWebsiteForSubAccount(input: {
   const db = getAdminDb();
   const col = db.collection(`subAccounts/${subAccountId}/website`);
   const existing = await col.get();
-  if (existing.size >= maxSites) {
+  // THE CAP METERS PUBLISHED SITES, NOT DOCUMENTS. A blank draft and a build
+  // that failed inside gitpage delivered the customer nothing, so neither
+  // spends a slot. See consumesWebsiteSlot().
+  const sites = existing.docs.map((d) => d.data() as { status?: string; liveUrl?: string | null });
+  const consumed = countConsumedWebsiteSlots(sites);
+  if (consumed >= maxSites) {
     throw new WebsiteServiceError(
       Number.isFinite(maxSites)
-        ? `You can create up to ${maxSites} websites per sub-account. Remove one to add another.`
+        ? `You have ${consumed} of ${maxSites} websites published. Remove one to add another.`
         : "Unexpected site cap reached.",
+      409,
+    );
+  }
+  // Drafts are free but not unlimited — see DRAFT_HEADROOM.
+  const draftCeiling = Number.isFinite(maxSites) ? maxSites + DRAFT_HEADROOM : Infinity;
+  if (existing.size >= draftCeiling) {
+    throw new WebsiteServiceError(
+      `You have ${existing.size} unfinished website drafts. Delete one before starting another.`,
       409,
     );
   }
@@ -229,6 +242,33 @@ export async function submitWebsiteBuildForSubAccount(input: {
       "gitpage is not configured on this deployment (GITPAGE_API_KEY missing).",
       503,
     );
+  }
+
+  // ENFORCED HERE BECAUSE THIS IS WHERE A SITE BECOMES REAL.
+  //
+  // Creation is now capped on PUBLISHED sites, so the cap has to be checked
+  // again at the moment a draft is about to become one — otherwise a
+  // workspace could sit under the limit while drafting and quietly publish
+  // past it. A rebuild of a site that ALREADY consumes its slot is always
+  // allowed: it is the same website, not an additional one.
+  {
+    const col = getAdminDb().collection(`subAccounts/${subAccountId}/website`);
+    const all = await col.get();
+    const thisSite = all.docs.find((d) => d.id === siteId)?.data() as
+      | { status?: string; liveUrl?: string | null }
+      | undefined;
+    if (!consumesWebsiteSlot(thisSite)) {
+      const { maxSites } = await requireWebsiteEnabledSub(subAccountId);
+      const consumed = countConsumedWebsiteSlots(
+        all.docs.map((d) => d.data() as { status?: string; liveUrl?: string | null }),
+      );
+      if (consumed >= maxSites) {
+        throw new WebsiteServiceError(
+          `You already have ${consumed} of ${maxSites} websites published. Remove one before publishing another.`,
+          409,
+        );
+      }
+    }
   }
 
   normalizeWebsiteConfig(config);
