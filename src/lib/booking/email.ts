@@ -202,7 +202,7 @@ export function renderBookingReminderEmail(
     `
       <h1 style="font-size:20px;margin:0 0 12px;">${escapeHtml(`In ${horizonLabel}: ${input.page.name}`)}</h1>
       <p style="margin:0 0 16px;color:#3a3a44;">${escapeHtml(greeting)}</p>
-      <p style="margin:0 0 16px;">${escapeHtml(`Just a heads-up — your ${input.page.name} is in ${horizonLabel}.`)}</p>
+      <p style="margin:0 0 16px;">${escapeHtml(`Just a heads-up. Your ${input.page.name} is in ${horizonLabel}.`)}</p>
       <table role="presentation" style="width:100%;border-collapse:collapse;margin:16px 0 24px;background:#f6f7f9;border-radius:8px;">
         <tr><td style="padding:10px 16px;font-size:14px;"><strong>When:</strong> ${escapeHtml(whenLocal)} (${input.page.durationMinutes} min)</td></tr>
         ${input.location ? `<tr><td style="padding:0 16px 10px;font-size:14px;"><strong>Where:</strong> ${escapeHtml(input.location)}</td></tr>` : ""}

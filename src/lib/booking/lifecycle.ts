@@ -83,7 +83,7 @@ function defaultContent(
   type: BookingLifecycleEvent,
   extra: string | null | undefined,
 ): string {
-  const suffix = extra ? ` — ${extra}` : "";
+  const suffix = extra ? `, ${extra}` : "";
   switch (type) {
     case "booking_page_booked":
       return `Meeting booked: "${title}"${suffix}.`;
@@ -225,7 +225,7 @@ export async function scheduleEventReminders(input: {
   if (input.reminderOffsetsMinutes.length === 0) return;
   if (!qstashIsConfigured()) {
     console.warn(
-      "[booking/lifecycle] QStash not configured — reminders won't fire for event " +
+      "[booking/lifecycle] QStash not configured, reminders won't fire for event " +
         input.eventId,
     );
     return;
@@ -268,7 +268,7 @@ export async function schedulePaymentAutoExpire(input: {
 }): Promise<void> {
   if (!qstashIsConfigured()) {
     console.warn(
-      "[booking/lifecycle] QStash not configured — payment hold won't auto-expire for event " +
+      "[booking/lifecycle] QStash not configured, payment hold won't auto-expire for event " +
         input.eventId,
     );
     return;

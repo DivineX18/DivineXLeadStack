@@ -96,7 +96,7 @@ export async function POST(
     await tenantStripe.balance.retrieve();
   } catch {
     return NextResponse.json(
-      { error: "That key doesn't look valid — Stripe rejected it." },
+      { error: "That key doesn't look valid. Stripe rejected it." },
       { status: 400 },
     );
   }

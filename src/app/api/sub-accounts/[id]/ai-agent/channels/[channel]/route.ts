@@ -548,7 +548,7 @@ async function runVoiceProvisioningSideEffect(input: {
     return "Set the Agent persona on the Overview page before enabling Voice.";
   }
   if (!voice) {
-    return "Voice config missing — try saving again.";
+    return "Voice config missing. Try saving again.";
   }
   if (mode === "twilio-byoc" && !subAccount.twilioConfig?.enabled) {
     return "Dedicated Twilio number is required for voice in BYOC mode.";

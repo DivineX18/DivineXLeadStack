@@ -108,7 +108,7 @@ export const WHATSAPP_STARTER_TEMPLATES: WhatsappStarterTemplate[] = [
     mapsTo: "Manual / re-engagement",
     category: "MARKETING",
     language: "en",
-    body: "Hi {{1}}, just checking in — are you still interested in {{2}}? Reply here and we'll pick up where we left off. Reply STOP to opt out.",
+    body: "Hi {{1}}, just checking in. Are you still interested in {{2}}? Reply here and we'll pick up where we left off. Reply STOP to opt out.",
     variables: [
       { position: 1, label: "First name", sampleValue: "Ben", source: "merge_tag", mergeTag: "contact.firstName" },
       { position: 2, label: "Service / topic", sampleValue: "the bathroom reno", source: "manual", mergeTag: null },

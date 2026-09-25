@@ -474,7 +474,7 @@ export function ChatWindow(props: ChatWindowProps) {
           }}
           role="status"
         >
-          Connection issue — your message may not have been delivered.
+          Connection issue. Your message may not have been delivered.
         </div>
       )}
     </div>

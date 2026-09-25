@@ -14,7 +14,7 @@ import { AlertCircle } from "lucide-react";
 const REASON_COPY: Record<string, string> = {
   missing_code: "That sign-in link is missing its authorization code. Go back to Ascend and click Operations again.",
   not_configured: "Operations sign-in isn't configured on this deployment yet.",
-  exchange_rejected: "Ascend couldn't verify that sign-in request. It may have expired — go back and try again.",
+  exchange_rejected: "Ascend couldn't verify that sign-in request. It may have expired. Go back and try again.",
   network_error: "Couldn't reach Ascend to verify your sign-in. Try again in a moment.",
   unverified_email: "Your Ascend account needs a verified email address before you can use Operations.",
   workspace_unavailable: "The Growth Operations workspace for your account isn't available right now.",

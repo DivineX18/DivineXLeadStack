@@ -27,7 +27,7 @@ export async function uploadCommunityImage(
     throw new Error("Choose an image file (JPG, PNG, WebP, or GIF).");
   }
   if (file.size > MAX_IMAGE_BYTES) {
-    throw new Error("Image is too large — keep it under 5 MB.");
+    throw new Error("Image is too large. Keep it under 5 MB.");
   }
   const ext = file.name.includes(".") ? file.name.split(".").pop() : "img";
   const path = `community/${saId}/${groupId}/${kind}-${Date.now()}.${ext}`;

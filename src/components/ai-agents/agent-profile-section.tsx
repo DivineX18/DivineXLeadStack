@@ -35,7 +35,7 @@ const HOURS_OPTIONS = Array.from({ length: 24 }, (_, i) => i);
 const NATIVE_SELECT_CLASSES =
   "flex h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [&_option]:bg-background [&_option]:text-foreground";
 
-const DEFAULT_PROMPT_PLACEHOLDER = `You are a friendly receptionist for {{businessName}}. Help leads with quick questions about services and hours. If they want a quote, capture their name + best time to call and confirm someone will reach out. Stay short and warm — you're texting, not writing essays.`;
+const DEFAULT_PROMPT_PLACEHOLDER = `You are a friendly receptionist for {{businessName}}. Help leads with quick questions about services and hours. If they want a quote, capture their name + best time to call and confirm someone will reach out. Stay short and warm, you're texting, not writing essays.`;
 
 /**
  * Agent Profile editor — the shared identity used by every active channel.
@@ -160,7 +160,7 @@ export function AgentProfileSection() {
         setWebsiteUrl(data.profile.websiteUrl ?? "");
       }
       toast.success("Agent profile saved");
-    } catch (err) { toast.error(describeError(err, "Network error — try again"), { duration: 12_000 });
+    } catch (err) { toast.error(describeError(err, "Network error. Try again"), { duration: 12_000 });
     } finally {
       setSaving(false);
     }
@@ -187,10 +187,10 @@ export function AgentProfileSection() {
       if (data.profile) setProfile(data.profile);
       toast.success(
         data.truncated
-          ? `Captured ${data.chars} chars (homepage was longer — trimmed).`
+          ? `Captured ${data.chars} chars (homepage was longer, trimmed).`
           : `Captured ${data.chars} chars from the homepage.`,
       );
-    } catch (err) { toast.error(describeError(err, "Network error — try again"), { duration: 12_000 });
+    } catch (err) { toast.error(describeError(err, "Network error. Try again"), { duration: 12_000 });
     } finally {
       setRefreshingKb(false);
     }
@@ -236,7 +236,7 @@ export function AgentProfileSection() {
           <h2 className="text-base font-semibold">Agent profile</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             One persona, applied to every active channel. Configure here
-            once — channels inherit and can override specific settings.
+            once. Channels inherit and can override specific settings.
           </p>
         </div>
       </div>
@@ -355,7 +355,7 @@ export function AgentProfileSection() {
               <p className="mt-1 text-[11px] text-muted-foreground">
                 Optional. Paste this client&rsquo;s public website. Save the
                 profile, then click <strong>Refresh KB</strong> to crawl the
-                homepage — the agent will reference it when replying.
+                homepage, the agent will reference it when replying.
               </p>
             </div>
             <div className="flex gap-2">
@@ -490,7 +490,7 @@ export function AgentProfileSection() {
           <DialogHeader>
             <DialogTitle>Website knowledge base</DialogTitle>
             <DialogDescription>
-              {profile?.websiteUrl ?? "—"}
+              {profile?.websiteUrl ?? "-"}
               {profile?.websiteKbFetchedAt && (
                 <>
                   {" · "}captured{" "}

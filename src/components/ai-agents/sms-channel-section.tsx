@@ -129,7 +129,7 @@ export function SmsChannelSection() {
       }
       if (data.config) setConfig(data.config);
       toast.success("SMS channel saved");
-    } catch (err) { toast.error(describeError(err, "Network error — try again"), { duration: 12_000 });
+    } catch (err) { toast.error(describeError(err, "Network error. Try again"), { duration: 12_000 });
     } finally {
       setSaving(false);
     }
@@ -213,7 +213,7 @@ export function SmsChannelSection() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="sms-model">Model (advanced — blank for default)</Label>
+              <Label htmlFor="sms-model">Model (advanced, blank for default)</Label>
               <Input
                 id="sms-model"
                 value={modelOverride}

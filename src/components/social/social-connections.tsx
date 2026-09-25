@@ -39,7 +39,7 @@ export function SocialConnections() {
             <p className="mt-0.5 text-sm text-muted-foreground">
               The Social Planner publishes through the same Facebook /
               Instagram connection as your inbox. Manage that connection in
-              Settings — this tab just shows whether posting is ready.
+              Settings. This tab just shows whether posting is ready.
             </p>
           </div>
         </header>
@@ -50,7 +50,7 @@ export function SocialConnections() {
               <p className="flex items-center gap-2 text-sm font-medium">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 <Facebook className="h-4 w-4 text-blue-500" />
-                {cfg?.pageName || "Facebook Page"} — posting enabled
+                {cfg?.pageName || "Facebook Page"}, posting enabled
               </p>
               {cfg?.instagramUsername ? (
                 <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -59,7 +59,7 @@ export function SocialConnections() {
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  No Instagram business account linked — Facebook only.
+                  No Instagram business account linked. Facebook only.
                 </p>
               )}
             </div>

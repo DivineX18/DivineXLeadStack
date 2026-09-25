@@ -37,7 +37,7 @@ export default async function AscendHomePage() {
     return (
       <AscendSectionPlaceholder
         title="Home"
-        description="No active workspace yet — once you're linked to one, your growth overview will appear here."
+        description="No active workspace yet, once you're linked to one, your growth overview will appear here."
         links={[]}
       />
     );
@@ -50,7 +50,7 @@ export default async function AscendHomePage() {
         <PageHeader title="Home" />
         <ErrorState
           title="We couldn't load your overview"
-          body="Your data is safe — this is a problem reading it, not a problem with it. Your workspace is still fully usable."
+          body="Your data is safe. This is a problem reading it, not a problem with it. Your workspace is still fully usable."
           // NON-ENUMERATION / NO TENANT-SPECIFIC LINKS. This error state is
           // reachable on a path where the requested workspace may not be one
           // the caller can access, so it must not construct a
@@ -77,21 +77,21 @@ export default async function AscendHomePage() {
   const metrics: { label: string; value: string; sub?: string }[] = [
     {
       label: "Revenue this month",
-      value: health ? formatCents(health.revenueThisMonthCents) : "—",
+      value: health ? formatCents(health.revenueThisMonthCents) : "-",
       sub: health ? `${health.wonDealsThisMonth} won` : undefined,
     },
     {
       label: "Open pipeline",
-      value: health ? formatCents(health.openPipelineValueCents) : "—",
+      value: health ? formatCents(health.openPipelineValueCents) : "-",
       sub: health ? `${health.openPipelineCount} deals` : undefined,
     },
-    { label: "New leads this week", value: health ? String(health.newLeadsThisWeek) : "—" },
+    { label: "New leads this week", value: health ? String(health.newLeadsThisWeek) : "-" },
     {
       label: "Tasks due today",
-      value: health ? String(health.dueTodayTaskCount) : "—",
+      value: health ? String(health.dueTodayTaskCount) : "-",
       sub: health && health.overdueTaskCount > 0 ? `${health.overdueTaskCount} overdue` : undefined,
     },
-    { label: "Upcoming appointments", value: health ? String(health.upcomingAppointmentCount) : "—" },
+    { label: "Upcoming appointments", value: health ? String(health.upcomingAppointmentCount) : "-" },
   ];
 
   return (
@@ -120,7 +120,7 @@ export default async function AscendHomePage() {
 
       {/* 1b — GROWTH PLAN, the execution half (P0.6 Phase 3). Home already
           said what to do next; this says what has been built, what needs
-          review, and what happens next for work underway — so the customer
+          review, and what happens next for work underway, so the customer
           never reconstructs that from chat history or the Create library.
           A read-time projection over the artifact's own state, so it cannot
           drift out of agreement with the artifact. */}

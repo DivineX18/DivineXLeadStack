@@ -46,7 +46,7 @@ export async function sendEscalationNotification(
 ): Promise<string | null> {
   if (!emailIsConfigured()) {
     console.warn(
-      "[ai/escalation] Resend not configured — escalation email skipped",
+      "[ai/escalation] Resend not configured, escalation email skipped",
     );
     return null;
   }
@@ -66,7 +66,7 @@ Their message:
 Pick up the conversation:
 ${link}
 
-(The AI did NOT reply to this message — it's now waiting for a human.)
+(The AI did NOT reply to this message, it's now waiting for a human.)
 `;
 
   const html = `<!DOCTYPE html>

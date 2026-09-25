@@ -21,14 +21,14 @@ const STAGES: StageDetail[] = [
     label: "Capture",
     icon: Inbox,
     headline: "Every lead lands somewhere real",
-    body: "A form on your site, a booking page, or a web chat widget — every one writes straight into a contact record, with the campaign it came from attached.",
+    body: "A form on your site, a booking page, or a web chat widget. Every one writes straight into a contact record, with the campaign it came from attached.",
     items: ["Drag-and-drop lead forms", "Public booking pages", "Web chat lead capture", "UTM + campaign attribution"],
   },
   {
     key: "convert",
     label: "Convert",
     icon: MessageCircle,
-    headline: "Someone — or something — answers immediately",
+    headline: "Someone (or something) answers immediately",
     body: "A form submit can trigger an SMS and email within seconds. An AI agent can answer chat, SMS, WhatsApp, and calls around the clock, and every deal moves through a real pipeline.",
     items: ["AI agents across chat, SMS, WhatsApp, voice", "Speed-to-lead automation", "Six-stage sales pipeline", "Outbound calling campaigns"],
   },
@@ -45,7 +45,7 @@ const STAGES: StageDetail[] = [
     label: "Retain",
     icon: Users2,
     headline: "Every client's history, in one place",
-    body: "Notes, messages, bookings, and quotes merge into one activity timeline per contact — so follow-up doesn't depend on anyone's memory.",
+    body: "Notes, messages, bookings, and quotes merge into one activity timeline per contact, so follow-up doesn't depend on anyone's memory.",
     items: ["Unified contact activity timeline", "Tasks linked to contacts", "Bulk email broadcasts", "Two-way SMS + WhatsApp threads"],
   },
   {
@@ -53,7 +53,7 @@ const STAGES: StageDetail[] = [
     label: "Understand",
     icon: LineChart,
     headline: "See what's actually working",
-    body: "Date-range KPIs, a pipeline funnel, a won-revenue trend, and a leads-by-source breakdown — without exporting anything to a spreadsheet.",
+    body: "Date-range KPIs, a pipeline funnel, a won-revenue trend, and a leads-by-source breakdown, without exporting anything to a spreadsheet.",
     items: ["Pipeline funnel + won-revenue trend", "Leads-by-source breakdown", "Date-range KPI reporting", "Public API for custom reporting"],
   },
 ];
@@ -72,7 +72,7 @@ export function BusinessOperatingSystem() {
             <span className="font-serif font-normal italic">from first contact to understood</span>
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            The same five stages every lead moves through — reading from the same record the whole way.
+            The same five stages every lead moves through, reading from the same record the whole way.
           </p>
         </div>
 

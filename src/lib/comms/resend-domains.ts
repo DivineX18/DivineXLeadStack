@@ -92,7 +92,7 @@ export function validateSendingSubdomain(input: string): SubdomainValidation {
 
   if (!domain) return fail("Enter a domain.");
   if (domain.includes("@")) {
-    return fail("Enter a domain, not an email address — e.g. mail.acme.com.");
+    return fail("Enter a domain, not an email address, e.g. mail.acme.com.");
   }
 
   const labels = domain.split(".");
@@ -102,7 +102,7 @@ export function validateSendingSubdomain(input: string): SubdomainValidation {
 
   if (labels.length <= registrableLabelCount(labels)) {
     return fail(
-      "Use a subdomain, not your root domain — e.g. mail.acme.com instead of acme.com. A dedicated subdomain protects your main domain's email reputation.",
+      "Use a subdomain, not your root domain, e.g. mail.acme.com instead of acme.com. A dedicated subdomain protects your main domain's email reputation.",
     );
   }
 

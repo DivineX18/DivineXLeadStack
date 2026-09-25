@@ -35,7 +35,7 @@ export function IncludedSection({
           </h2>
         )}
         {/* One implementation of the framed example, shared with the
-            benefits grid's proof variant — the markup used to live only
+            benefits grid's proof variant, the markup used to live only
             here, so a second section could not present a deliverable
             without copying it. */}
         <DocumentShowcase items={config.items} accentColor={accentColor} theme={theme} />

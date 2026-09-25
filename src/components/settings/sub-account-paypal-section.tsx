@@ -51,7 +51,7 @@ export function SubAccountPayPalSection() {
         throw new Error(data.error ?? "Failed to save PayPal.me username.");
       }
       setUsername("");
-      toast.success(`PayPal connected — paypal.me/${data.username}`);
+      toast.success(`PayPal connected, paypal.me/${data.username}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save.");
     } finally {
@@ -95,7 +95,7 @@ export function SubAccountPayPalSection() {
           <Wallet className="h-4 w-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-base font-semibold">Payments — PayPal</h2>
+          <h2 className="text-base font-semibold">Payments. PayPal</h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Paste your PayPal.me username so invoices can collect payment via
             a PayPal-hosted page. Set one up at{" "}
@@ -167,7 +167,7 @@ export function SubAccountPayPalSection() {
             </div>
             <p className="text-[11px] text-muted-foreground">
               1-20 characters, letters/digits/hyphens. We don&apos;t store any
-              keys or credentials — just the username.
+              keys or credentials, just the username.
             </p>
           </div>
 

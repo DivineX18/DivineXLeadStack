@@ -60,7 +60,7 @@ export const UPDATES_MODAL_DEFAULTS: UpdatesModalConfig = {
     },
     {
       title: "Workflow Builder",
-      description: "Visual, step-by-step automations — no flowchart spaghetti.",
+      description: "Visual, step-by-step automations, no flowchart spaghetti.",
       badge: "New",
     },
     {

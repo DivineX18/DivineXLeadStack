@@ -221,7 +221,7 @@ export async function DELETE(
     // The member is already removed; log and still report success so the
     // admin doesn't see a false "could not remove".
     console.error(
-      `[members/DELETE] post-removal global-disable failed for ${targetUid} — member already removed`,
+      `[members/DELETE] post-removal global-disable failed for ${targetUid}, member already removed`,
       err,
     );
   }

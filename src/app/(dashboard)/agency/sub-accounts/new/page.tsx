@@ -177,7 +177,7 @@ export default function NewSubAccountPage() {
       let billingNote = "";
       if (payload.billingStatus === "pending" && payload.checkoutUrl) {
         billingNote =
-          " Your default plan was assigned — the workspace is locked until the client pays.";
+          " Your default plan was assigned, the workspace is locked until the client pays.";
         try {
           await navigator.clipboard.writeText(payload.checkoutUrl);
           billingNote += " Payment link copied to your clipboard.";
@@ -340,7 +340,7 @@ export default function NewSubAccountPage() {
                 <option value="">No snapshots captured yet</option>
               ) : (
                 <>
-                  <option value="">None — blank account</option>
+                  <option value="">None, blank account</option>
                   {snapshots.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name} ({s.counts.forms} forms · {s.counts.workflows}{" "}
@@ -388,7 +388,7 @@ export default function NewSubAccountPage() {
                   onChange={() => setBillingChoice("default")}
                 />
                 <span>
-                  Assign your default plan —{" "}
+                  Assign your default plan, {" "}
                   <span className="font-medium">
                     {defaultPlan.name} ({formatPlanPrice(defaultPlan)})
                   </span>
@@ -406,7 +406,7 @@ export default function NewSubAccountPage() {
                   onChange={() => setBillingChoice("comped")}
                 />
                 <span>
-                  Comped — free / test account
+                  Comped, free / test account
                   <span className="block text-[11px] text-muted-foreground">
                     No billing at all. Use this for a demo, an internal test, or an account you&apos;re
                     setting up for a prospect before they&apos;ve agreed to anything. Assign a real
@@ -436,7 +436,7 @@ export default function NewSubAccountPage() {
               Enable website builder now
               <span className="block text-[11px] text-muted-foreground">
                 Off by default for every new sub-account. Turn this on if you need to build a landing
-                page for this client right away — otherwise you can flip it on later from Manage.
+                page for this client right away. Otherwise you can flip it on later from Manage.
               </span>
             </span>
           </label>
@@ -451,7 +451,7 @@ export default function NewSubAccountPage() {
           </div>
           <p className="-mt-2 text-[11px] text-muted-foreground">
             Primary point of contact at the client. Skip for internal or
-            personal sub-accounts — you can also add or edit this later from
+            personal sub-accounts. You can also add or edit this later from
             sub-account settings.
           </p>
 

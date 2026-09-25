@@ -139,7 +139,7 @@ function ApiLogRow({
             httpStatusClass(log.responseStatus),
           )}
         >
-          {log.responseStatus || "—"}
+          {log.responseStatus || "-"}
         </span>
         <span className="hidden w-16 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground sm:inline">
           {log.latencyMs}ms
@@ -153,11 +153,11 @@ function ApiLogRow({
       {expanded && (
         <div className="space-y-3 border-t bg-muted/20 px-4 py-3">
           <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] sm:grid-cols-3">
-            <Meta label="Request ID" value={log.requestId || "—"} mono />
-            <Meta label="API key" value={log.keyPrefix || "—"} mono />
+            <Meta label="Request ID" value={log.requestId || "-"} mono />
+            <Meta label="API key" value={log.keyPrefix || "-"} mono />
             <Meta
               label="Error code"
-              value={log.errorCode ?? "—"}
+              value={log.errorCode ?? "-"}
               mono
               danger={!!log.errorCode}
             />

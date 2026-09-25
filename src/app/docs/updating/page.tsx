@@ -25,9 +25,9 @@ import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 export async function generateMetadata() {
   const brand = await resolveCustomBrand();
   return {
-    title: `Keeping your app up to date — ${brand.name}`,
+    title: `Keeping your app up to date, ${brand.name}`,
     description:
-      "How to pull the latest official LeadStack build into your own customised version of the app — without losing your changes.",
+      "How to pull the latest official LeadStack build into your own customised version of the app, without losing your changes.",
   };
 }
 
@@ -56,7 +56,7 @@ export default async function UpdatingDocsPage() {
         </h1>
         <p className="mt-3 text-base text-muted-foreground">
           How to pull the latest official LeadStack build into your own
-          customised version of the app — without losing the changes you&apos;ve
+          customised version of the app, without losing the changes you&apos;ve
           made.
         </p>
 
@@ -141,7 +141,7 @@ git branch vendor upstream/main`}</CodeBlock>
 
         <Section title="Each time you want the latest org build" id="updating">
           <p>
-            Always start from a <strong>clean working tree</strong> — commit or
+            Always start from a <strong>clean working tree</strong>, commit or
             stash your work first.
           </p>
           <CodeBlock>{`# 1. Get the newest org snapshot
@@ -189,19 +189,19 @@ git commit`}</CodeBlock>
           </Tip>
         </Section>
 
-        <Section title="After updating — don't forget" id="checklist">
+        <Section title="After updating, don't forget" id="checklist">
           <ul className="my-3 space-y-2 pl-6 text-sm">
             <li className="list-disc">
               <strong>
                 <InlineCode>pnpm install</InlineCode>
               </strong>{" "}
-              — pulls any new dependencies the update added.
+, pulls any new dependencies the update added.
             </li>
             <li className="list-disc">
               <strong>
                 Check <InlineCode>.env.example</InlineCode>
               </strong>{" "}
-              — new features sometimes add new environment variables. Compare it
+, new features sometimes add new environment variables. Compare it
               against your real <InlineCode>.env</InlineCode> and fill in
               anything new.
             </li>
@@ -270,13 +270,13 @@ git commit`}</CodeBlock>
         <Section title="Common questions" id="faq">
           <FaqItem question="Does pushing send my code to the org repo?">
             No. <InlineCode>git push</InlineCode> goes to{" "}
-            <InlineCode>origin</InlineCode> — your personal fork. The org repo
+            <InlineCode>origin</InlineCode>, your personal fork. The org repo
             is <InlineCode>upstream</InlineCode> and is read-only to you.
           </FaqItem>
           <FaqItem question="What if I haven't customised anything yet?">
             The merge still works; there just won&apos;t be any conflicts.
           </FaqItem>
-          <FaqItem question="I messed up a merge — how do I bail out?">
+          <FaqItem question="I messed up a merge. How do I bail out?">
             Before committing: <InlineCode>git merge --abort</InlineCode>{" "}
             returns you to where you started.
           </FaqItem>
@@ -287,7 +287,7 @@ git commit`}</CodeBlock>
           <Link href="/" className="text-foreground underline hover:no-underline">
             Get in touch
           </Link>{" "}
-          — we&apos;re happy to walk you through it.
+. We&apos;re happy to walk you through it.
         </footer>
       </main>
     </div>

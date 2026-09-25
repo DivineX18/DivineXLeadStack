@@ -38,7 +38,7 @@ export default async function RefundPolicyPage() {
         <h2>1. Monthly subscriptions, cancel anytime</h2>
         <p>
           {brand.name} is billed monthly, in advance. You can cancel at any
-          time &mdash; no cancellation fee. Most plans carry no minimum
+          time, no cancellation fee. Most plans carry no minimum
           commitment; the exception is an offer whose order page expressly
           states an initial minimum term (see Section 3).
         </p>
@@ -65,7 +65,7 @@ export default async function RefundPolicyPage() {
         <h2>4. No refunds for the current billing period</h2>
         <p>
           <strong>Once a monthly charge has been made, it is not refunded</strong>{" "}
-          &mdash; including if you cancel partway through the period, use
+, including if you cancel partway through the period, use
           the Service for only part of the month, or decide the Service
           isn&rsquo;t right for you after being charged. When you cancel,
           you keep full access through the end of the period you&rsquo;ve
@@ -81,7 +81,7 @@ export default async function RefundPolicyPage() {
         <h2>5. Failed payments and the grace period</h2>
         <p>
           If a payment fails, you have a <strong>7-day grace period</strong>{" "}
-          to update your payment method before access is restricted &mdash;
+          to update your payment method before access is restricted
           see Section 4.4 of the <Link href="/terms">Terms of Service</Link>.
           No charge is refunded during this process; the grace period exists
           to give you time to fix a payment issue before losing access, not
@@ -91,7 +91,7 @@ export default async function RefundPolicyPage() {
         <h2>6. Exceptions</h2>
         <p>
           Nothing in this policy limits any refund right you have under law
-          that cannot be waived by agreement &mdash; for example,
+          that cannot be waived by agreement, for example,
           consumer-protection law in your jurisdiction may require a refund
           in specific circumstances (such as a billing error on our part, or
           a legally mandated cooling-off period). If you believe
@@ -103,7 +103,7 @@ export default async function RefundPolicyPage() {
         <p>
           If you believe you were charged incorrectly (for example, charged
           twice for the same period, or charged after you&rsquo;d already
-          cancelled), contact us immediately &mdash; this is different from
+          cancelled), contact us immediately. This is different from
           a standard cancellation refund request, and we will correct
           genuine billing errors.
         </p>
@@ -113,7 +113,7 @@ export default async function RefundPolicyPage() {
           Cancel any time from your account&rsquo;s billing settings, or by
           contacting support. We do not require a reason, and there&rsquo;s
           no retention flow or required &ldquo;exit interview&rdquo; to get
-          through &mdash; cancellation is self-service.
+          through. Cancellation is self-service.
         </p>
 
         <h2>9. Related Documents</h2>
@@ -125,7 +125,7 @@ export default async function RefundPolicyPage() {
 
         <h2>10. Contact</h2>
         <p>
-          Questions about a specific charge or this policy &mdash;{" "}
+          Questions about a specific charge or this policy, {" "}
           <a
             href={supportMailto}
             className="underline-offset-4 hover:underline"

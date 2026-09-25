@@ -32,7 +32,7 @@ export const dynamic = "force-dynamic";
 
 const POLL_INTERVAL_SECONDS = 20;
 const MAX_POLL_ATTEMPTS = 45;
-const STALE_HEARTBEAT_MS = 5 * 60 * 1000; // 5 min — gitpage's heartbeat advice
+const STALE_HEARTBEAT_MS = 5 * 60 * 1000; // 5 min, gitpage's heartbeat advice
 
 interface PollPayload {
   subAccountId?: string;
@@ -109,7 +109,7 @@ export async function POST(
     await docRef.update({
       status: "failed",
       errorMessage:
-        "Build is taking longer than expected (15+ min). gitpage may still finish — check the dashboard.",
+        "Build is taking longer than expected (15+ min). gitpage may still finish. Check the dashboard.",
       pollAttempts: attempts,
       updatedAt: FieldValue.serverTimestamp(),
     });
@@ -153,7 +153,7 @@ export async function POST(
       });
       return NextResponse.json({ ok: true, settled: "client-error" });
     }
-    console.warn("[website/poll] gitpage poll threw — rescheduling", err);
+    console.warn("[website/poll] gitpage poll threw, rescheduling", err);
     await docRef.update({
       pollAttempts: attempts,
       updatedAt: FieldValue.serverTimestamp(),

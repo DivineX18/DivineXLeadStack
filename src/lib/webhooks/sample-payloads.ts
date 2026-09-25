@@ -321,7 +321,7 @@ export const SAMPLE_PAYLOADS: Record<WebhookEventType, () => unknown> = {
       contact_id: sampleId("contact"),
       contact_name: "Test Contact",
       channel: "sms",
-      preview: "Hi — is anyone available this afternoon?",
+      preview: "Hi. Is anyone available this afternoon?",
     },
   }),
   "call.missed": () => ({

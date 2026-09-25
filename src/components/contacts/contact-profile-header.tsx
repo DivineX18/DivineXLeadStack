@@ -526,7 +526,7 @@ function reviewSkipMessage(reason?: string): string {
     case "template_not_approved":
       return "The WhatsApp review template isn't approved yet.";
     case "window_closed":
-      return "WhatsApp's 24h window is closed — the contact hasn't messaged recently. Use it from the inbox after they reply, or switch to a template / SMS.";
+      return "WhatsApp's 24h window is closed, the contact hasn't messaged recently. Use it from the inbox after they reply, or switch to a template / SMS.";
     case "sms_not_configured":
       return "SMS isn't configured on this deployment.";
     default:

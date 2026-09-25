@@ -43,7 +43,7 @@ export function SubAccountStripeCheckoutSection() {
         error?: string;
       };
       if (!res.ok || !data.ok) throw new Error(data.error ?? "Failed to connect.");
-      toast.success("Stripe connected — real checkout is now live on this workspace's funnels.");
+      toast.success("Stripe connected. Real checkout is now live on this workspace's funnels.");
       setKey("");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to connect.");
@@ -94,10 +94,10 @@ export function SubAccountStripeCheckoutSection() {
           <CreditCard className="h-4 w-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-base font-semibold">Funnel checkout — Stripe</h2>
+          <h2 className="text-base font-semibold">Funnel checkout. Stripe</h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Connect your OWN Stripe account to sell products directly on
-            funnel pages — real checkout, order bump, one-click upsell. You
+            funnel pages, real checkout, order bump, one-click upsell. You
             are the merchant of record; payments go straight to your Stripe
             account, never through this platform.
           </p>
@@ -108,7 +108,7 @@ export function SubAccountStripeCheckoutSection() {
         <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4">
           <p className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
             <CheckCircle2 className="h-4 w-4" />
-            Connected — {stripeConfig.mode === "live" ? "Live" : "Test"} mode,
+            Connected, {stripeConfig.mode === "live" ? "Live" : "Test"} mode,
             key ending in •••• {stripeConfig.secretKeyLast4}
           </p>
           <div className="mt-3 flex items-center gap-2">

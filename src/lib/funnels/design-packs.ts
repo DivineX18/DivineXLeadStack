@@ -60,7 +60,7 @@ export const DESIGN_PACKS: Record<DesignPackId, DesignPackTokens> = {
   classic: {
     id: "classic",
     label: "Classic",
-    audienceHint: "Default — no strong pack signal from the business description.",
+    audienceHint: "Default, no strong pack signal from the business description.",
     defaultAccentColor: "#2563eb",
     defaultTheme: "light",
     headingFont: "sans",
@@ -82,7 +82,7 @@ export const DESIGN_PACKS: Record<DesignPackId, DesignPackTokens> = {
   bold: {
     id: "bold",
     label: "Bold",
-    audienceHint: "Agencies, creators, marketing, sales — high-energy B2C/B2B.",
+    audienceHint: "Agencies, creators, marketing, sales, high-energy B2C/B2B.",
     defaultAccentColor: "#7c3aed",
     defaultTheme: "dark",
     headingFont: "sans",
@@ -120,7 +120,7 @@ export const DESIGN_PACKS: Record<DesignPackId, DesignPackTokens> = {
   local_business: {
     id: "local_business",
     label: "Local Business",
-    audienceHint: "Dentists, roofing, HVAC, real estate, restaurants — trust-first local services.",
+    audienceHint: "Dentists, roofing, HVAC, real estate, restaurants, trust-first local services.",
     defaultAccentColor: "#0891b2",
     defaultTheme: "light",
     headingFont: "sans",

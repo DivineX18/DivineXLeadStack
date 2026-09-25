@@ -57,7 +57,7 @@ export async function GET(
   } catch (err) {
     if (err instanceof GhlApiError && (err.status === 401 || err.status === 403)) {
       return NextResponse.json(
-        { error: "GoHighLevel rejected the stored token — reconnect." },
+        { error: "GoHighLevel rejected the stored token, reconnect." },
         { status: 400 },
       );
     }

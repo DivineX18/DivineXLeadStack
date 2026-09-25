@@ -221,7 +221,7 @@ export function WhatsappTemplatesManager() {
     if (!res.ok || !data.ok) {
       throw new Error(data.error ?? "Submission failed.");
     }
-    toast.success("Submitted to Meta for approval — status will update here.");
+    toast.success("Submitted to Meta for approval. Status will update here.");
   }
 
   async function handleSubmitExisting(id: string) {
@@ -284,13 +284,13 @@ export function WhatsappTemplatesManager() {
         <p className="mt-1 text-sm text-muted-foreground">
           Pre-approved messages for starting or re-opening WhatsApp
           conversations outside the 24-hour window. Submitted to Meta for
-          approval via Twilio — approval usually takes minutes.
+          approval via Twilio. Approval usually takes minutes.
         </p>
       </header>
 
       {!senderConfigured && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-400">
-          You can draft templates now, but submitting needs a WhatsApp sender —
+          You can draft templates now, but submitting needs a WhatsApp sender
           add one under{" "}
           <Link
             href={`/sa/${subAccountId}/dashboard/settings`}

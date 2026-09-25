@@ -96,7 +96,7 @@ const SYSTEM_PROMPT = `You help an agency owner set up LeadStack, a self-hosted 
 Rules:
 - 2-3 short sentences. Under 70 words. No preamble, no sign-off, no markdown headings or bullets.
 - Be concrete: name the service/dashboard, the exact menu path, and what to copy.
-- Do NOT explain at length what the variable does — only where to GET its value.
+- Do NOT explain at length what the variable does, only where to GET its value.
 - Prefer the provided documentation excerpts; if they're empty, use your own knowledge of the service.
 - Plain text only.`;
 
@@ -136,7 +136,7 @@ export async function GET(request: Request) {
     meta?.off ? `Without it: ${meta.off}` : "",
     "",
     "Documentation excerpts:",
-    excerpts || "(none found — use your own knowledge of this service)",
+    excerpts || "(none found. Use your own knowledge of this service)",
   ]
     .filter((l) => l !== "")
     .join("\n");

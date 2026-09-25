@@ -42,31 +42,31 @@ export default async function LeadsPage() {
     <div className="mx-auto w-full max-w-6xl space-y-8">
       <PageHeader
         title="Leads"
-        description="Who to talk to next — leads, pipeline, tasks and conversations at a glance, then the tools to work them."
+        description="Who to talk to next, leads, pipeline, tasks and conversations at a glance, then the tools to work them."
       />
 
       {/* Operational insight — the "where do things stand" layer before the tools */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard
           label="New Leads (this week)"
-          value={h ? String(h.newLeadsThisWeek) : "—"}
+          value={h ? String(h.newLeadsThisWeek) : "-"}
           meta={meta}
         />
         <MetricCard
           label="Open Pipeline"
-          value={h ? formatCents(h.openPipelineValueCents) : "—"}
+          value={h ? formatCents(h.openPipelineValueCents) : "-"}
           subLabel={h ? `${h.openPipelineCount} open deals` : undefined}
           meta={meta}
         />
         <MetricCard
           label="Tasks Due Today"
-          value={h ? String(h.dueTodayTaskCount) : "—"}
+          value={h ? String(h.dueTodayTaskCount) : "-"}
           subLabel={h ? `${h.overdueTaskCount} overdue` : undefined}
           meta={meta}
         />
         <MetricCard
           label="Upcoming Appointments"
-          value={h ? String(h.upcomingAppointmentCount) : "—"}
+          value={h ? String(h.upcomingAppointmentCount) : "-"}
           meta={meta}
         />
       </div>

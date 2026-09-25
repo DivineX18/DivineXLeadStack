@@ -67,7 +67,7 @@ const FEATURES: Feature[] = [
     tone: "pink",
     href: "/calendar",
     description:
-      "Month grid with click-to-add events. Optionally link an event to a contact — it shows on their activity timeline automatically.",
+      "Month grid with click-to-add events. Optionally link an event to a contact. It shows on their activity timeline automatically.",
   },
   {
     icon: CalendarClock,
@@ -123,7 +123,7 @@ const FEATURES: Feature[] = [
     tone: "violet",
     href: "/ai-agents",
     description:
-      "One persona, every channel. Configure the agent's identity once (system prompt, business hours, escalation keywords) and optionally point at the client's website — Firecrawl scrapes the homepage into a knowledge base the bot uses for replies. Channels: Web Chat (embeddable widget), SMS + WhatsApp (auto-replies on the sub-account's number), Voice (Vapi answers inbound calls), and Outbound Voice (the AI proactively dials a contact or a filtered campaign). Captures create a Contact + a follow-up Task + an escalation email.",
+      "One persona, every channel. Configure the agent's identity once (system prompt, business hours, escalation keywords) and optionally point at the client's website. Firecrawl scrapes the homepage into a knowledge base the bot uses for replies. Channels: Web Chat (embeddable widget), SMS + WhatsApp (auto-replies on the sub-account's number), Voice (Vapi answers inbound calls), and Outbound Voice (the AI proactively dials a contact or a filtered campaign). Captures create a Contact + a follow-up Task + an escalation email.",
   },
   {
     icon: Send,
@@ -131,7 +131,7 @@ const FEATURES: Feature[] = [
     tone: "indigo",
     href: "/broadcasts",
     description:
-      "Send a templated email to a filtered audience (all contacts, by tag, or by pipeline stage). Reuses the automation engine + QStash fan-out — opt-out compliance, per-recipient delivery tracking, live status. Capped at 25k recipients per broadcast.",
+      "Send a templated email to a filtered audience (all contacts, by tag, or by pipeline stage). Reuses the automation engine + QStash fan-out, opt-out compliance, per-recipient delivery tracking, live status. Capped at 25k recipients per broadcast.",
   },
   {
     icon: Globe,
@@ -147,7 +147,7 @@ const FEATURES: Feature[] = [
     tone: "indigo",
     href: "/reports",
     description:
-      "Date-rangeable KPIs, pipeline funnel, won-revenue area chart, leads-by-source donut. All inline SVG — no chart library.",
+      "Date-rangeable KPIs, pipeline funnel, won-revenue area chart, leads-by-source donut. All inline SVG, no chart library.",
   },
   {
     icon: Search,
@@ -179,7 +179,7 @@ export function FeaturesTab({ firstSubAccountId }: FeaturesTabProps) {
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Each surface, at a glance. Links open in the same tab — use back to
+        Each surface, at a glance. Links open in the same tab. Use back to
         return.
       </p>
 

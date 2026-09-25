@@ -132,7 +132,7 @@ export default function BroadcastDetailPage() {
               {formatRelativeTime(broadcast.createdAt)} by{" "}
               {broadcast.createdBy?.displayName ||
                 broadcast.createdBy?.email ||
-                "—"}
+                "-"}
             </p>
           </div>
           <StatusBadge status={broadcast.status} />
@@ -160,7 +160,7 @@ export default function BroadcastDetailPage() {
           </div>
           {t.queued > 0 && (
             <p className="mt-2 text-xs text-muted-foreground">
-              {t.queued} still queued — sending at ~5/sec via QStash.
+              {t.queued} still queued, sending at ~5/sec via QStash.
             </p>
           )}
         </div>
@@ -195,8 +195,8 @@ export default function BroadcastDetailPage() {
                 </div>
                 <SendStatus send={s} />
                 <span className="text-xs text-muted-foreground">
-                  {formatContactDate(s.sentAt) === "—"
-                    ? "—"
+                  {formatContactDate(s.sentAt) === "-"
+                    ? "-"
                     : formatRelativeTime(s.sentAt)}
                 </span>
               </li>

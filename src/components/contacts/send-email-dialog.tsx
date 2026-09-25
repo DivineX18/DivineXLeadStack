@@ -89,7 +89,7 @@ export function SendEmailDialog({
             Send email
           </DialogTitle>
           <DialogDescription>
-            Replies go straight to your inbox — the recipient sees your email
+            Replies go straight to your inbox, the recipient sees your email
             address on the Reply-To header.
           </DialogDescription>
         </DialogHeader>

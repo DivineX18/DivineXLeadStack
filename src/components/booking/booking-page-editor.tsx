@@ -325,7 +325,7 @@ export function BookingPageEditor({ mode, initial }: Props) {
           required
           hint={
             mode === "edit"
-              ? "Slug can't be changed after creation — public links would break."
+              ? "Slug can't be changed after creation. Public links would break."
               : "Lowercase letters, numbers, and hyphens. 1–48 chars."
           }
         >
@@ -592,7 +592,7 @@ export function BookingPageEditor({ mode, initial }: Props) {
         <p className="text-[11px] text-muted-foreground">
           {(form.hosts ?? []).length > 0
             ? "Team mode: a time stays open while any selected host is free, and each booking is auto-assigned to the least-busy host (the customer doesn't pick)."
-            : "Single shared schedule: everyone shares one calendar — a time closes once any one booking lands (today's behavior)."}
+            : "Single shared schedule: everyone shares one calendar, a time closes once any one booking lands (today's behavior)."}
         </p>
       </Section>
 
@@ -630,7 +630,7 @@ export function BookingPageEditor({ mode, initial }: Props) {
         <Field
           label="Redirect URL (optional)"
           htmlFor="redirectUrl"
-          hint="After a confirmed booking, send visitors here (e.g. a thank-you or upsell page). We briefly show the confirmation, then redirect — appending ?booking_id & email for tracking. Paid booking pages never redirect. Leave blank to stay on the confirmation screen."
+          hint="After a confirmed booking, send visitors here (e.g. a thank-you or upsell page). We briefly show the confirmation, then redirect, appending ?booking_id & email for tracking. Paid booking pages never redirect. Leave blank to stay on the confirmation screen."
         >
           <Input
             id="redirectUrl"
@@ -662,7 +662,7 @@ export function BookingPageEditor({ mode, initial }: Props) {
               <p className="text-xs text-muted-foreground">
                 Adds <code>?booking_id</code> and <code>email</code> so your
                 thank-you page can fire conversion pixels and de-dup
-                bookings. Turn off to send visitors to the bare URL — the
+                bookings. Turn off to send visitors to the bare URL, the
                 booker&apos;s email won&apos;t appear in the destination&apos;s
                 address bar, referrer, or logs.
               </p>

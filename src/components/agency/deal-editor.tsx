@@ -79,7 +79,7 @@ export function DealEditor({
       };
       setDraft(committed);
       setSaved(committed);
-      toast.success("Deal saved — live on the landing page.");
+      toast.success("Deal saved, live on the landing page.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Save failed.");
     } finally {
@@ -92,7 +92,7 @@ export function DealEditor({
       <div className="border-b bg-muted/30 px-5 py-3">
         <h2 className="text-sm font-semibold tracking-tight">Deal</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          The current campaign shown across the landing page — hero counter,
+          The current campaign shown across the landing page, hero counter,
           pricing card, announcement bar, CTAs, and FAQ. Changes go live
           immediately, no deploy. Prices ($891 / $1,782) stay in code so the
           display can&apos;t drift from what Stripe charges.
@@ -152,7 +152,7 @@ export function DealEditor({
             <p className="text-xs text-muted-foreground">
               Sold so far:{" "}
               <span className="font-medium text-foreground">{soldCount}</span>{" "}
-              — driven by Stripe purchases. Starting a fresh campaign? Reset{" "}
+, driven by Stripe purchases. Starting a fresh campaign? Reset{" "}
               <code className="rounded bg-muted px-1 py-0.5 text-[11px]">
                 appConfig/foundersCohort.soldCount
               </code>{" "}
@@ -160,7 +160,7 @@ export function DealEditor({
             </p>
             {belowSold && (
               <p className="text-xs text-amber-600 dark:text-amber-400">
-                New total is below the current sold count — the landing page
+                New total is below the current sold count, the landing page
                 will show the deal as sold out.
               </p>
             )}

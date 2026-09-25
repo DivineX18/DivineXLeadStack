@@ -187,7 +187,7 @@ export function BulkEmailDialog({
         return;
       }
       toast.success(
-        `Bulk email queued — ${data.queued ?? 0} recipients${
+        `Bulk email queued, ${data.queued ?? 0} recipients${
           data.skipped ? ` (${data.skipped} skipped)` : ""
         }`,
       );
@@ -231,7 +231,7 @@ export function BulkEmailDialog({
                 >
                   Create one
                 </a>{" "}
-                first — bulk email reuses the same template engine as
+                first, bulk email reuses the same template engine as
                 automations.
               </p>
             ) : (
@@ -245,7 +245,7 @@ export function BulkEmailDialog({
                 {templates.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
-                    {t.subject ? ` — ${t.subject}` : ""}
+                    {t.subject ? `, ${t.subject}` : ""}
                   </option>
                 ))}
               </select>

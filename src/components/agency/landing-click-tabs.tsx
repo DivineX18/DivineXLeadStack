@@ -61,7 +61,7 @@ export interface LandingClickTabsProps {
 }
 
 function pct(numerator: number, denominator: number, digits = 1): string {
-  if (denominator <= 0) return "—";
+  if (denominator <= 0) return "-";
   return `${+((numerator / denominator) * 100).toFixed(digits)}%`;
 }
 
@@ -154,13 +154,13 @@ function VariantsTable({
                   {row.ctaClicks.toLocaleString()}
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
-                  {row.conversionPct !== null ? `${row.conversionPct}%` : "—"}
+                  {row.conversionPct !== null ? `${row.conversionPct}%` : "-"}
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums">
                   {row.purchases.toLocaleString()}
                 </td>
                 <td className="px-4 py-3 text-right font-medium tabular-nums">
-                  {row.buyRatePct !== null ? `${row.buyRatePct}%` : "—"}
+                  {row.buyRatePct !== null ? `${row.buyRatePct}%` : "-"}
                 </td>
               </tr>
             );
@@ -174,13 +174,13 @@ function VariantsTable({
                 </span>
               </td>
               <td className="px-4 py-3">{r.hint}</td>
-              <td className="px-4 py-3 text-right">—</td>
-              <td className="px-4 py-3 text-right">—</td>
-              <td className="px-4 py-3 text-right">—</td>
+              <td className="px-4 py-3 text-right">-</td>
+              <td className="px-4 py-3 text-right">-</td>
+              <td className="px-4 py-3 text-right">-</td>
               <td className="px-4 py-3 text-right tabular-nums text-foreground">
                 {r.value.toLocaleString()}
               </td>
-              <td className="px-4 py-3 text-right">—</td>
+              <td className="px-4 py-3 text-right">-</td>
             </tr>
           ))}
 
@@ -189,13 +189,13 @@ function VariantsTable({
             <td className="px-4 py-3 font-normal text-muted-foreground">
               All completed checkout sessions
             </td>
-            <td className="px-4 py-3 text-right text-muted-foreground">—</td>
-            <td className="px-4 py-3 text-right text-muted-foreground">—</td>
-            <td className="px-4 py-3 text-right text-muted-foreground">—</td>
+            <td className="px-4 py-3 text-right text-muted-foreground">-</td>
+            <td className="px-4 py-3 text-right text-muted-foreground">-</td>
+            <td className="px-4 py-3 text-right text-muted-foreground">-</td>
             <td className="px-4 py-3 text-right tabular-nums">
               {totalPurchases.toLocaleString()}
             </td>
-            <td className="px-4 py-3 text-right text-muted-foreground">—</td>
+            <td className="px-4 py-3 text-right text-muted-foreground">-</td>
           </tr>
         </tbody>
       </table>
@@ -228,7 +228,7 @@ function EmptyState({ message }: { message: string }) {
 function SourcesTable({ sources }: { sources: FunnelRowData[] }) {
   if (sources.length === 0) {
     return (
-      <EmptyState message="No click sources recorded yet. Data starts collecting from now on — share a link with a UTM tag or from a social post to see it populate." />
+      <EmptyState message="No click sources recorded yet. Data starts collecting from now on. Share a link with a UTM tag or from a social post to see it populate." />
     );
   }
   return (

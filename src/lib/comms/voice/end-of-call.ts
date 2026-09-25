@@ -232,7 +232,7 @@ export async function handleVapiEndOfCall(input: {
           territoryId = GLOBAL_TERRITORY_ID;
         }
         const taskRef = await db.collection("tasks").add({
-          title: `Follow up: ${interested ? "interested" : "callback"} — ${identity} (${label})`,
+          title: `Follow up: ${interested ? "interested" : "callback"}, ${identity} (${label})`,
           notes: [
             `Outbound AI campaign call: ${label}`,
             payload.extracted.interestReason

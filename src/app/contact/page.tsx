@@ -8,9 +8,9 @@ import { ContactForm } from "@/components/landing-custom/contact-form";
 export async function generateMetadata() {
   const brand = await resolveCustomBrand();
   return {
-    title: `Contact — ${brand.name}`,
+    title: `Contact, ${brand.name}`,
     description: `Get in touch with the ${brand.name} team.`,
-    openGraph: { title: `Contact — ${brand.name}`, type: "website" as const },
+    openGraph: { title: `Contact, ${brand.name}`, type: "website" as const },
   };
 }
 
@@ -33,7 +33,7 @@ export default async function ContactPage() {
                 </h1>
                 <p className="mt-6 text-lg text-muted-foreground">
                   Tell us about your business and what you&apos;re trying to fix. We&apos;ll reply
-                  directly — no ticket queue.
+                  directly, no ticket queue.
                 </p>
                 <div className="mt-8 flex items-center gap-3 rounded-xl border bg-card p-5">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">

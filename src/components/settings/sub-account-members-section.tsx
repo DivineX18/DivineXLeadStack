@@ -160,12 +160,12 @@ export function SubAccountMembersSection() {
         // no pending invite / signup step.
         if (payload.alreadyMember) {
           toast.success(
-            `${email} is already a member — role set to ${roleLabel}`,
+            `${email} is already a member, role set to ${roleLabel}`,
           );
         } else {
           toast.success(
             `Added ${email} as ${roleLabel}${
-              payload.mailed ? " — they've been notified by email" : ""
+              payload.mailed ? ", they've been notified by email" : ""
             }`,
           );
         }
@@ -177,11 +177,11 @@ export function SubAccountMembersSection() {
         try {
           await navigator.clipboard.writeText(payload.inviteUrl);
           toast.success(
-            `Invite created — link copied (set RESEND_API_KEY to email automatically)`,
+            `Invite created, link copied (set RESEND_API_KEY to email automatically)`,
           );
         } catch {
           toast.success(
-            `Invite created — copy the link from "Pending invites" below`,
+            `Invite created. Copy the link from "Pending invites" below`,
           );
         }
       } else {
@@ -205,7 +205,7 @@ export function SubAccountMembersSection() {
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Invite link copied");
-    } catch (err) { toast.error(describeError(err, "Could not copy — your browser blocked clipboard access"), { duration: 12_000 });
+    } catch (err) { toast.error(describeError(err, "Could not copy, your browser blocked clipboard access"), { duration: 12_000 });
     }
   }
 
@@ -453,7 +453,7 @@ export function SubAccountMembersSection() {
 
         <p className="pt-1 text-[11px] text-muted-foreground">
           <Shield className="mr-1 inline h-3 w-3" />
-          Both roles are scoped to this workspace only — they can&apos;t
+          Both roles are scoped to this workspace only. They can&apos;t
           see or touch other sub-accounts.{" "}
           <strong className="text-foreground">Workspace Admins</strong>{" "}
           can invite, change roles, and remove members.{" "}

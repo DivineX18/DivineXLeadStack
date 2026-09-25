@@ -395,7 +395,7 @@ export async function seedDemo(db: Firestore): Promise<SeedResult> {
 
   // Notes (~30% of contacts)
   const NOTE_SAMPLES = [
-    "Followed up via email — waiting on their procurement timeline.",
+    "Followed up via email, waiting on their procurement timeline.",
     "Great call. They want a follow-up next quarter.",
     "Reached out on LinkedIn. No response yet.",
     "Budget confirmed. Sending proposal this week.",

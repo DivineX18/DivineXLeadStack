@@ -483,7 +483,7 @@ export async function listCoursesForMember(opts: {
         if (groupPaid.empty) {
           const price =
             course.priceCents != null
-              ? ` — ${formatPrice(course.priceCents, course.currency)}`
+              ? `, ${formatPrice(course.priceCents, course.currency)}`
               : "";
           locked = { reason: `Buy${price}`, purchasable: true };
         }

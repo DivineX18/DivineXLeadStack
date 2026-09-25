@@ -49,7 +49,7 @@ async function emailCheckoutLink(opts: {
   const text = [
     `Your workspace "${opts.subAccountName}" is ready to activate.`,
     "",
-    opts.planName ? `Plan: ${opts.planName} — ${opts.priceLabel}/month` : "",
+    opts.planName ? `Plan: ${opts.planName}, ${opts.priceLabel}/month` : "",
     "",
     `Complete your subscription here: ${opts.url}`,
   ]
@@ -137,7 +137,7 @@ export async function PATCH(
       });
       if (!url) {
         return NextResponse.json(
-          { error: "NEXT_PUBLIC_APP_URL isn't configured — can't build the link." },
+          { error: "NEXT_PUBLIC_APP_URL isn't configured. Can't build the link." },
           { status: 500 },
         );
       }

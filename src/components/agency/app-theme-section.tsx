@@ -28,7 +28,7 @@ const OPTIONS: {
   {
     value: "green",
     label: "Green",
-    hint: "The emerald default palette — matches the landing page and default app icon.",
+    hint: "The emerald default palette, matches the landing page and default app icon.",
     swatch: "bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-300",
   },
   {
@@ -40,7 +40,7 @@ const OPTIONS: {
   {
     value: "neutral",
     label: "Neutral",
-    hint: "Monochrome — buttons and highlights follow light/dark foreground.",
+    hint: "Monochrome, buttons and highlights follow light/dark foreground.",
     swatch: "bg-gradient-to-r from-zinc-800 to-zinc-500 dark:from-zinc-200 dark:to-zinc-400",
   },
 ];

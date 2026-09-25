@@ -49,7 +49,7 @@ export async function POST(
   if (file.size > MAX_PRODUCT_FILE_BYTES) {
     return NextResponse.json(
       {
-        error: `File is too large — keep it under ${Math.round(MAX_PRODUCT_FILE_BYTES / (1024 * 1024))} MB.`,
+        error: `File is too large. Keep it under ${Math.round(MAX_PRODUCT_FILE_BYTES / (1024 * 1024))} MB.`,
       },
       { status: 400 },
     );

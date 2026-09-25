@@ -97,7 +97,7 @@ export async function submitBuild(
       : typeof body.details === "string"
         ? body.details
         : null;
-    const message = detail ? `${baseMessage} — ${detail}` : baseMessage;
+    const message = detail ? `${baseMessage}, ${detail}` : baseMessage;
     throw new GitpageError(message, res.status, body);
   }
 

@@ -29,7 +29,7 @@ export default async function ResponsibleAiPage() {
           {brand.name}, provided by Jade&rsquo;s Gems &amp; SOULutions LLC,
           doing business as DivineX, includes optional AI-powered features.
           This page explains what they are, how they work, and their
-          limitations &mdash; in plain language, matched to what&rsquo;s
+          limitations, in plain language, matched to what&rsquo;s
           actually built today. This policy is governed by the laws of the
           State of Texas, United States, on the same terms as Section 14 of
           our <Link href="/terms">Terms of Service</Link>.
@@ -40,28 +40,28 @@ export default async function ResponsibleAiPage() {
           All of {brand.name}&rsquo;s AI features share one persona per
           workspace (a system prompt you write, plus optional business
           hours, escalation rules, and a knowledge base drawn from your own
-          website) &mdash; the same identity answers across whichever
+          website), the same identity answers across whichever
           channels you enable:
         </p>
         <ul>
           <li>
-            <strong>In-app AI Assistant</strong> &mdash; answers questions
+            <strong>In-app AI Assistant</strong>, answers questions
             and, for actions that change data (like creating a contact or
             sending a message), asks you to confirm before it acts.
           </li>
           <li>
-            <strong>Web Chat</strong> &mdash; an AI agent embedded on your
+            <strong>Web Chat</strong>, an AI agent embedded on your
             website that can answer visitor questions and capture lead
             details.
           </li>
           <li>
-            <strong>SMS, WhatsApp, and Voice (inbound)</strong> &mdash; the
+            <strong>SMS, WhatsApp, and Voice (inbound)</strong>, the
             same persona auto-replies to incoming messages and can answer
             inbound phone calls.
           </li>
           <li>
             <strong>Outbound Voice</strong> (opt-in, separately enabled)
-            &mdash; the AI can proactively call your contacts, either one at
+, the AI can proactively call your contacts, either one at
             a time or as part of a campaign you configure.
           </li>
         </ul>
@@ -81,13 +81,13 @@ export default async function ResponsibleAiPage() {
         <h2>3. Human oversight built into the product</h2>
         <p>
           Some AI actions require your explicit confirmation before they
-          take effect, rather than executing automatically &mdash; this is
+          take effect, rather than executing automatically. This is
           a deliberate design choice for actions with real-world
           consequences (for example, creating records or sending messages
           on your behalf in certain flows). Outbound voice calling
           additionally passes through a compliance gate that checks
           consent, calling windows, and contact frequency before any call is
-          placed &mdash; you remain responsible for your own compliance
+          placed. You remain responsible for your own compliance
           obligations (Section 5 of our{" "}
           <Link href="/terms">Terms of Service</Link>) on top of this
           safeguard.
@@ -97,7 +97,7 @@ export default async function ResponsibleAiPage() {
         <p>
           AI-generated content can be wrong. It may misunderstand context,
           generate inaccurate information, or produce a response that
-          doesn&rsquo;t match your intent &mdash; especially for nuanced,
+          doesn&rsquo;t match your intent, especially for nuanced,
           sensitive, or high-stakes conversations. You are responsible for:
         </p>
         <ul>
@@ -161,7 +161,7 @@ export default async function ResponsibleAiPage() {
 
         <h2>8. Contact</h2>
         <p>
-          Questions about how {brand.name}&rsquo;s AI features work &mdash;{" "}
+          Questions about how {brand.name}&rsquo;s AI features work, {" "}
           <a
             href={supportMailto}
             className="underline-offset-4 hover:underline"

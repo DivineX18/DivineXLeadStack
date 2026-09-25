@@ -139,11 +139,11 @@ export async function resolveArtifact(
 
 const SURFACE_MEANING: Record<IaSurface, string> = {
   home: "their starting overview of the business.",
-  create: "Create — where campaigns, landing pages and follow-up are built.",
-  leads: "Leads — the people who have come in, and their pipeline.",
-  performance: "Performance — the business outcomes and what has moved.",
-  intelligence: "Intelligence — the diagnosis of the business and its opportunities.",
-  settings: "Settings — configuration for this workspace.",
+  create: "Create, where campaigns, landing pages and follow-up are built.",
+  leads: "Leads, the people who have come in, and their pipeline.",
+  performance: "Performance, the business outcomes and what has moved.",
+  intelligence: "Intelligence, the diagnosis of the business and its opportunities.",
+  settings: "Settings, configuration for this workspace.",
 };
 
 /**
@@ -163,14 +163,14 @@ export function renderPageContextCard(
   if (artifact?.sections?.length) {
     lines.push(
       `THE PAGE AS IT STANDS RIGHT NOW, in order: ${artifact.sections
-        .map((x, i) => `${i + 1}. ${x.type}${x.heading ? ` — "${x.heading}"` : ""}`)
+        .map((x, i) => `${i + 1}. ${x.type}${x.heading ? ` - "${x.heading}"` : ""}`)
         .join("; ")}.`,
-      "Reason about THIS draft. Do not regenerate the page from its title or from defaults — the customer's own edits are the starting point.",
+      "Reason about THIS draft. Do not regenerate the page from its title or from defaults, the customer's own edits are the starting point.",
     );
   }
   if (artifact?.refIds) {
     lines.push(
-      `TOOL REFERENCES for this page — use these exact values when calling a tool that edits it: funnel_id="${artifact.refIds.funnelId}"${artifact.refIds.sectionId ? `, section_id="${artifact.refIds.sectionId}"` : ""}. These are internal identifiers: never say them to the customer.`,
+      `TOOL REFERENCES for this page. Use these exact values when calling a tool that edits it: funnel_id="${artifact.refIds.funnelId}"${artifact.refIds.sectionId ? `, section_id="${artifact.refIds.sectionId}"` : ""}. These are internal identifiers: never say them to the customer.`,
     );
   }
   if (artifact?.selected) {
@@ -191,7 +191,7 @@ export function renderPageContextCard(
   }
   lines.push(
     "",
-    "USE THIS: they can see this screen — do not ask them what they are working on or which page they mean. Answer in terms of what is in front of them.",
+    "USE THIS: they can see this screen. Do not ask them what they are working on or which page they mean. Answer in terms of what is in front of them.",
   );
 
   return {

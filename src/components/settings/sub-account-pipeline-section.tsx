@@ -151,7 +151,7 @@ export function SubAccountPipelineSection() {
           <p className="text-xs text-muted-foreground">
             Rename your deal stages and reorder them to match how your team
             works. The Won and Lost stages stay as the closed states (they
-            drive reports + automations) — you can rename and reposition them,
+            drive reports + automations). You can rename and reposition them,
             but they can&apos;t be removed.
           </p>
         </div>
@@ -204,7 +204,7 @@ export function SubAccountPipelineSection() {
                     ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
                     : "bg-rose-500/10 text-rose-700 dark:text-rose-400",
                 )}
-                title="Closed state — drives reports + automations"
+                title="Closed state, drives reports + automations"
               >
                 {r.terminal}
               </span>

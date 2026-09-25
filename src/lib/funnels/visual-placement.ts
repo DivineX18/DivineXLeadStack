@@ -31,7 +31,7 @@ import type { ConstructedShape } from "@/lib/funnels/visual-source";
  *  are the shapes that already exist in the renderer and already read as part
  *  of a section rather than as an attachment to one. */
 export type VisualComposition =
-  | "fold_media" // the hero's split fold — the media side beside the headline
+  | "fold_media" // the hero's split fold, the media side beside the headline
   | "split" //      text beside visual, inside the section's own shell
   | "anchor"; //    a wide visual LEADING the section, which the content details
 

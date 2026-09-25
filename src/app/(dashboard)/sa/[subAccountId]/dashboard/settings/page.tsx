@@ -197,7 +197,7 @@ export default function SettingsPage() {
                 </span>
               </div>
               <p className="mt-2 text-[11px] text-muted-foreground">
-                Sub-account billing is on the roadmap — agencies will be able
+                Sub-account billing is on the roadmap. Agencies will be able
                 to set tiered plans (free / pro / etc.) and clients can upgrade
                 from this card. Until then every sub-account is on the free
                 plan.

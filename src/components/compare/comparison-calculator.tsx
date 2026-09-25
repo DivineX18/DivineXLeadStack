@@ -76,7 +76,7 @@ export function ComparisonCalculator() {
     <section className="mb-12 sm:mb-16">
       <header className="mb-6 text-center">
         <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          Build your scenario — what does your agency actually need?
+          Build your scenario. What does your agency actually need?
         </h2>
         <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Plug in your sub-account count, how many of those clients you&apos;d
@@ -171,7 +171,7 @@ export function ComparisonCalculator() {
               label="Year 2"
               value={`$${yearlyGhl.toLocaleString()}`}
               tone="bleed"
-              hint="Same bill — every year, forever"
+              hint="Same bill, every year, forever"
             />
             <Line
               label="Year 3"
@@ -194,7 +194,7 @@ export function ComparisonCalculator() {
             <Line
               label="Premium Support"
               value="$0"
-              hint="Direct support from the team — included"
+              hint="Direct support from the team, included"
             />
             <Divider />
             <Line label="Monthly" value="$0/mo" strong />
@@ -207,7 +207,7 @@ export function ComparisonCalculator() {
             <Line
               label="Year 2"
               value="$0"
-              hint="License is one-time — no monthly fee, ever"
+              hint="License is one-time, no monthly fee, ever"
             />
             <Line label="Year 3" value="$0" />
           </CostCard>
@@ -235,7 +235,7 @@ export function ComparisonCalculator() {
             <span className="font-semibold text-foreground">
               {paybackMonths} {paybackMonths === 1 ? "month" : "months"}
             </span>
-            {" "}— in typical agency use (10+ clients on AI, Premium Support
+            {" "}, in typical agency use (10+ clients on AI, Premium Support
             included), payback is 1 month or less. Every month after that is
             straight to your bottom line.
           </p>
@@ -243,7 +243,7 @@ export function ComparisonCalculator() {
       </div>
 
       <p className="mt-4 text-center text-[11px] text-muted-foreground">
-        Pricing accurate as of June 2026 — provided as a guide.
+        Pricing accurate as of June 2026, provided as a guide.
       </p>
     </section>
   );

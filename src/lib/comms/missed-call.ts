@@ -221,7 +221,7 @@ export async function handleMissedCall(input: {
 
   if (contact?.smsOptedOut) {
     await logActivity(
-      `Missed call from ${from}. Text-back suppressed — contact is opted out of SMS.`,
+      `Missed call from ${from}. Text-back suppressed. Contact is opted out of SMS.`,
     );
     return { handled: true, reason: "opted_out", contactId };
   }

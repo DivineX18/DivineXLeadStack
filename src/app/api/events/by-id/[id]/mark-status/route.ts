@@ -88,7 +88,7 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          "This event is already in a final state — operators can't flip past it.",
+          "This event is already in a final state. Operators can't flip past it.",
       },
       { status: 409 },
     );
@@ -211,7 +211,7 @@ async function runStatusSideEffects(
   if (next !== "cancelled") return { emailSent: false, emailSkipReason: "not_cancelled" };
   if (!emailIsConfigured()) {
     console.warn(
-      `[events/mark-status] email not configured — skipping cancel notify for event=${event.id}`,
+      `[events/mark-status] email not configured, skipping cancel notify for event=${event.id}`,
     );
     return { emailSent: false, emailSkipReason: "email_not_configured" };
   }

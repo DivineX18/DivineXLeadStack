@@ -65,7 +65,7 @@ export function SubAccountCalendarSyncSection() {
     try {
       await navigator.clipboard.writeText(value);
       toast.success("Calendar URL copied.");
-    } catch (err) { toast.error(describeError(err, "Clipboard blocked — select the URL and copy manually."), { duration: 12_000 });
+    } catch (err) { toast.error(describeError(err, "Clipboard blocked. Select the URL and copy manually."), { duration: 12_000 });
     }
   }
 
@@ -99,14 +99,14 @@ export function SubAccountCalendarSyncSection() {
           <div className="space-y-3">
             <FeedUrlRow
               label="All bookings"
-              hint="Everyone's bookings in this sub-account — the shared team calendar."
+              hint="Everyone's bookings in this sub-account, the shared team calendar."
               url={url}
               onCopy={() => copyText(url)}
             />
             {hostUrl && (
               <FeedUrlRow
                 label="Just my bookings"
-                hint="Only bookings assigned to you — useful when a page runs as a team (round-robin)."
+                hint="Only bookings assigned to you. Useful when a page runs as a team (round-robin)."
                 url={hostUrl}
                 onCopy={() => copyText(hostUrl)}
               />
@@ -174,7 +174,7 @@ export function SubAccountCalendarSyncSection() {
           </div>
 
           <p className="mt-5 text-[11px] leading-relaxed text-muted-foreground">
-            The feed is read-only — your external calendar receives our
+            The feed is read-only, your external calendar receives our
             bookings but can&apos;t edit them. To keep events private, treat
             this URL like a password. If it leaks, rotate{" "}
             <code className="rounded bg-muted px-1 py-0.5 text-[10px]">

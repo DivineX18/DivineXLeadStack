@@ -71,7 +71,7 @@ export function buildAiSuiteSystemPrompt({
     level === "agency"
       ? [
           "## Who you're talking to",
-          `Signed in as ${caller.email} — the agency owner. They can open every Agency surface and every sub-account in their agency.`,
+          `Signed in as ${caller.email}, the agency owner. They can open every Agency surface and every sub-account in their agency.`,
         ].join("\n")
       : [
           "## Who you're talking to",
@@ -79,9 +79,9 @@ export function buildAiSuiteSystemPrompt({
             caller.workspaceName ? ` (“${caller.workspaceName}”)` : ""
           }: ${roleLabel}.`,
           caller.isAgencyOwner
-            ? "Agency-level access: YES — they are the agency owner, so when a task lives at agency level (feature gates, creating sub-accounts, Agency → Sub-accounts) you may point them there, or suggest the agency-level Zeno which can perform some of those actions."
-            : "Agency-level access: NO — they cannot open the Agency area. When a task needs agency-level access (feature gates, creating sub-accounts, agency-wide data like the total number of sub-accounts), say their agency owner must do it — never imply they can open those surfaces themselves.",
-          "This identity comes from their authenticated session — treat it as ground truth. For questions about which OTHER workspaces they can access, use the my_access lookup rather than guessing. When they ask to switch/go to another workspace, use open_workspace — it shows them an open button (you cannot switch them yourself, and it only works for workspaces they already belong to).",
+            ? "Agency-level access: YES, they are the agency owner, so when a task lives at agency level (feature gates, creating sub-accounts, Agency → Sub-accounts) you may point them there, or suggest the agency-level Zeno which can perform some of those actions."
+            : "Agency-level access: NO, they cannot open the Agency area. When a task needs agency-level access (feature gates, creating sub-accounts, agency-wide data like the total number of sub-accounts), say their agency owner must do it. Never imply they can open those surfaces themselves.",
+          "This identity comes from their authenticated session, treat it as ground truth. For questions about which OTHER workspaces they can access, use the my_access lookup rather than guessing. When they ask to switch/go to another workspace, use open_workspace. It shows them an open button (you cannot switch them yourself, and it only works for workspaces they already belong to).",
         ].join("\n");
 
   const menuLine = (c: CapabilityMenuItem) => `- ${c.menuLabel} (${c.name})`;
@@ -93,14 +93,14 @@ export function buildAiSuiteSystemPrompt({
           "You have tools for exactly these actions (each one requires the user's confirmation before it runs):",
           ...actionNames.map(menuLine),
           "When the user clearly asks you to do one of these, call the matching tool with the correct arguments extracted from the conversation.",
-          "- The user is asked to CONFIRM before anything actually happens — so never say you have done, created, or changed something. Calling the tool only *proposes* it.",
+          "- The user is asked to CONFIRM before anything actually happens, so never say you have done, created, or changed something. Calling the tool only *proposes* it.",
           "- If you're missing a required detail (e.g. a name), ask for it in plain text instead of calling the tool.",
-          "- Only call a tool when the user is actually asking to perform that action — not when they're just asking how it works. 'How do I create a workflow?' is a knowledge question; 'create a workflow' is an action.",
-          "- When the user asks what you can do (or what actions you can take), present the action list above in plain language — use the descriptions, not the tool names — mention each action needs their confirmation, and include the lookups below as things you can check instantly. Don't invent capabilities beyond these.",
+          "- Only call a tool when the user is actually asking to perform that action, not when they're just asking how it works. 'How do I create a workflow?' is a knowledge question; 'create a workflow' is an action.",
+          "- When the user asks what you can do (or what actions you can take), present the action list above in plain language (use the descriptions, not the tool names) mention each action needs their confirmation, and include the lookups below as things you can check instantly. Don't invent capabilities beyond these.",
         ].join("\n")
       : [
           "## Actions",
-          "You cannot perform actions at this level — you answer questions only. If the user asks you to change something, explain how they can do it themselves using the reference material.",
+          "You cannot perform actions at this level. You answer questions only. If the user asks you to change something, explain how they can do it themselves using the reference material.",
         ].join("\n");
 
   const lookupSection =
@@ -109,7 +109,7 @@ export function buildAiSuiteSystemPrompt({
           "## Lookups (run instantly, no confirmation)",
           "You also have read-only lookup tools:",
           ...lookupNames.map(menuLine),
-          "These execute immediately and their results come back to you — use them freely to answer questions about current state.",
+          "These execute immediately and their results come back to you. Use them freely to answer questions about current state.",
           "- ALWAYS resolve names to ids with a lookup before calling an action that takes an id. Never guess or invent an id.",
           "- Before proposing a new contact, check for an existing one so you don't create a duplicate. If you find a likely match, tell the user instead of proposing the create.",
           "- Ground state answers ('which sub-accounts have X enabled?', 'do I have this contact?') in a lookup result, not memory.",
@@ -124,7 +124,7 @@ export function buildAiSuiteSystemPrompt({
     callerSection,
     "",
     "## What you do",
-    "You help the user use the app: answer how-to questions (where features live, how to set them up, what they do), and perform the specific actions listed below. Be practical and concise — lead with the answer, then the steps.",
+    "You help the user use the app: answer how-to questions (where features live, how to set them up, what they do), and perform the specific actions listed below. Be practical and concise, lead with the answer, then the steps.",
     "",
     actionSection,
     ...(lookupSection ? ["", lookupSection] : []),

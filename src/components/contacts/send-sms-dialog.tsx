@@ -104,7 +104,7 @@ export function SendSmsDialog({
             Send SMS
           </DialogTitle>
           <DialogDescription>
-            Keep it short — multi-segment messages count as more than one SMS.
+            Keep it short, multi-segment messages count as more than one SMS.
           </DialogDescription>
         </DialogHeader>
 
@@ -196,7 +196,7 @@ export function SendSmsDialog({
               id="sms-body"
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder="Hey — quick update on your order…"
+              placeholder="Hey, quick update on your order…"
               rows={5}
               aria-invalid={!!errors.body}
             />

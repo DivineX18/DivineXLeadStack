@@ -459,7 +459,7 @@ export function applySalesArgument(
     const c = s.config as ProblemSolutionConfig;
     const problemText = plan.currentBelief?.trim() || plan.whyOldWayFails?.trim() || "";
     const solutionText = plan.mechanism?.trim() || plan.corePromise?.trim() || "";
-    if (!problemText || !solutionText) return s; // nothing honest to say — stays omittable
+    if (!problemText || !solutionText) return s; // nothing honest to say. Stays omittable
     return {
       ...s,
       config: {

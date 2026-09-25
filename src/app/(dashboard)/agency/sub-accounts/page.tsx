@@ -109,7 +109,7 @@ export default function SubAccountsListPage() {
                     <span className="font-mono">
                       {s.accountNumber !== undefined
                         ? `#${s.accountNumber}`
-                        : "—"}
+                        : "-"}
                     </span>
                     <span
                       className={
@@ -169,7 +169,7 @@ export default function SubAccountsListPage() {
               subs.map((s) => (
                 <tr key={s.id} className="border-t">
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                    {s.accountNumber !== undefined ? `#${s.accountNumber}` : "—"}
+                    {s.accountNumber !== undefined ? `#${s.accountNumber}` : "-"}
                   </td>
                   <td className="px-4 py-3 font-medium">{s.name}</td>
                   <td className="px-4 py-3">

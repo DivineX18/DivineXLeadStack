@@ -116,7 +116,7 @@ export function findBrokenCtas(
 }
 
 export function ctaRejection(problems: CtaProblem[]): string {
-  const lines = problems.map((p) => `"${p.label}" (${p.sectionType}) — ${p.reason}`);
+  const lines = problems.map((p) => `"${p.label}" (${p.sectionType}), ${p.reason}`);
   return (
     `These buttons would render but do nothing when a visitor clicks them: ${lines.join("; ")}. ` +
     `Attach a capture form, a link, a booking page, a phone number or a checkout to each one, or remove its button label, then publish again.`
@@ -174,7 +174,7 @@ export function findDeliveryGaps(ctx: DeliveryContext): string[] {
   if (ctx.workflows.length > 0 && active.length === 0) {
     gaps.push(
       `the follow-up built for this page is not switched on, so nobody who submits the form will hear anything back ` +
-        `(${inactive.map((w) => `"${w.name}"`).join(", ")} — open it under Workflows and activate it)`,
+        `(${inactive.map((w) => `"${w.name}"`).join(", ")}. Open it under Workflows and activate it)`,
     );
   }
 
@@ -209,11 +209,11 @@ export function findDeliveryGaps(ctx: DeliveryContext): string[] {
     }
     if (!ctx.hasLeadMagnetAsset) {
       gaps.push(
-        "upload your lead magnet before publishing — this page promises a downloadable resource and no file is attached to it",
+        "upload your lead magnet before publishing. This page promises a downloadable resource and no file is attached to it",
       );
     } else if (ctx.assetResolves === false) {
       gaps.push(
-        "the file attached to this page no longer exists in storage, so the download link would fail — re-upload it before publishing",
+        "the file attached to this page no longer exists in storage, so the download link would fail, re-upload it before publishing",
       );
     } else if (ctx.emailBodies && ctx.leadMagnetAssetUrl) {
       const delivered = ctx.emailBodies.some((b) => b.includes(ctx.leadMagnetAssetUrl as string));

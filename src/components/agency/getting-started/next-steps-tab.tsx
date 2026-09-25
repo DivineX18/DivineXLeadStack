@@ -31,7 +31,7 @@ interface NextStep {
 const STEPS: NextStep[] = [
   {
     title: "Enter your API keys with Guided setup",
-    why: "Guided setup lists every integration key in one place — the required core (Firebase, cookies, app URL) plus the optional features (Stripe, Resend email, Twilio SMS, AI Agents, and more; each one just unlocks its feature). Type a key once and LeadStack writes it to Vercel and your local .env.local, then triggers the redeploy. Prefer setting environment variables by hand? That works too — this is a shortcut, not a requirement.",
+    why: "Guided setup lists every integration key in one place, the required core (Firebase, cookies, app URL) plus the optional features (Stripe, Resend email, Twilio SMS, AI Agents, and more; each one just unlocks its feature). Type a key once and LeadStack writes it to Vercel and your local.env.local, then triggers the redeploy. Prefer setting environment variables by hand? That works too. This is a shortcut, not a requirement.",
     cta: "Open Guided setup",
     href: "/agency/setup",
     icon: KeyRound,
@@ -39,7 +39,7 @@ const STEPS: NextStep[] = [
   },
   {
     title: "Verify your integrations are working",
-    why: "Open the Status tab on Agency home for a traffic-light health check across all your integrations — Firebase, Stripe, Resend, Twilio, the AI Agents stack (OpenRouter / Firecrawl / Vapi), Meta Inbox, QStash, gitpage, and Mapbox. Anything red or amber needs attention before the dependent features work.",
+    why: "Open the Status tab on Agency home for a traffic-light health check across all your integrations. Firebase, Stripe, Resend, Twilio, the AI Agents stack (OpenRouter / Firecrawl / Vapi), Meta Inbox, QStash, gitpage, and Mapbox. Anything red or amber needs attention before the dependent features work.",
     cta: "Open Status",
     href: "/agency",
     icon: ActivitySquare,
@@ -55,7 +55,7 @@ const STEPS: NextStep[] = [
   },
   {
     title: "Add your first contacts",
-    why: "Add one manually to learn the profile + activity timeline, or import a CSV to bulk-load existing leads. Field mapping is fuzzy — name/email/phone/company columns auto-detect.",
+    why: "Add one manually to learn the profile + activity timeline, or import a CSV to bulk-load existing leads. Field mapping is fuzzy, name/email/phone/company columns auto-detect.",
     cta: "Open Contacts",
     href: "/contacts",
     icon: Users,
@@ -100,7 +100,7 @@ const STEPS: NextStep[] = [
   },
   {
     title: "Invite a teammate",
-    why: "Add an admin or collaborator to a sub-account. Members are scoped to that one workspace — no leak across clients.",
+    why: "Add an admin or collaborator to a sub-account. Members are scoped to that one workspace, no leak across clients.",
     cta: "Open Settings",
     href: "/dashboard/settings",
     icon: UserPlus,
@@ -118,7 +118,7 @@ export function NextStepsTab({ firstSubAccountId }: NextStepsTabProps) {
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
         A recommended order for the first hour. Each step takes a couple of
-        minutes — feel free to skip around.
+        minutes, feel free to skip around.
       </p>
 
       <ol className="space-y-3">

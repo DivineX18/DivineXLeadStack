@@ -611,7 +611,7 @@ function ConfirmationPanel({
     >
       <CheckCircle2 className="mx-auto h-6 w-6" />
       <p className="font-medium">
-        {pending ? "Almost there — pay to confirm" : "You're booked."}
+        {pending ? "Almost there, pay to confirm" : "You're booked."}
       </p>
       {confirmation.confirmationMessage && !pending && (
         <p className="whitespace-pre-wrap text-xs">

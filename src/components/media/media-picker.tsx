@@ -258,7 +258,7 @@ export function MediaPicker({
                 style={{ borderColor: "var(--dx-border)" }}
               />
               <p className="text-xs text-[var(--dx-text-muted)]">
-                Paste a normal YouTube or Vimeo link — we&apos;ll turn it into an embed for you.
+                Paste a normal YouTube or Vimeo link. We&apos;ll turn it into an embed for you.
               </p>
               <Button
                 type="button"

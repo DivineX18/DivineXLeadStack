@@ -68,7 +68,7 @@ export function sourceLabel(source: ContactSource | string): string {
 
 export function SourceBadge({ source }: { source: ContactSource }) {
   if (!source) {
-    return <span className="text-xs text-muted-foreground">—</span>;
+    return <span className="text-xs text-muted-foreground">-</span>;
   }
   const knownStyle = STYLES[source as Exclude<ContactSource, "">];
   const label = sourceLabel(source);

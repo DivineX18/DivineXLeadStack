@@ -228,7 +228,7 @@ export default function CommunityGroupSettingsPage({
             onChange={(e) => setAbout(e.target.value.slice(0, ABOUT_MAX_CHARS))}
             maxLength={ABOUT_MAX_CHARS}
             rows={5}
-            placeholder="Sell the group — what members get, who it's for."
+            placeholder="Sell the group, what members get, who it's for."
           />
           <p className="text-right text-xs text-muted-foreground">
             {about.length}/{ABOUT_MAX_CHARS}
@@ -383,8 +383,8 @@ export default function CommunityGroupSettingsPage({
               value={joinPolicy}
               onChange={(e) => setJoinPolicy(e.target.value as GroupJoinPolicy)}
             >
-              <option value="open">Open — anyone can join instantly</option>
-              <option value="approval">Approval — admin approves joins</option>
+              <option value="open">Open. Anyone can join instantly</option>
+              <option value="approval">Approval, admin approves joins</option>
             </select>
           </div>
           <div className="space-y-1.5">

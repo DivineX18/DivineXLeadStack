@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  * reach it.
  */
 export const metadata: Metadata = {
-  title: "Free Growth Scan — find what's costing you leads | Ascend",
+  title: "Free Growth Scan. Find what's costing you leads | Ascend",
   description:
     "Enter your website and Ascend will analyze your marketing, identify your biggest growth constraint, and show you what to fix first. Free growth assessment, no software setup required.",
   robots: { index: true, follow: true },
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   // as "Flow". Overriding here fixes THIS page; the host-aware fix for every
   // public surface is the separate branding pass.
   openGraph: {
-    title: "Free Growth Scan — find what's costing you leads",
+    title: "Free Growth Scan. Find what's costing you leads",
     siteName: "Ascend",
     description:
       "Ascend analyzes your website and marketing, identifies your biggest growth constraint, and shows you what to fix first.",

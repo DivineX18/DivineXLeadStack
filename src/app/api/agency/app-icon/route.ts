@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   const agencyId = await getFirstAgencyId();
   if (!agencyId) {
     return NextResponse.json(
-      { error: "No agency exists yet — complete first signup first." },
+      { error: "No agency exists yet, complete first signup first." },
       { status: 409 },
     );
   }

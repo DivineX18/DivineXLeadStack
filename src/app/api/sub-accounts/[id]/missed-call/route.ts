@@ -103,7 +103,7 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          "AI inbound Voice is enabled on this number — it already answers calls. Turn off AI Voice (AI Agents → Voice) before enabling Missed Call Text Back.",
+          "AI inbound Voice is enabled on this number. It already answers calls. Turn off AI Voice (AI Agents → Voice) before enabling Missed Call Text Back.",
       },
       { status: 409 },
     );
@@ -131,7 +131,7 @@ export async function POST(
   let prevVoiceUrl = cfg.missedCall?.prevVoiceUrl ?? null;
   if (!webhookUrl) {
     webhookError =
-      "NEXT_PUBLIC_APP_URL is not set on this deployment — configure the number's Voice URL manually.";
+      "NEXT_PUBLIC_APP_URL is not set on this deployment. Configure the number's Voice URL manually.";
   } else {
     const result = await configureVoiceWebhook({
       accountSid: cfg.accountSid,

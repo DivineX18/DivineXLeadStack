@@ -28,17 +28,17 @@ export default async function PerformancePage() {
   const h = health?.data ?? null;
 
   const metrics = [
-    { label: "Revenue this month", value: h ? formatCents(h.revenueThisMonthCents) : "—", sub: h ? `${h.wonDealsThisMonth} won` : undefined },
-    { label: "Open pipeline", value: h ? formatCents(h.openPipelineValueCents) : "—", sub: h ? `${h.openPipelineCount} deals` : undefined },
-    { label: "New leads this week", value: h ? String(h.newLeadsThisWeek) : "—" },
-    { label: "Upcoming appointments", value: h ? String(h.upcomingAppointmentCount) : "—" },
+    { label: "Revenue this month", value: h ? formatCents(h.revenueThisMonthCents) : "-", sub: h ? `${h.wonDealsThisMonth} won` : undefined },
+    { label: "Open pipeline", value: h ? formatCents(h.openPipelineValueCents) : "-", sub: h ? `${h.openPipelineCount} deals` : undefined },
+    { label: "New leads this week", value: h ? String(h.newLeadsThisWeek) : "-" },
+    { label: "Upcoming appointments", value: h ? String(h.upcomingAppointmentCount) : "-" },
   ];
 
   return (
     <div className="mx-auto w-full max-w-6xl">
       <PageHeader
         title="Performance"
-        description="What's actually happening in the business — the outcomes, not the traffic."
+        description="What's actually happening in the business, the outcomes, not the traffic."
       />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {metrics.map((m) => (

@@ -36,7 +36,7 @@ export function TicketTiersSection({
         </h2>
         {config.tiers.length === 0 && (
           <MediaPlaceholder
-            label="No tickets set up yet — add at least one in the builder"
+            label="No tickets set up yet. Add at least one in the builder"
             accentColor={accentColor}
             className="min-h-32"
           />

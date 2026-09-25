@@ -26,9 +26,9 @@ export async function generateMetadata() {
     // this the Ascend host served Flow's name, tagline and closing CTA.
     const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
     return {
-      title: `About — ${brand.name}`,
-      description: `${brand.name} is DivineX's growth operations platform — built to run the day-to-day of a growing business: leads, follow-up, pipeline, and getting paid, in one place.`,
-      openGraph: { title: `About — ${brand.name}`, type: "website" as const },
+      title: `About, ${brand.name}`,
+      description: `${brand.name} is DivineX's growth operations platform. Built to run the day-to-day of a growing business: leads, follow-up, pipeline, and getting paid, in one place.`,
+      openGraph: { title: `About, ${brand.name}`, type: "website" as const },
     };
   }
   return {
@@ -69,7 +69,7 @@ const FLOW_IS_NOT = [
 
 const FLOW_IS = [
   "A CRM built to run day-to-day operations, not just record them",
-  "One record for every touchpoint — chat, text, call, email, quote, booking",
+  "One record for every touchpoint, chat, text, call, email, quote, booking",
   "AI agents that answer the moment a lead reaches out, on any channel",
   "Pipeline stages configured around how your team actually sells",
   "Ready to run in days, not months",
@@ -81,13 +81,13 @@ const INCLUDED = [
   { name: "Quotes & Booking", desc: "Line-itemed quotes clients accept from their inbox; public booking pages with automatic confirmations." },
   { name: "Automations", desc: "Speed-to-lead sequences that respond within seconds of a form submission." },
   { name: "Reporting", desc: "Pipeline funnel, won-revenue trend, and lead-source breakdown, always current." },
-  { name: "Public API", desc: "REST endpoints and outbound webhooks — connect the tools you already use." },
+  { name: "Public API", desc: "REST endpoints and outbound webhooks. Connect the tools you already use." },
 ];
 
 const PRINCIPLES = [
   {
     title: "Operations, not another dashboard",
-    body: "A CRM that just stores data is a filing cabinet. The point isn't to look at your pipeline — it's for the pipeline to actually move, with follow-up that happens whether or not you remembered to do it.",
+    body: "A CRM that just stores data is a filing cabinet. The point isn't to look at your pipeline, it's for the pipeline to actually move, with follow-up that happens whether or not you remembered to do it.",
   },
   {
     title: "Consolidation over sprawl",
@@ -95,7 +95,7 @@ const PRINCIPLES = [
   },
   {
     title: "Automation with a human in the loop",
-    body: "AI agents handle the immediate first response — the moment that actually determines whether a lead sticks around. Anything that needs judgment routes to a real person, on purpose, every time.",
+    body: "AI agents handle the immediate first response, the moment that actually determines whether a lead sticks around. Anything that needs judgment routes to a real person, on purpose, every time.",
   },
 ];
 
@@ -120,7 +120,7 @@ export default async function AboutPage() {
               </h1>
               <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
                 {brand.name} is built by DivineX. It exists to run the operational side of a
-                growing business — capturing leads, responding fast, keeping a pipeline honest,
+                growing business, capturing leads, responding fast, keeping a pipeline honest,
                 and getting paid, all from one system.
               </p>
             </div>
@@ -133,7 +133,7 @@ export default async function AboutPage() {
                   Built to run the operational side, not just record it
                 </h2>
                 <p className="mt-4 text-muted-foreground">
-                  Most small businesses don&rsquo;t lose deals because of bad service — they lose
+                  Most small businesses don&rsquo;t lose deals because of bad service. They lose
                   them because a lead sits unanswered too long, a follow-up gets forgotten, or a
                   pipeline nobody trusts stops getting checked. A CRM that only stores information
                   after the fact doesn&rsquo;t fix that; it just documents it. {brand.name} is
@@ -148,7 +148,7 @@ export default async function AboutPage() {
           <section className="border-t bg-muted/30 py-16 md:py-20">
             <div className="container mx-auto px-4">
               <h2 className="text-center text-2xl font-semibold tracking-tighter sm:text-4xl">
-                What {brand.name} is — and isn&rsquo;t
+                What {brand.name} is, and isn&rsquo;t
               </h2>
               <div className="mx-auto mt-10 grid max-w-3xl gap-5 sm:grid-cols-2">
                 <div className="rounded-2xl border border-destructive/25 bg-destructive/[0.07] p-6 shadow-sm sm:p-7">
@@ -237,7 +237,7 @@ export default async function AboutPage() {
                 </h2>
                 <p className="mt-4 text-muted-foreground">
                   {brand.name} is built by DivineX, based in Houston, Texas. Questions about the
-                  product, pricing, or anything else — {" "}
+                  product, pricing, or anything else, {" "}
                   <Link href="/contact" className="text-primary hover:underline">
                     reach out directly
                   </Link>{" "}
@@ -282,7 +282,7 @@ export default async function AboutPage() {
                 Established in 2007, we&apos;ve been building software for well
                 over a decade. Since 2021, our focus has been on developing
                 tools and resources that help solopreneurs and small businesses
-                grow and scale online &mdash; leveraging AI and AI agents.
+                grow and scale online, leveraging AI and AI agents.
               </p>
               <p>
                 Beyond application development, we also provide coaching and

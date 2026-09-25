@@ -80,7 +80,7 @@ export default function BookingListPage() {
         toast.error(body.error ?? "Couldn't duplicate the booking page.");
         return;
       }
-      toast.success("Booking page duplicated — now editing the copy.");
+      toast.success("Booking page duplicated, now editing the copy.");
       if (body.warning) toast.warning(body.warning);
       // Land in the new draft's editor so the operator can rename + publish.
       router.push(saPath(`/booking/${body.slug}`));
@@ -267,7 +267,7 @@ function EmptyState({
         Replace Calendly. Create your first booking page.
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Pick working hours, slot length, and a confirmation message —
+        Pick working hours, slot length, and a confirmation message
         share the link and your leads grab a time. Reminders + reschedule
         / cancel are built in.
       </p>

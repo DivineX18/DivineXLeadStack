@@ -100,7 +100,7 @@ export async function POST(request: Request) {
         error:
           channel === "instagram"
             ? "No Instagram business account is linked to the connected Page."
-            : "The connected Page is missing its id — reconnect under Settings → Messaging.",
+            : "The connected Page is missing its id, reconnect under Settings → Messaging.",
       },
       { status: 503 },
     );
@@ -130,7 +130,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "Meta's 24-hour messaging window is closed — the contact hasn't messaged within that time. Re-opening the conversation needs a message tag (coming in a later release).",
+          "Meta's 24-hour messaging window is closed, the contact hasn't messaged within that time. Re-opening the conversation needs a message tag (coming in a later release).",
         code: "session_window_closed",
       },
       { status: 409 },

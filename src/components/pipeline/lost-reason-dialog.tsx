@@ -47,7 +47,7 @@ export function LostReasonDialog({
   }, [open]);
 
   async function handleConfirm() {
-    const reason = [preset, note.trim()].filter(Boolean).join(" — ");
+    const reason = [preset, note.trim()].filter(Boolean).join(" - ");
     setSaving(true);
     try {
       await onConfirm(reason);
@@ -92,7 +92,7 @@ export function LostReasonDialog({
               id="lost-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Optional — any context that will help later."
+              placeholder="Optional. Any context that will help later."
               rows={3}
             />
           </div>

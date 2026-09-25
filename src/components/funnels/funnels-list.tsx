@@ -176,7 +176,7 @@ export function FunnelsList({
       });
       return;
     }
-    if (gate !== true) return; // still resolving, or locked — both rendered below
+    if (gate !== true) return; // still resolving, or locked, both rendered below
 
     // A NEWER WORKSPACE'S ANSWER MUST WIN. Switching workspace (or retrying)
     // starts a second request while the first is still open; without this flag

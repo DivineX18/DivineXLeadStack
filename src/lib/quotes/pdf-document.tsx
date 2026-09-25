@@ -278,7 +278,7 @@ export function InvoicePdfDocument({
           <View style={styles.metaBlock}>
             <Text style={styles.metaBlockLabel}>Recipient</Text>
             <Text style={styles.metaBlockValue}>
-              {recipientName || "—"}
+              {recipientName || "-"}
             </Text>
           </View>
           {(quote.billedToOrganization || quote.billingAddress) && (

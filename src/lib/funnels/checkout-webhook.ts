@@ -189,7 +189,7 @@ export async function handleFunnelChargeDispute(
       const db = getAdminDb();
       await db.collection("tasks").add({
         title: `Dispute opened on funnel order (${(dispute.amount / 100).toFixed(2)} ${dispute.currency})`,
-        notes: `Stripe dispute reason: ${dispute.reason}. Respond in your Stripe Dashboard — this platform doesn't submit evidence for you.`,
+        notes: `Stripe dispute reason: ${dispute.reason}. Respond in your Stripe Dashboard. This platform doesn't submit evidence for you.`,
         dueAt: new Date(),
         completed: false,
         completedAt: null,

@@ -104,8 +104,8 @@ export type StrategyFieldSource =
   | "website_evidence"
   | "brand_voice"
   | "crm_history"
-  | "inferred" // AI-reasoned from provided context — allowed, but flagged as such
-  | "unknown"; // genuinely not known — NEVER invented downstream
+  | "inferred" // AI-reasoned from provided context, allowed, but flagged as such
+  | "unknown"; // genuinely not known. NEVER invented downstream
 
 /** The campaign's top-level objective — maps onto a landing_page framework
  *  and a post-conversion email sequence archetype. */

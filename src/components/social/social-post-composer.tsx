@@ -282,7 +282,7 @@ export function SocialPostComposer({
               )}
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Approximate — exact rendering varies by platform.
+              Approximate, exact rendering varies by platform.
             </p>
           </div>
         </div>

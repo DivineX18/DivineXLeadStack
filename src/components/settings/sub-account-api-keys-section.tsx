@@ -51,7 +51,7 @@ interface MintFormState {
 
 const SCOPE_HELP: Record<ApiKeyScope, string> = {
   admin:
-    "Full CRUD on every resource in this sub-account. Server-to-server only — never paste into a browser.",
+    "Full CRUD on every resource in this sub-account. Server-to-server only, never paste into a browser.",
   "forms-ingest":
     "Write-only, restricted to form submissions. Safe to embed in client-side JS on a custom landing page.",
 };
@@ -120,7 +120,7 @@ export function SubAccountApiKeysSection() {
             <p className="mt-1">
               Your agency administrator controls this from the agency
               sub-accounts list (Manage → Public API access). Existing keys
-              and webhooks are preserved — re-enabling resumes them
+              and webhooks are preserved, re-enabling resumes them
               instantly without re-rotating Zapier integrations.
             </p>
           </div>
@@ -164,7 +164,7 @@ export function SubAccountApiKeysSection() {
   async function handleRevoke(key: ApiKeyResponse) {
     if (
       !confirm(
-        `Revoke "${key.name}"? Any Zapier / integration using this key will start getting 401s immediately. This cannot be undone — mint a new key if you need to reconnect.`,
+        `Revoke "${key.name}"? Any Zapier / integration using this key will start getting 401s immediately. This cannot be undone, mint a new key if you need to reconnect.`,
       )
     ) {
       return;
@@ -197,7 +197,7 @@ export function SubAccountApiKeysSection() {
     try {
       await navigator.clipboard.writeText(secret);
       toast.success("Copied to clipboard.");
-    } catch (err) { toast.error(describeError(err, "Clipboard blocked — select the key and copy manually."), { duration: 12_000 });
+    } catch (err) { toast.error(describeError(err, "Clipboard blocked. Select the key and copy manually."), { duration: 12_000 });
     }
   }
 
@@ -250,7 +250,7 @@ export function SubAccountApiKeysSection() {
               autoFocus
             />
             <p className="text-[11px] text-muted-foreground">
-              An internal label — shown only to your team. Pick something
+              An internal label, shown only to your team. Pick something
               that names the integration so revocations are easy.
             </p>
           </div>
@@ -378,7 +378,7 @@ export function SubAccountApiKeysSection() {
         <strong>Admin</strong>-scope keys can read and write everything;
         treat them like passwords. <strong>Forms-ingest</strong> keys are
         safe to embed in client-side code. If a key leaks, revoke it
-        immediately and mint a replacement — there is no &quot;regenerate&quot;.
+        immediately and mint a replacement. There is no &quot;regenerate&quot;.
       </p>
     </section>
   );
@@ -476,7 +476,7 @@ function RevealPanel({
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-            Copy your key now — you won&apos;t see it again
+            Copy your key now. You won&apos;t see it again
           </p>
           <p className="mt-0.5 text-xs text-amber-800/80 dark:text-amber-200/70">
             <strong>{name}</strong> · <ModeBadge mode={mode} />

@@ -53,7 +53,7 @@ export default async function PricingSuccessPage({
               {planName ? `Your ${planName} subscription is live. ` : ""}
               {requiresActivation
                 ? "Check your email for a link to set your password and log in."
-                : "You already had an account — just log in and it'll be in your workspace switcher."}
+                : "You already had an account, just log in and it'll be in your workspace switcher."}
             </p>
             <Link
               href="/login"
@@ -67,7 +67,7 @@ export default async function PricingSuccessPage({
             <h1 className="text-xl font-semibold">Something went wrong</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               Your payment went through, but we hit a snag setting up your
-              workspace. We&apos;ve been notified and will sort it out — reach
+              workspace. We&apos;ve been notified and will sort it out, reach
               out to support if you don&apos;t hear from us shortly.
             </p>
           </>
@@ -88,7 +88,7 @@ export default async function PricingSuccessPage({
           <>
             <h1 className="text-xl font-semibold">Payment received</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              We&apos;re setting up your workspace — this usually takes a few
+              We&apos;re setting up your workspace. This usually takes a few
               seconds. Refresh this page in a moment.
             </p>
           </>

@@ -37,7 +37,7 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          "The website knowledge base isn't set up on this deployment yet — contact your workspace admin.",
+          "The website knowledge base isn't set up on this deployment yet. Contact your workspace admin.",
       },
       { status: 503 },
     );

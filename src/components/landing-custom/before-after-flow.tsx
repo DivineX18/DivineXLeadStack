@@ -3,7 +3,7 @@ import type { PlanProduct } from "@/types/billing";
 import { X, Check } from "lucide-react";
 
 const ROWS = [
-  { before: "A lead texts, DMs, or fills out a form — and it lands in whichever inbox someone happens to check.", after: "Every channel writes into the same contact record, the moment it arrives." },
+  { before: "A lead texts, DMs, or fills out a form, and it lands in whichever inbox someone happens to check.", after: "Every channel writes into the same contact record, the moment it arrives." },
   { before: "First response depends on who's free and whether anyone saw the notification.", after: "An AI agent or automated sequence responds within seconds, day or night." },
   { before: "\"Where does this deal actually stand?\" has a different answer depending on who you ask.", after: "One pipeline, visible to the whole team, updated as it actually moves." },
   { before: "A quote gets typed up fresh in a document, then waits on a callback to get confirmed.", after: "A quote sends once and the client accepts or pays straight from their inbox." },
@@ -19,9 +19,9 @@ const ROWS = [
  * inheriting Flow's, which would make it read as Flow with a badge.
  */
 const UNIFIED_ROWS = [
-  { before: "You have traffic, tools and marketing activity — and no clear answer to what's actually costing you leads.", after: "A Growth Scan names the constraint, with the evidence behind it." },
+  { before: "You have traffic, tools and marketing activity, and no clear answer to what's actually costing you leads.", after: "A Growth Scan names the constraint, with the evidence behind it." },
   { before: "Everything looks like a priority, so the biggest problem keeps waiting.", after: "Recommendations arrive ranked, so the highest-impact fix is the obvious one." },
-  { before: "Deciding what to build next is a guess wearing the clothes of a strategy.", after: "Zeno turns the diagnosis into a plan and the assets to run it — you approve before anything ships." },
+  { before: "Deciding what to build next is a guess wearing the clothes of a strategy.", after: "Zeno turns the diagnosis into a plan and the assets to run it. You approve before anything ships." },
   { before: "Strategy lives in a document, and what actually gets built drifts away from it.", after: "The pages, campaigns and follow-up are generated from that same diagnosis." },
   { before: "A lead arrives and waits for whoever happens to notice it first.", after: "It lands on the contact record and gets a response within seconds, day or night." },
   { before: "\"Did the fix work?\" means exporting three tools into a spreadsheet.", after: "One dashboard ties the change back to pipeline and revenue." },

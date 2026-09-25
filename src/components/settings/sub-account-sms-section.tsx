@@ -40,7 +40,7 @@ export function SubAccountSmsSection() {
 
   const [enabled, setEnabled] = useState<boolean>(!!cfg?.enabled);
   const [accountSid, setAccountSid] = useState(cfg?.accountSid ?? "");
-  const [authToken, setAuthToken] = useState(""); // never reveal — write-only
+  const [authToken, setAuthToken] = useState(""); // never reveal. Write-only
   const [fromNumber, setFromNumber] = useState(cfg?.fromNumber ?? "");
   const [saving, setSaving] = useState(false);
   const [disabling, setDisabling] = useState(false);
@@ -353,7 +353,7 @@ export function SubAccountSmsSection() {
           <p className="text-muted-foreground mt-0.5 text-sm">
             Use a dedicated Twilio number for this sub-account so customer
             replies land in a chat thread on each contact profile. Off by
-            default — leave off to keep using the shared deployment-wide sender.
+            default. Leave off to keep using the shared deployment-wide sender.
           </p>
         </div>
       </header>
@@ -467,7 +467,7 @@ export function SubAccountSmsSection() {
                   <CheckCircle2 className="h-4 w-4" />
                   Connected
                   {lastResult.friendlyName
-                    ? ` — ${lastResult.friendlyName}`
+                    ? `, ${lastResult.friendlyName}`
                     : ""}
                   . Inbound webhook configured automatically.
                 </p>
@@ -545,7 +545,7 @@ export function SubAccountSmsSection() {
             />
             <span>
               Use the Twilio WhatsApp Sandbox (shared number{" "}
-              <code className="text-[11px]">+14155238886</code> — for testing)
+              <code className="text-[11px]">+14155238886</code>, for testing)
             </span>
           </label>
 
@@ -672,7 +672,7 @@ export function SubAccountSmsSection() {
               <strong className="text-foreground">
                 Locked by your agency.
               </strong>{" "}
-              This feature isn&apos;t switched on for your sub-account yet — ask
+              This feature isn&apos;t switched on for your sub-account yet. Ask
               your agency owner to enable &ldquo;Missed Call Text Back&rdquo;.
               The guide below explains what it does and what you&apos;ll need.
             </span>
@@ -681,7 +681,7 @@ export function SubAccountSmsSection() {
           <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-400">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>
-              Almost there — enable a <strong>dedicated Twilio number</strong>{" "}
+              Almost there, enable a <strong>dedicated Twilio number</strong>{" "}
               for this sub-account above first, then come back here to switch
               Missed Call Text Back on.
             </span>
@@ -870,7 +870,7 @@ export function SubAccountSmsSection() {
               and rings for the timeout you set.
             </li>
             <li>
-              If someone answers, it&apos;s a normal call — no text is sent.
+              If someone answers, it&apos;s a normal call, no text is sent.
             </li>
             <li>
               If it goes <strong>unanswered</strong> (no answer, busy, or the
@@ -894,7 +894,7 @@ export function SubAccountSmsSection() {
             </li>
             <li>
               A <strong>dedicated Twilio number enabled above</strong> (Settings
-              → SMS). It uses this sub-account&apos;s own number — never a
+              → SMS). It uses this sub-account&apos;s own number, never a
               shared one.
             </li>
             <li>
@@ -904,10 +904,10 @@ export function SubAccountSmsSection() {
             </li>
             <li>
               The <strong>AI inbound Voice agent must be OFF</strong> for this
-              number — a number can only route calls to one place.
+              number, a number can only route calls to one place.
             </li>
             <li>
-              A <strong>&ldquo;Forward to&rdquo; number</strong> — the real
+              A <strong>&ldquo;Forward to&rdquo; number</strong>, the real
               phone (mobile / desk) that should ring first.
             </li>
           </ul>
@@ -935,11 +935,11 @@ export function SubAccountSmsSection() {
                 <ul className="mt-1 list-disc space-y-1 pl-4">
                   <li>
                     A caller who replied <strong>STOP</strong> (opted out of
-                    SMS) is <strong>not</strong> texted — the missed call is
+                    SMS) is <strong>not</strong> texted, the missed call is
                     still logged.
                   </li>
                   <li>
-                    <strong>One text per call</strong> — Twilio retries
+                    <strong>One text per call</strong>. Twilio retries
                     won&apos;t double-text the caller.
                   </li>
                   <li>
@@ -957,7 +957,7 @@ export function SubAccountSmsSection() {
                   <strong>Disable</strong> restores the number&apos;s previous
                   voice setting. If you later enable{" "}
                   <strong>AI inbound Voice</strong> on this number, it takes
-                  over the call line and MCTB stops receiving calls — use one or
+                  over the call line and MCTB stops receiving calls. Use one or
                   the other per number, not both.
                 </p>
               </div>

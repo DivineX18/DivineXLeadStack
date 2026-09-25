@@ -112,7 +112,7 @@ function followUpStrategyForObjective(objective: CampaignObjective | null): stri
 function offerStructureFor(priced: boolean): string {
   return priced
     ? "Value stack of real deliverables → total-value anchor → price reveal → real guarantee → honest urgency"
-    : "Single low-friction ask — one clear thing received in exchange for contact details";
+    : "Single low-friction ask, one clear thing received in exchange for contact details";
 }
 
 export interface StrategyBuilderInput {
@@ -235,9 +235,9 @@ export function computeUnknowns(s: {
   if (!s.offer.mechanism) u.push("unique mechanism (why this works)");
   if (!s.audience.awareness) u.push("audience awareness level (must be inferred, not assumed)");
   if (!s.audience.sophistication) u.push("market sophistication stage");
-  if (s.offer.proof.length === 0) u.push("real proof / results (none supplied — do not fabricate any)");
-  if (!s.offer.guarantee) u.push("guarantee (none supplied — do not invent one)");
-  if (!s.offer.urgency) u.push("genuine urgency (none supplied — do not fabricate a deadline)");
+  if (s.offer.proof.length === 0) u.push("real proof / results (none supplied. Do not fabricate any)");
+  if (!s.offer.guarantee) u.push("guarantee (none supplied. Do not invent one)");
+  if (!s.offer.urgency) u.push("genuine urgency (none supplied. Do not fabricate a deadline)");
   if (!s.context.objective) u.push("campaign objective");
   if (!s.context.trafficSource) u.push("traffic source");
   return u;

@@ -62,7 +62,7 @@ export default async function CommandCenterWorkspaceDetailPage({
         <>
           {report.issues.length > 0 ? (
             <section className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5">
-              <h2 className="mb-2 text-sm font-medium text-amber-300">Audit — {report.issues.length} issue{report.issues.length === 1 ? "" : "s"}</h2>
+              <h2 className="mb-2 text-sm font-medium text-amber-300">Audit, {report.issues.length} issue{report.issues.length === 1 ? "" : "s"}</h2>
               <ul className="space-y-1.5 text-sm text-[var(--dx-text-secondary)]">
                 {report.issues.map((issue, i) => (
                   <li key={i} className="flex gap-2">

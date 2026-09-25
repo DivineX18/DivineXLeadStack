@@ -86,7 +86,7 @@ export default function MySettingsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Your account</h1>
         <p className="text-sm text-muted-foreground">
-          Personal settings — same identity across every sub-account you
+          Personal settings, same identity across every sub-account you
           belong to. For workspace settings (members, payments, SMS), open
           a sub-account&apos;s settings instead.
         </p>
@@ -216,7 +216,7 @@ export default function MySettingsPage() {
       </section>
 
       {/* Profile data is touched after this only by Firebase; keep the
-          unused-warning at bay for the linter — referenced via subtitle
+          unused-warning at bay for the linter, referenced via subtitle
           line above. */}
       {profile && null}
     </div>

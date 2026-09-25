@@ -55,7 +55,7 @@ export async function GET(
     // Rotated (a newer link was sent) or consumed (already activated).
     if (billing?.status === "active") {
       return deadLink(
-        "This subscription is already active — nothing more to pay. You can log in to your workspace as usual.",
+        "This subscription is already active. Nothing more to pay. You can log in to your workspace as usual.",
       );
     }
     return deadLink(

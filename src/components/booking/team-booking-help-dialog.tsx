@@ -27,7 +27,7 @@ export function TeamBookingHelpDialog({
         <DialogHeader>
           <DialogTitle>How team booking works</DialogTitle>
           <DialogDescription>
-            Run one booking page across several people — availability pools
+            Run one booking page across several people, availability pools
             across the team and each booking is auto-assigned.
           </DialogDescription>
         </DialogHeader>
@@ -70,7 +70,7 @@ export function TeamBookingHelpDialog({
               rows={[
                 [
                   "Availability",
-                  "Pools across hosts — a slot is offered while ANY host is free, so a 3-host page can take 3 bookings at the same time instead of one.",
+                  "Pools across hosts, a slot is offered while ANY host is free, so a 3-host page can take 3 bookings at the same time instead of one.",
                 ],
                 [
                   "Assignment",
@@ -78,11 +78,11 @@ export function TeamBookingHelpDialog({
                 ],
                 [
                   "Customer emails",
-                  "Confirmation + reminders stay business-branded — no host name is shown to the contact.",
+                  "Confirmation + reminders stay business-branded, no host name is shown to the contact.",
                 ],
                 [
                   "Internal",
-                  "The assigned host shows on the calendar event and in the .ics calendar-feed title (e.g. “Cleaning — Priya”).",
+                  "The assigned host shows on the calendar event and in the.ics calendar-feed title (e.g. “Cleaning. Priya”).",
                 ],
                 [
                   "Per-person calendars",
@@ -106,12 +106,12 @@ export function TeamBookingHelpDialog({
               <li>
                 Assignment only considers{" "}
                 <strong className="text-foreground">existing bookings made here</strong>
-                {" "}— it won&apos;t avoid time a host blocked in their personal
+                {" "}. It won&apos;t avoid time a host blocked in their personal
                 Google / Outlook calendar yet (that&apos;s the two-way-sync
                 upgrade).
               </li>
               <li>
-                Remove a host by unticking + saving — their existing bookings
+                Remove a host by unticking + saving, their existing bookings
                 keep their assignment. Untick everyone to return the page to a
                 single shared schedule.
               </li>
@@ -120,7 +120,7 @@ export function TeamBookingHelpDialog({
 
           <p className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
             In short: add hosts to pool availability and share the load
-            automatically — customers see one simple page, and each booking
+            automatically, customers see one simple page, and each booking
             lands with the least-busy teammate.
           </p>
         </div>

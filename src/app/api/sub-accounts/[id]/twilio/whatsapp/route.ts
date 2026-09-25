@@ -93,7 +93,7 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          "Configure your dedicated Twilio number (Settings → SMS) first — WhatsApp reuses those credentials.",
+          "Configure your dedicated Twilio number (Settings → SMS) first. WhatsApp reuses those credentials.",
       },
       { status: 400 },
     );
@@ -110,7 +110,7 @@ export async function POST(
       "Sandbox inbound is configured in the Twilio console (Messaging → Try it out → WhatsApp sandbox settings).";
   } else if (!webhookUrl) {
     webhookResult.error =
-      "NEXT_PUBLIC_APP_URL is not set on this deployment — set the inbound webhook URL manually in Twilio.";
+      "NEXT_PUBLIC_APP_URL is not set on this deployment. Set the inbound webhook URL manually in Twilio.";
   } else {
     webhookResult = await autoConfigureInboundWebhook({
       accountSid: cfg.accountSid,

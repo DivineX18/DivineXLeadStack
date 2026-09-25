@@ -24,7 +24,7 @@ export default async function CreatePage() {
     return (
       <AscendSectionPlaceholder
         title="Create"
-        description="No active workspace yet — once you're linked to one, everything you build will appear here."
+        description="No active workspace yet, once you're linked to one, everything you build will appear here."
         links={[]}
       />
     );
@@ -44,7 +44,7 @@ export default async function CreatePage() {
       isAdmin={isAdmin}
       websiteMaxSites={sub?.websiteMaxSites ?? null}
       title="Create"
-      description="Everything you're running to win business — funnels, pages and the sites behind them. Preview any draft before it goes live."
+      description="Everything you're running to win business, funnels, pages and the sites behind them. Preview any draft before it goes live."
       funnelBaseHref="/create/funnel"
       />
     </SubAccountProvider>

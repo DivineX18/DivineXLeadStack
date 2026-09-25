@@ -44,7 +44,7 @@ const MAX_AUDIENCE_SIZE = 25_000;
 export async function POST(request: Request) {
   if (!qstashIsConfigured()) {
     return NextResponse.json(
-      { error: "QStash is not configured — bulk calling needs the queue." },
+      { error: "QStash is not configured. Bulk calling needs the queue." },
       { status: 503 },
     );
   }

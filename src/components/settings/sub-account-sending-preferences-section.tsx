@@ -102,8 +102,8 @@ export function SubAccountSendingPreferencesSection() {
       await patch({ automationsPaused: !paused });
       toast.success(
         paused
-          ? "Workflows resumed — new triggers fire again."
-          : "All workflows paused — nothing will fire until you resume.",
+          ? "Workflows resumed, new triggers fire again."
+          : "All workflows paused. Nothing will fire until you resume.",
       );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update.");
@@ -142,7 +142,7 @@ export function SubAccountSendingPreferencesSection() {
           />
           <p className="mt-1 text-xs text-muted-foreground">
             Replies to every automated and broadcast email come back to this
-            address. Required before sending from a dedicated domain — the
+            address. Required before sending from a dedicated domain, the
             domain has no inbox, so replies bounce without it.
           </p>
         </div>
@@ -169,7 +169,7 @@ export function SubAccountSendingPreferencesSection() {
                 piece of work; until then the setting says what it is.
               */}
               <span className="block text-xs text-muted-foreground">
-                Saved as a preference. Not enforced yet — messages currently
+                Saved as a preference. Not enforced yet, messages currently
                 send whenever a workflow reaches them, including outside this
                 window.
               </span>

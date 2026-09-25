@@ -365,7 +365,7 @@ export function QuoteDetail({
               <SummaryField label="Recipient" value={contactName} />
               <SummaryField
                 label="Billed to"
-                value={quote.billedToOrganization ?? "—"}
+                value={quote.billedToOrganization ?? "-"}
                 secondary={quote.billingAddress ?? undefined}
                 mono={!quote.billedToOrganization}
               />

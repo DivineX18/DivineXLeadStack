@@ -170,9 +170,9 @@ function emailSequenceFor(objective: CampaignObjective | null): { archetype: str
         archetype: "appointment nurture (short, no-show-reducing)",
         stopCondition: "Stop the reminder sequence once the appointment is attended; branch to a no-show flow if missed.",
         emails: [
-          e(1, "Confirm + set expectations", "just booked", "immediate", "Booking confirmed — here's what to expect and how to prepare.", "Add to calendar"),
+          e(1, "Confirm + set expectations", "just booked", "immediate", "Booking confirmed, here's what to expect and how to prepare.", "Add to calendar"),
           e(2, "Reduce no-show + pre-frame value", "booked, day before", "1 day before", "A quick reminder + the one thing to have ready so the call is worth it.", "Confirm you're coming"),
-          e(3, "Same-day nudge", "booked, day of", "1 hour before", "See you soon — here's the link/details.", "Join / directions"),
+          e(3, "Same-day nudge", "booked, day of", "1 hour before", "See you soon, here's the link/details.", "Join / directions"),
         ],
       };
     case "free_trial":
@@ -180,11 +180,11 @@ function emailSequenceFor(objective: CampaignObjective | null): { archetype: str
         archetype: "trial onboarding (activation-paced)",
         stopCondition: "Stop pre-trial nurture on trial start; stop the conversion push the moment they upgrade.",
         emails: [
-          e(1, "Welcome + first action", "trial started", "immediate", "You're in — do this one thing first to get value fast.", "Take the first step"),
+          e(1, "Welcome + first action", "trial started", "immediate", "You're in. Do this one thing first to get value fast.", "Take the first step"),
           e(2, "Drive activation", "trial, not yet activated", "day 1", "The fastest path to your first real result inside the trial.", "Set it up"),
           e(3, "Show the outcome", "activated", "day 4", "Here's what you can now do that you couldn't before.", "See your results"),
-          e(4, "Handle the objection", "mid-trial", "day 8", "The most common reason people hesitate — and the honest answer.", "Keep going"),
-          e(5, "Convert before expiry", "trial ending", "day 12", "Your trial ends soon — keep everything you've built.", "Upgrade now"),
+          e(4, "Handle the objection", "mid-trial", "day 8", "The most common reason people hesitate, and the honest answer.", "Keep going"),
+          e(5, "Convert before expiry", "trial ending", "day 12", "Your trial ends soon. Keep everything you've built.", "Upgrade now"),
         ],
       };
     case "purchase":
@@ -192,7 +192,7 @@ function emailSequenceFor(objective: CampaignObjective | null): { archetype: str
         archetype: "post-purchase onboarding",
         stopCondition: "Stop the sales sequence on purchase; start onboarding.",
         emails: [
-          e(1, "Receipt + reassure", "just purchased", "immediate", "Thanks — here's your access and what happens next.", "Get started"),
+          e(1, "Receipt + reassure", "just purchased", "immediate", "Thanks. Here's your access and what happens next.", "Get started"),
           e(2, "First win", "new customer", "day 1", "Do this first to get value from what you bought.", "Start here"),
           e(3, "Next step / cross-sell", "onboarded", "day 5", "Now that you're set up, here's the natural next step.", "See what's next"),
         ],
@@ -202,7 +202,7 @@ function emailSequenceFor(objective: CampaignObjective | null): { archetype: str
         archetype: "application review nurture",
         stopCondition: "Stop once a call is booked or the applicant is disqualified.",
         emails: [
-          e(1, "Confirm receipt + next step", "applied", "immediate", "Got your application — here's what happens next and when.", "Book your call"),
+          e(1, "Confirm receipt + next step", "applied", "immediate", "Got your application. Here's what happens next and when.", "Book your call"),
           e(2, "Pre-frame + qualify", "under review", "day 1", "What we look for, so the call is a fit for both of us.", "Book your call"),
           e(3, "Follow up on no-book", "applied, no call booked", "day 3", "Still want to move forward? Grab a time here.", "Book your call"),
         ],
@@ -212,9 +212,9 @@ function emailSequenceFor(objective: CampaignObjective | null): { archetype: str
         archetype: "audit delivery + education",
         stopCondition: "Stop once a call is booked or the offer is taken.",
         emails: [
-          e(1, "Confirm + set delivery expectation", "requested audit", "immediate", "Your audit is on the way — here's when to expect it.", "What to prepare"),
+          e(1, "Confirm + set delivery expectation", "requested audit", "immediate", "Your audit is on the way, here's when to expect it.", "What to prepare"),
           e(2, "Deliver + explain", "audit delivered", "on delivery", "Your results, and the single biggest opportunity we found.", "See the opportunity"),
-          e(3, "Turn insight into action", "reviewed audit", "day 2", "How to actually fix the #1 issue — and how we can help.", "Book a call"),
+          e(3, "Turn insight into action", "reviewed audit", "day 2", "How to actually fix the #1 issue, and how we can help.", "Book a call"),
         ],
       };
     default: // lead_generation / donation / event fallback
@@ -222,10 +222,10 @@ function emailSequenceFor(objective: CampaignObjective | null): { archetype: str
         archetype: "lead nurture (value → mechanism → offer)",
         stopCondition: "Stop on conversion (booked / purchased / replied); stop all marketing on unsubscribe.",
         emails: [
-          e(1, "Deliver the promised value", "new lead", "immediate", "Here's what you asked for — plus the fastest way to use it.", "Get it now"),
+          e(1, "Deliver the promised value", "new lead", "immediate", "Here's what you asked for, plus the fastest way to use it.", "Get it now"),
           e(2, "Educate on the problem", "engaged lead", "day 2", "Why the obvious fix usually fails, and what to do instead.", "Learn more"),
           e(3, "Reveal the mechanism", "warming lead", "day 4", "The specific approach that actually moves the needle here.", "See how it works"),
-          e(4, "Handle the top objection", "considering", "day 6", "The main reason people hesitate — answered honestly.", "Take the next step"),
+          e(4, "Handle the top objection", "considering", "day 6", "The main reason people hesitate, answered honestly.", "Take the next step"),
           e(5, "Make the offer", "ready", "day 8", "If you want help doing this, here's the offer and the next step.", "Get started"),
         ],
       };
@@ -246,7 +246,7 @@ function workflowNodesFor(objective: CampaignObjective | null, seq: PlannedEmail
       nodes.push({ type: "if_else", note: `If the conversion goal (${conversionEventFor(objective)}) is met, exit the sequence.` });
     }
   });
-  nodes.push({ type: "goal", note: `Goal: ${conversionEventFor(objective)} — reaching it stops the campaign so a converted contact is never sold to again.` });
+  nodes.push({ type: "goal", note: `Goal: ${conversionEventFor(objective)}, reaching it stops the campaign so a converted contact is never sold to again.` });
   return nodes;
 }
 
@@ -296,8 +296,8 @@ export function buildCampaignPlan(strategy: CampaignStrategy): CampaignPlan {
     messageMatch: {
       centralPromise: strategy.derived.centralPromise,
       note: strategy.derived.centralPromise
-        ? "Every asset restates this one promise — ad, page, form, thank-you, and emails must not drift."
-        : "Central promise not yet set (AI-enrichment fills it) — all assets must still share ONE promise once written.",
+        ? "Every asset restates this one promise, ad, page, form, thank-you, and emails must not drift."
+        : "Central promise not yet set (AI-enrichment fills it), all assets must still share ONE promise once written.",
     },
     unknowns: strategy.unknowns,
   };

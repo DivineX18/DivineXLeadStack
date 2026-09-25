@@ -382,7 +382,7 @@ export async function POST(
         );
       }
 
-      const title = `${page.name} — ${name}`;
+      const title = `${page.name}, ${name}`;
       // Mint token now so we can store hash atomically.
       const { token, hash } = issueEventToken(eventDocRef.id);
 

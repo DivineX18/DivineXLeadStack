@@ -53,7 +53,7 @@ export default async function FunnelThanksPage({
   // that is an operator-level Dashboard choice this code cannot see, and a
   // page whose honesty depends on an invisible external toggle is not honest.
   // When a real confirmation email exists, this copy changes with it.
-  const headline = paid ? "Order confirmed — you're in!" : bridge?.headline || "You're in!";
+  const headline = paid ? "Order confirmed, you're in!" : bridge?.headline || "You're in!";
   const message = paid
     ? "Your payment was successful and your order has been confirmed."
     : bridge?.message ||

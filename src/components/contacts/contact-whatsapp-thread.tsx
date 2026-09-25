@@ -139,7 +139,7 @@ export function ContactWhatsappThread({ contact }: { contact: Contact }) {
   const placeholder = optedOut
     ? "Contact opted out of WhatsApp"
     : !windowOpen
-      ? "24-hour window closed — a template is required to message again"
+      ? "24-hour window closed, a template is required to message again"
       : `Reply to ${contact.phone}…`;
 
   return (
@@ -188,7 +188,7 @@ export function ContactWhatsappThread({ contact }: { contact: Contact }) {
       {!optedOut && !windowOpen && messages.length > 0 && !templateMode && (
         <div className="border-t bg-amber-500/5 px-4 py-2 text-[11px] text-amber-700 dark:text-amber-400">
           The 24-hour messaging window has closed. Free-form replies are only
-          allowed within 24h of the contact&apos;s last message — send an
+          allowed within 24h of the contact&apos;s last message. Send an
           approved template to re-open the conversation.
         </div>
       )}

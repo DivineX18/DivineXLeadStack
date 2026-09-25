@@ -103,7 +103,7 @@ export function CommandCenterWorkspaceList() {
                 <tr key={w.subAccountId} className="border-b last:border-0">
                   <td className="py-2.5 pr-3">
                     <div className="font-medium">{w.name}</div>
-                    <div className="text-xs text-muted-foreground">#{w.accountNumber ?? "—"}</div>
+                    <div className="text-xs text-muted-foreground">#{w.accountNumber ?? "-"}</div>
                   </td>
                   <td className="py-2.5 pr-3">
                     <Badge variant={w.status === "active" ? "secondary" : "outline"}>{w.status}</Badge>
@@ -201,7 +201,7 @@ function CreateWorkspaceDialog({
         <DialogHeader>
           <DialogTitle>Create workspace</DialogTitle>
           <DialogDescription>
-            Creates a new sub-account via the same service every other creation path in this app uses — an owner membership, welcome
+            Creates a new sub-account via the same service every other creation path in this app uses, an owner membership, welcome
             templates, and (unless comped) the agency&apos;s default plan are set up automatically.
           </DialogDescription>
         </DialogHeader>

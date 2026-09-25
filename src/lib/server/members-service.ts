@@ -205,7 +205,7 @@ export async function createInviteServerSide(
     } catch (err) {
       mailError = err instanceof Error ? err.message : String(err);
       console.warn(
-        "[invite] sendEmail failed — invite still created",
+        "[invite] sendEmail failed, invite still created",
         mailError,
       );
     }
@@ -427,7 +427,7 @@ async function addExistingUserAsMember(params: {
     } catch (err) {
       mailError = err instanceof Error ? err.message : String(err);
       console.warn(
-        "[invite] added-member email failed — membership still written",
+        "[invite] added-member email failed, membership still written",
         mailError,
       );
     }
@@ -614,7 +614,7 @@ function renderAddedText({
   return [
     `${inviterName} added you to ${subAccountName} on ${brandName} as ${roleLabel}.`,
     "",
-    `You already have an account, so there's nothing to accept — just sign in and ${subAccountName} will be in your workspace switcher.`,
+    `You already have an account, so there's nothing to accept, just sign in and ${subAccountName} will be in your workspace switcher.`,
     ...(appUrl ? ["", `Open ${brandName}:`, appUrl] : []),
   ].join("\n");
 }
@@ -679,7 +679,7 @@ function renderAddedHtml({
             <td>
               <h1 style="margin:0 0 12px 0; font-size:22px; font-weight:600; color:#0a0a0f; letter-spacing:-0.01em;">You've been added</h1>
               <p style="margin:0 0 8px 0; font-size:15px; line-height:1.5; color:#4a4a55;">${inviter} added you to <strong style="color:#0a0a0f;">${sub}</strong> on ${brand} as <strong>${role}</strong>.</p>
-              <p style="margin:0 0 24px 0; font-size:15px; line-height:1.5; color:#4a4a55;">You already have an account, so there's nothing to accept — just sign in and ${sub} will be in your workspace switcher.</p>
+              <p style="margin:0 0 24px 0; font-size:15px; line-height:1.5; color:#4a4a55;">You already have an account, so there's nothing to accept, just sign in and ${sub} will be in your workspace switcher.</p>
               ${cta}
             </td>
           </tr>

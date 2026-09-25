@@ -44,7 +44,7 @@ export function SubAccountStripeSection() {
       toast.success(
         next
           ? "Stripe card payments enabled for invoices."
-          : "Stripe card payments disabled — PayPal still works if connected.",
+          : "Stripe card payments disabled. PayPal still works if connected.",
       );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update.");
@@ -60,10 +60,10 @@ export function SubAccountStripeSection() {
           <CreditCard className="h-4 w-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-base font-semibold">Payments — Stripe</h2>
+          <h2 className="text-base font-semibold">Payments. Stripe</h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Let invoice recipients pay by card. Charges go to this
-            deployment&apos;s own Stripe account — no separate signup, no
+            deployment&apos;s own Stripe account, no separate signup, no
             keys to paste. Invoices auto-flip to paid the moment payment
             clears.
           </p>
@@ -74,7 +74,7 @@ export function SubAccountStripeSection() {
         <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4">
           <p className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
             <CheckCircle2 className="h-4 w-4" />
-            Enabled — invoices show a &ldquo;Pay with card&rdquo; button.
+            Enabled, invoices show a &ldquo;Pay with card&rdquo; button.
           </p>
           <div className="mt-3 flex justify-end">
             <Button

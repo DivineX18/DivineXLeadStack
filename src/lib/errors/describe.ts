@@ -20,10 +20,10 @@ const FIREBASE_MESSAGES: Record<string, string> = {
   "permission-denied":
     "You don't have permission to do that in this workspace. An admin of this sub-account (or the agency owner) can, so ask them to run it or to raise your role.",
   unauthenticated: "Your session expired. Sign in again and retry.",
-  unavailable: "Couldn't reach the database — you may be offline. Check your connection and retry.",
+  unavailable: "Couldn't reach the database. You may be offline. Check your connection and retry.",
   "deadline-exceeded": "That took too long and timed out. Retry; if it keeps happening the service is degraded.",
   "failed-precondition":
-    "The database rejected that because something it depends on is missing — often an index that hasn't finished building yet.",
+    "The database rejected that because something it depends on is missing, often an index that hasn't finished building yet.",
   "resource-exhausted": "Quota exceeded for this project. It will recover, or the owner needs to raise the limit.",
   "not-found": "That record no longer exists. Refresh the page.",
   "already-exists": "That already exists.",

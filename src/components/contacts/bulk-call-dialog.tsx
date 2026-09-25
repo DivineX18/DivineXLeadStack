@@ -243,7 +243,7 @@ export function BulkCallDialog({
         return;
       }
       toast.success(
-        `Calling campaign queued — ${data.queued ?? 0} contacts${
+        `Calling campaign queued, ${data.queued ?? 0} contacts${
           data.skipped ? ` (${data.skipped} skipped)` : ""
         }`,
       );
@@ -282,7 +282,7 @@ export function BulkCallDialog({
               id="bulk-call-name"
               value={campaignName}
               onChange={(e) => setCampaignName(e.target.value)}
-              placeholder="e.g. 30-Day Challenge — free trials"
+              placeholder="e.g. 30-Day Challenge, free trials"
               maxLength={120}
             />
             <p className="text-[11px] text-muted-foreground">

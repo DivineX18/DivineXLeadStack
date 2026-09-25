@@ -31,7 +31,7 @@ export function isPresent(value) {
 export const startsWith = (p) => (v) =>
   v.startsWith(p)
     ? null
-    : `expected to start with "${p}" — double-check the paste`;
+    : `expected to start with "${p}", double-check the paste`;
 export const isUrl = (v) =>
   /^https?:\/\//.test(v) ? null : "should be a full http(s):// URL";
 export const isEmail = (v) =>
@@ -64,7 +64,7 @@ export const GROUPS = [
   {
     title: "Vercel (setup form prerequisite)",
     tier: "preflight",
-    off: "the in-app setup form stays disabled — set these manually to enable it",
+    off: "the in-app setup form stays disabled. Set these manually to enable it",
     vars: [
       ["VERCEL_TOKEN", "req"],
       ["VERCEL_PROJECT_ID", "req", startsWith("prj_")],
@@ -75,7 +75,7 @@ export const GROUPS = [
 
   // ===== Required to run =====================================================
   {
-    title: "Firebase — client SDK",
+    title: "Firebase, client SDK",
     tier: "boot",
     vars: [
       ["NEXT_PUBLIC_FIREBASE_API_KEY", "req"],
@@ -100,7 +100,7 @@ export const GROUPS = [
     },
   },
   {
-    title: "Firebase — Admin SDK",
+    title: "Firebase. Admin SDK",
     tier: "boot",
     vars: [
       ["FIREBASE_ADMIN_PROJECT_ID", "req"],
@@ -117,15 +117,15 @@ export const GROUPS = [
           key.includes("-----BEGIN PRIVATE KEY-----") &&
           key.includes("-----END PRIVATE KEY-----");
         if (!ok)
-          add("error", "PRIVATE_KEY malformed — no BEGIN/END markers (copy the whole key incl. markers)");
+          add("error", "PRIVATE_KEY malformed, no BEGIN/END markers (copy the whole key incl. markers)");
         else if (!key.includes("\n"))
-          add("error", 'PRIVATE_KEY has no line breaks — keep the literal \\n escapes from the JSON');
+          add("error", 'PRIVATE_KEY has no line breaks. Keep the literal \\n escapes from the JSON');
       }
       if (env.has("NEXT_PUBLIC_FIREBASE_PROJECT_ID") && env.has("FIREBASE_ADMIN_PROJECT_ID")) {
         const cp = env.val("NEXT_PUBLIC_FIREBASE_PROJECT_ID");
         const ap = env.val("FIREBASE_ADMIN_PROJECT_ID");
         if (cp !== ap)
-          add("error", `client project "${cp}" ≠ admin project "${ap}" — must be the SAME project`);
+          add("error", `client project "${cp}" ≠ admin project "${ap}", must be the SAME project`);
       }
     },
   },
@@ -139,9 +139,9 @@ export const GROUPS = [
     deep(add, env) {
       if (env.has("COOKIE_SECRET_CURRENT") && env.has("COOKIE_SECRET_PREVIOUS")) {
         if (env.val("COOKIE_SECRET_CURRENT") === env.val("COOKIE_SECRET_PREVIOUS"))
-          add("warn", "the two cookie secrets are identical — they should differ (one is the rotation slot)");
+          add("warn", "the two cookie secrets are identical. They should differ (one is the rotation slot)");
         if (env.val("COOKIE_SECRET_CURRENT").length < 32)
-          add("warn", "cookie secret looks short — generate with: openssl rand -base64 32");
+          add("warn", "cookie secret looks short, generate with: openssl rand -base64 32");
       }
     },
   },
@@ -154,7 +154,7 @@ export const GROUPS = [
     ],
     deep(add, env) {
       if (env.has("NEXT_PUBLIC_APP_URL") && env.val("NEXT_PUBLIC_APP_URL").endsWith("/"))
-        add("warn", "APP_URL has a trailing slash — drop it (it breaks OAuth redirect-URI matching)");
+        add("warn", "APP_URL has a trailing slash. Drop it (it breaks OAuth redirect-URI matching)");
     },
   },
 
@@ -176,7 +176,7 @@ export const GROUPS = [
         const pubLive = env.val("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY").startsWith("pk_live");
         const secLive = env.val("STRIPE_SECRET_KEY").startsWith("sk_live");
         if (pubLive !== secLive)
-          add("warn", "publishable + secret keys mix test/live modes — they must match");
+          add("warn", "publishable + secret keys mix test/live modes. They must match");
       }
     },
   },
@@ -191,7 +191,7 @@ export const GROUPS = [
     ],
     deep(add, env) {
       if (env.has("EMAIL_FROM") && env.val("EMAIL_FROM").includes("resend.dev"))
-        add("warn", "EMAIL_FROM uses the resend.dev sandbox — fine for testing, untrusted in production");
+        add("warn", "EMAIL_FROM uses the resend.dev sandbox, fine for testing, untrusted in production");
     },
   },
   {

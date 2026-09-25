@@ -287,7 +287,7 @@ export function NotificationsSection() {
         {state === "unsupported" && (
           <p className="text-sm text-muted-foreground">
             This browser doesn&apos;t support push notifications. Try Chrome,
-            Edge, or Firefox — or install the app on your phone.
+            Edge, or Firefox, or install the app on your phone.
           </p>
         )}
         {state === "ios-needs-install" && (

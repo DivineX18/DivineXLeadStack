@@ -109,7 +109,7 @@ export default function EditBookingPagePage() {
           Back to booking pages
         </Link>
         <div className="rounded-2xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
-          Booking page not found — it may have been deleted.
+          Booking page not found. It may have been deleted.
         </div>
       </div>
     );

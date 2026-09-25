@@ -115,13 +115,13 @@ export function AscendAssetsSection({ saId, isAdmin }: { saId: string; isAdmin: 
           return;
         }
         if (data.status === "completed" && data.asset) {
-          toast.success(`${assetType} ready — written from your business and brand.`);
+          toast.success(`${assetType} ready, written from your business and brand.`);
           setAssets((prev) => [data.asset!, ...prev]);
           setOpen(data.asset);
           return;
         }
       }
-      toast.error("That's taking longer than expected. Check your assets shortly — it may still arrive.");
+      toast.error("That's taking longer than expected. Check your assets shortly. It may still arrive.");
     } catch (err) { toast.error(describeError(err, "Couldn't reach the generator. Try again in a moment."), { duration: 12_000 });
     } finally {
       setGenerating(null);
@@ -141,7 +141,7 @@ export function AscendAssetsSection({ saId, isAdmin }: { saId: string; isAdmin: 
       {unavailable === "workspace_not_linked" ? (
         <p className="rounded-[var(--dx-radius-md)] border p-4 text-sm text-[var(--dx-text-muted)]"
            style={{ borderColor: "var(--dx-border-subtle)" }}>
-          Finish onboarding to connect this workspace&apos;s business profile — these are written from
+          Finish onboarding to connect this workspace&apos;s business profile. These are written from
           your real business, so there&apos;s nothing to write from yet.
         </p>
       ) : unavailable ? (
@@ -183,7 +183,7 @@ export function AscendAssetsSection({ saId, isAdmin }: { saId: string; isAdmin: 
               <p className="flex items-center gap-2 text-sm text-[var(--dx-text-muted)]">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 Writing your {generating} from this workspace&apos;s business and brand. This usually
-                takes one to three minutes — you can leave this page, it&apos;ll be saved to your assets.
+                takes one to three minutes. You can leave this page, it&apos;ll be saved to your assets.
               </p>
             )}
           </div>
@@ -196,7 +196,7 @@ export function AscendAssetsSection({ saId, isAdmin }: { saId: string; isAdmin: 
         ) : assets.length === 0 ? (
           !unavailable && (
             <p className="text-sm text-[var(--dx-text-muted)]">
-              Nothing here yet — pick one above, or just ask Zeno.
+              Nothing here yet. Pick one above, or just ask Zeno.
             </p>
           )
         ) : (

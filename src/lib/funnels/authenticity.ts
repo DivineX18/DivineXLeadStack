@@ -70,7 +70,7 @@ export const TRUST_QUESTIONS: Record<AuthenticityCategory, string> = {
 
 export const AUTHENTICITY_MODELS: Record<AuthenticityCategory, EvidenceAsset[]> = {
   local_service_health: [
-    { kind: "team_photo", label: "Photo of the doctor/team", value: "high", fabricability: "never", note: "Patients book people, not pages — a real face answers 'who will I meet.'" },
+    { kind: "team_photo", label: "Photo of the doctor/team", value: "high", fabricability: "never", note: "Patients book people, not pages, a real face answers 'who will I meet.'" },
     { kind: "office_photo", label: "Photos of your office/rooms", value: "high", fabricability: "stock_ok", note: "The environment answers 'is this a real, professional place.'" },
     { kind: "real_rating", label: "Your Google rating + review count", value: "high", fabricability: "never", note: "Linked, verifiable social proof beats any copy." },
     { kind: "credentials", label: "Credentials/memberships (e.g. ADA)", value: "medium", fabricability: "never", note: "Professional legitimacy signals." },
@@ -121,7 +121,7 @@ export const AUTHENTICITY_MODELS: Record<AuthenticityCategory, EvidenceAsset[]> 
   nonprofit: [
     { kind: "program_photo", label: "Real program/field photos", value: "high", fabricability: "never", note: "Donors give to work they can see; stock children would be counterfeit impact." },
     { kind: "org_identity", label: "Organization name, location, contact", value: "high", fabricability: "never", note: "Legitimacy starts with being findable." },
-    { kind: "registration", label: "Charity registration (if held)", value: "high", fabricability: "never", note: "Only when actually supplied — never assumed." },
+    { kind: "registration", label: "Charity registration (if held)", value: "high", fabricability: "never", note: "Only when actually supplied, never assumed." },
     { kind: "team_photo", label: "Founder/team photos", value: "medium", fabricability: "never", note: "Who runs this matters to recurring donors." },
   ],
 };

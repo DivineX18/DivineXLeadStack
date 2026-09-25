@@ -58,7 +58,7 @@ function wallClockInTz(
   tz: string,
 ): {
   year: number;
-  month: number; // 1-12 (not JS 0-11) — convenient for the inverse
+  month: number; // 1-12 (not JS 0-11), convenient for the inverse
   day: number;
   hour: number;
   minute: number;

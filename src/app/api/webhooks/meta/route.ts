@@ -81,7 +81,7 @@ async function resolveRoute(
   const sa = snap.docs[0].data() as SubAccountDoc;
   if (sa.metaInboxEnabledByAgency !== true) {
     console.warn(
-      `[webhooks/meta] event for ${entryId} (sa=${snap.docs[0].id}) but metaInboxEnabledByAgency is off — dropping`,
+      `[webhooks/meta] event for ${entryId} (sa=${snap.docs[0].id}) but metaInboxEnabledByAgency is off, dropping`,
     );
     return null;
   }

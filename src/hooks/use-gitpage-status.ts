@@ -14,7 +14,7 @@ import { getFirebaseDb } from "@/lib/firebase/client";
  * `subscribe-needed` with `lastError: "401_invalid_api_key"`.
  */
 export type GitpageGateState =
-  | { kind: "unknown" } // first load, no doc yet — render normally
+  | { kind: "unknown" } // first load, no doc yet, render normally
   | { kind: "ready" } // operator has pasted a key
   | { kind: "subscribe-needed"; lastError: string | null };
 

@@ -196,7 +196,7 @@ export async function respondToWebChat(
         businessName:
           eff.businessName.trim() || subAccount?.name || "your business",
         contactName: session.capturedName ?? "(anonymous web visitor)",
-        contactPhone: session.capturedPhone ?? "—",
+        contactPhone: session.capturedPhone ?? "-",
         contactId: session.contactId ?? input.sessionId,
         subAccountId: input.subAccountId,
         triggeredKeyword: triggered,

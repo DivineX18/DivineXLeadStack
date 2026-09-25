@@ -47,7 +47,7 @@ const ADMIN_OR_ABOVE: readonly WorkspacePermission[] = [
   "members.manage",
   "billing.read",
   "billing.manage",
-  "assessments.run", // spends metered/paid Ascend usage — admin+ only, matches the target-model matrix in PHASE_1_IMPLEMENTATION_BLUEPRINT.md §4.2
+  "assessments.run", // spends metered/paid Ascend usage, admin+ only, matches the target-model matrix in PHASE_1_IMPLEMENTATION_BLUEPRINT.md §4.2
   "memory.write",
   "memory.approve",
   "recommendations.approve",
@@ -70,7 +70,7 @@ const ADMIN_OR_ABOVE: readonly WorkspacePermission[] = [
   "integrations.manage",
   "api.manage",
   "reports.export",
-  "zeno.execute", // consequential, confirm-gated actions — admin+ only, matches PHASE_1_IMPLEMENTATION_BLUEPRINT.md §4.6
+  "zeno.execute", // consequential, confirm-gated actions, admin+ only, matches PHASE_1_IMPLEMENTATION_BLUEPRINT.md §4.6
 ];
 
 /** Everything not listed above is canAccessSub-tier — any active member,
@@ -100,6 +100,6 @@ export const WORKSPACE_PERMISSION_COMPAT_MAP: Readonly<Record<WorkspacePermissio
  *  defensive regardless) deny by default. */
 export function roleHasPermission(role: string, permission: WorkspacePermission): boolean {
   const allowed = WORKSPACE_PERMISSION_COMPAT_MAP[permission];
-  if (!allowed) return false; // unknown permission — should already have been rejected upstream, deny defensively anyway
+  if (!allowed) return false; // unknown permission. Should already have been rejected upstream, deny defensively anyway
   return (allowed as readonly string[]).includes(role);
 }

@@ -361,7 +361,7 @@ export async function submitWebsiteBuildForSubAccount(input: {
     });
   } else {
     console.warn(
-      "[website/build] QStash not configured — status will sit at queued",
+      "[website/build] QStash not configured. Status will sit at queued",
     );
   }
 

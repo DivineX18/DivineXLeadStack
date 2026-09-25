@@ -61,7 +61,7 @@ export function computeWindowDeferralSeconds(
     s = get("second");
   } catch (err) {
     console.warn(
-      `[time/window] invalid timezone "${timezone}" — treating as inside window`,
+      `[time/window] invalid timezone "${timezone}", treating as inside window`,
       err,
     );
     return 0;

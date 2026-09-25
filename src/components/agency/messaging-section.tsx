@@ -107,7 +107,7 @@ export function MessagingSection() {
       toast.success(
         next
           ? "Sub-accounts can use the shared SMS sender."
-          : "Shared SMS disabled — sub-accounts must use their own number.",
+          : "Shared SMS disabled, sub-accounts must use their own number.",
       );
     } catch (err) {
       setConfig((c) =>
@@ -149,7 +149,7 @@ export function MessagingSection() {
           <p className="text-xs text-muted-foreground">
             The deployment-wide Twilio (SMS) and Resend (email) senders every
             sub-account falls back to when it has no dedicated config of its
-            own. Set via environment variables — read-only here.
+            own. Set via environment variables. Read-only here.
           </p>
         </div>
       </div>
@@ -179,11 +179,11 @@ export function MessagingSection() {
             <div className="divide-y">
               <Field
                 label="From number"
-                value={config.sms.fromNumber ?? "—"}
+                value={config.sms.fromNumber ?? "-"}
               />
               <Field
                 label="Account SID"
-                value={config.sms.accountSidMasked ?? "—"}
+                value={config.sms.accountSidMasked ?? "-"}
               />
               <Field
                 label="Auth token"
@@ -199,7 +199,7 @@ export function MessagingSection() {
                 </p>
                 <p className="text-[11px] text-muted-foreground">
                   On by default. Turn off to require every sub-account to
-                  configure its own dedicated Twilio number — SMS steps and
+                  configure its own dedicated Twilio number. SMS steps and
                   sends are blocked until they do.
                 </p>
               </div>
@@ -228,7 +228,7 @@ export function MessagingSection() {
             <div className="divide-y">
               <Field
                 label="From address"
-                value={config.email.fromAddress ?? "—"}
+                value={config.email.fromAddress ?? "-"}
               />
               <Field
                 label="API key"

@@ -298,7 +298,7 @@ export async function updateDealServerSide(opts: {
   if (stageChanged && previousStage) {
     const reasonSuffix =
       patch.stageId === "lost" && write.lostReason
-        ? ` — ${write.lostReason as string}`
+        ? `, ${write.lostReason as string}`
         : "";
     await writePipelineActivity(data.contactId, {
       content: `Deal "${data.title}" moved from ${getStage(previousStage).label} to ${getStage(patch.stageId!).label}${reasonSuffix}`,

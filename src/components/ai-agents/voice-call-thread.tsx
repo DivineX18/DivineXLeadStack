@@ -242,7 +242,7 @@ export function VoiceCallThread({ callId }: Props) {
               <span className="font-medium">
                 {task.completed ? "Followed up" : "Pending follow-up"}
               </span>
-              <span className="text-muted-foreground">— {task.title}</span>
+              <span className="text-muted-foreground">- {task.title}</span>
             </div>
             <Button
               variant={task.completed ? "outline" : "default"}
@@ -297,7 +297,7 @@ export function VoiceCallThread({ callId }: Props) {
         ) : (
           <p className="text-sm italic text-muted-foreground">
             No transcript captured for this call. (Vapi may have skipped
-            the analysis pass — check the call in your Vapi dashboard.)
+            the analysis pass. Check the call in your Vapi dashboard.)
           </p>
         )}
       </section>

@@ -85,7 +85,7 @@ export default async function FunnelPreviewPage({
           }}
         >
           <Eye className="h-3.5 w-3.5" />
-          {isDraft ? "Draft preview" : "Published — preview"}
+          {isDraft ? "Draft preview" : "Published, preview"}
         </span>
         <span className="truncate text-sm font-medium" style={{ color: "var(--dx-text-primary)" }}>
           {funnel.name}
@@ -106,7 +106,7 @@ export default async function FunnelPreviewPage({
       {/* Unresolved visual requirements, resolvable in place. Deliberately
           ABOVE the page: a blank slot inside the composition reads as a bug,
           whereas a named brief with actions reads as the next step. Completed
-          Director decisions are not shown — they are resolved choices, not
+          Director decisions are not shown. They are resolved choices, not
           gaps. */}
       <CopyReviewNotice funnel={funnel} />
       <VisualRequirementsPanel

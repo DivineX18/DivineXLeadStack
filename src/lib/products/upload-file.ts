@@ -26,7 +26,7 @@ export async function uploadProductFile(
 ): Promise<UploadedProductFile> {
   if (file.size > MAX_PRODUCT_FILE_BYTES) {
     throw new Error(
-      `File is too large — keep it under ${MAX_PRODUCT_FILE_BYTES / (1024 * 1024)} MB.`,
+      `File is too large. Keep it under ${MAX_PRODUCT_FILE_BYTES / (1024 * 1024)} MB.`,
     );
   }
   const form = new FormData();

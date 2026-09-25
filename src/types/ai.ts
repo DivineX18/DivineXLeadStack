@@ -261,7 +261,7 @@ export const DEFAULT_VOICE_CONFIG: VoiceChannelConfig = {
   vapiPhoneNumberId: null,
   outboundEnabled: false,
   outboundFirstMessage:
-    "Hi, this is the team following up on your enquiry — is now a good time for a quick chat?",
+    "Hi, this is the team following up on your enquiry. Is now a good time for a quick chat?",
   outboundSystemPrompt: "",
   outboundWindow: { startHour: 9, endHour: 18, timezone: "Australia/Sydney" },
   outboundPerMinuteCap: 10,

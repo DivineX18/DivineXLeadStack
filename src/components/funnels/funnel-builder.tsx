@@ -135,7 +135,7 @@ const SECTION_DEFAULTS: Record<FunnelSectionType, () => FunnelSection["config"]>
     }) satisfies CheckoutConfig,
   upsell_offer: () =>
     ({
-      headline: "Wait — add this to your order?",
+      headline: "Wait. Add this to your order?",
       bullets: [],
       priceCents: 0,
       acceptLabel: "Yes, add it!",
@@ -496,7 +496,7 @@ export function FunnelBuilder({
       <div className="rounded-xl border bg-card p-4">
         <p className="text-[13px] font-semibold">Files &amp; delivery</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Upload an <b>image</b> (JPEG/PNG/WebP — its URL is copied to your clipboard to paste into any Media/Image field) or your <b>lead magnet PDF</b> — the PDF is delivered automatically in the confirmation email and on the thank-you page.
+          Upload an <b>image</b> (JPEG/PNG/WebP. Its URL is copied to your clipboard to paste into any Media/Image field) or your <b>lead magnet PDF</b>, the PDF is delivered automatically in the confirmation email and on the thank-you page.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-black/[0.03] dark:hover:bg-white/[0.06]">
@@ -519,7 +519,7 @@ export function FunnelBuilder({
             </span>
           )}
           {uploadedImageUrl && (
-            <span className="text-xs text-muted-foreground">Image URL copied — paste into a Media URL field: <code className="text-[10px]">{uploadedImageUrl}</code></span>
+            <span className="text-xs text-muted-foreground">Image URL copied. Paste into a Media URL field: <code className="text-[10px]">{uploadedImageUrl}</code></span>
           )}
         </div>
       </div>
@@ -527,7 +527,7 @@ export function FunnelBuilder({
       <div className="rounded-xl border bg-card p-4">
         <p className="text-[13px] font-semibold">Thank-you page</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          What visitors see right after signing up — the lead-magnet download plus (optionally) your next offer. Blank fields use smart defaults.{" "}
+          What visitors see right after signing up, the lead-magnet download plus (optionally) your next offer. Blank fields use smart defaults.{" "}
           <a href={`/lp/${funnelId}/thanks`} target="_blank" rel="noreferrer" className="underline">Preview</a>
         </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -542,7 +542,7 @@ export function FunnelBuilder({
               onChange={(e) => setBridgeNextFunnelId(e.target.value)}
               className="mt-0.5 h-9 w-full rounded-md border bg-transparent px-3 text-sm"
             >
-              <option value="">None — just confirm + deliver</option>
+              <option value="">None, just confirm + deliver</option>
               {allFunnels.map((f) => (
                 <option key={f.id} value={f.id}>{f.name}</option>
               ))}
@@ -550,7 +550,7 @@ export function FunnelBuilder({
           </div>
           <div className="sm:col-span-2">
             <label className="text-xs font-semibold text-muted-foreground">Message</label>
-            <Input value={bridgeMessage} onChange={(e) => setBridgeMessage(e.target.value)} placeholder="Your download is ready below — we also emailed you a copy." maxLength={600} />
+            <Input value={bridgeMessage} onChange={(e) => setBridgeMessage(e.target.value)} placeholder="Your download is ready below. We also emailed you a copy." maxLength={600} />
           </div>
           {bridgeNextFunnelId && (
             <div>
@@ -621,12 +621,12 @@ export function FunnelBuilder({
                 }
                 className={fieldClass}
               >
-                <option value="centered">Sales letter — centered, media below (VSL / sales pages)</option>
-                <option value="split">Webinar / lead-gen — split, media beside the text</option>
-                <option value="background_image">Background — full-bleed media, text overlay</option>
-                <option value="founder_image">Founder — small framed photo above text</option>
-                <option value="browser_mockup">Browser mockup — media in a browser frame</option>
-                <option value="phone_mockup">Phone mockup — media in a phone frame</option>
+                <option value="centered">Sales letter, centered, media below (VSL / sales pages)</option>
+                <option value="split">Webinar / lead-gen, split, media beside the text</option>
+                <option value="background_image">Background, full-bleed media, text overlay</option>
+                <option value="founder_image">Founder, small framed photo above text</option>
+                <option value="browser_mockup">Browser mockup, media in a browser frame</option>
+                <option value="phone_mockup">Phone mockup, media in a phone frame</option>
               </select>
               <p className="mt-1 text-xs text-muted-foreground">
                 Switch this funnel between the centered sales-letter and the split webinar/lead-gen layouts.
@@ -665,7 +665,7 @@ export function FunnelBuilder({
           {archetype ? (
             <p className="mt-1 text-xs text-muted-foreground">{VISUAL_ARCHETYPES[archetype].audienceHint}</p>
           ) : (
-            <p className="mt-1 text-xs text-muted-foreground">Industry-aware design system — palette, typography, cards, motion, and CTA resolved together. Pick &ldquo;Legacy design pack&rdquo; to use the older single-token system instead.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Industry-aware design system, palette, typography, cards, motion, and CTA resolved together. Pick &ldquo;Legacy design pack&rdquo; to use the older single-token system instead.</p>
           )}
         </div>
 
@@ -732,9 +732,9 @@ export function FunnelBuilder({
                 className={fieldClass}
               >
                 <option value="">Default for this style</option>
-                <option value="low">Low — spacious</option>
+                <option value="low">Low, spacious</option>
                 <option value="medium">Medium</option>
-                <option value="high">High — compact</option>
+                <option value="high">High, compact</option>
               </select>
             </div>
             <div>
@@ -778,7 +778,7 @@ export function FunnelBuilder({
             placeholder="https://…"
             className="h-9"
           />
-          <p className="mt-1 text-xs text-muted-foreground">Shown as a small mark above the hero. Never set by Zeno — your real logo, not a generated one.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Shown as a small mark above the hero. Never set by Zeno, your real logo, not a generated one.</p>
         </div>
       </div>
 
@@ -844,7 +844,7 @@ export function FunnelBuilder({
           >
             <h3 className="text-sm font-semibold">Add a section</h3>
             <p className="mt-1 text-xs text-muted-foreground">
-              It starts empty — fill it in before publishing.
+              It starts empty. Fill it in before publishing.
             </p>
             <div className="mt-4 grid grid-cols-2 gap-2">
               {(Object.keys(SECTION_LABELS) as FunnelSectionType[]).map((type) => (
@@ -885,7 +885,7 @@ export function FunnelBuilder({
             ))}
           </ul>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            We never add stock or generated photos on your behalf — these are yours to supply.
+            We never add stock or generated photos on your behalf. These are yours to supply.
           </p>
         </div>
       )}
@@ -1039,15 +1039,15 @@ function SectionFields({
               onChange={(e) => onChange({ ...c, layout: e.target.value as HeroConfig["layout"] })}
               className={fieldClass}
             >
-              <option value="centered">Sales letter — centered, media below (VSL / sales pages)</option>
-              <option value="split">Webinar / lead-gen — split, media beside the text</option>
-              <option value="background_image">Background — full-bleed media, text overlay</option>
-              <option value="founder_image">Founder — small framed photo above text</option>
-              <option value="browser_mockup">Browser mockup — media in a browser frame</option>
-              <option value="phone_mockup">Phone mockup — media in a phone frame</option>
+              <option value="centered">Sales letter, centered, media below (VSL / sales pages)</option>
+              <option value="split">Webinar / lead-gen, split, media beside the text</option>
+              <option value="background_image">Background, full-bleed media, text overlay</option>
+              <option value="founder_image">Founder, small framed photo above text</option>
+              <option value="browser_mockup">Browser mockup, media in a browser frame</option>
+              <option value="phone_mockup">Phone mockup, media in a phone frame</option>
             </select>
             <p className="mt-1 text-xs text-muted-foreground">
-              Sales letter flows straight down the page (best for VSLs &amp; long-form sales). Webinar/split puts the media beside the text (best for registrations). Split needs a media slot — set Media below.
+              Sales letter flows straight down the page (best for VSLs &amp; long-form sales). Webinar/split puts the media beside the text (best for registrations). Split needs a media slot. Set Media below.
             </p>
           </Field>
           <Field label="Eyebrow">
@@ -1102,7 +1102,7 @@ function SectionFields({
                 )}
                 {c.mediaIsStock && (
                   <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                    Stock photo (auto-selected) — replace with your real photo when you have one.
+                    Stock photo (auto-selected), replace with your real photo when you have one.
                   </p>
                 )}
               </Field>
@@ -1143,13 +1143,13 @@ function SectionFields({
               className="h-9"
             />
           </Field>
-          <Field label="Lead-capture form (optional — hero can capture directly)">
+          <Field label="Lead-capture form (optional. Hero can capture directly)">
             <select
               value={c.formId ?? ""}
               onChange={(e) => onChange({ ...c, formId: e.target.value || null })}
               className={fieldClass}
             >
-              <option value="">No form — CTA link/button only</option>
+              <option value="">No form. CTA link/button only</option>
               {forms.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.name}
@@ -1168,18 +1168,18 @@ function SectionFields({
               }
               className={fieldClass}
             >
-              <option value="inline">Inline — form/button on the page</option>
-              <option value="popup_form">Popup — opens the form in a modal</option>
-              <option value="popup_calendar">Popup calendar — opens a booking page</option>
-              <option value="dual">Dual — primary + secondary button</option>
-              <option value="sticky_desktop">Sticky (desktop) — always-visible bar</option>
-              <option value="floating_mobile">Floating (mobile) — persistent bottom button</option>
-              <option value="phone">Phone — tel: link</option>
+              <option value="inline">Inline, form/button on the page</option>
+              <option value="popup_form">Popup, opens the form in a modal</option>
+              <option value="popup_calendar">Popup calendar, opens a booking page</option>
+              <option value="dual">Dual, primary + secondary button</option>
+              <option value="sticky_desktop">Sticky (desktop), always-visible bar</option>
+              <option value="floating_mobile">Floating (mobile), persistent bottom button</option>
+              <option value="phone">Phone, tel: link</option>
             </select>
           </Field>
           {c.cta?.style === "popup_form" && !c.formId && (
             <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
-              This CTA is set to open a popup, but no form is selected above — pick one, or the
+              This CTA is set to open a popup, but no form is selected above. Pick one, or the
               button won&apos;t open anything for visitors.
             </p>
           )}
@@ -1194,7 +1194,7 @@ function SectionFields({
               </Field>
               {!c.cta?.bookingPageSlug && (
                 <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
-                  No booking page slug set — this CTA won&apos;t open anything for visitors until
+                  No booking page slug set. This CTA won&apos;t open anything for visitors until
                   you add one.
                 </p>
               )}
@@ -1211,7 +1211,7 @@ function SectionFields({
               </Field>
               {!c.cta?.phoneNumber && (
                 <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
-                  No phone number set — this CTA falls back to a plain link/button until you add
+                  No phone number set. This CTA falls back to a plain link/button until you add
                   one.
                 </p>
               )}
@@ -1243,9 +1243,9 @@ function SectionFields({
                   onChange={(e) => onChange({ ...c, cta: { ...c.cta, popupLayout: e.target.value as NonNullable<HeroConfig["cta"]>["popupLayout"] } })}
                   className={fieldClass}
                 >
-                  <option value="centered">Centered — form only</option>
-                  <option value="split_image">Split — real photo beside the form</option>
-                  <option value="split_benefits">Split — benefit list beside the form</option>
+                  <option value="centered">Centered, form only</option>
+                  <option value="split_image">Split, real photo beside the form</option>
+                  <option value="split_benefits">Split, benefit list beside the form</option>
                 </select>
               </Field>
               <Field label="Popup headline (optional)">
@@ -1397,13 +1397,13 @@ function SectionFields({
               onChange={(e) => onChange({ ...c, bullets: linesToArray(e.target.value) })}
             />
           </Field>
-          <Field label="Lead-capture form (optional — leave blank for a plain CTA link)">
+          <Field label="Lead-capture form (optional. Leave blank for a plain CTA link)">
             <select
               value={c.formId ?? ""}
               onChange={(e) => onChange({ ...c, formId: e.target.value || null })}
               className={fieldClass}
             >
-              <option value="">No form — CTA button only</option>
+              <option value="">No form. CTA button only</option>
               {forms.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.name}
@@ -1438,18 +1438,18 @@ function SectionFields({
               }
               className={fieldClass}
             >
-              <option value="inline">Inline — form/button on the page</option>
-              <option value="popup_form">Popup — opens the form in a modal</option>
-              <option value="popup_calendar">Popup calendar — opens a booking page</option>
-              <option value="dual">Dual — primary + secondary button</option>
-              <option value="sticky_desktop">Sticky (desktop) — always-visible bar</option>
-              <option value="floating_mobile">Floating (mobile) — persistent bottom button</option>
-              <option value="phone">Phone — tel: link</option>
+              <option value="inline">Inline, form/button on the page</option>
+              <option value="popup_form">Popup, opens the form in a modal</option>
+              <option value="popup_calendar">Popup calendar, opens a booking page</option>
+              <option value="dual">Dual, primary + secondary button</option>
+              <option value="sticky_desktop">Sticky (desktop), always-visible bar</option>
+              <option value="floating_mobile">Floating (mobile), persistent bottom button</option>
+              <option value="phone">Phone, tel: link</option>
             </select>
           </Field>
           {c.cta?.style === "popup_form" && !c.formId && (
             <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
-              This CTA is set to open a popup, but no form is selected above — pick one, or the
+              This CTA is set to open a popup, but no form is selected above. Pick one, or the
               button won&apos;t open anything for visitors.
             </p>
           )}
@@ -1464,7 +1464,7 @@ function SectionFields({
               </Field>
               {!c.cta?.bookingPageSlug && (
                 <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
-                  No booking page slug set — this CTA won&apos;t open anything for visitors until
+                  No booking page slug set. This CTA won&apos;t open anything for visitors until
                   you add one.
                 </p>
               )}
@@ -1481,7 +1481,7 @@ function SectionFields({
               </Field>
               {!c.cta?.phoneNumber && (
                 <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
-                  No phone number set — this CTA falls back to a plain link/button until you add
+                  No phone number set. This CTA falls back to a plain link/button until you add
                   one.
                 </p>
               )}
@@ -1513,9 +1513,9 @@ function SectionFields({
                   onChange={(e) => onChange({ ...c, cta: { ...c.cta, popupLayout: e.target.value as NonNullable<OfferConfig["cta"]>["popupLayout"] } })}
                   className={fieldClass}
                 >
-                  <option value="centered">Centered — form only</option>
-                  <option value="split_image">Split — real photo beside the form</option>
-                  <option value="split_benefits">Split — benefit list beside the form</option>
+                  <option value="centered">Centered, form only</option>
+                  <option value="split_image">Split, real photo beside the form</option>
+                  <option value="split_benefits">Split, benefit list beside the form</option>
                 </select>
               </Field>
               <Field label="Popup headline (optional)">
@@ -1759,7 +1759,7 @@ function SectionFields({
                 onChange={(e) => update({ ...tier, formId: e.target.value || null })}
                 className={fieldClass}
               >
-                <option value="">No form — CTA button only</option>
+                <option value="">No form. CTA button only</option>
                 {forms.map((f) => (
                   <option key={f.id} value={f.id}>
                     {f.name}
@@ -1851,7 +1851,7 @@ function SectionFields({
             >
               <option value="external_link">External link (e.g. Amazon, another checkout)</option>
               <option value="form_capture">Lead-capture form</option>
-              <option value="stripe_checkout">Real checkout — your own Stripe</option>
+              <option value="stripe_checkout">Real checkout, your own Stripe</option>
             </select>
           </Field>
 
@@ -2091,7 +2091,7 @@ function SectionFields({
               className="h-9"
             />
           </Field>
-          <Field label="Terms (your real guarantee — nothing pre-filled)">
+          <Field label="Terms (your real guarantee, nothing pre-filled)">
             <Textarea
               rows={3}
               value={c.bodyText}
@@ -2196,7 +2196,7 @@ function SectionFields({
         <div className="space-y-3">
           {c.items.some((it) => it.imageIsStock) && (
             <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
-              Some row images are auto-selected stock photos — replace them with your real photos when you have them.
+              Some row images are auto-selected stock photos, replace them with your real photos when you have them.
             </p>
           )}
           <Field label="Headline (optional)">
@@ -2383,7 +2383,7 @@ function SectionFields({
                   className="h-9"
                 />
                 <Input
-                  placeholder="Value, e.g. $500 (optional — use only real values)"
+                  placeholder="Value, e.g. $500 (optional. Use only real values)"
                   value={item.value ?? ""}
                   onChange={(e) => update({ ...item, value: e.target.value })}
                   className="h-9"
@@ -2678,10 +2678,10 @@ function SectionFields({
               onChange={(e) => onChange({ ...c, layout: e.target.value as PhotoGalleryConfig["layout"] })}
               className={fieldClass}
             >
-              <option value="grid">Grid — even columns</option>
-              <option value="masonry">Masonry — varied-height columns</option>
-              <option value="carousel">Carousel — horizontal scroll (best for 5+)</option>
-              <option value="before_after">Before / After — exactly 2 photos</option>
+              <option value="grid">Grid, even columns</option>
+              <option value="masonry">Masonry, varied-height columns</option>
+              <option value="carousel">Carousel, horizontal scroll (best for 5+)</option>
+              <option value="before_after">Before / After, exactly 2 photos</option>
             </select>
           </Field>
           {c.images.length === 0 && (

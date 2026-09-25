@@ -72,7 +72,7 @@ export function TestDialog({
       );
       const d = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(d.error ?? "Couldn't start test");
-      toast.success("Test run started — check the Runs tab.");
+      toast.success("Test run started. Check the Runs tab.");
       onOpenChange(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't start test");
@@ -94,7 +94,7 @@ export function TestDialog({
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
           Pick a contact to enroll now. This runs the <strong>saved</strong>{" "}
-          version immediately, even on a draft — save first if you have unsaved
+          version immediately, even on a draft. Save first if you have unsaved
           changes.
         </p>
         <div className="relative">

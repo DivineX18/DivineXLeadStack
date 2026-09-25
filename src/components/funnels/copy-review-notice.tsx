@@ -42,13 +42,13 @@ export function CopyReviewNotice({ funnel }: { funnel: Pick<FunnelDoc, "criticVe
       </p>
       <p className="mt-1 text-xs" style={{ color: "var(--dx-text-muted)" }}>
         We reviewed this page and noticed {worth.length === 1 ? "something" : `${worth.length} things`} you
-        may want to change. Your call — nothing has been altered.
+        may want to change. Your call. Nothing has been altered.
       </p>
       <ul className="mt-3 space-y-2">
         {worth.map((f, i) => (
           <li key={`${f.sectionType}-${i}`} className="text-sm" style={{ color: "var(--dx-text-primary)" }}>
             {/* Customer nouns. The category name and the model's reasoning
-                stay internal — U1 applies here as everywhere else. */}
+                stay internal. U1 applies here as everywhere else. */}
             <span className="text-xs uppercase tracking-wider" style={{ color: "var(--dx-text-muted)" }}>
               {f.sectionType.replace(/_/g, " ")}
             </span>

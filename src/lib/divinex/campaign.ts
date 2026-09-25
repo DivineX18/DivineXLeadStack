@@ -210,7 +210,7 @@ export function renderPlanSummary(plan: CampaignPlan): string {
   const msgs = plan.followUpStrategy.messages;
   if (msgs.length > 0) {
     lines.push(
-      `Follow-up: ${msgs.length} message${msgs.length === 1 ? "" : "s"} — ${msgs
+      `Follow-up: ${msgs.length} message${msgs.length === 1 ? "" : "s"}, ${msgs
         .map((m) => `${m.delayHours === 0 ? "immediate" : `+${Math.round(m.delayHours / 24)}d`} ${m.commType}`)
         .join(", ")}`,
     );
@@ -237,7 +237,7 @@ export function validateCampaignPlan(plan: CampaignPlan): { ok: true } | { ok: f
 
   for (const rule of plan.segmentationRules ?? []) {
     const hasField = (plan.formRequirements?.fields ?? []).some((f) => f.name === rule.field);
-    if (!hasField) errors.push(`segmentation needs form field "${rule.field}" — add it to formRequirements`);
+    if (!hasField) errors.push(`segmentation needs form field "${rule.field}". Add it to formRequirements`);
   }
   return errors.length === 0 ? { ok: true } : { ok: false, errors };
 }

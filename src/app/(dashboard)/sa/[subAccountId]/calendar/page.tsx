@@ -51,7 +51,7 @@ export default function CalendarPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Calendar</h1>
         <p className="text-sm text-muted-foreground">
-          Manual events — meetings, calls, reminders. Click any day to add
+          Manual events, meetings, calls, reminders. Click any day to add
           something.
         </p>
       </div>

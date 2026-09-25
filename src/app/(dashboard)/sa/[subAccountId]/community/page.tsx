@@ -84,7 +84,7 @@ export default function CommunityPage() {
             Community
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Skool-style groups — a feed, courses, and a leaderboard your members
+            Skool-style groups, a feed, courses, and a leaderboard your members
             access at a branded public link.
           </p>
         </div>

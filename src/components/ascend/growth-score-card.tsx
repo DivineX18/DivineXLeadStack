@@ -19,7 +19,7 @@ export function GrowthScoreCard({ dashboardSummary }: { dashboardSummary: WithMe
         <>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-semibold tracking-tight" style={{ color: "hsl(var(--jade))" }}>
-              {data.latestGrowthScore !== null ? Math.round(data.latestGrowthScore) : "—"}
+              {data.latestGrowthScore !== null ? Math.round(data.latestGrowthScore) : "-"}
             </span>
             <span className="text-sm text-[var(--dx-text-muted)]">/ 100</span>
             {data.scoreLabel && <span className="ml-1 text-xs text-[var(--dx-text-muted)]">{data.scoreLabel}</span>}

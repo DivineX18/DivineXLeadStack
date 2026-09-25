@@ -78,7 +78,7 @@ export function parseEvidenceProofInput(
   input: unknown,
 ): { ok: true; value: VerifiedEvidenceItem[] } | { ok: false; error: string } {
   if (!Array.isArray(input)) return { ok: false, error: "evidence must be a list of marks" };
-  if (input.length === 0) return { ok: false, error: "evidence cannot be empty — omit it instead" };
+  if (input.length === 0) return { ok: false, error: "evidence cannot be empty, omit it instead" };
   if (input.length > MAX_ITEMS) return { ok: false, error: `at most ${MAX_ITEMS} marks` };
 
   const out: VerifiedEvidenceItem[] = [];

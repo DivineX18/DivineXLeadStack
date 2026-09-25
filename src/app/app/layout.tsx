@@ -114,7 +114,7 @@ export default async function AscendAppLayout({ children }: { children: ReactNod
       {/* PINNED TO THE VIEWPORT, NOT THE DOCUMENT.
           The shell is min-h-dvh, so on a long page (Intelligence, Command
           Center) this column stretched to the full document height and the
-          mt-auto account nav inside it went with it — Command Center, Ask
+          mt-auto account nav inside it went with it. Command Center, Ask
           Zeno and Switch workspace ended up below the fold, reachable only by
           scrolling past the entire page. sticky + h-dvh makes mt-auto resolve
           against the screen instead, and overflow-y-auto keeps the nav
@@ -141,7 +141,7 @@ export default async function AscendAppLayout({ children }: { children: ReactNod
         </main>
 
         {/* Zeno is the orchestration layer, so it is globally reachable rather
-            than a destination. This is the SAME launcher Flow mounts — one
+            than a destination. This is the SAME launcher Flow mounts, one
             implementation, one chat, one capability set; the unified shell
             just has to hand it the active workspace, which isn't in the URL
             here the way it is under /sa/:id. */}

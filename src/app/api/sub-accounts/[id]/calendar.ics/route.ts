@@ -97,11 +97,11 @@ export async function GET(
   if (hostMode) {
     const who = hostMemberName ? `${hostMemberName}'s` : "My";
     calendarName = subName
-      ? `${subName} — ${who} bookings`
+      ? `${subName}, ${who} bookings`
       : `${who} LeadStack bookings`;
   } else {
     calendarName = subName
-      ? `${subName} — LeadStack bookings`
+      ? `${subName}. LeadStack bookings`
       : "LeadStack bookings";
   }
 
@@ -142,7 +142,7 @@ export async function GET(
     const baseSummary = e.title || "Booking";
     const summary =
       !hostMode && e.assignedToName
-        ? `${baseSummary} — ${e.assignedToName}`
+        ? `${baseSummary}, ${e.assignedToName}`
         : baseSummary;
     feedEvents.push({
       uid: d.id,

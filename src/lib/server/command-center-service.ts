@@ -111,7 +111,7 @@ export async function getWorkspaceProvisioningReport(subAccountId: string): Prom
   // 1. Workspace mapping v2
   if (!mapping) {
     checks.push({ key: "mapping", label: "Workspace Mapping v2", status: "missing", detail: "No workspaceMappings doc exists for this workspace." });
-    issues.push("No Workspace Mapping v2 record — Full Ascend cannot activate until one is created (via SSO login JIT or manual provisioning).");
+    issues.push("No Workspace Mapping v2 record. Full Ascend cannot activate until one is created (via SSO login JIT or manual provisioning).");
   } else {
     const ok = mapping.status === "active";
     checks.push({
@@ -123,7 +123,7 @@ export async function getWorkspaceProvisioningReport(subAccountId: string): Prom
     if (!ok) issues.push(`Workspace mapping status is "${mapping.status}" (not active).`);
     if (mapping.provisioningStatus === "partial_failure") {
       const details = mapping.lastReconciliationResult?.details ?? "no details recorded";
-      checks.push({ key: "provisioning", label: "Provisioning", status: "warning", detail: `partial_failure — ${details}` });
+      checks.push({ key: "provisioning", label: "Provisioning", status: "warning", detail: `partial_failure, ${details}` });
       issues.push(`Provisioning partial failure: ${details}`);
     }
   }
@@ -141,9 +141,9 @@ export async function getWorkspaceProvisioningReport(subAccountId: string): Prom
       key: "business_profile",
       label: "Ascend business-profile link",
       status: mapping ? "warning" : "unknown",
-      detail: mapping ? "Mapping exists but no primary business profile linked yet." : "Cannot check — no mapping exists.",
+      detail: mapping ? "Mapping exists but no primary business profile linked yet." : "Cannot check, no mapping exists.",
     });
-    if (mapping) issues.push("No Ascend business profile linked yet — intelligence cards will show \"link a business profile\".");
+    if (mapping) issues.push("No Ascend business profile linked yet. Intelligence cards will show \"link a business profile\".");
   }
 
   // 3. Identity link (owner) — only checkable once a mapping names an owner uid
@@ -166,10 +166,10 @@ export async function getWorkspaceProvisioningReport(subAccountId: string): Prom
         status: "missing",
         detail: `No identityLinks doc for firebaseUid ${mapping.ownerFirebaseUid}.`,
       });
-      issues.push("No identity link for the workspace owner — SSO login will re-create this automatically on next sign-in.");
+      issues.push("No identity link for the workspace owner. SSO login will re-create this automatically on next sign-in.");
     }
   } else {
-    checks.push({ key: "identity_link", label: "Identity link (Clerk ↔ Firebase)", status: "unknown", detail: "Cannot check — no workspace mapping names an owner uid." });
+    checks.push({ key: "identity_link", label: "Identity link (Clerk ↔ Firebase)", status: "unknown", detail: "Cannot check, no workspace mapping names an owner uid." });
   }
 
   // 4. Firebase Auth user status for the mapped owner
@@ -188,7 +188,7 @@ export async function getWorkspaceProvisioningReport(subAccountId: string): Prom
       issues.push("Mapped owner's Firebase Auth user no longer exists.");
     }
   } else {
-    checks.push({ key: "firebase_user", label: "Firebase/user status", status: "unknown", detail: "Cannot check — no workspace mapping names an owner uid." });
+    checks.push({ key: "firebase_user", label: "Firebase/user status", status: "unknown", detail: "Cannot check, no workspace mapping names an owner uid." });
   }
 
   // 5. Ascend Intelligence gate (commercial)
@@ -219,7 +219,7 @@ export async function getWorkspaceProvisioningReport(subAccountId: string): Prom
   ]);
   checks.push({ key: "flag_unified_shell", label: "unified_shell rollout flag", status: unifiedShell ? "ok" : "warning", detail: unifiedShell ? "on for this workspace" : "off for this workspace" });
   checks.push({ key: "flag_unified_navigation", label: "unified_navigation rollout flag", status: unifiedNavigation ? "ok" : "warning", detail: unifiedNavigation ? "on for this workspace" : "off for this workspace" });
-  if (!unifiedShell) issues.push("unified_shell rollout flag is off for this workspace — Full Ascend chrome will not render even if entitled.");
+  if (!unifiedShell) issues.push("unified_shell rollout flag is off for this workspace. Full Ascend chrome will not render even if entitled.");
 
   // 8. Intelligence Bridge / Ascend-side reachability (best-effort — this is
   // an HTTP signal from Ascend's own API, NOT a direct Postgres read. Flow
@@ -229,7 +229,7 @@ export async function getWorkspaceProvisioningReport(subAccountId: string): Prom
   if (!ascendIntelligenceConfigured()) {
     checks.push({ key: "intelligence_bridge", label: "Intelligence Bridge", status: "unknown", detail: "ASCEND_INTELLIGENCE_API_URL/SECRET not configured on this deployment." });
   } else if (!mapping?.primaryAscendBusinessProfileId) {
-    checks.push({ key: "intelligence_bridge", label: "Intelligence Bridge", status: "unknown", detail: "No business profile linked — nothing to query." });
+    checks.push({ key: "intelligence_bridge", label: "Intelligence Bridge", status: "unknown", detail: "No business profile linked, nothing to query." });
   } else {
     const client = createAscendIntelligenceClient();
     const result = await client.getDashboardSummary(mapping.primaryAscendBusinessProfileId);

@@ -37,7 +37,7 @@ export async function composeBusinessHealthSummary(workspaceId: string): Promise
         .where("subAccountId", "==", workspaceId)
         .where("createdAt", ">=", startOfWeek)
         .get()
-        .catch(() => null), // composite index may not exist yet — degrade to 0 rather than fail the whole summary
+        .catch(() => null), // composite index may not exist yet, degrade to 0 rather than fail the whole summary
       db.collection("tasks").where("subAccountId", "==", workspaceId).where("completed", "==", false).get(),
       db
         .collection("events")

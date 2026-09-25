@@ -121,7 +121,7 @@ function buildHtmlSnippet(form: LeadForm, origin: string): string {
     })
     .join("\n\n");
 
-  return `<!-- Lead form. Style with your own CSS — every element is unstyled. -->
+  return `<!-- Lead form. Style with your own CSS. Every element is unstyled. -->
 <!-- Submissions create contacts and fire automations in your workspace. -->
 <form data-lead-form="${form.id}" novalidate>
 ${fieldsHtml}
@@ -630,7 +630,7 @@ export default function FormBuilderPage() {
                         For A2P 10DLC compliance the text must name your
                         business and include message frequency, &ldquo;message
                         &amp; data rates may apply,&rdquo; and STOP/HELP
-                        instructions. The box stays unticked by default — tick
+                        instructions. The box stays unticked by default, tick
                         &ldquo;Required&rdquo; only if SMS consent is mandatory
                         to submit. Add your Privacy Policy + Terms links on the
                         surrounding page.
@@ -688,7 +688,7 @@ export default function FormBuilderPage() {
                   className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 text-foreground dark:bg-input/30 [&_option]:bg-background [&_option]:text-foreground"
                 >
                   <option value="" className="bg-background text-foreground">
-                    — None (contact only)
+. None (contact only)
                   </option>
                   {PIPELINE_STAGES.map((s) => (
                     <option
@@ -737,7 +737,7 @@ export default function FormBuilderPage() {
                         })
                       }
                       className="h-8 text-sm"
-                      placeholder="New lead — {name}"
+                      placeholder="New lead, {name}"
                     />
                     <p className="text-[11px] text-muted-foreground">
                       Use <code>{`{name}`}</code>, <code>{`{email}`}</code>,{" "}
@@ -917,7 +917,7 @@ function EmbedAppearanceSection({
       <h2 className="mb-1 text-sm font-semibold">Embed appearance</h2>
       <p className="mb-3 text-[11px] text-muted-foreground">
         How the form looks when embedded as an iframe. The standalone link
-        ignores these — they only kick in for the iframe snippet below.
+        ignores these. They only kick in for the iframe snippet below.
       </p>
       <div className="space-y-3 text-sm">
         <div className="space-y-1.5">

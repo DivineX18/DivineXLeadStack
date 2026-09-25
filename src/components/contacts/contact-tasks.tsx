@@ -77,7 +77,7 @@ export function ContactTasks({ contact }: { contact: Contact }) {
       ) : tasks.length === 0 ? (
         <div className="rounded-lg border border-dashed py-6 text-center text-xs text-muted-foreground">
           <CheckSquare className="mx-auto mb-1 h-4 w-4" />
-          No tasks yet — add a follow-up to stay in motion.
+          No tasks yet. Add a follow-up to stay in motion.
         </div>
       ) : (
         <div className="space-y-2">

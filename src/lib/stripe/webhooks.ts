@@ -81,7 +81,7 @@ async function handleFoundersCheckout(session: Stripe.Checkout.Session) {
   const email = session.customer_details?.email ?? session.customer_email;
   if (!email) {
     console.error(
-      `[founders] Session ${sessionId} completed without a buyer email — cannot send welcome`,
+      `[founders] Session ${sessionId} completed without a buyer email, cannot send welcome`,
     );
     return;
   }

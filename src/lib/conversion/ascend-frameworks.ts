@@ -55,7 +55,7 @@ export function renderAscendFrameworksAsCards(
   return frameworks.map((f) => ({
     id: `ascend-framework-${f.slug}`,
     levels: ["sub-account" as const],
-    title: `DivineX Intelligence — ${f.name}`,
+    title: `DivineX Intelligence, ${f.name}`,
     location: `Ascend Intelligence Library (${f.category})`,
     keywords: ["ascend", "intelligence", "framework", f.category],
     body: f.content,

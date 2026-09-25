@@ -44,7 +44,7 @@ export async function POST(
   try {
     await ref.collection("activities").add({
       type: "automation_step_skipped",
-      content: "Email unsubscribe — clicked the link in an outbound email.",
+      content: "Email unsubscribe, clicked the link in an outbound email.",
       createdBy: "unsubscribe",
       meta: { kind: "email_opt_out" },
       createdAt: FieldValue.serverTimestamp(),

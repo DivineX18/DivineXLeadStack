@@ -6,17 +6,17 @@ export const HOMEPAGE_FAQS = [
   {
     question: "How do I get started?",
     answer:
-      "No technical setup on your end. Tell us about your business, and we configure your systems — contacts, pipeline, follow-up, everything — and connect the tools you already use. Most teams are running within days.",
+      "No technical setup on your end. Tell us about your business, and we configure your systems (contacts, pipeline, follow-up, everything) and connect the tools you already use. Most teams are running within days.",
   },
   {
     question: "How do imports work?",
     answer:
-      "Send us your existing contacts — a spreadsheet, another system, wherever they live now — and we bring them in clean, matched, and ready to work from. No manual re-entry.",
+      "Send us your existing contacts (a spreadsheet, another system, wherever they live now) and we bring them in clean, matched, and ready to work from. No manual re-entry.",
   },
   {
     question: "What about email and SMS?",
     answer:
-      "Every conversation lives in one place. Send from any contact profile in one click, and replies route straight back to your inbox — no shared mailbox, nothing to copy-paste.",
+      "Every conversation lives in one place. Send from any contact profile in one click, and replies route straight back to your inbox, no shared mailbox, nothing to copy-paste.",
   },
   {
     question: "How fast can I get a website live?",
@@ -26,12 +26,12 @@ export const HOMEPAGE_FAQS = [
   {
     question: "Is my data safe?",
     answer:
-      "Your workspace is yours alone — only you and the people you invite can access it. Data is encrypted at rest, and you can export everything as a CSV whenever you want.",
+      "Your workspace is yours alone, only you and the people you invite can access it. Data is encrypted at rest, and you can export everything as a CSV whenever you want.",
   },
   {
     question: "Do you have an API?",
     answer:
-      "Yes — if your team wants to connect its own tools, the API and integrations give you that flexibility. Most clients never need to touch it; we handle the setup for you.",
+      "Yes, if your team wants to connect its own tools, the API and integrations give you that flexibility. Most clients never need to touch it; we handle the setup for you.",
   },
 ];
 

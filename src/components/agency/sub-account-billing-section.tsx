@@ -117,12 +117,12 @@ export function SubAccountBillingSection({ subAccount, disabled }: Props) {
         setLastLink(data.checkoutUrl);
         toast.success(
           data.emailed
-            ? "Plan assigned — checkout link emailed to the client."
-            : "Plan assigned — copy the checkout link below or email it.",
+            ? "Plan assigned, checkout link emailed to the client."
+            : "Plan assigned. Copy the checkout link below or email it.",
         );
       } else {
         toast.success(
-          "Plan switched — the live subscription and features were updated.",
+          "Plan switched, the live subscription and features were updated.",
         );
       }
     } catch (err) {
@@ -152,7 +152,7 @@ export function SubAccountBillingSection({ subAccount, disabled }: Props) {
           toast.success(
             data.emailed
               ? "Checkout link emailed to the client."
-              : "Link minted, but email isn't configured — copy it instead.",
+              : "Link minted, but email isn't configured. Copy it instead.",
           );
         }
       }
@@ -177,7 +177,7 @@ export function SubAccountBillingSection({ subAccount, disabled }: Props) {
     try {
       await patchBilling({ action: "comp" });
       setLastLink(null);
-      toast.success("Marked comped — billing stopped, features stay manual.");
+      toast.success("Marked comped. Billing stopped, features stay manual.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to comp.");
     } finally {
@@ -199,7 +199,7 @@ export function SubAccountBillingSection({ subAccount, disabled }: Props) {
         </div>
         {billing && billing.status !== "comped" && (
           <span className="text-xs text-muted-foreground">
-            {billing.planName ?? "—"} ·{" "}
+            {billing.planName ?? "-"} ·{" "}
             {formatBillingPrice(billing.priceCents, billing.currency)}/mo
           </span>
         )}
@@ -208,14 +208,14 @@ export function SubAccountBillingSection({ subAccount, disabled }: Props) {
       <div className="space-y-3 p-3">
         {!stripeConfigured ? (
           <p className="text-xs text-amber-600 dark:text-amber-400">
-            Stripe isn&apos;t configured on this deployment — set{" "}
+            Stripe isn&apos;t configured on this deployment. Set{" "}
             <code>STRIPE_SECRET_KEY</code> to bill clients.
           </p>
         ) : plans === null ? (
           <p className="text-xs text-muted-foreground">Loading plans…</p>
         ) : activePlans.length === 0 ? (
           <p className="text-xs text-muted-foreground">
-            No plans yet — create one under{" "}
+            No plans yet. Create one under{" "}
             <span className="font-medium text-foreground">
               Agency → Client billing
             </span>{" "}
@@ -233,7 +233,7 @@ export function SubAccountBillingSection({ subAccount, disabled }: Props) {
                 <option value="">Choose a plan…</option>
                 {activePlans.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} — {formatBillingPrice(p.priceMonthlyCents, p.currency)}
+                    {p.name} - {formatBillingPrice(p.priceMonthlyCents, p.currency)}
                     /mo
                   </option>
                 ))}
@@ -337,7 +337,7 @@ export function SubAccountBillingSection({ subAccount, disabled }: Props) {
             {lastLink && (
               <div className="rounded-md border border-dashed bg-muted/30 px-2.5 py-2">
                 <p className="mb-1 text-[11px] font-medium text-muted-foreground">
-                  Checkout link (latest — older links are now invalid)
+                  Checkout link (latest. Older links are now invalid)
                 </p>
                 <div className="flex items-center gap-2">
                   <code className="min-w-0 flex-1 truncate text-xs">{lastLink}</code>
@@ -350,7 +350,7 @@ export function SubAccountBillingSection({ subAccount, disabled }: Props) {
                       void navigator.clipboard
                         .writeText(lastLink)
                         .then(() => toast.success("Copied."))
-                        .catch(() => toast.error("Couldn't copy — select it manually."));
+                        .catch(() => toast.error("Couldn't copy. Select it manually."));
                     }}
                   >
                     <Copy className="h-3.5 w-3.5" />
@@ -361,7 +361,7 @@ export function SubAccountBillingSection({ subAccount, disabled }: Props) {
 
             <p className="text-[11px] leading-relaxed text-muted-foreground">
               {hasLiveSubscription
-                ? "This client has a live subscription — switching plans updates the charge (prorated) and re-applies the plan's features immediately. Card changes happen via “Manage billing” inside their workspace settings."
+                ? "This client has a live subscription, switching plans updates the charge (prorated) and re-applies the plan's features immediately. Card changes happen via “Manage billing” inside their workspace settings."
                 : state === "pending"
                   ? "Awaiting payment: the workspace shows an activation screen to the client until checkout completes. The plan's features switch on automatically at payment."
                   : state === "lapsed"

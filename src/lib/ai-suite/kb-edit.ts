@@ -110,8 +110,8 @@ export function validateKbChanges(
     if (cardError) throw new Error(cardError);
     const card = normalizeCard(ch.card as AiSuiteKnowledgeCard);
     if (card.id !== id) throw new Error(`change id '${id}' doesn't match card id '${card.id}'`);
-    if (op === "add" && ids.has(id)) throw new Error(`card '${id}' already exists — use update`);
-    if (op === "update" && !ids.has(id)) throw new Error(`can't update unknown card '${id}' — use add`);
+    if (op === "add" && ids.has(id)) throw new Error(`card '${id}' already exists. Use update`);
+    if (op === "update" && !ids.has(id)) throw new Error(`can't update unknown card '${id}'. Use add`);
     changes.push({ op, id, reason, card });
   }
   return changes;
@@ -166,9 +166,9 @@ export function serializeKnowledgeBase(cards: AiSuiteKnowledgeCard[]): string {
     ` * allowed to state.`,
     ` *`,
     ` * Maintained two ways (both regenerate this file deterministically from`,
-    ` * validated card data — edit cards, not formatting):`,
+    ` * validated card data. Edit cards, not formatting):`,
     ` *   - the \`/update-ai-kb\` Claude Code skill (deep, code-aware review)`,
-    ` *   - Agency Settings → AI knowledge (local dev only — quick LLM-assisted`,
+    ` *   - Agency Settings → AI knowledge (local dev only, quick LLM-assisted`,
     ` *     refresh with card-by-card approval)`,
     ` */`,
     `export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [`,

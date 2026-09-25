@@ -216,7 +216,7 @@ export function defaultSectionConfig(type: FunnelSectionType): FunnelSectionConf
       return { priceCents: 0, bullets: [], ctaLabel: "Buy now", checkoutMode: "external_link" };
     case "upsell_offer":
       return {
-        headline: "Wait — add this to your order?",
+        headline: "Wait. Add this to your order?",
         bullets: [],
         priceCents: 0,
         acceptLabel: "Yes, add it!",

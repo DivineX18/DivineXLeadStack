@@ -30,7 +30,7 @@ export function renderCompletion(c: CustomerCompletion): string {
     // customer-facing prose. Labels are authored correctly; leave them alone.
     parts.push(
       rest.length > 0
-        ? `${first.label} when you're ready — or: ${rest.map((a) => a.label).join(" · ")}`
+        ? `${first.label} when you're ready, or: ${rest.map((a) => a.label).join(" · ")}`
         : `${first.label} when you're ready.`,
     );
   }

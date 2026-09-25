@@ -176,7 +176,7 @@ export function ContactMessagesThread({ contact }: { contact: Contact }) {
         ) : messages.length === 0 ? (
           <div className="flex h-full min-h-[150px] items-center justify-center text-center">
             <p className="text-xs text-muted-foreground">
-              No messages yet. Send an SMS to start the conversation —
+              No messages yet. Send an SMS to start the conversation
               replies from {contact.phone} will land here in real time.
             </p>
           </div>

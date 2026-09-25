@@ -77,7 +77,7 @@ export function IntakeFieldBuilder({
       <Label className="text-sm">Extra questions (optional)</Label>
       <p className="text-xs text-muted-foreground">
         Name, email, and phone are always asked. Add up to 10 extra
-        questions — keep it short to lift completions.
+        questions. Keep it short to lift completions.
       </p>
 
       {value.length === 0 ? (

@@ -23,7 +23,7 @@ export default function ApiWebhooksPage() {
 
         <p>
           {CUSTOM_BRAND.name} ships a REST API and signed webhooks so your workspace can
-          talk to the tools you already use &mdash; sync contacts and deals,
+          talk to the tools you already use, sync contacts and deals,
           drive your own automations, and react to what happens in real time.
         </p>
 
@@ -51,7 +51,7 @@ export default function ApiWebhooksPage() {
         <h2>2. Webhooks</h2>
         <p>
           Subscribe an endpoint to the events you care about and {CUSTOM_BRAND.name}{" "}
-          <strong>POSTs to it the moment they happen</strong> &mdash; no
+          <strong>POSTs to it the moment they happen</strong>, no
           polling, no cron jobs on your side.
         </p>
         <p>
@@ -64,30 +64,30 @@ export default function ApiWebhooksPage() {
         <p>Events you can subscribe to include:</p>
         <ul>
           <li>
-            <code>contact.created</code> &mdash; a new contact enters the
+            <code>contact.created</code>, a new contact enters the
             workspace
           </li>
           <li>
-            <code>form.submission.created</code> &mdash; a hosted form is
+            <code>form.submission.created</code>, a hosted form is
             submitted
           </li>
-          <li>Deal stage changes &mdash; a deal moves along your pipeline</li>
+          <li>Deal stage changes, a deal moves along your pipeline</li>
           <li>
-            <code>event.booked</code> &mdash; someone books through a booking
+            <code>event.booked</code>, someone books through a booking
             page
           </li>
           <li>
-            <code>message.received</code> &mdash; an inbound SMS, WhatsApp, or
+            <code>message.received</code>, an inbound SMS, WhatsApp, or
             social DM lands
           </li>
           <li>
-            <code>call.missed</code> &mdash; a call goes unanswered
+            <code>call.missed</code>, a call goes unanswered
           </li>
         </ul>
 
         <h2>3. Keys &amp; security</h2>
         <p>
-          API keys are scoped to a single workspace &mdash; a key only ever
+          API keys are scoped to a single workspace, a key only ever
           sees that workspace&rsquo;s data. Secrets are shown once at creation
           and stored hashed, so treat them like passwords. You can revoke and
           rotate keys at any time without disrupting the rest of your setup.
@@ -111,7 +111,7 @@ export default function ApiWebhooksPage() {
           >
             Feature Request
           </a>{" "}
-          link in the footer &mdash; it&rsquo;s the fastest way to get it onto
+          link in the footer. It&rsquo;s the fastest way to get it onto
           the roadmap and to see what others have already asked for.
         </p>
 
@@ -125,7 +125,7 @@ export default function ApiWebhooksPage() {
           >
             Ask us via Chat
           </button>{" "}
-          &mdash; we&rsquo;re happy to walk you through it.
+. We&rsquo;re happy to walk you through it.
         </p>
       </article>
     </div>

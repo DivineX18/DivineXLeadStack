@@ -48,7 +48,7 @@ export function FormFieldInput({
           </span>
         </label>
         {/* Carriers require the Privacy Policy and Terms to be VISIBLE on the
-            same page as the SMS consent — not only in a global footer, and not
+            same page as the SMS consent, not only in a global footer, and not
             only in the page source. Rendered here, immediately under the
             disclosure, so the opt-in area is self-contained evidence for
             toll-free verification. Relative hrefs resolve on whichever host
@@ -82,7 +82,7 @@ export function FormFieldInput({
   return (
     <div className="space-y-1.5">
       {/* An empty label is a deliberate signal from a caller whose own heading
-          already asks the question (see the multi-step section) — render no
+          already asks the question (see the multi-step section), render no
           label rather than an empty one that still takes vertical space. */}
       {field.label && (
         <Label htmlFor={field.id}>

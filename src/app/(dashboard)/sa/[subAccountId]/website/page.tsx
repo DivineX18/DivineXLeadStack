@@ -90,7 +90,7 @@ export default function WebsitePage() {
         error?: string;
       };
       if (!res.ok) throw new Error(payload.error ?? "Could not add website.");
-      toast.success("New website draft added — fill it in and build.");
+      toast.success("New website draft added. Fill it in and build.");
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Could not add website.",
@@ -222,7 +222,7 @@ function ActivationGate({
     try {
       const ok = await onRefresh();
       toast[ok ? "success" : "error"](
-        ok ? "Status refreshed." : "Couldn't refresh — try again.",
+        ok ? "Status refreshed." : "Couldn't refresh. Try again.",
       );
     } finally {
       setRefreshing(false);
@@ -244,7 +244,7 @@ function ActivationGate({
           </h2>
           {keyInvalid ? (
             <p className="mt-1 text-sm text-muted-foreground">
-              The website-builder API key was rejected — it may have been
+              The website-builder API key was rejected. It may have been
               rotated upstream. Update <code>GITPAGE_API_KEY</code> in your
               hosting env vars and redeploy.
             </p>
@@ -253,7 +253,7 @@ function ActivationGate({
               Spin up a marketing site for this client straight from the CRM
               once you&apos;ve dropped a website-builder API key into your env
               vars. Already have one? Set <code>GITPAGE_API_KEY</code> and
-              redeploy — the Status tab on Agency home confirms when it&apos;s
+              redeploy, the Status tab on Agency home confirms when it&apos;s
               detected.
             </p>
           )}

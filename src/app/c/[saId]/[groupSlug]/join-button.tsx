@@ -62,7 +62,7 @@ export function JoinButton({
         className={base}
         style={style}
       >
-        {access === "paid" ? `Join — ${priceLabel}` : "Join group"}
+        {access === "paid" ? `Join, ${priceLabel}` : "Join group"}
       </a>
     );
   }
@@ -76,7 +76,7 @@ export function JoinButton({
         groupId={groupId}
         scope="group"
         targetId={groupId}
-        label={`Join — ${priceLabel}`}
+        label={`Join, ${priceLabel}`}
         brand={brandColor}
         className={base}
       />
@@ -100,7 +100,7 @@ export function JoinButton({
         router.push(`/c/${saId}/${groupSlug}/community`);
         router.refresh();
       } else if (data.status === "payment_required") {
-        setError("This group requires payment — coming soon.");
+        setError("This group requires payment, coming soon.");
       } else {
         router.refresh();
       }

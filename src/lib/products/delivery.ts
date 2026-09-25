@@ -67,7 +67,7 @@ export async function deliverDigitalProductsForQuote(
     if (fileProducts.length === 0) return { delivered: 0, reason: "no_file_products" };
 
     if (!emailIsConfigured()) {
-      console.warn("[products/delivery] email not configured — skipping delivery for", quote.id);
+      console.warn("[products/delivery] email not configured, skipping delivery for", quote.id);
       return { delivered: 0, reason: "email_not_configured" };
     }
 
@@ -80,7 +80,7 @@ export async function deliverDigitalProductsForQuote(
       : null;
     const recipientEmail = contact?.email?.trim();
     if (!recipientEmail) {
-      console.warn("[products/delivery] contact has no email — skipping delivery for", quote.id);
+      console.warn("[products/delivery] contact has no email, skipping delivery for", quote.id);
       return { delivered: 0, reason: "no_contact_email" };
     }
     const sub = subSnap.exists ? (subSnap.data() as SubAccountDoc) : null;
@@ -109,7 +109,7 @@ export async function deliverDigitalProductsForQuote(
       await deliveryRef.set(delivery);
       const url = buildDeliveryUrl(token);
       if (!url) {
-        console.warn("[products/delivery] NEXT_PUBLIC_APP_URL not configured — link omitted");
+        console.warn("[products/delivery] NEXT_PUBLIC_APP_URL not configured, link omitted");
         continue;
       }
       links.push({

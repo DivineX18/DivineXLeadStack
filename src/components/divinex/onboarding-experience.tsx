@@ -337,7 +337,7 @@ export function OnboardingExperience({
             </div>
             {assets.length === 0 && (
               <p className="mt-6 rounded-xl border border-white/10 bg-white/5 p-5 opacity-70">
-                No usable imagery found on that site. You can upload your own later — your pages will be composed
+                No usable imagery found on that site. You can upload your own later. Your pages will be composed
                 without placeholder images until then.
               </p>
             )}

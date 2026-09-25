@@ -82,10 +82,10 @@ export function BillingGuard({ children }: { children: ReactNode }) {
 function AgencyBillingNotice({ state }: { state: "pending" | "grace" | "lapsed" }) {
   const copy =
     state === "pending"
-      ? "This client hasn't completed checkout yet — members see an activation screen."
+      ? "This client hasn't completed checkout yet, members see an activation screen."
       : state === "grace"
-        ? "This client's payment failed — members see a payment banner until the grace period ends."
-        : "This client's billing lapsed — members are behind the paywall. You still have full access.";
+        ? "This client's payment failed, members see a payment banner until the grace period ends."
+        : "This client's billing lapsed. Members are behind the paywall. You still have full access.";
   return (
     <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
       <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
@@ -232,7 +232,7 @@ function Paywall({
                 <>
                   {" "}
                   on the <strong>{planName}</strong> plan
-                  {priceLabel !== "—" ? ` (${priceLabel}/month)` : ""}
+                  {priceLabel !== "-" ? ` (${priceLabel}/month)` : ""}
                 </>
               ) : null}
               . Complete checkout to unlock it.
@@ -240,7 +240,7 @@ function Paywall({
           ) : (
             <>
               Payment for this workspace couldn&apos;t be collected, so access
-              is paused. All your data is safe — completing payment restores
+              is paused. All your data is safe, completing payment restores
               everything instantly.
             </>
           )}

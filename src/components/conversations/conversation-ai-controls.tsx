@@ -68,7 +68,7 @@ export function ConversationAiControls({
           className="flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
         >
           <Pause className="h-3 w-3" />
-          Bot paused — Resume
+          Bot paused. Resume
         </button>
       )}
     </div>

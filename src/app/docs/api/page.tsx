@@ -5,7 +5,7 @@ import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 export const metadata: Metadata = {
   title: "API reference",
   description:
-    "Public REST API — authentication, resources, webhooks.",
+    "Public REST API, authentication, resources, webhooks.",
 };
 
 /**
@@ -46,7 +46,7 @@ export default async function ApiDocsPage() {
       <Section id="quickstart" title="Quickstart">
         <p>
           1. Mint a key in <Code>Settings → API keys</Code>. Copy the{" "}
-          <Code>lsk_live_...</Code> value — you only see it once.
+          <Code>lsk_live_...</Code> value. You only see it once.
         </p>
         <p className="mt-3">
           2. Send a request. Authentication is HTTP Bearer:
@@ -73,10 +73,10 @@ e.g. lsk_live_AB12CD34_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`}</Pre>
         <H3>Scopes</H3>
         <ul className="ml-6 list-disc space-y-1 text-sm">
           <li>
-            <Code>admin</Code> — full CRUD across every resource. Server-to-server only.
+            <Code>admin</Code>, full CRUD across every resource. Server-to-server only.
           </li>
           <li>
-            <Code>forms-ingest</Code> — write-only on{" "}
+            <Code>forms-ingest</Code>. Write-only on{" "}
             <Code>POST /v1/forms/:id/submissions</Code>. Safe to embed in
             client-side JS. Only endpoint with open CORS.
           </li>
@@ -95,7 +95,7 @@ e.g. lsk_live_AB12CD34_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`}</Pre>
           Versions are date-coded. Pin a request with{" "}
           <Code>LeadStack-Version: 2026-06-15</Code>. If omitted, the
           request resolves to the version stamped on your key at mint time
-          — so existing integrations don&apos;t break when we release a new
+, so existing integrations don&apos;t break when we release a new
           version.
         </p>
         <p className="mt-3">
@@ -118,7 +118,7 @@ e.g. lsk_live_AB12CD34_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`}</Pre>
 }`}</Pre>
         <p className="mt-3">
           The <Code>request_id</Code> matches the <Code>X-Request-Id</Code>{" "}
-          response header. Quote it in support tickets — it&apos;s the index
+          response header. Quote it in support tickets. It&apos;s the index
           we look up in the request log.
         </p>
       </Section>
@@ -127,10 +127,10 @@ e.g. lsk_live_AB12CD34_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`}</Pre>
         <p>Per-key sliding windows, mode-namespaced (live + test separate budgets):</p>
         <ul className="ml-6 list-disc space-y-1 text-sm">
           <li>
-            <Code>admin</Code> — 60 req/min, 1,000 req/hour
+            <Code>admin</Code> - 60 req/min, 1,000 req/hour
           </li>
           <li>
-            <Code>forms-ingest</Code> — 300 req/min
+            <Code>forms-ingest</Code> - 300 req/min
           </li>
         </ul>
         <p className="mt-3">

@@ -245,7 +245,7 @@ export function QuoteBuilder({
     const snapshotted: QuoteLineItem = {
       id: newId(),
       description: product.description
-        ? `${product.name} — ${product.description}`
+        ? `${product.name}, ${product.description}`
         : product.name,
       quantity: 1,
       unitPrice: product.unitPriceCents / 100,
@@ -414,7 +414,7 @@ export function QuoteBuilder({
                 <>
                   {" "}
                   <br />
-                  Your catalog is empty —{" "}
+                  Your catalog is empty, {" "}
                   <a
                     href="../products"
                     className="text-primary underline-offset-4 hover:underline"
@@ -454,7 +454,7 @@ export function QuoteBuilder({
               <option value="">Add product from catalog…</option>
               {products.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} — {formatCurrency(p.unitPriceCents / 100, p.currency)}
+                  {p.name} - {formatCurrency(p.unitPriceCents / 100, p.currency)}
                 </option>
               ))}
             </select>

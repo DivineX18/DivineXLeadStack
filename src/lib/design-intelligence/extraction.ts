@@ -32,8 +32,8 @@ const CATEGORY_VALUES: DesignPrincipleCategory[] = [
 function buildExtractionPrompt(feedback: DesignFeedback, existingTexts: string[]): string {
   return (
     "You extract REUSABLE design principles for a landing-page design knowledge vault, from one operator's feedback on ONE funnel. " +
-    "Rules: (1) generalize away any client-specific business name, brand, exact copy, or numbers — the principle must be usable on a completely different business; " +
-    "(2) if the feedback is too specific/one-off to generalize into a real principle, say so — do not force one; " +
+    "Rules: (1) generalize away any client-specific business name, brand, exact copy, or numbers, the principle must be usable on a completely different business; " +
+    "(2) if the feedback is too specific/one-off to generalize into a real principle, say so. Do not force one; " +
     "(3) keep it to ONE sentence, concrete and actionable (e.g. 'Roofing pages perform better with a before/after section placed right after the offer', not 'improve visual quality'); " +
     "(4) pick the best category: visual_system (palette/typography/imagery style for a class of business), section_pattern (which section type/placement works), typography_system (type scale/pairing/rhythm), cro_principle (attention/trust/urgency/friction), archetype_note (a specific observation about one visual_archetype).\n\n" +
     `Funnel genre: ${feedback.genre}. Visual archetype: ${feedback.archetype ?? "unspecified"}.\n` +
@@ -41,7 +41,7 @@ function buildExtractionPrompt(feedback: DesignFeedback, existingTexts: string[]
     `What they changed/noticed: ${feedback.whatImproved}\n` +
     `Why it's better: ${feedback.why}\n\n` +
     (existingTexts.length > 0
-      ? `Existing vault principles (do not duplicate — if this feedback just reinforces one of these, respond with {"duplicate_of": "<exact existing text>"} instead):\n` +
+      ? `Existing vault principles (do not duplicate, if this feedback just reinforces one of these, respond with {"duplicate_of": "<exact existing text>"} instead):\n` +
         existingTexts.map((t) => `- ${t}`).join("\n") +
         "\n\n"
       : "") +

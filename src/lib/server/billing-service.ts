@@ -302,7 +302,7 @@ export async function updatePlanForAgency(input: {
   ) {
     if (!stripe || !plan.stripeProductId) {
       throw new BillingError(
-        "Stripe isn't configured — can't change the plan price.",
+        "Stripe isn't configured. Can't change the plan price.",
         503,
       );
     }
@@ -486,7 +486,7 @@ async function resolveStripePrice(
 ): Promise<string> {
   if (!plan.stripePriceId || !plan.stripeProductId) {
     throw new BillingError(
-      "This plan has no Stripe price — recreate it with Stripe configured.",
+      "This plan has no Stripe price, recreate it with Stripe configured.",
       500,
     );
   }
@@ -531,7 +531,7 @@ export async function assignPlanToSubAccount(input: {
   }
   const plan = await getPlanOrThrow(input.agencyId, input.planId);
   if (plan.status !== "active") {
-    throw new BillingError("This plan is archived — unarchive it or pick another.");
+    throw new BillingError("This plan is archived, unarchive it or pick another.");
   }
   if (input.specialPriceCents !== null) {
     if (
@@ -569,7 +569,7 @@ export async function assignPlanToSubAccount(input: {
     const item = sub.items.data[0];
     if (!item) {
       throw new BillingError(
-        "The Stripe subscription has no items — resolve it in the Stripe dashboard.",
+        "The Stripe subscription has no items, resolve it in the Stripe dashboard.",
         500,
       );
     }
@@ -740,7 +740,7 @@ export async function mintCheckoutLink(input: {
   }
   if (billing.status === "active") {
     throw new BillingError(
-      "This client already has an active subscription — use the billing portal for card changes.",
+      "This client already has an active subscription. Use the billing portal for card changes.",
     );
   }
   const { token, hash } = issueCheckoutToken(input.subAccountId);
@@ -885,7 +885,7 @@ export async function handleSubAccountPlanCheckoutCompleted(
       const { skippedMetaGates } = await applyFeatureGates(subAccountId, gates);
       if (skippedMetaGates.length > 0) {
         console.warn(
-          `[billing] plan ${planId} wants Meta gates but the deployment lacks META_APP_ID/SECRET — left off for ${subAccountId}`,
+          `[billing] plan ${planId} wants Meta gates but the deployment lacks META_APP_ID/SECRET, left off for ${subAccountId}`,
         );
       }
     }

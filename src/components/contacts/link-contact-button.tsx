@@ -104,7 +104,7 @@ export function LinkContactButton({ contact }: { contact: Contact }) {
             <DialogTitle>Link to an existing contact</DialogTitle>
             <DialogDescription>
               This contact came from Facebook/Instagram and has no email or
-              phone. Pick the existing contact who is the same person — their
+              phone. Pick the existing contact who is the same person, their
               Messenger/Instagram conversation, messages, and any linked records
               move onto that contact, and this duplicate is removed. This
               can&apos;t be undone.

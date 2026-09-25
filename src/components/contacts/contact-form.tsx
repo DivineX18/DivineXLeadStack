@@ -17,7 +17,7 @@ import type { CustomFieldDef, CustomFieldValue } from "@/types/custom-fields";
 import type { Contact, ContactFormData, ContactSource } from "@/types/contacts";
 
 const SOURCES: { value: ContactSource; label: string }[] = [
-  { value: "", label: "—" },
+  { value: "", label: "-" },
   { value: "website-form", label: "Website Form" },
   { value: "web-chat", label: "Web Chat" },
   { value: "website", label: "Website (other)" },

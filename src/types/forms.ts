@@ -199,7 +199,7 @@ export function contactFormSettings(): FormSettings {
   return {
     ...defaultFormSettings(),
     thankYouMessage:
-      "Thanks for reaching out — we'll get back to you shortly.",
+      "Thanks for reaching out, we'll get back to you shortly.",
     autoTags: ["form", "contact"],
   };
 }
@@ -208,10 +208,10 @@ export function defaultFormSettings(): FormSettings {
   return {
     pipelineStageId: "new",
     autoTags: ["form"],
-    thankYouMessage: "Thanks — we'll be in touch shortly.",
+    thankYouMessage: "Thanks, we'll be in touch shortly.",
     redirectUrl: "",
     createDeal: false,
-    dealTitleTemplate: "New lead — {name}",
+    dealTitleTemplate: "New lead, {name}",
     dealValue: 0,
     dealCurrency: "USD",
     appearance: defaultFormAppearance(),

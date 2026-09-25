@@ -844,7 +844,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const lines = snap.docs.map((d) => {
         const data = d.data();
         const gates = enabledGateLabels(data);
-        return `- ${data.name ?? "(unnamed)"} — id: ${d.id}${
+        return `- ${data.name ?? "(unnamed)"}, id: ${d.id}${
           data.accountNumber ? `, account #${data.accountNumber}` : ""
         }. Enabled gates: ${gates.length ? gates.join(", ") : "none"}.`;
       });
@@ -861,7 +861,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     menuLabel:
       "Get record counts (contacts, deals, tasks, events, quotes) for one sub-account",
     description:
-      "Count the records inside one of your sub-accounts — contacts, deals, tasks, calendar events, and quotes. Use for questions like 'how many contacts does Acme have?'. Resolve the sub-account's id with list_sub_accounts first — never guess ids.",
+      "Count the records inside one of your sub-accounts, contacts, deals, tasks, calendar events, and quotes. Use for questions like 'how many contacts does Acme have?'. Resolve the sub-account's id with list_sub_accounts first, never guess ids.",
     parameters: {
       type: "object",
       properties: {
@@ -883,7 +883,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         return {
           ok: false,
           error:
-            "the sub-account id is required — I need to look it up first (list_sub_accounts)",
+            "the sub-account id is required. I need to look it up first (list_sub_accounts)",
         };
       }
       return {
@@ -928,7 +928,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     menuLabel:
       "Enable or disable a feature (broadcasts, API access, WhatsApp, Community, …) for one of your sub-accounts",
     description:
-      "Enable or disable one feature gate on one sub-account in this agency. Resolve the sub-account's id with list_sub_accounts first — never guess ids. The dedicated email sending domain gate can't be changed here (it has a destructive tear-down); point the user at the sub-account's Manage dialog for that one.",
+      "Enable or disable one feature gate on one sub-account in this agency. Resolve the sub-account's id with list_sub_accounts first, never guess ids. The dedicated email sending domain gate can't be changed here (it has a destructive tear-down); point the user at the sub-account's Manage dialog for that one.",
     parameters: {
       type: "object",
       properties: {
@@ -960,7 +960,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         return {
           ok: false,
           error:
-            "the sub-account id is required — I need to look it up first (list_sub_accounts)",
+            "the sub-account id is required. I need to look it up first (list_sub_accounts)",
         };
       }
       const gate = str(raw, "gate");
@@ -1038,7 +1038,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         slug: {
           type: "string",
           description:
-            "Optional URL slug — lowercase letters, numbers, and dashes only. Omit to auto-derive.",
+            "Optional URL slug, lowercase letters, numbers, and dashes only. Omit to auto-derive.",
         },
         timezone: {
           type: "string",
@@ -1078,7 +1078,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       });
       const billingNote =
         res.billingStatus === "pending" && res.checkoutUrl
-          ? ` This agency's default plan was auto-assigned — the workspace is locked until the client pays: ${res.checkoutUrl}`
+          ? ` This agency's default plan was auto-assigned, the workspace is locked until the client pays: ${res.checkoutUrl}`
           : "";
       return {
         resultText: `Created sub-account “${res.name}” (#${res.accountNumber}). You'll find it under Agency → Sub-accounts.${billingNote}`,
@@ -1095,7 +1095,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     readonly: true,
     menuLabel: "Check which workspaces you can access and your role in each",
     description:
-      "Look up which workspaces (sub-accounts) the signed-in user can access and their role in each, plus whether they have agency-level access. Use for questions like 'do I have access to X?', 'what workspaces can I switch to?', or anything about the user's own permissions. It only ever reflects the current user — it cannot look up anyone else, and it cannot change anything.",
+      "Look up which workspaces (sub-accounts) the signed-in user can access and their role in each, plus whether they have agency-level access. Use for questions like 'do I have access to X?', 'what workspaces can I switch to?', or anything about the user's own permissions. It only ever reflects the current user. It cannot look up anyone else, and it cannot change anything.",
     parameters: {
       type: "object",
       properties: {},
@@ -1117,10 +1117,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         const marker = d.id === ctx.subAccountId ? " ← this workspace" : "";
         return `- ${data.name ?? d.id}${
           data.accountNumber ? ` (#${data.accountNumber})` : ""
-        } — role: ${data.role ?? "member"}${marker}`;
+        }, role: ${data.role ?? "member"}${marker}`;
       });
       const agencyLine = isAgencyOwner
-        ? "The user is the AGENCY OWNER — full access to every sub-account in the agency (even any not listed above) plus the Agency area (feature gates, creating sub-accounts, agency settings)."
+        ? "The user is the AGENCY OWNER, full access to every sub-account in the agency (even any not listed above) plus the Agency area (feature gates, creating sub-accounts, agency settings)."
         : "The user does NOT have agency-level access. Only their agency owner can see agency-wide data (e.g. the full list or count of sub-accounts) or change feature gates. To reach another workspace not listed above, they'd need the agency owner to invite them.";
       return {
         resultText: `Workspaces this user can access (${snap.size}):\n${
@@ -1136,7 +1136,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     readonly: true,
     menuLabel: "Switch you to another workspace you belong to (via an open button)",
     description:
-      "Give the user a button to open another workspace (sub-account) they already have access to — use when they ask to switch/go/move to a different workspace. This never grants access: it only resolves against workspaces the user is already a member of. You cannot switch them yourself; the button does it.",
+      "Give the user a button to open another workspace (sub-account) they already have access to. Use when they ask to switch/go/move to a different workspace. This never grants access: it only resolves against workspaces the user is already a member of. You cannot switch them yourself; the button does it.",
     parameters: {
       type: "object",
       properties: {
@@ -1190,13 +1190,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const target = matches[0];
       if (target.id === ctx.subAccountId) {
         return {
-          resultText: `“${target.name}” is the workspace the user is already in — no switch needed.`,
+          resultText: `“${target.name}” is the workspace the user is already in, no switch needed.`,
         };
       }
       // This resultText is USER-facing: the chat route short-circuits on
       // `navigate` and shows it directly with the button.
       return {
-        resultText: `You have access to “${target.name}” — click below to switch. You'll land in that workspace's own assistant, which only sees that client's data.`,
+        resultText: `You have access to “${target.name}”. Click below to switch. You'll land in that workspace's own assistant, which only sees that client's data.`,
         navigate: {
           href: `/sa/${target.id}/ai-suite`,
           label: `Open ${target.name} →`,
@@ -1264,7 +1264,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           data.phone && `phone: ${data.phone}`,
           data.company && `company: ${data.company}`,
         ].filter(Boolean);
-        return `- ${data.name ?? "(unnamed)"} — id: ${d.id}${
+        return `- ${data.name ?? "(unnamed)"}, id: ${d.id}${
           bits.length ? ` (${bits.join(", ")})` : ""
         }`;
       });
@@ -1279,7 +1279,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     requiredRole: "subAccountMember",
     readonly: true,
     menuLabel:
-      "Get a workspace snapshot — pipeline by stage with values, contacts, open/overdue tasks, upcoming events",
+      "Get a workspace snapshot, pipeline by stage with values, contacts, open/overdue tasks, upcoming events",
     parameters: {
       type: "object",
       properties: {},
@@ -1365,7 +1365,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     readonly: true,
     menuLabel: "Search this workspace's deals (by title or pipeline stage)",
     description:
-      "Search this sub-account's deals by title fragment and/or pipeline stage. Use to answer questions about deals and ALWAYS use it to resolve a deal's id before move_deal_stage — never guess ids.",
+      "Search this sub-account's deals by title fragment and/or pipeline stage. Use to answer questions about deals and ALWAYS use it to resolve a deal's id before move_deal_stage, never guess ids.",
     parameters: {
       type: "object",
       properties: {
@@ -1417,7 +1417,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       }
       const lines = matches.map((d) => {
         const data = d.data();
-        return `- ${data.title} — id: ${d.id}, stage: ${
+        return `- ${data.title}, id: ${d.id}, stage: ${
           getStage(data.stageId as PipelineStageId).label
         }, value: ${fmtMoney(
           typeof data.value === "number" ? data.value : 0,
@@ -1433,7 +1433,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     requiredRole: "subAccountMember",
     menuLabel: "Create a deal for a contact (title, value, pipeline stage)",
     description:
-      "Create a deal on the pipeline for an existing contact. Resolve the contact's id with find_contacts first — never guess ids. Ask for the deal value if the user didn't give one.",
+      "Create a deal on the pipeline for an existing contact. Resolve the contact's id with find_contacts first, never guess ids. Ask for the deal value if the user didn't give one.",
     parameters: {
       type: "object",
       properties: {
@@ -1477,7 +1477,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       if (!contactId) {
         return {
           ok: false,
-          error: "the contact is required — I need to find them first (find_contacts)",
+          error: "the contact is required. I need to find them first (find_contacts)",
         };
       }
       const currency = (str(raw, "currency") || "USD").toUpperCase();
@@ -1540,7 +1540,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     requiredRole: "subAccountMember",
     menuLabel: "Move a deal to another pipeline stage (including Won / Lost)",
     description:
-      "Move an existing deal to a different pipeline stage. Resolve the deal's id with find_deals first — never guess ids. When moving to 'lost', ask the user for a short lost reason.",
+      "Move an existing deal to a different pipeline stage. Resolve the deal's id with find_deals first, never guess ids. When moving to 'lost', ask the user for a short lost reason.",
     parameters: {
       type: "object",
       properties: {
@@ -1570,7 +1570,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       if (!dealId) {
         return {
           ok: false,
-          error: "the deal id is required — I need to find it first (find_deals)",
+          error: "the deal id is required. I need to find it first (find_deals)",
         };
       }
       const stage = str(raw, "stage");
@@ -1622,7 +1622,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     requiredRole: "subAccountMember",
     menuLabel: "Edit an existing deal's title, value, or priority",
     description:
-      "Update an existing deal's title, value, currency, or priority. Resolve the deal's id with find_deals first — never guess ids. To move a deal to a different pipeline stage, use move_deal_stage instead — this tool does not change stage.",
+      "Update an existing deal's title, value, currency, or priority. Resolve the deal's id with find_deals first, never guess ids. To move a deal to a different pipeline stage, use move_deal_stage instead. This tool does not change stage.",
     parameters: {
       type: "object",
       properties: {
@@ -1647,7 +1647,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       if (!dealId) {
         return {
           ok: false,
-          error: "the deal id is required — I need to find it first (find_deals)",
+          error: "the deal id is required. I need to find it first (find_deals)",
         };
       }
       const rawValue = (raw as Record<string, unknown>)?.value;
@@ -1741,7 +1741,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           d.lastDeliveryStatus != null
             ? `last delivery HTTP ${d.lastDeliveryStatus}`
             : "no deliveries yet";
-        return `- ${d.url} — ${d.mode}, ${d.status}${
+        return `- ${d.url}, ${d.mode}, ${d.status}${
           d.pausedReason ? ` (${d.pausedReason})` : ""
         }. Events: ${events}. ${last}.${
           d.description ? ` Label: ${d.description}.` : ""
@@ -1759,7 +1759,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     menuLabel:
       "Set up an outbound webhook to n8n / Make / Zapier (with a live test to verify it)",
     description:
-      "Create an outbound webhook subscription in this sub-account: events here get POSTed to the user's endpoint (n8n, Make, Zapier, custom). Gather two things conversationally before calling: (1) the trigger — which event(s), all from ONE category (contacts, deals, tasks & events, forms, quotes, bookings, AI agents, conversations); offer the closest event types when they describe a goal like 'when a new lead comes in' → contact.created. (2) the destination URL from their automation tool. n8n gotcha — n8n shows TWO URLs per webhook node: a Test URL containing /webhook-test/ (only works while the n8n editor is listening) and a Production URL containing /webhook/ (only works when the workflow is Active). If the user pastes a /webhook-test/ URL, point this out and ask whether they want the Production URL for a permanent hook (same address with /webhook/ instead) — only proceed with the test URL if they say they're just testing right now. After the user confirms, the webhook is created AND a signed test event is sent immediately to verify the endpoint is live.",
+      "Create an outbound webhook subscription in this sub-account: events here get POSTed to the user's endpoint (n8n, Make, Zapier, custom). Gather two things conversationally before calling: (1) the trigger, which event(s), all from ONE category (contacts, deals, tasks & events, forms, quotes, bookings, AI agents, conversations); offer the closest event types when they describe a goal like 'when a new lead comes in' → contact.created. (2) the destination URL from their automation tool. n8n gotcha. N8n shows TWO URLs per webhook node: a Test URL containing /webhook-test/ (only works while the n8n editor is listening) and a Production URL containing /webhook/ (only works when the workflow is Active). If the user pastes a /webhook-test/ URL, point this out and ask whether they want the Production URL for a permanent hook (same address with /webhook/ instead), only proceed with the test URL if they say they're just testing right now. After the user confirms, the webhook is created AND a signed test event is sent immediately to verify the endpoint is live.",
     parameters: {
       type: "object",
       properties: {
@@ -1772,7 +1772,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           type: "array",
           items: { type: "string", enum: [...WEBHOOK_EVENT_TYPES] },
           description:
-            "Event types to subscribe to — at least one, all from the same category.",
+            "Event types to subscribe to, at least one, all from the same category.",
         },
         description: {
           type: "string",
@@ -1808,7 +1808,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           ok: false,
           error: `all events must be from one category (these span ${[
             ...new Set(events.map((e) => categoryOf(e))),
-          ].join(" + ")}) — create one webhook per category`,
+          ].join(" + ")}). Create one webhook per category`,
         };
       }
       const mode = str(raw, "mode") || "live";
@@ -1831,7 +1831,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       ).join(", ")}. A test event will be sent to verify it.`;
       const info = detectAutomationUrl(args.url as string);
       return info.tool === "n8n" && info.n8nKind === "test"
-        ? `${base} ⚠️ This is an n8n TEST URL — it only receives events while the n8n editor is listening. For an always-on hook, use the Production URL instead (same address with /webhook/ instead of /webhook-test/).`
+        ? `${base} ⚠️ This is an n8n TEST URL. It only receives events while the n8n editor is listening. For an always-on hook, use the Production URL instead (same address with /webhook/ instead of /webhook-test/).`
         : base;
     },
     execute: async (ctx, args) => {
@@ -1867,7 +1867,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const isN8nTestUrl = urlInfo.tool === "n8n" && urlInfo.n8nKind === "test";
       let verification: string;
       if (test.ok) {
-        verification = `✅ Verified live — a test “${test.type}” event was delivered and your endpoint responded ${test.httpStatus}.`;
+        verification = `✅ Verified live, a test “${test.type}” event was delivered and your endpoint responded ${test.httpStatus}.`;
         if (isN8nTestUrl) {
           verification += ` ⚠️ Heads-up: this is n8n's TEST URL, so it only responded because the n8n editor is listening right now. Once you stop listening, deliveries will silently fail. For a permanent hook: activate the workflow in n8n, then create a webhook to the Production URL (${n8nProductionUrl(
             doc.url,
@@ -1878,11 +1878,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           test.error ?? `HTTP ${test.httpStatus}`
         }). Real events will still be attempted with retries.`;
         if (isN8nTestUrl) {
-          verification += ` This is n8n's TEST URL — it only responds while the n8n editor is in “Listen for test event” mode. Click “Execute workflow” in n8n and send another test from Settings → Webhooks, or (better, for an always-on hook) use the Production URL instead: ${n8nProductionUrl(
+          verification += ` This is n8n's TEST URL. It only responds while the n8n editor is in “Listen for test event” mode. Click “Execute workflow” in n8n and send another test from Settings → Webhooks, or (better, for an always-on hook) use the Production URL instead: ${n8nProductionUrl(
             doc.url,
-          )} — the workflow must be set to Active.`;
+          )}, the workflow must be set to Active.`;
         } else if (urlInfo.tool === "n8n") {
-          verification += ` This looks like an n8n Production URL — those only respond once the workflow's Active toggle is ON in n8n. Activate it, then send another test from Settings → Webhooks.`;
+          verification += ` This looks like an n8n Production URL. Those only respond once the workflow's Active toggle is ON in n8n. Activate it, then send another test from Settings → Webhooks.`;
         } else {
           verification += ` Check the URL is correct and your workflow is listening, then send another test from Settings → Webhooks.`;
         }
@@ -1891,7 +1891,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       return {
         resultText: `Created the webhook to ${doc.url} for ${(
           args.events as string[]
-        ).join(", ")}.\n${verification}\nSigning secret (shown once — copy it now if you want to verify signatures; n8n/Make work fine without it): ${signingSecret}\nManage it anytime under Settings → Webhooks.`,
+        ).join(", ")}.\n${verification}\nSigning secret (shown once. Copy it now if you want to verify signatures; n8n/Make work fine without it): ${signingSecret}\nManage it anytime under Settings → Webhooks.`,
         ref: { kind: "webhookSubscription", id: doc.id },
       };
     },
@@ -1903,7 +1903,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     menuLabel:
       "Set up a new community with its first course and lesson (returns the live URLs)",
     description:
-      "Set up a new community (a Skool-style group with a feed + classroom) in this sub-account, including its first course and first lesson, and return the live URLs. Gather conversationally before calling: the community's name, who can join (open, or approval-required), an optional one-line tagline, the first lesson's title, and optionally a YouTube/Vimeo video URL and/or lesson text. Everything is created PUBLISHED and live on confirm. Free-to-join communities only — for a paid community, point the user at Create (pricing needs PayPal setup).",
+      "Set up a new community (a Skool-style group with a feed + classroom) in this sub-account, including its first course and first lesson, and return the live URLs. Gather conversationally before calling: the community's name, who can join (open, or approval-required), an optional one-line tagline, the first lesson's title, and optionally a YouTube/Vimeo video URL and/or lesson text. Everything is created PUBLISHED and live on confirm. Free-to-join communities only, for a paid community, point the user at Create (pricing needs PayPal setup).",
     parameters: {
       type: "object",
       properties: {
@@ -1972,7 +1972,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         args.joinPolicy === "approval" ? "join requests need approval" : "open to join"
       }, free) with a published “${args.courseTitle}” course and first lesson “${
         args.lessonTitle
-      }”${args.lessonVideoUrl ? " (with video)" : ""} — live immediately.`,
+      }”${args.lessonVideoUrl ? " (with video)" : ""}, live immediately.`,
     execute: async (ctx, args) => {
       const subSnap = await getAdminDb()
         .doc(`subAccounts/${ctx.subAccountId!}`)
@@ -2032,12 +2032,12 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const communityUrl = `${base}/c/${ctx.subAccountId}/${group.slug}/community`;
       const lessonUrl = `${base}/c/${ctx.subAccountId}/${group.slug}/classroom/${course.id}/${lesson.id}`;
       const videoNote = videoError
-        ? " (⚠️ the video URL wasn't recognized — YouTube/Vimeo links only; add it in the classroom editor)"
+        ? " (⚠️ the video URL wasn't recognized. YouTube/Vimeo links only; add it in the classroom editor)"
         : args.lessonVideoUrl
           ? " with video"
           : "";
       return {
-        resultText: `Your community “${group.name}” is live.\nCommunity feed: ${communityUrl}\nFirst lesson “${lesson.title}”${videoNote}: ${lessonUrl}\nMembers sign in via a magic link (tied to their contact record) — share the community URL to invite them${
+        resultText: `Your community “${group.name}” is live.\nCommunity feed: ${communityUrl}\nFirst lesson “${lesson.title}”${videoNote}: ${lessonUrl}\nMembers sign in via a magic link (tied to their contact record). Share the community URL to invite them${
           args.joinPolicy === "approval" ? "; join requests will wait for your approval" : ""
         }. Manage everything under Create.`,
         ref: { kind: "communityGroup", id: group.id },
@@ -2198,7 +2198,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     requiredRole: "subAccountMember",
     menuLabel: "Edit an existing contact's details or tags",
     description:
-      "Update an existing contact's name, email, phone, company, or tags. Resolve the contact's id with find_contacts first — never guess ids. Only send the fields that are actually changing; omitted fields are left as-is. Setting tags REPLACES the full tag list — if the user says 'add a tag', combine it with the contact's existing tags from find_contacts rather than sending just the new one.",
+      "Update an existing contact's name, email, phone, company, or tags. Resolve the contact's id with find_contacts first, never guess ids. Only send the fields that are actually changing; omitted fields are left as-is. Setting tags REPLACES the full tag list, if the user says 'add a tag', combine it with the contact's existing tags from find_contacts rather than sending just the new one.",
     parameters: {
       type: "object",
       properties: {
@@ -2228,7 +2228,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       if (!contactId) {
         return {
           ok: false,
-          error: "the contact id is required — I need to find it first (find_contacts)",
+          error: "the contact id is required. I need to find it first (find_contacts)",
         };
       }
       const email = str(raw, "email").toLowerCase();
@@ -2298,7 +2298,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     requiredRole: "subAccountMember",
     menuLabel: "Create a task, with an optional due date and linked contact",
     description:
-      "Create a task (to-do) in this sub-account, optionally with a due date and linked to a contact. Use when the user asks to add/create a task or reminder. To link a contact, resolve their id with find_contacts first — never guess ids.",
+      "Create a task (to-do) in this sub-account, optionally with a due date and linked to a contact. Use when the user asks to add/create a task or reminder. To link a contact, resolve their id with find_contacts first, never guess ids.",
     parameters: {
       type: "object",
       properties: {
@@ -2389,9 +2389,9 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     level: "sub-account",
     requiredRole: "subAccountMember",
     readonly: true,
-    menuLabel: "See your open tasks — today, overdue, or upcoming",
+    menuLabel: "See your open tasks, today, overdue, or upcoming",
     description:
-      "List this workspace's open (incomplete) tasks, filtered to today / overdue / upcoming, or everything open. Dates are evaluated in the workspace's timezone. Use for questions like 'what's on today?', 'anything overdue?', and ALWAYS use it to resolve a task's id before complete_task — never guess ids. For today's calendar, also call find_events.",
+      "List this workspace's open (incomplete) tasks, filtered to today / overdue / upcoming, or everything open. Dates are evaluated in the workspace's timezone. Use for questions like 'what's on today?', 'anything overdue?', and ALWAYS use it to resolve a task's id before complete_task, never guess ids. For today's calendar, also call find_events.",
     parameters: {
       type: "object",
       properties: {
@@ -2462,7 +2462,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         return {
           resultText:
             args.filter === "all-open"
-              ? "No open tasks — all clear."
+              ? "No open tasks, all clear."
               : `No ${args.filter} tasks.`,
         };
       }
@@ -2477,7 +2477,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         shown.map((r) => r.contactId),
       );
       const line = (r: Row) =>
-        `- ${r.title} — id: ${r.id}${
+        `- ${r.title}, id: ${r.id}${
           r.due
             ? `, due ${r.due}${bucketOf(r) === "overdue" ? " (OVERDUE)" : ""}`
             : ", no due date"
@@ -2508,7 +2508,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       }
       const more =
         wanted.length > shown.length
-          ? `\n(+${wanted.length - shown.length} more — see the Tasks page)`
+          ? `\n(+${wanted.length - shown.length} more. See the Tasks page)`
           : "";
       return {
         resultText: `Open tasks (${wanted.length}, dates in ${tz}):\n${body}${more}`,
@@ -2521,7 +2521,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     requiredRole: "subAccountMember",
     menuLabel: "Mark a task as done",
     description:
-      "Mark one of this workspace's tasks as completed. Resolve the task's id with find_tasks first — never guess ids. This fires the same task.completed webhook + contact-timeline activity as ticking it off on the Tasks page.",
+      "Mark one of this workspace's tasks as completed. Resolve the task's id with find_tasks first, never guess ids. This fires the same task.completed webhook + contact-timeline activity as ticking it off on the Tasks page.",
     parameters: {
       type: "object",
       properties: {
@@ -2542,7 +2542,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       if (!taskId) {
         return {
           ok: false,
-          error: "the task id is required — I need to find it first (find_tasks)",
+          error: "the task id is required. I need to find it first (find_tasks)",
         };
       }
       return { ok: true, args: { taskId, taskTitle: str(raw, "taskTitle") } };
@@ -2558,7 +2558,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const title = (snap.data()?.title as string) || (args.taskTitle as string);
       if (snap.data()?.completed === true) {
         return {
-          resultText: `“${title}” is already marked done — nothing to change.`,
+          resultText: `“${title}” is already marked done, nothing to change.`,
           ref: { kind: "task", id: snap.id },
         };
       }
@@ -2579,7 +2579,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     level: "sub-account",
     requiredRole: "subAccountMember",
     readonly: true,
-    menuLabel: "See what's on the calendar — today, this week, or upcoming",
+    menuLabel: "See what's on the calendar, today, this week, or upcoming",
     description:
       "List this workspace's upcoming calendar events (today / next 7 days / everything upcoming), in the workspace's timezone. Use for questions like 'what's on today?' or 'what does my week look like?'. Pair with find_tasks for a full daily agenda.",
     parameters: {
@@ -2663,7 +2663,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         const startAt = toDate(data.startAt);
         const contactId =
           typeof data.contactId === "string" ? data.contactId : null;
-        return `- ${data.title ?? "(untitled)"} — ${
+        return `- ${data.title ?? "(untitled)"}, ${
           startAt ? fmtInTz(startAt, tz) : "(no time)"
         }${data.location ? `, at ${data.location}` : ""}${
           contactId ? `, contact: ${names.get(contactId) ?? contactId}` : ""
@@ -2671,7 +2671,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       });
       const more =
         rows.length > shown.length
-          ? `\n(+${rows.length - shown.length} more — see the Calendar page)`
+          ? `\n(+${rows.length - shown.length} more. See the Calendar page)`
           : "";
       return {
         resultText: `Upcoming events (${rows.length}, times in ${tz}):\n${lines.join("\n")}${more}`,
@@ -2685,7 +2685,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     menuLabel:
       "Book a calendar event (date + time, optionally linked to a contact)",
     description:
-      "Create a calendar event in this workspace. The date and time are interpreted in the WORKSPACE's timezone. Convert relative dates ('tomorrow', 'next Friday') using today's date from the system prompt, and ask for a time if the user didn't give one. To link a contact, resolve their id with find_contacts first — never guess ids.",
+      "Create a calendar event in this workspace. The date and time are interpreted in the WORKSPACE's timezone. Convert relative dates ('tomorrow', 'next Friday') using today's date from the system prompt, and ask for a time if the user didn't give one. To link a contact, resolve their id with find_contacts first, never guess ids.",
     parameters: {
       type: "object",
       properties: {
@@ -2829,13 +2829,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             (data.displayName as string) || (data.email as string) || d.id;
           const email =
             data.displayName && data.email ? ` (${data.email})` : "";
-          return `- ${who}${email} — role: ${data.role ?? "member"}${
+          return `- ${who}${email}, role: ${data.role ?? "member"}${
             data.status && data.status !== "active" ? `, ${data.status}` : ""
           }`;
         });
       const inviteLines = invitesSnap.docs.map((d) => {
         const data = d.data();
-        return `- ${data.email} — invited as ${
+        return `- ${data.email}, invited as ${
           data.subAccountRole ?? "collaborator"
         }, pending (hasn't signed up yet)`;
       });
@@ -2859,7 +2859,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     menuLabel:
       "Invite someone to this workspace by email (as admin or collaborator)",
     description:
-      "Add someone (by email) to this sub-account as 'admin' (manages members + settings) or 'collaborator' (works the data, no member management). If the email is NEW, they get an email with a signup link and the invite stays pending until they sign up. If the email ALREADY has an account, they're added to this workspace directly (nothing to accept) and emailed a notification — this is how someone already in another sub-account gets added here. Re-adding an existing member just updates their role. Ask which role the user wants if they didn't say; default to collaborator when they just say 'invite'.",
+      "Add someone (by email) to this sub-account as 'admin' (manages members + settings) or 'collaborator' (works the data, no member management). If the email is NEW, they get an email with a signup link and the invite stays pending until they sign up. If the email ALREADY has an account, they're added to this workspace directly (nothing to accept) and emailed a notification. This is how someone already in another sub-account gets added here. Re-adding an existing member just updates their role. Ask which role the user wants if they didn't say; default to collaborator when they just say 'invite'.",
     parameters: {
       type: "object",
       properties: {
@@ -2913,7 +2913,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       if (res.added) {
         if (res.alreadyMember) {
           return {
-            resultText: `${res.email} was already a member of “${res.subAccountName}” — their role is now ${roleLabel}.`,
+            resultText: `${res.email} was already a member of “${res.subAccountName}”. Their role is now ${roleLabel}.`,
             ref: { kind: "subAccount", id: res.subAccountId },
           };
         }
@@ -2928,13 +2928,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
 
       // New email → pending invite until they sign up.
       const reusedNote = res.reused
-        ? " There was already a pending invite for them — it's been updated to this role and re-sent."
+        ? " There was already a pending invite for them, it's been updated to this role and re-sent."
         : "";
       const delivery = res.mailed
         ? `The invite email is on its way.`
         : `No email was sent (${
             res.mailError ? "the send failed" : "email isn't configured on this deployment"
-          }) — share this signup link with them directly: ${res.inviteUrl}`;
+          }). Share this signup link with them directly: ${res.inviteUrl}`;
       return {
         resultText: `Invited ${res.email} to “${res.subAccountName}” as ${roleLabel}.${reusedNote} ${delivery} Pending invites are managed under Settings → Members.`,
         ref: { kind: "invite", id: res.inviteId },
@@ -2949,7 +2949,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     menuLabel:
       "Read a reference website's content to inform a site you're drafting",
     description:
-      "Fetch a public web page's main content (markdown) so you can draft website copy, services, and positioning in a similar style — use this BEFORE create_website whenever the user names a reference site ('make it like fitness.com'). Also useful to read the client's existing site. Returns the page text; if the deployment has no Firecrawl key or the page can't be read, you'll get a note saying so — then draft from the user's description instead. Never quote the reference site verbatim in the new site's copy.",
+      "Fetch a public web page's main content (markdown) so you can draft website copy, services, and positioning in a similar style. Use this BEFORE create_website whenever the user names a reference site ('make it like fitness.com'). Also useful to read the client's existing site. Returns the page text; if the deployment has no Firecrawl key or the page can't be read, you'll get a note saying so, then draft from the user's description instead. Never quote the reference site verbatim in the new site's copy.",
     parameters: {
       type: "object",
       properties: {
@@ -2992,7 +2992,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       } catch (err) {
         const status = err instanceof FirecrawlError ? ` (${err.status})` : "";
         return {
-          resultText: `That page couldn't be read${status} — it may be blocked or unavailable. Draft the website from the user's description instead.`,
+          resultText: `That page couldn't be read${status}. It may be blocked or unavailable. Draft the website from the user's description instead.`,
         };
       }
     },
@@ -3005,7 +3005,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     menuLabel:
       "Check what's already known for a website draft (business details, defaults, site slots)",
     description:
-      "Look up what this workspace already knows before drafting a website: the business name, saved contact email/phone, the booking link (the default CTA), how many of the site slots are used, and whether the website builder is enabled/configured. ALWAYS call this before create_website (and before asking the user questions) so you only ask for what's genuinely missing — never ask for something this lookup already provides.",
+      "Look up what this workspace already knows before drafting a website: the business name, saved contact email/phone, the booking link (the default CTA), how many of the site slots are used, and whether the website builder is enabled/configured. ALWAYS call this before create_website (and before asking the user questions) so you only ask for what's genuinely missing, never ask for something this lookup already provides.",
     parameters: { type: "object", properties: {}, additionalProperties: false },
     validate: () => ({ ok: true, args: {} }),
     summarize: () => "Check the workspace's website prefill details.",
@@ -3035,18 +3035,18 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const maxSites = effectiveWebsiteCap(sub);
       const maxSitesLabel = Number.isFinite(maxSites) ? String(maxSites) : "unlimited";
       const lines = [
-        `Website builder enabled by agency: ${gateOn ? "yes" : "NO — the agency owner must enable it before any build (tell the user this up front)"}`,
-        `Builder configured on this deployment: ${gitpageIsConfigured() ? "yes" : "NO (GITPAGE_API_KEY missing — builds will fail)"}`,
+        `Website builder enabled by agency: ${gateOn ? "yes" : "NO, the agency owner must enable it before any build (tell the user this up front)"}`,
+        `Builder configured on this deployment: ${gitpageIsConfigured() ? "yes" : "NO (GITPAGE_API_KEY missing. Builds will fail)"}`,
         `Site slots used: ${sitesSnap.size} of ${maxSitesLabel}${
           sitesSnap.size >= maxSites
-            ? " — FULL, one must be removed first"
+            ? ". FULL, one must be removed first"
             : ""
         }`,
-        `Business name: ${businessName ?? "(unknown — ask the user)"}`,
-        `Contact email (default for the site): ${contact.email ?? "(none saved — ask the user)"}`,
+        `Business name: ${businessName ?? "(unknown. Ask the user)"}`,
+        `Contact email (default for the site): ${contact.email ?? "(none saved. Ask the user)"}`,
         `Contact phone: ${contact.phone ?? "(none saved)"}`,
-        `Booking link (default CTA): ${bookingLink ?? "(none saved — ask the user where the main button should go)"}`,
-        "No street address is stored anywhere — always ask the user for it when a niche template or contact page is wanted.",
+        `Booking link (default CTA): ${bookingLink ?? "(none saved. Ask the user where the main button should go)"}`,
+        "No street address is stored anywhere, always ask the user for it when a niche template or contact page is wanted.",
       ];
       return { resultText: lines.join("\n") };
     },
@@ -3058,9 +3058,9 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     menuLabel:
       "Create and build a website for this workspace (via the website builder)",
     description:
-      "Create a website and submit a REAL build via the website builder — use when the user asks to build/make/create a website or landing page. Workflow: (1) call get_website_prefill FIRST — it tells you the business name, saved contact email, default CTA link, and remaining site slots, so you only ask the user for what's genuinely missing; (2) if they name a reference site, call research_website_reference and mirror its tone/services WITHOUT copying text; (3) pick the closest niche template — gym_fitness for gyms/trainers, home_services for trades (plumbers, electricians, cleaners), real_estate for agents — or 'none' for anything else; (4) NICHE SITES NEED THE BUSINESS'S STREET ADDRESS (street + city) — ask for it if unknown, or use niche 'none' without a contact page; (5) features and benefits are each EXACTLY 3 short comma-separated phrases (max 60 chars total); (6) build_type 'vsl' is a single-page video funnel — only use it when the user has a video embed URL; default 'local'. Contact email and the main button link default from the workspace's saved details when omitted. Confirming spends one of the agency's website builds; the site goes live in ~1–3 minutes on the Website page." +
-      " (7) WRITE LIKE A DIRECT-RESPONSE COPYWRITER (think Russell Brunson / Jim Edwards / Dan Kennedy), NOT A CORPORATE BROCHURE. gitpage's own template defaults to generic filler ('Our comprehensive approach combines cutting-edge methodology with timeless wisdom') when a site is built around vague input — your job is to give it something specific enough that it can't fall back to that. hero_statement should hook with the reader's actual problem, not describe the business in the abstract — a sharp question or a concrete pain beats a mission statement every time. features/benefits phrases must name a specific outcome or mechanism, never an adjective doing all the work ('transformative', 'revolutionary', 'comprehensive', 'cutting-edge' are banned — they say nothing). Ground every phrase in what the user actually told you about this specific business. Writing heading/hero_statement/features/benefits is YOUR job as the copywriter — never respond with 'heading is required, what should it be?' or similar. If you have even a one-line description of the business, write concrete copy from it rather than asking for more. The ONLY thing worth a clarifying question is a missing BUSINESS FACT you can't honestly invent (what the business does, who it's for, what makes it different) — never the copy itself." +
-      " (8) VARY THE DESIGN TO MATCH THIS BUSINESS'S ACTUAL PERSONALITY — don't default to the same design_color_palette/design_typography/design_components/design_interactions combination every time out of habit. A tattoo studio, a children's dentist, and a B2B SaaS tool should never land on the same design choices. Reason about who this business is for and what tone earns their trust (playful vs. authoritative, bold vs. minimal, energetic vs. calm) before picking — the enum lists exist precisely so different businesses can look different.",
+      "Create a website and submit a REAL build via the website builder. Use when the user asks to build/make/create a website or landing page. Workflow: (1) call get_website_prefill FIRST. It tells you the business name, saved contact email, default CTA link, and remaining site slots, so you only ask the user for what's genuinely missing; (2) if they name a reference site, call research_website_reference and mirror its tone/services WITHOUT copying text; (3) pick the closest niche template, gym_fitness for gyms/trainers, home_services for trades (plumbers, electricians, cleaners), real_estate for agents, or 'none' for anything else; (4) NICHE SITES NEED THE BUSINESS'S STREET ADDRESS (street + city). Ask for it if unknown, or use niche 'none' without a contact page; (5) features and benefits are each EXACTLY 3 short comma-separated phrases (max 60 chars total); (6) build_type 'vsl' is a single-page video funnel, only use it when the user has a video embed URL; default 'local'. Contact email and the main button link default from the workspace's saved details when omitted. Confirming spends one of the agency's website builds; the site goes live in ~1–3 minutes on the Website page." +
+      " (7) WRITE LIKE A DIRECT-RESPONSE COPYWRITER (think Russell Brunson / Jim Edwards / Dan Kennedy), NOT A CORPORATE BROCHURE. gitpage's own template defaults to generic filler ('Our comprehensive approach combines cutting-edge methodology with timeless wisdom') when a site is built around vague input. Your job is to give it something specific enough that it can't fall back to that. hero_statement should hook with the reader's actual problem, not describe the business in the abstract, a sharp question or a concrete pain beats a mission statement every time. features/benefits phrases must name a specific outcome or mechanism, never an adjective doing all the work ('transformative', 'revolutionary', 'comprehensive', 'cutting-edge' are banned. They say nothing). Ground every phrase in what the user actually told you about this specific business. Writing heading/hero_statement/features/benefits is YOUR job as the copywriter. Never respond with 'heading is required, what should it be?' or similar. If you have even a one-line description of the business, write concrete copy from it rather than asking for more. The ONLY thing worth a clarifying question is a missing BUSINESS FACT you can't honestly invent (what the business does, who it's for, what makes it different), never the copy itself." +
+      " (8) VARY THE DESIGN TO MATCH THIS BUSINESS'S ACTUAL PERSONALITY, don't default to the same design_color_palette/design_typography/design_components/design_interactions combination every time out of habit. A tattoo studio, a children's dentist, and a B2B SaaS tool should never land on the same design choices. Reason about who this business is for and what tone earns their trust (playful vs. authoritative, bold vs. minimal, energetic vs. calm) before picking, the enum lists exist precisely so different businesses can look different.",
     parameters: {
       type: "object",
       properties: {
@@ -3083,7 +3083,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         heading: {
           type: "string",
           description:
-            "Site heading / title, max 80 chars. The business name plus a specific, concrete hook — not a generic tagline. Bad: 'Elevate Your Fitness Journey'. Good: 'Drop 15lbs Before Your Reunion, Not Someday'.",
+            "Site heading / title, max 80 chars. The business name plus a specific, concrete hook, not a generic tagline. Bad: 'Elevate Your Fitness Journey'. Good: 'Drop 15lbs Before Your Reunion, Not Someday'.",
         },
         hero_statement: {
           type: "string",
@@ -3098,7 +3098,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         benefits: {
           type: "string",
           description:
-            "Exactly 3 short comma-separated phrases, max 60 chars total, e.g. 'Adapt fast, Stay durable, Train sharper'. What the reader actually gets, in their terms — not a restatement of the feature in fancier words.",
+            "Exactly 3 short comma-separated phrases, max 60 chars total, e.g. 'Adapt fast, Stay durable, Train sharper'. What the reader actually gets, in their terms, not a restatement of the feature in fancier words.",
         },
         contact_email: {
           type: "string",
@@ -3108,7 +3108,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         cta_link: {
           type: "string",
           description:
-            "http(s) URL the site's main button points at (booking page, phone tel: is NOT allowed — must be http/https). Omit to use the workspace's saved booking link.",
+            "http(s) URL the site's main button points at (booking page, phone tel: is NOT allowed, must be http/https). Omit to use the workspace's saved booking link.",
         },
         include_faq: { type: "boolean", description: "Include an FAQ section. Default true." },
         color_scheme: {
@@ -3131,13 +3131,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         design_typography: {
           type: "string",
           enum: [...GITPAGE_DESIGN_TYPOGRAPHY],
-          description: "Match the business's voice — a playful brand and a law firm shouldn't share one.",
+          description: "Match the business's voice, a playful brand and a law firm shouldn't share one.",
         },
         design_layout: { type: "string", enum: [...GITPAGE_DESIGN_LAYOUT] },
         design_components: {
           type: "string",
           enum: [...GITPAGE_DESIGN_COMPONENTS],
-          description: "Sharp/geometric reads differently than rounded/soft — pick what fits this brand.",
+          description: "Sharp/geometric reads differently than rounded/soft. Pick what fits this brand.",
         },
         design_interactions: {
           type: "string",
@@ -3171,7 +3171,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         business: {
           type: "object",
           description:
-            "Business details for the contact page / niche templates. Only include what the user actually provided — never invent an address.",
+            "Business details for the contact page / niche templates. Only include what the user actually provided, never invent an address.",
           properties: {
             name: { type: "string" },
             street: { type: "string" },
@@ -3243,7 +3243,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           return {
             ok: false,
             error:
-              "a VSL funnel needs the video's http(s) embed URL — ask the user for it (or build a 'local' site instead)",
+              "a VSL funnel needs the video's http(s) embed URL. Ask the user for it (or build a 'local' site instead)",
           };
         }
       }
@@ -3400,7 +3400,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           : `multi-page site (${nicheLabel})`;
       return `Create & BUILD the website “${
         args.siteName || args.heading
-      }” — ${kind}, ${args.colorScheme === "Dark Mode" ? "dark mode" : "standard colours"}, heading “${args.heading}”. This submits a real build (uses one of your agency's website builds; live in ~1–3 minutes).`;
+      }”, ${kind}, ${args.colorScheme === "Dark Mode" ? "dark mode" : "standard colours"}, heading “${args.heading}”. This submits a real build (uses one of your agency's website builds; live in ~1–3 minutes).`;
     },
     execute: async (ctx, args) => {
       const subAccountId = ctx.subAccountId!;
@@ -3611,7 +3611,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       return {
         resultText: `The build for “${
           (args.siteName as string) || (args.heading as string)
-        }” is submitted — it takes about 1–3 minutes to generate. Watch it go live under Create; the card shows the live URL when it's ready.`,
+        }” is submitted. It takes about 1–3 minutes to generate. Watch it go live under Create; the card shows the live URL when it's ready.`,
         ref: { kind: "website", id: siteId },
       };
     },
@@ -3648,13 +3648,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           status === "ready" && w.liveUrl
             ? `live at ${w.liveUrl}`
             : status === "failed"
-              ? `failed${w.errorMessage ? ` — ${w.errorMessage}` : ""}`
+              ? `failed${w.errorMessage ? `, ${w.errorMessage}` : ""}`
               : status === "queued" || status === "building"
                 ? "building now (usually 1–3 minutes)"
                 : "draft (not built yet)";
         const flagWarning =
           status === "ready" && contentFlags && contentFlags.length > 0
-            ? " ⚠️ may contain generic filler content (fake testimonials/stats/program details) — tell the user to review before sharing this link"
+            ? " ⚠️ may contain generic filler content (fake testimonials/stats/program details). Tell the user to review before sharing this link"
             : "";
         return `- “${name}”: ${detail}${flagWarning}`;
       });
@@ -3669,39 +3669,39 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     requiredRole: "subAccountAdmin",
     menuLabel: "Create a funnel system for this workspace (page + form + follow-up email + workflow)",
     description:
-      "Create a COMPLETE funnel system — not just a landing page — hosted directly on this platform (not the website builder): the funnel page itself, PLUS (when the funnel needs a lead-capture opt-in — most genres besides paid tripwire/vsl offers) a dedicated capture Form, a follow-up email Message Template, and a Workflow that sends it the moment someone submits. Use when the user asks to build/make/create/generate a funnel, landing page, lead magnet page, webinar registration page, application page, or tripwire offer — 'build me a webinar funnel' should produce the whole connected system in one shot, matching what an operator would expect, not just a page they still have to wire up by hand. Everything is created in DRAFT/review state — the funnel is never auto-published, the workflow is never auto-activated — since real money (Stripe) and real emails are on the other side of 'live'. If the user names a reference site, call research_website_reference FIRST and mirror its tone/services WITHOUT copying text. IF A VALIDATION ERROR COMES BACK from this tool, fix the arguments YOURSELF and call the tool again immediately — a validation error is an instruction to you, never a question to relay to the user. IMPORTANT — write the copy yourself, don't make the user write it: headline, subheadline, bullets, story, and CTA label are all YOUR job as the copywriter, not the user's — never respond with a bare 'a headline is required, what should it be?' question. From whatever the user told you about their business/offer/audience (even a single sentence), write a specific, concrete headline/subheadline/bullets/CTA yourself. The ONLY thing you should ask the user for is a genuine BUSINESS FACT you truly have nothing to go on for AND cannot safely infer or draft around — realistically just: what the business actually does (if even that wasn't said), whether a named person is really the founder, or whether a testimonial may be published. That's close to the full list — do NOT ask for the business/clinic/practice NAME (use whatever the user called it, or write around it generically — 'this clinic', 'your practice' — the operator can rename it in seconds), a CITY or location (skip locality-specific copy rather than ask), a real media URL (use media_subject/hero_media_url's honest-placeholder path instead of asking), or a booking calendar/phone number — and NEVER invent a phone number (555 numbers are fictional and are silently rejected; a fake number on a live page is worse than no number) — (cta_style silently falls back to a working popup_form when neither cta_booking_page_slug nor cta_phone_number is available — see those params — so there is NOTHING to ask about there either). Never ask the user to define marketing copy, visual choices, funnel structure, offer wording, or WHICH GENRE/PRICING MODEL to use — that includes the specific lead-magnet/consultation MECHANISM (e.g. 'should this be a free assessment, a downloadable checklist, or a generic consultation request?' is exactly the kind of question you must NOT ask) and 'should this be free or a paid offer?' (default to a free genre — lead_gen or lead_magnet — whenever the user didn't mention pricing; only pick a priced genre — tripwire/vsl/challenge — when they told you a real price). When the business, audience, and objective already give you enough context (which a one-sentence business description almost always does), pick the single most conversion-appropriate mechanism yourself — for a B2B/professional/consultative business with no named lead magnet, default to a free consultation/scoping-call/assessment offer, worded specifically to the business, not generically — build the complete DRAFT with that assumption, and say so plainly in your reply (e.g. 'I've drafted this around a free scoping-call offer, since none was specified — easy to swap for a different lead magnet before you publish'). A draft in review beats a blocking question every time; the user can always edit or regenerate. The one exception where asking instead of drafting stays correct: the user has explicitly requested something this tool structurally cannot configure without a specific real-world fact they haven't given — e.g. they said 'charge $49 for this' but never told you the actual price, or 'send people to my calendar' but never gave a real booking-page slug — because guessing those isn't a draft assumption, it's a broken or misleading live page. Absent such an explicit request, always take the safe free/self-contained default instead of asking. The one exception on copy specifically is testimonials (see story_paragraphs below): those must come from the user or be written as synthesized non-testimonial copy — never invented as if from a real customer. STRATEGY — before writing any copy, silently reason through (do NOT show this reasoning in your reply or explain it to the user — only the finished page is ever exposed, never the analysis behind it): who the customer is, their market sophistication (have they seen offers like this before, or is this new to them?) and awareness level (do they already know they have this problem, or do you need to surface it first?), what problem/pain they have right now, the outcome they actually want, the objection most likely stopping them from acting, how this offer is positioned against alternatives, what the offer itself concretely delivers, where they are in their buying cycle (browsing vs. actively comparing vs. ready now), whether real urgency exists (never invent false scarcity/deadlines — see the trust rules below), how much proof this specific claim needs before a skeptical reader believes it, whether the purchase is more emotional or more logical for this audience (and whether the copy should lead with feeling or with facts accordingly), and how much friction the CTA can tolerate (a free lead magnet can ask for one click; a $5k engagement earns the right to a longer, more consultative page). A senior conversion copywriter does this thinking before typing a single word — your headline/bullets/story/CTA should read like the output of that reasoning, not like a form filled in field-by-field or a generic template with the business name swapped in. CAPTURE that reasoning in the awareness / sophistication / traffic_temperature / objective / lead_magnet_needed params (also never shown to the user) — they now DRIVE the funnel's shape, not just the words: a most_aware reader or hot traffic gets a LEAN page that reaches the CTA fast (education stages auto-dropped), while cold/unaware traffic keeps the full persuasion sequence. So fill them honestly from the real traffic + offer; when a prospect is clearly high-intent (branded/urgent 'near me' search), also set lead_magnet_needed=false (+ include_capture_form=false + a phone/booking cta_style) to send them straight to the call/booking instead of an opt-in. Write your stage_content for the genre's FULL sequence regardless — the lean trim happens automatically, so unfilled/dropped stages never hurt. COPY QUALITY — cut every word that isn't doing real work: never use 'unlock', 'elevate', 'seamless', 'seamlessly', 'revolutionize', 'revolutionary', 'empower', 'unparalleled', 'cutting-edge', 'game-changing', 'game-changer', 'next-level', 'world-class', 'unleash', 'supercharge', 'effortless', 'effortlessly', 'holistic', 'robust', 'dynamic', 'tailored', 'transformative', 'comprehensive', 'unlock your potential', or any phrase that could be pasted onto a competitor's page unchanged — if a sentence would still be true with the business name swapped out, rewrite it until it wouldn't be. BREVITY ON MOBILE: body/story paragraphs are 2-3 sentences each, THREE paragraphs maximum per section — a wall of text kills mobile reading; make the first story paragraph a punchy 1-2 sentence lede, not an essay. NEVER use em dashes (—) anywhere in copy — they read as AI-generated and are stripped in post; use commas, colons, or periods. Prefer a concrete number, mechanism, or named outcome over an adjective every time ('cuts callback visits in half' beats 'more efficient'). Every sentence on the page should exist for a specific reason — cut anything that's there to sound impressive rather than to move the reader toward the CTA. FABRICATION BLACKLIST — these claim CLASSES are banned unless the user EXPLICITLY stated the underlying fact, no matter how much they'd 'help conversion' (each one shipped as a real violation in live testing, so treat this list as hard law): (a) guarantees and refund promises of any kind — 'money-back guarantee', '30-day guarantee', a refund-policy FAQ answer — the user must have TOLD you their actual guarantee; (b) legal/organizational status — tax-deductibility, 501(c)(3)/charity registration, licensing, insurance, certifications; (c) invented quantitative claims — dollar figures ('$300+ disappears'), percentages ('60% of your budget'), counts ('hundreds of kids', 'thousands of customers'), competitor pricing; (d) capacity/scarcity mechanics — cohort size caps, 'one application per quarter', limited spots, application windows; (e) impact ratios — '$25 funds one child's program'; (f) response/arrival-time promises. When one of these would genuinely strengthen the page, the correct move is to write the page WITHOUT it and note in your reply that the operator can add the real fact (their actual guarantee, their actual 501(c)(3) status) in the builder — an honest page that converts slightly less beats a fabricated claim every time. EVIDENCE PRIORITY — before composing, answer the PRIMARY TRUST QUESTION for this offer ('is this person worth listening to?' / 'is this product real and right for me?' / 'can I trust these people with my health?' / 'are these people credible enough for procurement?'). Then place the strongest VERIFIED evidence where it resolves that uncertainty — usually near the initial decision: a real audience size ('Followed by 120k on Instagram') or a real rating belongs in hero_trust_badges/real_rating at the top, not buried below; a real product photo belongs where the buyer inspects before paying; certifications belong beside the enterprise ask. Never invent, inflate, or reword weak proof into strong proof; when the user supplied none, compose credibly without it. HEADLINE PRINCIPLE — the governing rule for the hero headline and every section header: it must communicate meaningful VALUE, OUTCOME, OFFER, MECHANISM, or DIFFERENTIATION appropriate to that section's argument role. This is NOT a ban on imperatives — 'Get Your Free Roof Inspection Today' works because the action itself carries a concrete, valuable offer. An imperative fails when the action carries little information: 'Schedule Your Technical Evaluation' (what evaluation? what do I get? why care?), 'Find Out What's Actually Blocking Your Growth' (find out WHAT, concretely?), 'Book Your First Visit' — those spend the most valuable copy position on an ask that belongs on the button. Compare: 'See the gaps in your current security stack before they become expensive problems' carries an argument; 'Dental care designed for patients who feel anxious about the dentist' is almost boringly clear — and that's often better. NEGATIVE FRAMING: never introduce an objection, distrust frame, or fear merely to negate it ('Isn't a Gimmick for Us' makes the company defend an accusation nobody made; 'Without the Dread' plants dread). Negative framing IS appropriate when it accurately names a demonstrated prospect pain and advances the argument better than positive framing ('AC down in the heat?' is honest urgency, not a planted doubt). COMPREHENSION PRINCIPLE — correct strategy is necessary but insufficient: at every major section a visitor must understand WHAT is being offered, WHY the section matters, and what CONCRETE value they receive, without interpreting clever copy. Prefer specific clarity over cleverness; strong copy is never abstract copy. PLACEHOLDERS: never emit bracket placeholders like [YEAR]/[CITY]/[NAME] — if you don't have the fact, write the sentence without it or drop the claim entirely. " +
-      "PERSUASION OPERATING SYSTEM — APPLY these to the actual copy you write; this is what separates a real page from a template, and skipping it is why generic pages feel bland: " +
-      "(1) ONE ARGUMENT — the whole page argues a SINGLE belief: '[the mechanism] is why they aren't getting [result] now, and why [better result] is now possible.' Every section reinforces that one belief; the mechanism is the ROUTE to the result, never a list of deliverables. " +
-      "(2) HOOK — open with ONE hook that makes the RIGHT prospect feel seen and excludes the wrong one: villain/contrarian ('what you were told to do is quietly costing you'), bold specific claim, identity/situation ('if you're [who] stuck at [where]…'), or story/before-after. The context is the prospect's situation, never the company's bio. " +
-      "(3) OLD WAY vs NEW WAY — give a BLAMELESS reason their past effort failed ('not because you're incapable — the method itself produces the wrong result'); the villain is a behavior/belief/system/category, NEVER a named person or competitor; make the contrast FELT, don't literally announce 'old way/new way'. " +
-      "(4) AMPLIFY EVERY LINE — each line must make the outcome more DESIRABLE (physical + specific: 'case-study-worthy clients', not 'better leads'), more CERTAIN (controllable/proven: 'a dial you can turn', not 'scalable'), more ACHIEVABLE (lower effort/time: 'three shifts', not 'endless work'), or more URGENT (the cost of the old way). A line that does none of these four is filler — cut it. " +
-      "(5) MECHANISM — name it and state what it PRODUCES, not what you do ('a dialled-in message gets the right people to book themselves', not 'we write ads and optimize funnels'). It must feel better, easier, AND more certain than the old way. " +
-      "(6) CADENCE — one idea per line, open loops (a line raises a question the next answers), tension-then-payoff, side-by-side contrast, long-setup→short-snap, so each line pulls the reader into the next. " +
-      "(7) PROOF stays REAL — congruent with the claim, exact non-round numbers, no vanity metrics, and NEVER fabricated (no invented testimonials, counts, stats, or guarantees — write around missing proof with mechanism + specificity instead). " +
+      "Create a COMPLETE funnel system (not just a landing page) hosted directly on this platform (not the website builder): the funnel page itself, PLUS (when the funnel needs a lead-capture opt-in, most genres besides paid tripwire/vsl offers) a dedicated capture Form, a follow-up email Message Template, and a Workflow that sends it the moment someone submits. Use when the user asks to build/make/create/generate a funnel, landing page, lead magnet page, webinar registration page, application page, or tripwire offer. 'build me a webinar funnel' should produce the whole connected system in one shot, matching what an operator would expect, not just a page they still have to wire up by hand. Everything is created in DRAFT/review state, the funnel is never auto-published, the workflow is never auto-activated, since real money (Stripe) and real emails are on the other side of 'live'. If the user names a reference site, call research_website_reference FIRST and mirror its tone/services WITHOUT copying text. IF A VALIDATION ERROR COMES BACK from this tool, fix the arguments YOURSELF and call the tool again immediately, a validation error is an instruction to you, never a question to relay to the user. IMPORTANT. Write the copy yourself, don't make the user write it: headline, subheadline, bullets, story, and CTA label are all YOUR job as the copywriter, not the user's, never respond with a bare 'a headline is required, what should it be?' question. From whatever the user told you about their business/offer/audience (even a single sentence), write a specific, concrete headline/subheadline/bullets/CTA yourself. The ONLY thing you should ask the user for is a genuine BUSINESS FACT you truly have nothing to go on for AND cannot safely infer or draft around, realistically just: what the business actually does (if even that wasn't said), whether a named person is really the founder, or whether a testimonial may be published. That's close to the full list. Do NOT ask for the business/clinic/practice NAME (use whatever the user called it, or write around it generically ('this clinic', 'your practice') the operator can rename it in seconds), a CITY or location (skip locality-specific copy rather than ask), a real media URL (use media_subject/hero_media_url's honest-placeholder path instead of asking), or a booking calendar/phone number, and NEVER invent a phone number (555 numbers are fictional and are silently rejected; a fake number on a live page is worse than no number), (cta_style silently falls back to a working popup_form when neither cta_booking_page_slug nor cta_phone_number is available (see those params) so there is NOTHING to ask about there either). Never ask the user to define marketing copy, visual choices, funnel structure, offer wording, or WHICH GENRE/PRICING MODEL to use, that includes the specific lead-magnet/consultation MECHANISM (e.g. 'should this be a free assessment, a downloadable checklist, or a generic consultation request?' is exactly the kind of question you must NOT ask) and 'should this be free or a paid offer?' (default to a free genre (lead_gen or lead_magnet) whenever the user didn't mention pricing; only pick a priced genre (tripwire/vsl/challenge) when they told you a real price). When the business, audience, and objective already give you enough context (which a one-sentence business description almost always does), pick the single most conversion-appropriate mechanism yourself, for a B2B/professional/consultative business with no named lead magnet, default to a free consultation/scoping-call/assessment offer, worded specifically to the business, not generically. Build the complete DRAFT with that assumption, and say so plainly in your reply (e.g. 'I've drafted this around a free scoping-call offer, since none was specified, easy to swap for a different lead magnet before you publish'). A draft in review beats a blocking question every time; the user can always edit or regenerate. The one exception where asking instead of drafting stays correct: the user has explicitly requested something this tool structurally cannot configure without a specific real-world fact they haven't given, e.g. they said 'charge $49 for this' but never told you the actual price, or 'send people to my calendar' but never gave a real booking-page slug, because guessing those isn't a draft assumption, it's a broken or misleading live page. Absent such an explicit request, always take the safe free/self-contained default instead of asking. The one exception on copy specifically is testimonials (see story_paragraphs below): those must come from the user or be written as synthesized non-testimonial copy, never invented as if from a real customer. STRATEGY, before writing any copy, silently reason through (do NOT show this reasoning in your reply or explain it to the user. Only the finished page is ever exposed, never the analysis behind it): who the customer is, their market sophistication (have they seen offers like this before, or is this new to them?) and awareness level (do they already know they have this problem, or do you need to surface it first?), what problem/pain they have right now, the outcome they actually want, the objection most likely stopping them from acting, how this offer is positioned against alternatives, what the offer itself concretely delivers, where they are in their buying cycle (browsing vs. actively comparing vs. ready now), whether real urgency exists (never invent false scarcity/deadlines. See the trust rules below), how much proof this specific claim needs before a skeptical reader believes it, whether the purchase is more emotional or more logical for this audience (and whether the copy should lead with feeling or with facts accordingly), and how much friction the CTA can tolerate (a free lead magnet can ask for one click; a $5k engagement earns the right to a longer, more consultative page). A senior conversion copywriter does this thinking before typing a single word. Your headline/bullets/story/CTA should read like the output of that reasoning, not like a form filled in field-by-field or a generic template with the business name swapped in. CAPTURE that reasoning in the awareness / sophistication / traffic_temperature / objective / lead_magnet_needed params (also never shown to the user). They now DRIVE the funnel's shape, not just the words: a most_aware reader or hot traffic gets a LEAN page that reaches the CTA fast (education stages auto-dropped), while cold/unaware traffic keeps the full persuasion sequence. So fill them honestly from the real traffic + offer; when a prospect is clearly high-intent (branded/urgent 'near me' search), also set lead_magnet_needed=false (+ include_capture_form=false + a phone/booking cta_style) to send them straight to the call/booking instead of an opt-in. Write your stage_content for the genre's FULL sequence regardless, the lean trim happens automatically, so unfilled/dropped stages never hurt. COPY QUALITY, cut every word that isn't doing real work: never use 'unlock', 'elevate', 'seamless', 'seamlessly', 'revolutionize', 'revolutionary', 'empower', 'unparalleled', 'cutting-edge', 'game-changing', 'game-changer', 'next-level', 'world-class', 'unleash', 'supercharge', 'effortless', 'effortlessly', 'holistic', 'robust', 'dynamic', 'tailored', 'transformative', 'comprehensive', 'unlock your potential', or any phrase that could be pasted onto a competitor's page unchanged, if a sentence would still be true with the business name swapped out, rewrite it until it wouldn't be. BREVITY ON MOBILE: body/story paragraphs are 2-3 sentences each, THREE paragraphs maximum per section, a wall of text kills mobile reading; make the first story paragraph a punchy 1-2 sentence lede, not an essay. NEVER use em dashes ( () anywhere in copy) they read as AI-generated and are stripped in post; use commas, colons, or periods. Prefer a concrete number, mechanism, or named outcome over an adjective every time ('cuts callback visits in half' beats 'more efficient'). Every sentence on the page should exist for a specific reason, cut anything that's there to sound impressive rather than to move the reader toward the CTA. FABRICATION BLACKLIST. These claim CLASSES are banned unless the user EXPLICITLY stated the underlying fact, no matter how much they'd 'help conversion' (each one shipped as a real violation in live testing, so treat this list as hard law): (a) guarantees and refund promises of any kind ('money-back guarantee', '30-day guarantee', a refund-policy FAQ answer) the user must have TOLD you their actual guarantee; (b) legal/organizational status, tax-deductibility, 501(c)(3)/charity registration, licensing, insurance, certifications; (c) invented quantitative claims, dollar figures ('$300+ disappears'), percentages ('60% of your budget'), counts ('hundreds of kids', 'thousands of customers'), competitor pricing; (d) capacity/scarcity mechanics, cohort size caps, 'one application per quarter', limited spots, application windows; (e) impact ratios, '$25 funds one child's program'; (f) response/arrival-time promises. When one of these would genuinely strengthen the page, the correct move is to write the page WITHOUT it and note in your reply that the operator can add the real fact (their actual guarantee, their actual 501(c)(3) status) in the builder, an honest page that converts slightly less beats a fabricated claim every time. EVIDENCE PRIORITY, before composing, answer the PRIMARY TRUST QUESTION for this offer ('is this person worth listening to?' / 'is this product real and right for me?' / 'can I trust these people with my health?' / 'are these people credible enough for procurement?'). Then place the strongest VERIFIED evidence where it resolves that uncertainty, usually near the initial decision: a real audience size ('Followed by 120k on Instagram') or a real rating belongs in hero_trust_badges/real_rating at the top, not buried below; a real product photo belongs where the buyer inspects before paying; certifications belong beside the enterprise ask. Never invent, inflate, or reword weak proof into strong proof; when the user supplied none, compose credibly without it. HEADLINE PRINCIPLE, the governing rule for the hero headline and every section header: it must communicate meaningful VALUE, OUTCOME, OFFER, MECHANISM, or DIFFERENTIATION appropriate to that section's argument role. This is NOT a ban on imperatives, 'Get Your Free Roof Inspection Today' works because the action itself carries a concrete, valuable offer. An imperative fails when the action carries little information: 'Schedule Your Technical Evaluation' (what evaluation? what do I get? why care?), 'Find Out What's Actually Blocking Your Growth' (find out WHAT, concretely?), 'Book Your First Visit'. Those spend the most valuable copy position on an ask that belongs on the button. Compare: 'See the gaps in your current security stack before they become expensive problems' carries an argument; 'Dental care designed for patients who feel anxious about the dentist' is almost boringly clear, and that's often better. NEGATIVE FRAMING: never introduce an objection, distrust frame, or fear merely to negate it ('Isn't a Gimmick for Us' makes the company defend an accusation nobody made; 'Without the Dread' plants dread). Negative framing IS appropriate when it accurately names a demonstrated prospect pain and advances the argument better than positive framing ('AC down in the heat?' is honest urgency, not a planted doubt). COMPREHENSION PRINCIPLE. Correct strategy is necessary but insufficient: at every major section a visitor must understand WHAT is being offered, WHY the section matters, and what CONCRETE value they receive, without interpreting clever copy. Prefer specific clarity over cleverness; strong copy is never abstract copy. PLACEHOLDERS: never emit bracket placeholders like [YEAR]/[CITY]/[NAME], if you don't have the fact, write the sentence without it or drop the claim entirely. " +
+      "PERSUASION OPERATING SYSTEM. APPLY these to the actual copy you write; this is what separates a real page from a template, and skipping it is why generic pages feel bland: " +
+      "(1) ONE ARGUMENT, the whole page argues a SINGLE belief: '[the mechanism] is why they aren't getting [result] now, and why [better result] is now possible.' Every section reinforces that one belief; the mechanism is the ROUTE to the result, never a list of deliverables. " +
+      "(2) HOOK. Open with ONE hook that makes the RIGHT prospect feel seen and excludes the wrong one: villain/contrarian ('what you were told to do is quietly costing you'), bold specific claim, identity/situation ('if you're [who] stuck at [where]…'), or story/before-after. The context is the prospect's situation, never the company's bio. " +
+      "(3) OLD WAY vs NEW WAY, give a BLAMELESS reason their past effort failed ('not because you're incapable, the method itself produces the wrong result'); the villain is a behavior/belief/system/category, NEVER a named person or competitor; make the contrast FELT, don't literally announce 'old way/new way'. " +
+      "(4) AMPLIFY EVERY LINE, each line must make the outcome more DESIRABLE (physical + specific: 'case-study-worthy clients', not 'better leads'), more CERTAIN (controllable/proven: 'a dial you can turn', not 'scalable'), more ACHIEVABLE (lower effort/time: 'three shifts', not 'endless work'), or more URGENT (the cost of the old way). A line that does none of these four is filler, cut it. " +
+      "(5) MECHANISM, name it and state what it PRODUCES, not what you do ('a dialled-in message gets the right people to book themselves', not 'we write ads and optimize funnels'). It must feel better, easier, AND more certain than the old way. " +
+      "(6) CADENCE, one idea per line, open loops (a line raises a question the next answers), tension-then-payoff, side-by-side contrast, long-setup→short-snap, so each line pulls the reader into the next. " +
+      "(7) PROOF stays REAL, congruent with the claim, exact non-round numbers, no vanity metrics, and NEVER fabricated (no invented testimonials, counts, stats, or guarantees. Write around missing proof with mechanism + specificity instead). " +
       "Enter the conversation already happening in the prospect's head; use their words for the problem and the outcome, not industry jargon. " +
-      "DESIGN — you are both the conversion strategist AND the landing-page designer. This is Phase 2's job, not the user's: NEVER ask what color/font/template/border-radius/layout they want — infer a visual_archetype from the business/audience/offer you already have, and only ask when a real fact is genuinely missing and unsafe to guess (existing brand colors, whether a named person is the founder, whether a testimonial may be published, a video URL, which booking calendar). Pick ONE visual_archetype: " +
-      "For a sales or lead-generation page — which is MOST funnels, INCLUDING local-service lead-gen — DEFAULT to direct_response; only pick a softer archetype when the brand genuinely calls for it (luxury, wellness, nonprofit, or a brand that explicitly wants a calm/premium feel). " +
-      "direct_response (THE DEFAULT for high-converting sales & lead pages — offers, lead magnets, VSLs, applications, webinars, and most local-service lead-gen: dark, high-contrast, oversized bold headlines, ONE punchy high-visibility CTA color, strong alternating dark section bands, sharp layered cards, high energy — the ClickFunnels/direct-response look, built to CONVERT, not to look tastefully minimal. Never default a normal sales/lead page to a flat, light, tasteful look). " +
-      "local_service (home services, automotive, clinics, contractors — ONLY when a calm warm/high-trust look genuinely converts better than the bold direct-response look for this specific brand: warm palette, friendly sans, rounded cards, low complexity, phone/booking/estimate CTAs). " +
-      "saas_technology (SaaS, AI, dev tools, platforms, apps — high-contrast light/dark/mixed, controlled gradients, dashboard/browser mockups, modern type, moderate motion, tight geometry). " +
-      "luxury_premium (executive consulting, luxury services, wealth, premium professional services — cream/charcoal/deep-neutral, restrained gold/metallic accents, serif display, editorial imagery, generous whitespace, minimal icons, subtle motion). " +
-      "nonprofit_mission (nonprofits, causes, community/mission-driven programs — story-led, community/impact imagery, human-centered hierarchy, warm-but-credible palette, highly accessible). " +
-      "coach_consultant (coaches, consultants, personal brands, mastermind/mentorship — founder-forward, founder photo/video, methodology/journey sections, strong booking/application CTA, authority without fabricated proof). " +
-      "wellness (health, fitness, life coaching, spiritual/holistic — soft natural palette, organic/rounded shapes, calmer spacing, gentle animation, lower density). " +
-      "agency_creative (marketing/creative agencies, freelance studios, sales-led creative services — bold type, strong contrast, layered cards, higher energy, moderate/expressive motion, strategy-call CTA). " +
-      "professional_enterprise (consultants, healthcare, law, finance, enterprise B2B — structured grids, restrained color, data/process visuals, conservative motion, clear comparison sections). " +
-      "Each archetype resolves a FULL token set automatically (palette, color mode, typography, card geometry, icon style, density, background rhythm, animation level, hero layout, CTA strategy) — never hand-pick these individually; instead nudge them via the optional overrides below, which are only honored when they're one of that archetype's own approved options (an invalid override is silently ignored, never an arbitrary color/font): palette_variant (that archetype's own named palette, e.g. 'trust_blue' for local_service — omit to use its first/default), color_mode (light/dark/mixed, only if the archetype supports more than one), typography_pairing, hero_layout, animation_level (none/minimal/moderate/expressive — omit to use the archetype's own default; never crank this up just because you can), visual_density (low/medium/high), media_strategy (what kind of media the hero/founder area wants — e.g. dashboard_screenshot for SaaS, founder_photo for coach_consultant), cta_style (inline/popup_form/popup_calendar/dual/sticky_desktop/floating_mobile/phone — omit to use the archetype's own recommended CTA, e.g. local_service defaults to popup_calendar/phone, luxury_premium to popup_calendar). If the user gave you a REAL media asset (a screenshot/photo URL), pass it as hero_media_url (+ hero_media_type); if the archetype's media_strategy calls for real media you don't have, Zeno leaves an honest labeled placeholder automatically — never fabricate a fake dashboard/photo. Write media_subject whenever media_strategy implies a real photo (service_photo/team_photo/community_photo/founder_photo) with no hero_media_url given — a SPECIFIC shooting brief for the operator (e.g. 'Technician repairing an HVAC unit'), not a generic 'add a photo'; skip it for screenshot-type strategies (dashboard_screenshot/browser_mockup/product_screenshot — nothing to 'shoot'). When media_strategy is service_photo/team_photo/community_photo (i.e. the business would show MULTIPLE real examples, not one), Zeno automatically adds a dedicated photo-gallery section instead of cramming everything into the hero — the hero stays a clean headline (with room for the operator's real logo above it); gallery_layout optionally overrides which layout that gallery uses (grid/masonry/carousel/before_after), omit to use the archetype's own recommendation. For a 'phone' cta_style, pass the real number as cta_phone_number (E.164, e.g. '+15551234567') — omit if you don't have one and the CTA falls back to inline rather than a dead tel: link. " +
-      "Legacy design_pack (classic/executive/bold/premium/startup/local_business/wellness) still works if you use it instead, but visual_archetype is the current, richer system — prefer it for every new funnel. Don't set BOTH design_pack and accent_color when you've picked a real archetype/pack — they'd conflict. " +
-      "STRUCTURE — this is a conversion-framework generator, not a paragraph generator: every funnel follows Attention → Problem → Solution → Benefits → Process → Offer → Trust → FAQ → CTA, and each genre maps that sequence onto a recommended sequence of REUSABLE LAYOUTS (cards, grids, timelines, comparisons — favor these over walls of text): " +
-      "lead_magnet = Hero ONLY — one fold, no scrolling required. A free lead magnet is a low-commitment ask; the hero itself carries the value prop, 3-5 bullets (what they get), and the capture form as a popup behind the CTA button. Write MORE into eyebrow/headline/subheadline/bullets than you would for a multi-section genre, since the hero is the entire page — but still no separate sections below it. " +
+      "DESIGN. You are both the conversion strategist AND the landing-page designer. This is Phase 2's job, not the user's: NEVER ask what color/font/template/border-radius/layout they want, infer a visual_archetype from the business/audience/offer you already have, and only ask when a real fact is genuinely missing and unsafe to guess (existing brand colors, whether a named person is the founder, whether a testimonial may be published, a video URL, which booking calendar). Pick ONE visual_archetype: " +
+      "For a sales or lead-generation page, which is MOST funnels, INCLUDING local-service lead-gen. DEFAULT to direct_response; only pick a softer archetype when the brand genuinely calls for it (luxury, wellness, nonprofit, or a brand that explicitly wants a calm/premium feel). " +
+      "direct_response (THE DEFAULT for high-converting sales & lead pages, offers, lead magnets, VSLs, applications, webinars, and most local-service lead-gen: dark, high-contrast, oversized bold headlines, ONE punchy high-visibility CTA color, strong alternating dark section bands, sharp layered cards, high energy, the ClickFunnels/direct-response look, built to CONVERT, not to look tastefully minimal. Never default a normal sales/lead page to a flat, light, tasteful look). " +
+      "local_service (home services, automotive, clinics, contractors. ONLY when a calm warm/high-trust look genuinely converts better than the bold direct-response look for this specific brand: warm palette, friendly sans, rounded cards, low complexity, phone/booking/estimate CTAs). " +
+      "saas_technology (SaaS, AI, dev tools, platforms, apps, high-contrast light/dark/mixed, controlled gradients, dashboard/browser mockups, modern type, moderate motion, tight geometry). " +
+      "luxury_premium (executive consulting, luxury services, wealth, premium professional services, cream/charcoal/deep-neutral, restrained gold/metallic accents, serif display, editorial imagery, generous whitespace, minimal icons, subtle motion). " +
+      "nonprofit_mission (nonprofits, causes, community/mission-driven programs, story-led, community/impact imagery, human-centered hierarchy, warm-but-credible palette, highly accessible). " +
+      "coach_consultant (coaches, consultants, personal brands, mastermind/mentorship, founder-forward, founder photo/video, methodology/journey sections, strong booking/application CTA, authority without fabricated proof). " +
+      "wellness (health, fitness, life coaching, spiritual/holistic, soft natural palette, organic/rounded shapes, calmer spacing, gentle animation, lower density). " +
+      "agency_creative (marketing/creative agencies, freelance studios, sales-led creative services, bold type, strong contrast, layered cards, higher energy, moderate/expressive motion, strategy-call CTA). " +
+      "professional_enterprise (consultants, healthcare, law, finance, enterprise B2B, structured grids, restrained color, data/process visuals, conservative motion, clear comparison sections). " +
+      "Each archetype resolves a FULL token set automatically (palette, color mode, typography, card geometry, icon style, density, background rhythm, animation level, hero layout, CTA strategy), never hand-pick these individually; instead nudge them via the optional overrides below, which are only honored when they're one of that archetype's own approved options (an invalid override is silently ignored, never an arbitrary color/font): palette_variant (that archetype's own named palette, e.g. 'trust_blue' for local_service, omit to use its first/default), color_mode (light/dark/mixed, only if the archetype supports more than one), typography_pairing, hero_layout, animation_level (none/minimal/moderate/expressive, omit to use the archetype's own default; never crank this up just because you can), visual_density (low/medium/high), media_strategy (what kind of media the hero/founder area wants, e.g. dashboard_screenshot for SaaS, founder_photo for coach_consultant), cta_style (inline/popup_form/popup_calendar/dual/sticky_desktop/floating_mobile/phone, omit to use the archetype's own recommended CTA, e.g. local_service defaults to popup_calendar/phone, luxury_premium to popup_calendar). If the user gave you a REAL media asset (a screenshot/photo URL), pass it as hero_media_url (+ hero_media_type); if the archetype's media_strategy calls for real media you don't have, Zeno leaves an honest labeled placeholder automatically, never fabricate a fake dashboard/photo. Write media_subject whenever media_strategy implies a real photo (service_photo/team_photo/community_photo/founder_photo) with no hero_media_url given, a SPECIFIC shooting brief for the operator (e.g. 'Technician repairing an HVAC unit'), not a generic 'add a photo'; skip it for screenshot-type strategies (dashboard_screenshot/browser_mockup/product_screenshot. Nothing to 'shoot'). When media_strategy is service_photo/team_photo/community_photo (i.e. the business would show MULTIPLE real examples, not one), Zeno automatically adds a dedicated photo-gallery section instead of cramming everything into the hero, the hero stays a clean headline (with room for the operator's real logo above it); gallery_layout optionally overrides which layout that gallery uses (grid/masonry/carousel/before_after), omit to use the archetype's own recommendation. For a 'phone' cta_style, pass the real number as cta_phone_number (E.164, e.g. '+15551234567'). Omit if you don't have one and the CTA falls back to inline rather than a dead tel: link. " +
+      "Legacy design_pack (classic/executive/bold/premium/startup/local_business/wellness) still works if you use it instead, but visual_archetype is the current, richer system, prefer it for every new funnel. Don't set BOTH design_pack and accent_color when you've picked a real archetype/pack, they'd conflict. " +
+      "STRUCTURE. This is a conversion-framework generator, not a paragraph generator: every funnel follows Attention → Problem → Solution → Benefits → Process → Offer → Trust → FAQ → CTA, and each genre maps that sequence onto a recommended sequence of REUSABLE LAYOUTS (cards, grids, timelines, comparisons, favor these over walls of text): " +
+      "lead_magnet = Hero ONLY, one fold, no scrolling required. A free lead magnet is a low-commitment ask; the hero itself carries the value prop, 3-5 bullets (what they get), and the capture form as a popup behind the CTA button. Write MORE into eyebrow/headline/subheadline/bullets than you would for a multi-section genre, since the hero is the entire page, but still no separate sections below it. " +
       "vsl = Hero → Video → Problem/Solution → Value Stack → Offer → FAQ → CTA banner (fill the value_stack param with the real deliverables + values)." +
       "webinar = Hero → Agenda (process timeline) → Benefits (grid) → Host (founder story) → FAQ → Register (capture form). " +
-      "application = Hero → Who It's For (benefits grid) → Who This Isn't For (cards — real disqualifying criteria, not a vague adjective) → Process (timeline) → Results (before/after, or real testimonials if given) → Application (capture form). " +
+      "application = Hero → Who It's For (benefits grid) → Who This Isn't For (cards, real disqualifying criteria, not a vague adjective) → Process (timeline) → Results (before/after, or real testimonials if given) → Application (capture form). " +
       "challenge = Hero → Problem/Solution → What You'll Get (benefits grid) → Challenge Schedule (process timeline) → Register (ticket tiers) → FAQ. " +
-      "tripwire (sales-page style) = Hero → Problem/Solution → Opportunity (callout — why this matters now) → Features (benefits grid) → Trust badges (or real testimonials, if given) → Value Stack → Offer (priced) → Guarantee → FAQ (fill the value_stack param with the real deliverables + honest values + total + price)." +
+      "tripwire (sales-page style) = Hero → Problem/Solution → Opportunity (callout, why this matters now) → Features (benefits grid) → Trust badges (or real testimonials, if given) → Value Stack → Offer (priced) → Guarantee → FAQ (fill the value_stack param with the real deliverables + honest values + total + price)." +
       "lead_gen = Hero → Trust Logos → Benefits (grid) → Offer (capture form) → FAQ. " +
-      "LENGTH — match page length to commitment level, not a fixed habit: lead_magnet is the one exception at a true single fold (above); every other genre's stage count already reflects what its ask requires, so use the full sequence rather than trimming it. A free download needs zero persuasion runway; a webinar/lead_gen registration (6/5 stages) needs a little context before someone hands over their email; a multi-day challenge or a qualify-before-you-can-apply application (6 stages each) needs to show the process and set expectations; a priced tripwire offer (8 stages, sales-page style) needs the most — problem, proof, guarantee, objection-handling — because asking for a card number is the highest-commitment ask on this list. For an especially high-ticket / SaaS-style offer within any priced genre, lean into writing MORE substantive copy per stage (richer stage_content, fuller story_paragraphs) rather than adding new sections — depth of copy, not section count, is where 'long-form' actually lives. OFFER SHAPE may add a SMALL number of stages on top of the genre's sequence, and only ones the genre lacks: a paid digital product or a digital experience gets the product shown before the ask (image_text) plus what's included; a service gets a problem/solution beat and a how-it-works process; a booking page gets 'what to expect' placed early so someone who came to book is not made to read the whole argument first. This is composition, not inflation: it never repeats a stage the framework already has, never applies to the one-fold lead_magnet, and never re-inflates a LEAN page built for a most-aware or hot-traffic visitor. Write for the stages you are given and do not pad — an unnecessary section is worse than a short page. " +
-      "Some stages have a fixed layout; a few (marked above with 'or') allow an alternate — use layout_choices ONLY to pick that alternate when the business/evidence genuinely calls for it (e.g. real testimonials exist), never as a default habit. Workflow: (1) pick the genre — lead_magnet (free book/PDF opt-in, one-fold), vsl (high-ticket video sales page), challenge (multi-day registration), application (qualify leads before a call), tripwire (low-ticket entry offer), webinar (single-session registration), booking (the page's whole purpose is getting a time in the diary — a consultation, assessment, site visit or appointment; captures a lead and promises NO downloadable file), lead_gen (generic interest capture); (2) write a specific, concrete headline — never a generic tagline; (3) bullets must name a specific outcome or mechanism, never a vague adjective ('transformative', 'game-changing', 'cutting-edge' are banned); (4) ONLY include faq_items if you have enough real detail to answer honestly — never invent generic filler Q&A or fabricated guarantees/stats; (5) price_cents only applies to genres with a priced offer (tripwire, vsl, challenge) — omit for a free lead magnet, and when a price IS set, skip the capture form (a paid offer needs checkout, not a lead form — the operator wires up Stripe checkout on that section afterward); (6) leave include_capture_form at its default (true) unless the user is clearly building a pure sales/checkout page with no opt-in step; (7) confirmation_email_body should read like a real, brief, human confirmation (what they'll get, what's next) — it can be genuinely short, but must never invent guarantees, stats, or promises the funnel copy itself didn't make; (8) ALWAYS write story_paragraphs whenever the genre's framework includes a Story/Founder-Story/Host stage. Two cases: if the user gave you a REAL testimonial (an actual customer's words, name, location, or result), use it close to verbatim as story_paragraphs with story_byline set to their real attribution (e.g. 'From: Jane Doe, Austin, TX') — don't rewrite their claim into something stronger than what they said. Otherwise (the common case — no testimonial offered), write 2-4 paragraphs of synthesized 'why this works' copy — the mechanism, the reasoning — from the headline/bullets you already wrote, with a generic byline like 'Why this works' (or 'Your host: ...' for a webinar), and NEVER invent a fictional customer name/location/quote to make it look like a testimonial; (9) guarantee_headline/guarantee_body — ONLY when the user told you a real guarantee they actually offer, never invented; (10) trust_badges — safe generic ones (e.g. 'Secure checkout', 'Privacy protected') are fine whenever there's a form or checkout, but only add a guarantee-related badge if guarantee_headline is also set; ALSO write hero_trust_badges (2-3 honest risk-reversal signals like 'No credit card required' / 'Free — no obligation' / 'Licensed & insured') for the check-marked row under the hero's above-the-fold CTA — every genre, never an invented rating or 'trusted by N'; (11) cta_banner_headline/cta_banner_subtext — every multi-section genre now carries a repeat CTA banner (mid-page or closing), so ALWAYS write these for any genre except the one-fold lead_magnet; restate the real offer, never introduce a new claim; (12) process_steps — write these whenever the genre's framework includes a process-timeline stage (most do); (13) stage_content — write one entry per remaining stage the genre's framework includes (video/benefits grid/problem-solution/before-after/included/comparison/callout), per that param's own field-mapping description; never include a testimonials entry unless the user gave you real quotes; (14) visual_archetype — ALWAYS pick one that matches this business's audience (see the DESIGN section above); omitting it skips Phase 2's design intelligence entirely and falls back to a plain, generic look, which defeats the point — only override its palette/typography/animation/CTA defaults when you have a genuine reason from what the user told you, not by default habit; (15) emotional_transformation — ALWAYS set it (see its param description): it drives the page's ART DIRECTION so an emergency-service page and an anxious-patient page come out structurally different, not the same layout recolored; (16) sales_argument — construct it FIRST and derive EVERY section's copy from it. The page is the visual execution of ONE argument (current belief → required beliefs → action), not a collection of components. The Belief Shift stage (the problem_solution entry in stage_content — every multi-section genre now has one, including lead_gen and webinar) is where the argument TURNS: its problem side voices the prospect's CURRENT belief and the conventional experience that creates the friction they recognize (from old_way/why_old_way_fails — e.g. 'call center, voicemail, a slot next week, an unknown price', or 'you're probably not avoiding the dentist because you don't care — you're avoiding the lecture, the embarrassment, the loss of control') — never a manufactured strawman; its solution side is the REFRAME (the new opportunity + mechanism: 'so we changed the first visit', 'built around a different promise: one call, a real person, a technician today, the price before the wrench turns'). The benefits then PROVE the reframed promise — each item should serve a step in belief_chain, never a generic feature list. The offer section makes the ACTION tangible and must NOT repeat the benefits items (offer bullets = what they concretely get + what happens next; benefits = why the promise is believable). The closing CTA banner is the CLOSE, not a 'Ready?' box: restate core_promise, resolve the last hesitation (primary_objection/risk_reversal), and give close_reason. Every genre's full stage sequence renders on the page regardless of which fields you fill — an unfilled stage shows placeholder/nothing, so fill every stage the genre actually has, not just headline/offer/faq. (17) automation_plan + automation_sequence — the AUTOMATION STRATEGY ENGINE: before writing follow-up, silently reason through the conversion LIFECYCLE (never shown to the user): what a submission MEANS, the states a lead moves through, the state that ENDS the journey (goal_state, with a goal_tag the operator applies — the sequence auto-exits the moment it's tagged), how long before a human takes over (handoff_days), and the cadence between touches. Then write automation_sequence: 1-4 nurture emails AFTER the instant confirmation, each CONTINUING the page's sales argument — advance the SAME belief chain from where the page left off, same mechanism, same promise, resolving the primary_objection over the arc; never generic 'checking in' filler. Timing matches intent: urgent/phone-first = NO nurture emails (omit the sequence) + handoff_days 0-1; free magnet = 2-3 touches over 3-7 days bridging toward the next step; application/high-ticket = 2-4 spaced touches over 1-3 weeks; enterprise = patient, evaluation-supporting touches. INTENT vs VERIFIED CONVERSION (the automation no-fabrication rule): never claim or assume a state the triggering event doesn't prove. form.submitted proves details were SUBMITTED — not that anyone paid, donated, subscribed, or booked. For payment-dependent goals (donations, purchases) the confirmation email must reflect intent ('here's how to complete your monthly gift' / 'your spot is reserved — finish checkout to lock it in') unless the funnel actually collects payment on-page, in which case the purchase confirmation belongs to the PAYMENT event, not the form. Classify every sequence step's comm_type honestly (see that param — operational/escalation is not nurture), and let the classification CONSTRAIN the writing: operational = clarity, action, instructions — zero persuasion; reminder = time + access details only; nurture = belief progression; recovery = acknowledge the interrupted state FIRST, then the path back; stewardship = relationship voice, never acquisition copy; transactional = exactly what happened and what's next. STATE WINS OVER COMM_TYPE: the runtime suppresses any pending message whose lifecycle state no longer permits it (a cancelled appointment never gets 'see you tomorrow'), and your COPY must respect state too — post-event copy written before attendance is known must never assume they attended OR missed ('whether you caught it live or not…' framing), recovery copy is only ever sent to a verified missed/cancelled state so it MAY acknowledge it directly. The same fabrication blacklist applies to email copy — and additionally NEVER invent named people (a beneficiary, customer, or staff member — 'Marcus's first progress report' with no real Marcus is a fabricated testimonial in email form), and never promise artifacts that don't exist ('your impact report', 'your personalized analysis') — emails may only reference the funnel's REAL deliverable and the beliefs its page argued. Never write fill-in-the-blank emails either — bracketed placeholders like '[Child intro: name, age]' ship as broken copy; if the business can't truthfully promise a specific (a matched student, a personal report), write the email WITHOUT that mechanic rather than templating it. After creating, feel free to suggest one or two concrete improvements in your reply (e.g. a sharper headline angle, a stronger CTA placement, a trust element to add) — but only as a suggestion the user can act on, never as a score or grade.",
+      "LENGTH, match page length to commitment level, not a fixed habit: lead_magnet is the one exception at a true single fold (above); every other genre's stage count already reflects what its ask requires, so use the full sequence rather than trimming it. A free download needs zero persuasion runway; a webinar/lead_gen registration (6/5 stages) needs a little context before someone hands over their email; a multi-day challenge or a qualify-before-you-can-apply application (6 stages each) needs to show the process and set expectations; a priced tripwire offer (8 stages, sales-page style) needs the most (problem, proof, guarantee, objection-handling) because asking for a card number is the highest-commitment ask on this list. For an especially high-ticket / SaaS-style offer within any priced genre, lean into writing MORE substantive copy per stage (richer stage_content, fuller story_paragraphs) rather than adding new sections, depth of copy, not section count, is where 'long-form' actually lives. OFFER SHAPE may add a SMALL number of stages on top of the genre's sequence, and only ones the genre lacks: a paid digital product or a digital experience gets the product shown before the ask (image_text) plus what's included; a service gets a problem/solution beat and a how-it-works process; a booking page gets 'what to expect' placed early so someone who came to book is not made to read the whole argument first. This is composition, not inflation: it never repeats a stage the framework already has, never applies to the one-fold lead_magnet, and never re-inflates a LEAN page built for a most-aware or hot-traffic visitor. Write for the stages you are given and do not pad, an unnecessary section is worse than a short page. " +
+      "Some stages have a fixed layout; a few (marked above with 'or') allow an alternate. Use layout_choices ONLY to pick that alternate when the business/evidence genuinely calls for it (e.g. real testimonials exist), never as a default habit. Workflow: (1) pick the genre, lead_magnet (free book/PDF opt-in, one-fold), vsl (high-ticket video sales page), challenge (multi-day registration), application (qualify leads before a call), tripwire (low-ticket entry offer), webinar (single-session registration), booking (the page's whole purpose is getting a time in the diary, a consultation, assessment, site visit or appointment; captures a lead and promises NO downloadable file), lead_gen (generic interest capture); (2) write a specific, concrete headline, never a generic tagline; (3) bullets must name a specific outcome or mechanism, never a vague adjective ('transformative', 'game-changing', 'cutting-edge' are banned); (4) ONLY include faq_items if you have enough real detail to answer honestly, never invent generic filler Q&A or fabricated guarantees/stats; (5) price_cents only applies to genres with a priced offer (tripwire, vsl, challenge), omit for a free lead magnet, and when a price IS set, skip the capture form (a paid offer needs checkout, not a lead form, the operator wires up Stripe checkout on that section afterward); (6) leave include_capture_form at its default (true) unless the user is clearly building a pure sales/checkout page with no opt-in step; (7) confirmation_email_body should read like a real, brief, human confirmation (what they'll get, what's next). It can be genuinely short, but must never invent guarantees, stats, or promises the funnel copy itself didn't make; (8) ALWAYS write story_paragraphs whenever the genre's framework includes a Story/Founder-Story/Host stage. Two cases: if the user gave you a REAL testimonial (an actual customer's words, name, location, or result), use it close to verbatim as story_paragraphs with story_byline set to their real attribution (e.g. 'From: Jane Doe, Austin, TX'), don't rewrite their claim into something stronger than what they said. Otherwise (the common case, no testimonial offered), write 2-4 paragraphs of synthesized 'why this works' copy (the mechanism, the reasoning) from the headline/bullets you already wrote, with a generic byline like 'Why this works' (or 'Your host:...' for a webinar), and NEVER invent a fictional customer name/location/quote to make it look like a testimonial; (9) guarantee_headline/guarantee_body. ONLY when the user told you a real guarantee they actually offer, never invented; (10) trust_badges, safe generic ones (e.g. 'Secure checkout', 'Privacy protected') are fine whenever there's a form or checkout, but only add a guarantee-related badge if guarantee_headline is also set; ALSO write hero_trust_badges (2-3 honest risk-reversal signals like 'No credit card required' / 'Free, no obligation' / 'Licensed & insured') for the check-marked row under the hero's above-the-fold CTA, every genre, never an invented rating or 'trusted by N'; (11) cta_banner_headline/cta_banner_subtext. Every multi-section genre now carries a repeat CTA banner (mid-page or closing), so ALWAYS write these for any genre except the one-fold lead_magnet; restate the real offer, never introduce a new claim; (12) process_steps. Write these whenever the genre's framework includes a process-timeline stage (most do); (13) stage_content. Write one entry per remaining stage the genre's framework includes (video/benefits grid/problem-solution/before-after/included/comparison/callout), per that param's own field-mapping description; never include a testimonials entry unless the user gave you real quotes; (14) visual_archetype. ALWAYS pick one that matches this business's audience (see the DESIGN section above); omitting it skips Phase 2's design intelligence entirely and falls back to a plain, generic look, which defeats the point, only override its palette/typography/animation/CTA defaults when you have a genuine reason from what the user told you, not by default habit; (15) emotional_transformation. ALWAYS set it (see its param description): it drives the page's ART DIRECTION so an emergency-service page and an anxious-patient page come out structurally different, not the same layout recolored; (16) sales_argument, construct it FIRST and derive EVERY section's copy from it. The page is the visual execution of ONE argument (current belief → required beliefs → action), not a collection of components. The Belief Shift stage (the problem_solution entry in stage_content. Every multi-section genre now has one, including lead_gen and webinar) is where the argument TURNS: its problem side voices the prospect's CURRENT belief and the conventional experience that creates the friction they recognize (from old_way/why_old_way_fails, e.g. 'call center, voicemail, a slot next week, an unknown price', or 'you're probably not avoiding the dentist because you don't care (you're avoiding the lecture, the embarrassment, the loss of control')) never a manufactured strawman; its solution side is the REFRAME (the new opportunity + mechanism: 'so we changed the first visit', 'built around a different promise: one call, a real person, a technician today, the price before the wrench turns'). The benefits then PROVE the reframed promise. Each item should serve a step in belief_chain, never a generic feature list. The offer section makes the ACTION tangible and must NOT repeat the benefits items (offer bullets = what they concretely get + what happens next; benefits = why the promise is believable). The closing CTA banner is the CLOSE, not a 'Ready?' box: restate core_promise, resolve the last hesitation (primary_objection/risk_reversal), and give close_reason. Every genre's full stage sequence renders on the page regardless of which fields you fill, an unfilled stage shows placeholder/nothing, so fill every stage the genre actually has, not just headline/offer/faq. (17) automation_plan + automation_sequence, the AUTOMATION STRATEGY ENGINE: before writing follow-up, silently reason through the conversion LIFECYCLE (never shown to the user): what a submission MEANS, the states a lead moves through, the state that ENDS the journey (goal_state, with a goal_tag the operator applies, the sequence auto-exits the moment it's tagged), how long before a human takes over (handoff_days), and the cadence between touches. Then write automation_sequence: 1-4 nurture emails AFTER the instant confirmation, each CONTINUING the page's sales argument, advance the SAME belief chain from where the page left off, same mechanism, same promise, resolving the primary_objection over the arc; never generic 'checking in' filler. Timing matches intent: urgent/phone-first = NO nurture emails (omit the sequence) + handoff_days 0-1; free magnet = 2-3 touches over 3-7 days bridging toward the next step; application/high-ticket = 2-4 spaced touches over 1-3 weeks; enterprise = patient, evaluation-supporting touches. INTENT vs VERIFIED CONVERSION (the automation no-fabrication rule): never claim or assume a state the triggering event doesn't prove. form.submitted proves details were SUBMITTED, not that anyone paid, donated, subscribed, or booked. For payment-dependent goals (donations, purchases) the confirmation email must reflect intent ('here's how to complete your monthly gift' / 'your spot is reserved, finish checkout to lock it in') unless the funnel actually collects payment on-page, in which case the purchase confirmation belongs to the PAYMENT event, not the form. Classify every sequence step's comm_type honestly (see that param. Operational/escalation is not nurture), and let the classification CONSTRAIN the writing: operational = clarity, action, instructions, zero persuasion; reminder = time + access details only; nurture = belief progression; recovery = acknowledge the interrupted state FIRST, then the path back; stewardship = relationship voice, never acquisition copy; transactional = exactly what happened and what's next. STATE WINS OVER COMM_TYPE: the runtime suppresses any pending message whose lifecycle state no longer permits it (a cancelled appointment never gets 'see you tomorrow'), and your COPY must respect state too. Post-event copy written before attendance is known must never assume they attended OR missed ('whether you caught it live or not…' framing), recovery copy is only ever sent to a verified missed/cancelled state so it MAY acknowledge it directly. The same fabrication blacklist applies to email copy, and additionally NEVER invent named people (a beneficiary, customer, or staff member, 'Marcus's first progress report' with no real Marcus is a fabricated testimonial in email form), and never promise artifacts that don't exist ('your impact report', 'your personalized analysis'), emails may only reference the funnel's REAL deliverable and the beliefs its page argued. Never write fill-in-the-blank emails either, bracketed placeholders like '[Child intro: name, age]' ship as broken copy; if the business can't truthfully promise a specific (a matched student, a personal report), write the email WITHOUT that mechanic rather than templating it. After creating, feel free to suggest one or two concrete improvements in your reply (e.g. a sharper headline angle, a stronger CTA placement, a trust element to add), but only as a suggestion the user can act on, never as a score or grade.",
     parameters: {
       type: "object",
       properties: {
@@ -3722,7 +3722,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           type: "string",
           enum: ["unaware", "problem_aware", "solution_aware", "product_aware", "most_aware"],
           description:
-            "Eugene Schwartz's awareness level for THIS traffic — where the reader stands relative to their problem and your solution. Drives page DEPTH: 'most_aware' (they know you + want it, e.g. branded/high-intent search like 'emergency roofer near me') → a LEAN page straight to the CTA; 'unaware'/'problem_aware' (cold, must surface the problem first) → the FULL persuasion sequence. Infer it from the traffic + offer; when unsure, omit (defaults to the full sequence).",
+            "Eugene Schwartz's awareness level for THIS traffic, where the reader stands relative to their problem and your solution. Drives page DEPTH: 'most_aware' (they know you + want it, e.g. branded/high-intent search like 'emergency roofer near me') → a LEAN page straight to the CTA; 'unaware'/'problem_aware' (cold, must surface the problem first) → the FULL persuasion sequence. Infer it from the traffic + offer; when unsure, omit (defaults to the full sequence).",
         },
         sophistication: {
           type: "integer",
@@ -3740,29 +3740,29 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           type: "string",
           enum: ["lead_generation", "appointment", "application", "free_trial", "purchase", "webinar_registration", "audit_request", "consultation", "event_registration", "donation"],
           description:
-            "The ONE conversion this funnel must drive — the reasoned goal, from the business + offer + how it's actually bought. Recorded on the strategy so the whole campaign (page → CTA → follow-up) stays coherent. Pick the one that matches the buying process (a $50k service → application/consultation; a $29 product → purchase; a webinar → webinar_registration). Optional but recommended.",
+            "The ONE conversion this funnel must drive, the reasoned goal, from the business + offer + how it's actually bought. Recorded on the strategy so the whole campaign (page → CTA → follow-up) stays coherent. Pick the one that matches the buying process (a $50k service → application/consultation; a $29 product → purchase; a webinar → webinar_registration). Optional but recommended.",
         },
         lead_magnet_needed: {
           type: "boolean",
           description:
-            "Your explicit decision: does this funnel NEED a lead magnet / opt-in, or should it go straight to the primary action? High-intent prospects (e.g. 'emergency plumber near me') convert better sent DIRECTLY to a call/booking — a lead magnet adds friction. Educational/cold traffic often needs one. Set false to route a high-intent funnel straight to its CTA (also set include_capture_form false + a phone/booking cta_style). Defaults to the include_capture_form behavior when omitted.",
+            "Your explicit decision: does this funnel NEED a lead magnet / opt-in, or should it go straight to the primary action? High-intent prospects (e.g. 'emergency plumber near me') convert better sent DIRECTLY to a call/booking, a lead magnet adds friction. Educational/cold traffic often needs one. Set false to route a high-intent funnel straight to its CTA (also set include_capture_form false + a phone/booking cta_style). Defaults to the include_capture_form behavior when omitted.",
         },
         sales_argument: {
           type: "object",
           description:
-            "THE SALES ARGUMENT PLAN — construct this FIRST, before writing ANY copy. The page is the visual execution of ONE deliberate argument that moves THIS prospect from their current belief to the belief required for action — never a collection of components. Ground every field in what the user actually told you; never invent proof, guarantees, or differentiation.",
+            "THE SALES ARGUMENT PLAN, construct this FIRST, before writing ANY copy. The page is the visual execution of ONE deliberate argument that moves THIS prospect from their current belief to the belief required for action, never a collection of components. Ground every field in what the user actually told you; never invent proof, guarantees, or differentiation.",
           properties: {
             prospect: { type: "string", description: "Who exactly is being persuaded, in one sentence." },
-            arrival_context: { type: "string", description: "What likely happened right before they landed here — the conversation already in their head." },
-            current_belief: { type: "string", description: "What they believe right now that stops them acting (the REAL obstacle belief — e.g. 'dentists lecture people like me', 'repair companies make you wait and surprise you on price')." },
+            arrival_context: { type: "string", description: "What likely happened right before they landed here, the conversation already in their head." },
+            current_belief: { type: "string", description: "What they believe right now that stops them acting (the REAL obstacle belief, e.g. 'dentists lecture people like me', 'repair companies make you wait and surprise you on price')." },
             belief_chain: { type: "array", items: { type: "string" }, description: "The ordered chain of 3-6 beliefs the page must establish, from current belief to action. Each step must logically lead to the next; every section you then write should serve a step in this chain." },
-            old_way: { type: "string", description: "The conventional/alternative experience the prospect knows — ONLY when genuinely supportable, never a manufactured strawman. Omit/empty if none." },
+            old_way: { type: "string", description: "The conventional/alternative experience the prospect knows. ONLY when genuinely supportable, never a manufactured strawman. Omit/empty if none." },
             why_old_way_fails: { type: "string", description: "Why that conventional experience creates the exact friction the prospect recognizes." },
-            mechanism: { type: "string", description: "Why THIS solution works — the legitimate method/process/model difference. Never a fake proprietary mechanism." },
+            mechanism: { type: "string", description: "Why THIS solution works, the legitimate method/process/model difference. Never a fake proprietary mechanism." },
             core_promise: { type: "string", description: "The single credible outcome the whole page promises." },
             primary_objection: { type: "string", description: "The one objection most likely to block action." },
-            risk_reversal: { type: "string", description: "How legitimate risk is reduced — REAL policies/processes only (free, no-obligation, explained-first, cancel-anytime — whatever is actually true)." },
-            close_reason: { type: "string", description: "Why acting NOW makes sense — legitimate reasons only, never fake urgency." },
+            risk_reversal: { type: "string", description: "How legitimate risk is reduced. REAL policies/processes only (free, no-obligation, explained-first, cancel-anytime. Whatever is actually true)." },
+            close_reason: { type: "string", description: "Why acting NOW makes sense, legitimate reasons only, never fake urgency." },
           },
           required: ["prospect", "arrival_context", "current_belief", "belief_chain", "mechanism", "core_promise", "primary_objection", "close_reason"],
         },
@@ -3770,25 +3770,25 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           type: "string",
           enum: [...EMOTIONAL_TRANSFORMATIONS],
           description:
-            "ART DIRECTION — the buyer's current → desired emotional state, the single highest-leverage design input. ALWAYS set it; it deterministically shapes the page's visual composition (section layouts, contrast, canvases), not just the copy. Pick the one that matches THIS buyer's real state: panic_to_relief (emergency/urgent service — dead AC, burst pipe), fear_to_safety (anxious/avoidant buyer — dentist, therapy), uncertainty_to_confidence (attorney, high-stakes professional), confusion_to_clarity (financial/complex purchase), frustration_to_control (SaaS/tools replacing a painful workflow), discouragement_to_possibility (fitness/coaching), desire_to_aspiration (luxury/premium), concern_to_action (nonprofit/cause), interest_to_ownership (ecommerce/product), stagnation_to_clarity (consulting/strategy). E.g. an emergency HVAC page becomes urgent + high-contrast with a visualized hot→cool transformation and a full-bleed close, while an anxious-patient dental page becomes warm + human + image-led with soft transitions — structurally different pages, not recolors.",
+            "ART DIRECTION, the buyer's current → desired emotional state, the single highest-leverage design input. ALWAYS set it; it deterministically shapes the page's visual composition (section layouts, contrast, canvases), not just the copy. Pick the one that matches THIS buyer's real state: panic_to_relief (emergency/urgent service (dead AC, burst pipe), fear_to_safety (anxious/avoidant buyer) dentist, therapy), uncertainty_to_confidence (attorney, high-stakes professional), confusion_to_clarity (financial/complex purchase), frustration_to_control (SaaS/tools replacing a painful workflow), discouragement_to_possibility (fitness/coaching), desire_to_aspiration (luxury/premium), concern_to_action (nonprofit/cause), interest_to_ownership (ecommerce/product), stagnation_to_clarity (consulting/strategy). E.g. an emergency HVAC page becomes urgent + high-contrast with a visualized hot→cool transformation and a full-bleed close, while an anxious-patient dental page becomes warm + human + image-led with soft transitions, structurally different pages, not recolors.",
         },
         campaign_energy: {
           type: "string",
           enum: ["calm", "balanced", "urgent"],
           description:
-            "Optional override of the transformation's default energy — only when the business genuinely deviates (e.g. a non-emergency HVAC maintenance plan is NOT urgent). Omit to use the transformation's own character.",
+            "Optional override of the transformation's default energy, only when the business genuinely deviates (e.g. a non-emergency HVAC maintenance plan is NOT urgent). Omit to use the transformation's own character.",
         },
         decision_complexity: {
           type: "string",
           enum: ["low", "moderate", "high", "enterprise"],
           description:
-            "How much INFORMATION, proof, risk reduction, and buying SUPPORT this decision requires — ORTHOGONAL to persuasion: a most-aware enterprise prospect may need almost no convincing but substantial decision support (implementation, process, evaluation criteria, governance-grade FAQ). Judge from: price/commitment, offer complexity, trust requirement, perceived risk, sales-cycle length, number of decision makers, implementation/procurement burden. low = free/simple asks (ebook, checklist, emergency call). moderate = typical service bookings. high = considered purchases ($2k+, applications, multi-week engagements) — the page gains What's-Included + Process/Rollout stages; fill stage_content 'included' (concrete deliverables/implementation detail) + process_steps (rollout) for them. enterprise = multi-stakeholder/procurement decisions — additionally gains a Comparison/Evaluation stage; fill a stage_content 'comparison' entry (honest evaluation criteria vs alternatives) and write FAQ items at implementation/security/procurement grade. Omit if unsure — a safe floor is computed from price/objective.",
+            "How much INFORMATION, proof, risk reduction, and buying SUPPORT this decision requires. ORTHOGONAL to persuasion: a most-aware enterprise prospect may need almost no convincing but substantial decision support (implementation, process, evaluation criteria, governance-grade FAQ). Judge from: price/commitment, offer complexity, trust requirement, perceived risk, sales-cycle length, number of decision makers, implementation/procurement burden. low = free/simple asks (ebook, checklist, emergency call). moderate = typical service bookings. high = considered purchases ($2k+, applications, multi-week engagements), the page gains What's-Included + Process/Rollout stages; fill stage_content 'included' (concrete deliverables/implementation detail) + process_steps (rollout) for them. enterprise = multi-stakeholder/procurement decisions, additionally gains a Comparison/Evaluation stage; fill a stage_content 'comparison' entry (honest evaluation criteria vs alternatives) and write FAQ items at implementation/security/procurement grade. Omit if unsure, a safe floor is computed from price/objective.",
         },
         campaign_humanity: {
           type: "string",
           enum: ["product_led", "balanced", "people_led"],
           description:
-            "Optional override of the transformation's default humanity axis — product_led (UI/product imagery leads) vs people_led (human imagery leads). Omit to use the transformation's own character.",
+            "Optional override of the transformation's default humanity axis, product_led (UI/product imagery leads) vs people_led (human imagery leads). Omit to use the transformation's own character.",
         },
         eyebrow: {
           type: "string",
@@ -3797,17 +3797,17 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         headline: {
           type: "string",
           description:
-            "Main hero headline, max 80 chars. A specific, concrete hook — not a generic tagline. Bad: 'Unlock Your Potential'. Good: 'Book 10 Qualified Calls a Week Without Cold DMs'.",
+            "Main hero headline, max 80 chars. A specific, concrete hook, not a generic tagline. Bad: 'Unlock Your Potential'. Good: 'Book 10 Qualified Calls a Week Without Cold DMs'.",
         },
         subheadline: {
           type: "string",
-          description: "One-line subheadline under the headline. Keep it under 140 characters and make sure it reads as a complete sentence at that length — count as you write it, since anything longer gets cut off rather than wrapped. Optional.",
+          description: "One-line subheadline under the headline. Keep it under 140 characters and make sure it reads as a complete sentence at that length, count as you write it, since anything longer gets cut off rather than wrapped. Optional.",
         },
         bullets: {
           type: "array",
           items: { type: "string" },
           description:
-            "3-5 short phrases, each naming a specific outcome or mechanism, e.g. ['Done-in-a-day setup', 'No cold outreach', 'Works with any niche']. Never vague adjectives alone. Each item is ONE bullet — a phrase that itself contains a natural comma (e.g. 'Nail, ear, and paw prep') is still a single array item, not three.",
+            "3-5 short phrases, each naming a specific outcome or mechanism, e.g. ['Done-in-a-day setup', 'No cold outreach', 'Works with any niche']. Never vague adjectives alone. Each item is ONE bullet, a phrase that itself contains a natural comma (e.g. 'Nail, ear, and paw prep') is still a single array item, not three.",
         },
         price_cents: {
           type: "number",
@@ -3826,7 +3826,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         faq_items: {
           type: "array",
           description:
-            "ONLY include if you have enough real detail from the user to answer honestly — omit entirely rather than invent generic filler Q&A.",
+            "ONLY include if you have enough real detail from the user to answer honestly, omit entirely rather than invent generic filler Q&A.",
           items: {
             type: "object",
             properties: {
@@ -3840,7 +3840,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         include_capture_form: {
           type: "boolean",
           description:
-            "Create a dedicated lead-capture form and wire it into the funnel's offer/registration section (or, for the one-fold lead_magnet genre, directly into the hero itself), plus a follow-up email + workflow that fires on submit. Default true — set false only for a pure paid-checkout page with no opt-in step.",
+            "Create a dedicated lead-capture form and wire it into the funnel's offer/registration section (or, for the one-fold lead_magnet genre, directly into the hero itself), plus a follow-up email + workflow that fires on submit. Default true. Set false only for a pure paid-checkout page with no opt-in step.",
         },
         confirmation_email_subject: {
           type: "string",
@@ -3849,18 +3849,18 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         confirmation_email_body: {
           type: "string",
           description:
-            "Body of the auto-reply email. Short, human, no fabricated claims. Format as 2-4 short paragraphs (1-3 sentences each) SEPARATED BY A REAL BLANK LINE — never one dense block of text, and never a numbered list crammed onto consecutive lines with no space between items; give each step/point its own line with a blank line before and after so it's easy to scan. Use an ACTUAL newline character between paragraphs — never write the literal two-character text \"\\n\" as part of the sentence itself (a real line break is what a blank line in the string produces, not typed backslash-n characters). The unsubscribe footer is added automatically — don't write your own.",
+            "Body of the auto-reply email. Short, human, no fabricated claims. Format as 2-4 short paragraphs (1-3 sentences each) SEPARATED BY A REAL BLANK LINE, never one dense block of text, and never a numbered list crammed onto consecutive lines with no space between items; give each step/point its own line with a blank line before and after so it's easy to scan. Use an ACTUAL newline character between paragraphs, never write the literal two-character text \"\\n\" as part of the sentence itself (a real line break is what a blank line in the string produces, not typed backslash-n characters). The unsubscribe footer is added automatically, don't write your own.",
         },
         tag: {
           type: "string",
           description:
-            "Tag applied to the contact when they submit the capture form, e.g. 'Website Assessment Requested'. Omit for a sensible default derived from the funnel name — this tag is what downstream broadcasts/voice-campaign audiences and other workflow triggers filter on.",
+            "Tag applied to the contact when they submit the capture form, e.g. 'Website Assessment Requested'. Omit for a sensible default derived from the funnel name. This tag is what downstream broadcasts/voice-campaign audiences and other workflow triggers filter on.",
         },
         story_paragraphs: {
           type: "array",
           items: { type: "string" },
           description:
-            "2-4 short paragraphs of real, specific 'why this works' copy for the funnel's Story section — the mechanism, the reasoning, what makes this different. Write it whenever the funnel's genre has a Story section (most genres do); synthesize it from the headline/bullets/offer you already wrote, don't invent new facts, customer names, or case studies that weren't given to you. Omit only if you truly have nothing substantive to add beyond the offer copy.",
+            "2-4 short paragraphs of real, specific 'why this works' copy for the funnel's Story section, the mechanism, the reasoning, what makes this different. Write it whenever the funnel's genre has a Story section (most genres do); synthesize it from the headline/bullets/offer you already wrote, don't invent new facts, customer names, or case studies that weren't given to you. Omit only if you truly have nothing substantive to add beyond the offer copy.",
         },
         story_byline: {
           type: "string",
@@ -3870,7 +3870,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         guarantee_headline: {
           type: "string",
           description:
-            "Headline for a Guarantee section, e.g. '30-Day Money-Back Guarantee'. ONLY include if the user told you a real guarantee/refund policy they actually offer — never invent one. Omit entirely otherwise.",
+            "Headline for a Guarantee section, e.g. '30-Day Money-Back Guarantee'. ONLY include if the user told you a real guarantee/refund policy they actually offer, never invent one. Omit entirely otherwise.",
         },
         guarantee_body: {
           type: "string",
@@ -3880,12 +3880,12 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           type: "array",
           items: { type: "string" },
           description:
-            "Short trust-signal labels for a Trust Badges row, e.g. ['Secure checkout', 'Privacy protected']. Only include badges that are actually true of this funnel — e.g. only add a money-back-guarantee badge if guarantee_headline is also set. Safe generic ones like 'Secure checkout' and 'Privacy protected' are fine whenever there's a form or checkout. Omit if the genre has no Trust Badges section.",
+            "Short trust-signal labels for a Trust Badges row, e.g. ['Secure checkout', 'Privacy protected']. Only include badges that are actually true of this funnel, e.g. only add a money-back-guarantee badge if guarantee_headline is also set. Safe generic ones like 'Secure checkout' and 'Privacy protected' are fine whenever there's a form or checkout. Omit if the genre has no Trust Badges section.",
         },
         real_rating: {
           type: "object",
           description:
-            "The business's REAL public rating — ONLY when the user explicitly stated it (e.g. their actual Google rating). Renders as a linked star strip directly under the hero (verifiable social proof above the fold). NEVER estimate, invent, or round up; omit entirely when the user didn't provide real numbers.",
+            "The business's REAL public rating. ONLY when the user explicitly stated it (e.g. their actual Google rating). Renders as a linked star strip directly under the hero (verifiable social proof above the fold). NEVER estimate, invent, or round up; omit entirely when the user didn't provide real numbers.",
           properties: {
             score: { type: "number", description: "The real average rating, e.g. 4.7" },
             count: { type: "integer", description: "The real review count, e.g. 6287" },
@@ -3897,12 +3897,12 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           type: "array",
           items: { type: "string" },
           description:
-            "2-3 short risk-reversal signals shown as a small check-marked row DIRECTLY UNDER the hero's above-the-fold CTA (the Brunson pattern), e.g. ['No credit card required', 'Cancel anytime', 'Setup in 5 minutes'] or ['Free — no obligation', 'Licensed & insured', 'Serving Austin since 2009']. Distinct from trust_badges (the mid-page section). Keep every one literally TRUE of this business — never invent a rating, review count, or 'trusted by N' figure the user didn't give. Write these for every genre; omit only if you have no honest signal.",
+            "2-3 short risk-reversal signals shown as a small check-marked row DIRECTLY UNDER the hero's above-the-fold CTA (the Brunson pattern), e.g. ['No credit card required', 'Cancel anytime', 'Setup in 5 minutes'] or ['Free, no obligation', 'Licensed & insured', 'Serving Austin since 2009']. Distinct from trust_badges (the mid-page section). Keep every one literally TRUE of this business, never invent a rating, review count, or 'trusted by N' figure the user didn't give. Write these for every genre; omit only if you have no honest signal.",
         },
         cta_banner_headline: {
           type: "string",
           description:
-            "Headline for a repeat-CTA banner section, restating the real offer/hook already established — not a new claim. Every multi-section genre now has a CTA Banner (mid-page or closing), so write this for any genre except the one-fold lead_magnet.",
+            "Headline for a repeat-CTA banner section, restating the real offer/hook already established, not a new claim. Every multi-section genre now has a CTA Banner (mid-page or closing), so write this for any genre except the one-fold lead_magnet.",
         },
         cta_banner_subtext: {
           type: "string",
@@ -3911,13 +3911,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         layout_choices: {
           type: "object",
           description:
-            "Override which layout fills a stage, where that stage allows alternates. Keys are the stage's DEFAULT section type (not a label — e.g. \"before_after\", \"guarantee\", \"problem_solution\"), values are the alternate section type to use instead. E.g. for 'application' genre, {\"before_after\": \"testimonials\"} uses real testimonials for the Results stage instead of the default Before/After — only do this when the user actually gave you real testimonials. Then describe that chosen layout's content in stage_content, keyed by the SAME resolved type (e.g. \"testimonials\", not \"before_after\"). Omit entirely to use each genre's recommended layout for every stage.",
+            "Override which layout fills a stage, where that stage allows alternates. Keys are the stage's DEFAULT section type (not a label. E.g. \"before_after\", \"guarantee\", \"problem_solution\"), values are the alternate section type to use instead. E.g. for 'application' genre, {\"before_after\": \"testimonials\"} uses real testimonials for the Results stage instead of the default Before/After. Only do this when the user actually gave you real testimonials. Then describe that chosen layout's content in stage_content, keyed by the SAME resolved type (e.g. \"testimonials\", not \"before_after\"). Omit entirely to use each genre's recommended layout for every stage.",
           additionalProperties: { type: "string" },
         },
         process_steps: {
           type: "array",
           description:
-            "Steps for the funnel's Process Timeline stage (used by most genres — 'How It Works', 'Agenda', 'Process', 'Challenge Schedule'). Each step needs a short title and 1-3 supporting bullets. Write these whenever the genre has this stage — a timeline with no steps reads as unfinished.",
+            "Steps for the funnel's Process Timeline stage (used by most genres. 'How It Works', 'Agenda', 'Process', 'Challenge Schedule'). Each step needs a short title and 1-3 supporting bullets. Write these whenever the genre has this stage, a timeline with no steps reads as unfinished.",
           items: {
             type: "object",
             properties: {
@@ -3932,22 +3932,22 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         stage_content: {
           type: "array",
           description:
-            "Content for the funnel's other conversion-framework stages (Video, Benefits Grid, Problem/Solution, Before/After, What's Included, Comparison, Testimonials, Callout) — write ONE entry per stage the genre's framework actually includes (see the genre descriptions above), keyed by section_type = that stage's resolved section type. If a genre's framework lists BOTH benefits_grid and included (e.g. lead_magnet: 'What You'll Learn' AND 'What's Included'), write TWO separate entries, not one — they answer different questions (benefits_grid = the outcomes/knowledge the reader gains; included = the concrete deliverables/assets they receive) and skipping either leaves that section visibly blank on the page. Each entry's fields are used differently depending on section_type: " +
-            "\"video\" — video_url (required), headline/text optional. Unlike the other stages here, a video entry may be written for ANY genre, not only one whose framework lists a Video stage: when the user gave you a REAL video/embed URL (a recorded walkthrough, explainer, founder message, demo) and watching it would move this page's argument forward, write the entry and the section is composed for you, placed after the hero. Only ever with a real URL they actually supplied — never invent one, and never write this entry to reserve an empty video frame. " +
-            "\"benefits_grid\" — headline optional, items[].title + items[].description (3-6 items, each a specific outcome the reader gets, never a vague adjective). " +
-            "\"included\" — headline optional, items[].title + items[].description (3-6 concrete deliverables — what's literally in the box/download/program, OR for application genre's 'Who This Isn't For' stage, real disqualifying criteria). " +
-            "\"problem_solution\" — headline+text describe the problem, secondary_headline+secondary_text describe the solution. " +
-            "\"before_after\" — items with group 'before' or 'after' (items[].title is the line text); headline/secondary_headline are the two column labels. " +
-            "\"comparison\" — items[].title is a feature name (assumes you have it and the generic alternative doesn't — never claim something false); headline is the section title. " +
-            "\"callout\" — text is a single highlighted sentence restating something already established (e.g. the market opportunity/why-now) — not a new factual claim. " +
-            "\"testimonials\" — ONLY include this entry if the user gave you REAL customer quotes. items[].quote/name/detail, verbatim, never invented. Omit the whole entry (not just leave items empty) if you have no real testimonials — do not choose the testimonials layout via layout_choices without this.",
+            "Content for the funnel's other conversion-framework stages (Video, Benefits Grid, Problem/Solution, Before/After, What's Included, Comparison, Testimonials, Callout). Write ONE entry per stage the genre's framework actually includes (see the genre descriptions above), keyed by section_type = that stage's resolved section type. If a genre's framework lists BOTH benefits_grid and included (e.g. lead_magnet: 'What You'll Learn' AND 'What's Included'), write TWO separate entries, not one. They answer different questions (benefits_grid = the outcomes/knowledge the reader gains; included = the concrete deliverables/assets they receive) and skipping either leaves that section visibly blank on the page. Each entry's fields are used differently depending on section_type: " +
+            "\"video\", video_url (required), headline/text optional. Unlike the other stages here, a video entry may be written for ANY genre, not only one whose framework lists a Video stage: when the user gave you a REAL video/embed URL (a recorded walkthrough, explainer, founder message, demo) and watching it would move this page's argument forward, write the entry and the section is composed for you, placed after the hero. Only ever with a real URL they actually supplied, never invent one, and never write this entry to reserve an empty video frame. " +
+            "\"benefits_grid\", headline optional, items[].title + items[].description (3-6 items, each a specific outcome the reader gets, never a vague adjective). " +
+            "\"included\", headline optional, items[].title + items[].description (3-6 concrete deliverables, what's literally in the box/download/program, OR for application genre's 'Who This Isn't For' stage, real disqualifying criteria). " +
+            "\"problem_solution\", headline+text describe the problem, secondary_headline+secondary_text describe the solution. " +
+            "\"before_after\", items with group 'before' or 'after' (items[].title is the line text); headline/secondary_headline are the two column labels. " +
+            "\"comparison\". Items[].title is a feature name (assumes you have it and the generic alternative doesn't. Never claim something false); headline is the section title. " +
+            "\"callout\". Text is a single highlighted sentence restating something already established (e.g. the market opportunity/why-now), not a new factual claim. " +
+            "\"testimonials\". ONLY include this entry if the user gave you REAL customer quotes. items[].quote/name/detail, verbatim, never invented. Omit the whole entry (not just leave items empty) if you have no real testimonials. Do not choose the testimonials layout via layout_choices without this.",
           items: {
             type: "object",
             properties: {
               section_type: {
                 type: "string",
                 enum: ["video", "benefits_grid", "problem_solution", "before_after", "included", "comparison", "testimonials", "callout"],
-                description: "Which layout this content is for — must match a section that will actually be in the funnel (a genre default, or what you chose via layout_choices).",
+                description: "Which layout this content is for. Must match a section that will actually be in the funnel (a genre default, or what you chose via layout_choices).",
               },
               headline: { type: "string" },
               text: { type: "string" },
@@ -3977,7 +3977,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         value_stack: {
           type: "object",
           description:
-            "For PRICED sales genres (tripwire, vsl) — the value stack that renders right before the offer/price. List the operator's REAL deliverables, each with an honest value, then a summed total and the real price. Use only real, defensible values — NEVER fabricate or pad the numbers (an inflated stack is a fabrication). Omit entirely for free genres (lead_magnet, lead_gen, webinar, application) — there's no price to anchor.",
+            "For PRICED sales genres (tripwire, vsl), the value stack that renders right before the offer/price. List the operator's REAL deliverables, each with an honest value, then a summed total and the real price. Use only real, defensible values. NEVER fabricate or pad the numbers (an inflated stack is a fabrication). Omit entirely for free genres (lead_magnet, lead_gen, webinar, application), there's no price to anchor.",
           properties: {
             headline: { type: "string", description: "e.g. \"Here's everything you get\"." },
             items: {
@@ -4003,24 +4003,24 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         design_pack: {
           type: "string",
           enum: ["classic", "executive", "bold", "premium", "startup", "local_business", "wellness"],
-          description: "The visual design pack — see the DESIGN section above for which pack fits which audience. Omit for 'classic'.",
+          description: "The visual design pack. See the DESIGN section above for which pack fits which audience. Omit for 'classic'.",
         },
         hero_layout: {
           type: "string",
           enum: ["centered", "split", "background_image", "founder_image", "browser_mockup", "phone_mockup"],
-          description: "Hero section layout. Prefer omitting this and letting visual_archetype pick it — only set explicitly when you have a genuine reason (e.g. real media on hand) to deviate from the archetype's own recommendation. 'split'/'background_image'/'browser_mockup'/'phone_mockup' look best with real media (hero_media_url) but render an honest placeholder without one — never a fabricated screenshot.",
+          description: "Hero section layout. Prefer omitting this and letting visual_archetype pick it. Only set explicitly when you have a genuine reason (e.g. real media on hand) to deviate from the archetype's own recommendation. 'split'/'background_image'/'browser_mockup'/'phone_mockup' look best with real media (hero_media_url) but render an honest placeholder without one, never a fabricated screenshot.",
         },
         cta_style: {
           type: "string",
           enum: ["inline", "popup_form", "popup_calendar", "dual", "sticky_desktop", "floating_mobile", "phone"],
-          description: "How the primary capture/offer CTA behaves. NEVER ask the user for a booking-page slug or phone number before building — that's exactly the kind of blocking question the tool's top-level instructions ban. Only set this to 'popup_calendar' or 'phone' when the user has ALREADY volunteered a real slug/number earlier in the conversation; otherwise omit this entirely (or set 'popup_form') and the funnel safely defaults to a lead-capture form + follow-up email — the operator connects their calendar/number afterward, no live page is ever broken by omitting it. 'dual' needs cta_secondary_label + cta_secondary_href.",
+          description: "How the primary capture/offer CTA behaves. NEVER ask the user for a booking-page slug or phone number before building, that's exactly the kind of blocking question the tool's top-level instructions ban. Only set this to 'popup_calendar' or 'phone' when the user has ALREADY volunteered a real slug/number earlier in the conversation; otherwise omit this entirely (or set 'popup_form') and the funnel safely defaults to a lead-capture form + follow-up email, the operator connects their calendar/number afterward, no live page is ever broken by omitting it. 'dual' needs cta_secondary_label + cta_secondary_href.",
         },
         cta_secondary_label: { type: "string", description: "Only used with cta_style 'dual'." },
         cta_secondary_href: { type: "string", description: "Only used with cta_style 'dual'." },
         bridge_next_funnel_id: {
           type: "string",
           description:
-            "MULTISTEP FUNNELS: the id of an ALREADY-CREATED funnel (returned as 'Funnel ID' by a previous create_funnel call) that THIS funnel's thank-you page should route new signups to — the magnet→offer chain link. When the user asks for a multistep funnel (lead magnet → offer → checkout → upsell), call create_funnel once per page, DOWNSTREAM FIRST (the offer/sales page), then the lead-magnet page with this set to the offer funnel's id. Omit for single-page funnels. NEVER pass a placeholder value here, and NEVER create both steps of a chain in one parallel batch (the link needs the real id, and a re-create makes a duplicate page). Sequence STRICTLY: (1) one create_funnel call for the DOWNSTREAM offer alone and nothing else; (2) read the 'Funnel ID' from its result; (3) one more create_funnel call for the upstream lead-magnet page with this field set to that id. To link two funnels that BOTH already exist, call link_funnel_steps instead — never re-create a page just to add the link.",
+            "MULTISTEP FUNNELS: the id of an ALREADY-CREATED funnel (returned as 'Funnel ID' by a previous create_funnel call) that THIS funnel's thank-you page should route new signups to, the magnet→offer chain link. When the user asks for a multistep funnel (lead magnet → offer → checkout → upsell), call create_funnel once per page, DOWNSTREAM FIRST (the offer/sales page), then the lead-magnet page with this set to the offer funnel's id. Omit for single-page funnels. NEVER pass a placeholder value here, and NEVER create both steps of a chain in one parallel batch (the link needs the real id, and a re-create makes a duplicate page). Sequence STRICTLY: (1) one create_funnel call for the DOWNSTREAM offer alone and nothing else; (2) read the 'Funnel ID' from its result; (3) one more create_funnel call for the upstream lead-magnet page with this field set to that id. To link two funnels that BOTH already exist, call link_funnel_steps instead, never re-create a page just to add the link.",
         },
         bridge_next_cta: {
           type: "string",
@@ -4038,13 +4038,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             additionalProperties: false,
           },
           description:
-            "VERIFIABLE EVIDENCE ONLY — logo/badge images (customer logos, partner/association logos, certifications, press) the user EXPLICITLY provided as real image URLs in this conversation. Renders as a grayscale evidence strip under the hero. NEVER invent, guess, or placeholder these — no supplied evidence means OMIT this entirely and the page simply shows none. The operator can also add logos later in the builder (Trust logos section + the Files & delivery image upload).",
+            "VERIFIABLE EVIDENCE ONLY, logo/badge images (customer logos, partner/association logos, certifications, press) the user EXPLICITLY provided as real image URLs in this conversation. Renders as a grayscale evidence strip under the hero. NEVER invent, guess, or placeholder these, no supplied evidence means OMIT this entirely and the page simply shows none. The operator can also add logos later in the builder (Trust logos section + the Files & delivery image upload).",
         },
         authenticity_category: {
           type: "string",
           enum: ["local_service_health", "local_service_trade", "physical_product", "b2b_services", "enterprise_software", "info_product", "coaching", "nonprofit"],
           description:
-            "BUSINESS AUTHENTICITY category — which real-world evidence model applies to this business (drives which assets the page requests and where stock imagery is honest vs counterfeit). Pick the closest: a dental practice is local_service_health; skincare ecom is physical_product; a warehouse integrator is b2b_services; a cybersecurity platform is enterprise_software; a PDF guide is info_product. Inferred from genre/archetype when omitted.",
+            "BUSINESS AUTHENTICITY category, which real-world evidence model applies to this business (drives which assets the page requests and where stock imagery is honest vs counterfeit). Pick the closest: a dental practice is local_service_health; skincare ecom is physical_product; a warehouse integrator is b2b_services; a cybersecurity platform is enterprise_software; a PDF guide is info_product. Inferred from genre/archetype when omitted.",
         },
         supplied_evidence_heading: {
           type: "string",
@@ -4055,19 +4055,19 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           properties: {
             conversion_event: { type: "string", description: "What a form submission MEANS for this funnel ('requested the guide', 'applied for the program', 'asked for an emergency callback'). Max 100 chars." },
             goal_state: { type: "string", description: "The state that ENDS the follow-up journey ('booked the consultation', 'made a purchase', 'replied to schedule'). Max 100 chars." },
-            goal_tag: { type: "string", description: "Short kebab-case tag whose presence EXITS the sequence. STRONGLY PREFER the canonical auto-applied states — 'booked' (applied automatically when a real booking is created), 'purchased' (applied on verified payment — Stripe/community/quote-paid), 'replied' (applied on any inbound message), 'accepted' (quote accepted), 'won' (deal won) — because Flow detects those events natively and the exit fires with ZERO operator action. Use a custom tag only when the goal genuinely isn't one of these (the operator then applies it manually). Max 40 chars." },
+            goal_tag: { type: "string", description: "Short kebab-case tag whose presence EXITS the sequence. STRONGLY PREFER the canonical auto-applied states, 'booked' (applied automatically when a real booking is created), 'purchased' (applied on verified payment. Stripe/community/quote-paid), 'replied' (applied on any inbound message), 'accepted' (quote accepted), 'won' (deal won), because Flow detects those events natively and the exit fires with ZERO operator action. Use a custom tag only when the goal genuinely isn't one of these (the operator then applies it manually). Max 40 chars." },
             handoff_days: { type: "number", description: "Days from signup until a human-handoff task is created for the operator. Urgent/high-intent: 0-1. Considered: 3-7. Enterprise: 7-14." },
             cadence_rationale: { type: "string", description: "One sentence: why this timing fits this buyer's intent level. Max 200 chars." },
           },
           required: ["conversion_event", "goal_state", "goal_tag", "handoff_days"],
           additionalProperties: false,
           description:
-            "AUTOMATION STRATEGY — reason about the conversion LIFECYCLE before writing any follow-up: states, transitions, the goal that ends the journey, suppression, and human handoff. The composed workflow checks goal_tag before EVERY nurture touch and exits the moment it's applied — so converted leads are never nurtured. Fill honestly from the funnel's real intent: an emergency-service lead needs a fast handoff, not a nurture arc; an enterprise evaluation needs spaced touches over weeks.",
+            "AUTOMATION STRATEGY, reason about the conversion LIFECYCLE before writing any follow-up: states, transitions, the goal that ends the journey, suppression, and human handoff. The composed workflow checks goal_tag before EVERY nurture touch and exits the moment it's applied, so converted leads are never nurtured. Fill honestly from the funnel's real intent: an emergency-service lead needs a fast handoff, not a nurture arc; an enterprise evaluation needs spaced touches over weeks.",
         },
         event_start_at: {
           type: "string",
           description:
-            "Webinar/event funnels ONLY: the event's start datetime as ISO 8601 WITH timezone offset (e.g. '2026-09-15T14:00:00-05:00'), taken from what the user actually stated. Anchors automated reminders (anchor_offset_hours steps); the operator can edit it in the builder and every pending reminder reschedules automatically. NEVER invent a date — if the user didn't give one, omit this and note they can set it in the builder (anchored steps then fall back to signup-relative timing).",
+            "Webinar/event funnels ONLY: the event's start datetime as ISO 8601 WITH timezone offset (e.g. '2026-09-15T14:00:00-05:00'), taken from what the user actually stated. Anchors automated reminders (anchor_offset_hours steps); the operator can edit it in the builder and every pending reminder reschedules automatically. NEVER invent a date, if the user didn't give one, omit this and note they can set it in the builder (anchored steps then fall back to signup-relative timing).",
         },
         automation_sequence: {
           type: "array",
@@ -4076,33 +4076,33 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             properties: {
               delay_hours: { type: "number", description: "Hours AFTER SIGNUP this email sends (absolute, not relative to the previous step). 1-336." },
               subject: { type: "string", description: "Email subject. Max 120 chars." },
-              body: { type: "string", description: "Full email body. MUST continue the page's sales argument — advance the SAME belief chain from where the page left off, reference the same mechanism and promise; never a generic 'just checking in'. {{contact.firstName}} merge tag available." },
+              body: { type: "string", description: "Full email body. MUST continue the page's sales argument, advance the SAME belief chain from where the page left off, reference the same mechanism and promise; never a generic 'just checking in'. {{contact.firstName}} merge tag available." },
               purpose: { type: "string", description: "This step's JOB in the journey ('resolve the price objection', 'remove the risk of the first visit'). Max 100 chars." },
               anchor_offset_hours: {
                 type: "number",
                 description:
-                  "EVENT-ANCHORED timing (webinar/event funnels with event_start_at only): hours relative to the EVENT, not to signup. -24 = reminder 24h before; -1 = 1h before; +2 = follow-up 2h after it ends. When set, the step self-corrects against the live event time — a rescheduled webinar moves the send automatically. Omit for signup-relative steps (delay_hours).",
+                  "EVENT-ANCHORED timing (webinar/event funnels with event_start_at only): hours relative to the EVENT, not to signup. -24 = reminder 24h before; -1 = 1h before; +2 = follow-up 2h after it ends. When set, the step self-corrects against the live event time, a rescheduled webinar moves the send automatically. Omit for signup-relative steps (delay_hours).",
               },
               comm_type: {
                 type: "string",
                 enum: ["transactional", "operational", "reminder", "nurture", "recovery", "sales_followup", "stewardship", "reactivation"],
                 description:
-                  "COMMUNICATION TAXONOMY — classify what kind of message this actually is. Not every automated message is nurture: transactional = confirmation/receipt/delivery; operational = scheduling, availability, appointment instructions; reminder = event/appointment timing; nurture = belief progression toward the conversion; recovery = abandoned/missed/cancelled re-engagement; sales_followup = considered-purchase/evaluation support; stewardship = donor/customer relationship; reactivation = dormant re-engagement. An emergency-service lead needs OPERATIONAL communication and escalation, not nurture — classify honestly and the mix should differ by business.",
+                  "COMMUNICATION TAXONOMY, classify what kind of message this actually is. Not every automated message is nurture: transactional = confirmation/receipt/delivery; operational = scheduling, availability, appointment instructions; reminder = event/appointment timing; nurture = belief progression toward the conversion; recovery = abandoned/missed/cancelled re-engagement; sales_followup = considered-purchase/evaluation support; stewardship = donor/customer relationship; reactivation = dormant re-engagement. An emergency-service lead needs OPERATIONAL communication and escalation, not nurture. Classify honestly and the mix should differ by business.",
               },
             },
             required: ["delay_hours", "subject", "body", "purpose"],
             additionalProperties: false,
           },
           description:
-            "1-4 NURTURE emails sent AFTER the instant confirmation email (which confirmation_email_subject/body already covers — don't duplicate it here). Each is preceded by the goal_tag exit check. Match count + spacing to intent: urgent/high-intent gets 0-1 touch then fast human handoff; cold considered offers get 2-4 touches over 1-3 weeks. Omit entirely for phone-first emergency funnels where nurture emails would be tone-deaf.",
+            "1-4 NURTURE emails sent AFTER the instant confirmation email (which confirmation_email_subject/body already covers. Don't duplicate it here). Each is preceded by the goal_tag exit check. Match count + spacing to intent: urgent/high-intent gets 0-1 touch then fast human handoff; cold considered offers get 2-4 touches over 1-3 weeks. Omit entirely for phone-first emergency funnels where nurture emails would be tone-deaf.",
         },
         cta_phone_number: {
           type: "string",
-          description: "Real phone number in E.164 format (e.g. '+15551234567'), only used with cta_style 'phone'. Never ask for one before building — omit cta_style/leave it as popup_form if you don't have a real number; only set cta_style to 'phone' when the user already gave you one.",
+          description: "Real phone number in E.164 format (e.g. '+15551234567'), only used with cta_style 'phone'. Never ask for one before building, omit cta_style/leave it as popup_form if you don't have a real number; only set cta_style to 'phone' when the user already gave you one.",
         },
         cta_booking_page_slug: {
           type: "string",
-          description: "A real booking-page slug the user already gave you (from /b/[subAccountId]/[slug]), only used with cta_style 'popup_calendar'. Never ask for one before building. Without it, 'popup_calendar' is impossible to configure from this tool, so the CTA falls back to popup_form regardless of what cta_style/the archetype recommends — the operator can switch to a real calendar in the builder once they have a booking page.",
+          description: "A real booking-page slug the user already gave you (from /b/[subAccountId]/[slug]), only used with cta_style 'popup_calendar'. Never ask for one before building. Without it, 'popup_calendar' is impossible to configure from this tool, so the CTA falls back to popup_form regardless of what cta_style/the archetype recommends, the operator can switch to a real calendar in the builder once they have a booking page.",
         },
         visual_archetype: {
           type: "string",
@@ -4117,7 +4117,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             "agency_creative",
             "professional_enterprise",
           ],
-          description: "The industry-aware visual design system for the whole page — see the DESIGN section above. ALWAYS set this. DEFAULT to 'direct_response' (the bold, high-converting sales-letter look) for MOST sales/lead pages — local service, coaching, agency, SaaS, ecommerce, generic lead-gen. BUT for industries where a bold ClickFunnels-VSL look actively HURTS credibility, pick the fitting distinct archetype instead (these three are honored as-is; every other pick still resolves to the bold default): healthcare / dental / medical / therapy / legal / financial / accounting / insurance / any trust-heavy professional service → 'professional_enterprise' (calm authority); luxury / high-end / concierge / private / bespoke → 'luxury_premium' (restraint); nonprofit / charity / church / cause → 'nonprofit_mission' (human, mission-led). When unsure, 'direct_response'.",
+          description: "The industry-aware visual design system for the whole page. See the DESIGN section above. ALWAYS set this. DEFAULT to 'direct_response' (the bold, high-converting sales-letter look) for MOST sales/lead pages, local service, coaching, agency, SaaS, ecommerce, generic lead-gen. BUT for industries where a bold ClickFunnels-VSL look actively HURTS credibility, pick the fitting distinct archetype instead (these three are honored as-is; every other pick still resolves to the bold default): healthcare / dental / medical / therapy / legal / financial / accounting / insurance / any trust-heavy professional service → 'professional_enterprise' (calm authority); luxury / high-end / concierge / private / bespoke → 'luxury_premium' (restraint); nonprofit / charity / church / cause → 'nonprofit_mission' (human, mission-led). When unsure, 'direct_response'.",
         },
         palette_variant: {
           type: "string",
@@ -4163,22 +4163,22 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         },
         hero_media_url: {
           type: "string",
-          description: "A REAL image/video URL the user gave you (screenshot, founder photo, product shot). Never invent or guess a URL. Omit if you don't have one — the hero shows an honest placeholder instead.",
+          description: "A REAL image/video URL the user gave you (screenshot, founder photo, product shot). Never invent or guess a URL. Omit if you don't have one, the hero shows an honest placeholder instead.",
         },
         hero_media_type: { type: "string", enum: ["image", "video"], description: "Only used with hero_media_url. Omit to default to 'image'." },
         service_domain: {
           type: "string",
           description:
-            "WHAT THIS BUSINESS IS, in plain descriptive terms — the answer you would give a PHOTOGRAPHER who asked 'what kind of business am I shooting?'. Two to five words naming the service or trade: 'residential roof inspection and repair', 'general dentistry', 'operations strategy consulting', 'warehouse automation integration', 'paediatric sleep coaching'. This is BUSINESS TRUTH, deliberately separate from the persuasion copy: it is NOT the headline, NOT the offer's benefit, NOT the buyer, NOT the city, and NOT an activity performed along the way. A roofer who photographs damage is 'roof inspection', not 'photography'. A consultancy whose page talks about delivery breaking is 'operations consulting', not 'delivery'. Omit ONLY if you genuinely cannot name the service from what the user told you — omitting means the page composes without stock photography, which is the correct outcome when the trade is unknown.",
+            "WHAT THIS BUSINESS IS, in plain descriptive terms, the answer you would give a PHOTOGRAPHER who asked 'what kind of business am I shooting?'. Two to five words naming the service or trade: 'residential roof inspection and repair', 'general dentistry', 'operations strategy consulting', 'warehouse automation integration', 'paediatric sleep coaching'. This is BUSINESS TRUTH, deliberately separate from the persuasion copy: it is NOT the headline, NOT the offer's benefit, NOT the buyer, NOT the city, and NOT an activity performed along the way. A roofer who photographs damage is 'roof inspection', not 'photography'. A consultancy whose page talks about delivery breaking is 'operations consulting', not 'delivery'. Omit ONLY if you genuinely cannot name the service from what the user told you. Omitting means the page composes without stock photography, which is the correct outcome when the trade is unknown.",
         },
         media_subject: {
           type: "string",
-          description: "A SPECIFIC description of what the placeholder photo should show, written for the operator, not the visitor — e.g. 'Technician repairing an HVAC unit' or 'You speaking at a recent event', not a generic 'a photo'. Only used when hero_media_url is omitted (no real media yet); shown next to the placeholder in the builder as a shooting brief, never on the public page. Write this whenever media_strategy implies a real photo (service_photo/team_photo/community_photo/founder_photo) — skip for dashboard/product screenshots (there's nothing to 'shoot').",
+          description: "A SPECIFIC description of what the placeholder photo should show, written for the operator, not the visitor, e.g. 'Technician repairing an HVAC unit' or 'You speaking at a recent event', not a generic 'a photo'. Only used when hero_media_url is omitted (no real media yet); shown next to the placeholder in the builder as a shooting brief, never on the public page. Write this whenever media_strategy implies a real photo (service_photo/team_photo/community_photo/founder_photo), skip for dashboard/product screenshots (there's nothing to 'shoot').",
         },
         gallery_layout: {
           type: "string",
           enum: ["grid", "masonry", "carousel", "before_after"],
-          description: "Only relevant when the archetype's media strategy calls for MULTIPLE real photos (service_photo/team_photo/community_photo) — Zeno then adds a dedicated photo-gallery section (see media_strategy) instead of a single hero image, freeing the hero for a clean headline/logo. Omit to use the archetype's own recommended gallery layout.",
+          description: "Only relevant when the archetype's media strategy calls for MULTIPLE real photos (service_photo/team_photo/community_photo). Zeno then adds a dedicated photo-gallery section (see media_strategy) instead of a single hero image, freeing the hero for a clean headline/logo. Omit to use the archetype's own recommended gallery layout.",
         },
       },
       required: ["headline", "bullets", "emotional_transformation", "sales_argument"],
@@ -4244,14 +4244,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         return {
           ok: false,
           error:
-            "a headline is required (max 80 characters) — YOU are the copywriter: write a specific, concrete headline yourself from the business context already in this conversation and call create_funnel again with the complete arguments. Do NOT ask the user for a headline (or any other copy) — asking is a contract violation; a draft they can edit always beats a question.",
+            "a headline is required (max 80 characters). YOU are the copywriter: write a specific, concrete headline yourself from the business context already in this conversation and call create_funnel again with the complete arguments. Do NOT ask the user for a headline (or any other copy). Asking is a contract violation; a draft they can edit always beats a question.",
         };
       }
       if (headline.length > 80) {
         return {
           ok: false,
           error:
-            `your headline is ${headline.length} characters; the limit is 80. Shorten THIS headline — do not start over and do not ask the user. Keep the specific promise and cut qualifiers, or move the detail into the subheadline (which has no such limit). You sent: "${headline}"`,
+            `your headline is ${headline.length} characters; the limit is 80. Shorten THIS headline. Do not start over and do not ask the user. Keep the specific promise and cut qualifiers, or move the detail into the subheadline (which has no such limit). You sent: "${headline}"`,
         };
       }
       // NEVER SILENTLY CLIP CUSTOMER-FACING COPY.
@@ -4301,7 +4301,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         return {
           ok: false,
           error:
-            "at least one bullet point is required — write 3-4 specific outcome/mechanism bullets yourself from the business context and call create_funnel again. Never ask the user to supply copy.",
+            "at least one bullet point is required. Write 3-4 specific outcome/mechanism bullets yourself from the business context and call create_funnel again. Never ask the user to supply copy.",
         };
       }
       const genreRaw = str(raw, "genre");
@@ -4814,7 +4814,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       };
       const willPackage = args.includeCaptureForm !== false && args.priceCents === null;
       const packageNote = willPackage
-        ? " Also builds the connected Growth System: a capture form, a confirmation email, and a workflow that creates an Opportunity, tags the contact, sends the confirmation, notifies you, and leaves a follow-up task — all in draft/review state, nothing live automatically."
+        ? " Also builds the connected Growth System: a capture form, a confirmation email, and a workflow that creates an Opportunity, tags the contact, sends the confirmation, notifies you, and leaves a follow-up task, all in draft/review state, nothing live automatically."
         : "";
       return `Create a DRAFT ${genreLabels[args.genre as string] ?? args.genre} funnel “${
         args.funnelName || args.headline
@@ -5621,7 +5621,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         createdFormId = await createFormServerSide({
           subAccountId,
           createdByUid: ctx.uid,
-          name: `${(args.funnelName as string) || (args.headline as string)} — capture form`,
+          name: `${(args.funnelName as string) || (args.headline as string)}, capture form`,
         });
         sectionsToSave = sectionsToSave.map((s) => {
           if (s.type === "offer") return { ...s, config: { ...s.config, formId: createdFormId } };
@@ -5653,7 +5653,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         });
 
         const emailSubject =
-          (args.confirmationEmailSubject as string) || `You're in — ${args.headline as string}`;
+          (args.confirmationEmailSubject as string) || `You're in, ${args.headline as string}`;
         let emailBody =
           (args.confirmationEmailBody as string) ||
           `Thanks for signing up! We've got your details and will be in touch shortly.`;
@@ -5665,7 +5665,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           await createMessageTemplateServerSide({
             subAccountId,
             createdByUid: ctx.uid,
-            name: `${(args.funnelName as string) || (args.headline as string)} — confirmation`,
+            name: `${(args.funnelName as string) || (args.headline as string)}, confirmation`,
             type: "email",
             subject: emailSubject,
             body: emailBody,
@@ -5691,7 +5691,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         createdWorkflowId = await createWorkflowServerSide({
           subAccountId,
           createdByUid: ctx.uid,
-          name: `${displayName} — follow-up`,
+          name: `${displayName}. Follow-up`,
           template: "blank",
         });
         // AUTOMATION STRATEGY ENGINE (see lib/workflows/compose-strategy.ts):
@@ -5715,7 +5715,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           ...(genre === "webinar" ? { lifecycleDomain: "webinar" as const } : {}),
           confirmationSubject: emailSubject,
           confirmationBody: emailBody,
-          ownerNotifyBody: `{{contact.firstName}} ({{contact.email}}) just ${autoPlan.conversionEvent}. The follow-up sequence is running — apply the "${autoPlan.goalTag}" tag the moment they ${autoPlan.goalState}, and every remaining automated touch stops.`,
+          ownerNotifyBody: `{{contact.firstName}} ({{contact.email}}) just ${autoPlan.conversionEvent}. The follow-up sequence is running, apply the "${autoPlan.goalTag}" tag the moment they ${autoPlan.goalState}, and every remaining automated touch stops.`,
         });
         await updateWorkflowServerSide({
           subAccountId,
@@ -6276,7 +6276,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             nearbyDevices,
           });
 
-          trace.push(`${beat.visualJob} @ ${host.type}: ${resolved.source}${resolved.shape ? `/${resolved.shape}` : ""} — ${resolved.reason}`);
+          trace.push(`${beat.visualJob} @ ${host.type}: ${resolved.source}${resolved.shape ? `/${resolved.shape}` : ""}, ${resolved.reason}`);
 
           if (resolved.source === "text_led" || resolved.source === "document" || resolved.source === "composed_proof") {
             // Rungs 4 and 5 are satisfied by compositions this page already
@@ -6675,7 +6675,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         const target = await getFunnel(subAccountId, args.bridgeNextFunnelId);
         if (!target) {
           throw new CapabilityUserError(
-            `bridge_next_funnel_id "${args.bridgeNextFunnelId}" doesn't match a funnel in this workspace — use the exact Funnel ID returned by the earlier create_funnel call.`,
+            `bridge_next_funnel_id "${args.bridgeNextFunnelId}" doesn't match a funnel in this workspace. Use the exact Funnel ID returned by the earlier create_funnel call.`,
           );
         }
         if (target.id === funnelId) {
@@ -6887,11 +6887,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         "✅ Growth System Created",
         "",
         "ASSETS",
-        `✓ Landing Page — "${displayName}"`,
+        `✓ Landing Page, "${displayName}"`,
         `Funnel ID: ${funnelId}` +
           (bridgeTarget
             ? ` · thank-you page routes to funnel ${bridgeTarget}`
-            : " — pass as bridge_next_funnel_id when creating an UPSTREAM step of a multistep journey"),
+            : ", pass as bridge_next_funnel_id when creating an UPSTREAM step of a multistep journey"),
       ];
       // Phase 2 — a concise, honest design rationale (never chain-of-thought,
       // never a score/grade) so the operator knows WHY this look was chosen
@@ -6905,9 +6905,9 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         summaryLines.push(
           "",
           "DESIGN",
-          `${archetypeDef.label} style — chosen for ${archetypeDef.audienceHint.split(",")[0].toLowerCase()}. ${heroLayoutLabel} hero, ${animationLabel}, ${ctaLabel} CTA. Change the style, palette, hero, or CTA anytime without touching the copy.` +
+          `${archetypeDef.label} style, chosen for ${archetypeDef.audienceHint.split(",")[0].toLowerCase()}. ${heroLayoutLabel} hero, ${animationLabel}, ${ctaLabel} CTA. Change the style, palette, hero, or CTA anytime without touching the copy.` +
             (wantsGallerySection
-              ? ` Added a Photo Gallery section for real work photos — the hero stays a clean headline with room for your logo above it.`
+              ? ` Added a Photo Gallery section for real work photos, the hero stays a clean headline with room for your logo above it.`
               : ""),
         );
       }
@@ -6932,7 +6932,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         summaryLines.push(
           "",
           "CHECKOUT",
-          "— No capture form (this is a priced offer — wire up Stripe checkout on the offer section, no lead-form opt-in needed).",
+          ", No capture form (this is a priced offer, wire up Stripe checkout on the offer section, no lead-form opt-in needed).",
         );
       }
       // Conversion Engine (M6b) — surface the copy review so the operator knows
@@ -6942,7 +6942,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         summaryLines.push("", "COPY REVIEW");
         if (copyReview.fabricationRisk) {
           summaryLines.push(
-            "⚠️ Possible fabricated proof/stats detected — verify or remove before publishing (never publish invented testimonials, numbers, or guarantees).",
+            "⚠️ Possible fabricated proof/stats detected. Verify or remove before publishing (never publish invented testimonials, numbers, or guarantees).",
           );
         }
         summaryLines.push(
@@ -6959,10 +6959,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         if (manifest.length > 0) {
           summaryLines.push(
             "",
-            `AUTHENTICITY — the page must answer: "${TRUST_QUESTIONS[authenticityCategory]}"`,
+            `AUTHENTICITY, the page must answer: "${TRUST_QUESTIONS[authenticityCategory]}"`,
             "Assets that would most strengthen that answer:",
             ...manifest.map(
-              (m2, i2) => `${i2 + 1}. ${m2.label} — ${m2.note}`,
+              (m2, i2) => `${i2 + 1}. ${m2.label}, ${m2.note}`,
             ),
             "Upload via the builder's Files & delivery card; images give you a URL to paste into any media field. The page publishes cleanly without them and upgrades the moment they exist.",
           );
@@ -6972,7 +6972,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       summaryLines.push(
         "",
         "STATUS",
-        "Everything above is in Draft. Review each asset before publishing/activating — Create" +
+        "Everything above is in Draft. Review each asset before publishing/activating. Create" +
           (createdFormId ? " / Forms / Templates / Workflows." : "."),
       );
 
@@ -6984,20 +6984,20 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // archetype was chosen — those stay in `resultText` for the model.
       const review: string[] = [];
       if (copyReview?.fabricationRisk) {
-        review.push("Some copy may claim results or testimonials that haven't been verified — check it before this goes live.");
+        review.push("Some copy may claim results or testimonials that haven't been verified. Check it before this goes live.");
       }
       const outstandingPhotos = visualRequirements.filter((r) => !r.resolvedWith);
       const requiredPhotos = outstandingPhotos.filter((r) => r.necessity === "required").length;
       if (requiredPhotos > 0) {
-        review.push(`${requiredPhotos} photo${requiredPhotos === 1 ? "" : "s"} still needed before the page works properly — you can add them from the preview.`);
+        review.push(`${requiredPhotos} photo${requiredPhotos === 1 ? "" : "s"} still needed before the page works properly. You can add them from the preview.`);
       } else if (outstandingPhotos.length > 0) {
-        review.push(`Ready to review now. ${outstandingPhotos.length} real photo${outstandingPhotos.length === 1 ? "" : "s"} would make it stronger — you can add them from the preview.`);
+        review.push(`Ready to review now. ${outstandingPhotos.length} real photo${outstandingPhotos.length === 1 ? "" : "s"} would make it stronger. You can add them from the preview.`);
       }
       if (conversionDecision.action === "capture_pending_checkout") {
         review.push(CHECKOUT_PENDING_NOTE);
       }
       // P0.4: approved is not published. Say so plainly, every time.
-      review.push("Nothing is public yet — this is a draft until you publish it.");
+      review.push("Nothing is public yet. This is a draft until you publish it.");
 
       const completion: CustomerCompletion = {
         outcome: createdFormId
@@ -7024,7 +7024,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     requiredRole: "subAccountAdmin",
     menuLabel: "Build the follow-up sequence for a campaign (draft)",
     description:
-      "BUILD the follow-up you designed. Use when the user approves a follow-up plan, supplies their own emails ('here are my 5 emails'), or asks to change one ('make email 2 less aggressive', 'move it to day 4', 'delete the last one'). You describe the COMPLETE DESIRED STATE of the sequence and a deterministic compiler turns it into a real DRAFT workflow with real email subjects/bodies, real waits, real segmentation branches and a real exit condition — the customer never copy/pastes your emails into the builder. EDITS: re-send the whole desired state with the change applied (include workflow_id) — it overwrites, so send every message you want to keep, not just the changed one. CUSTOMER-SUPPLIED COPY IS INSTALLED VERBATIM: never rewrite emails the user gave you unless they asked. The workflow is always created as a DRAFT — it cannot contact anyone until the customer clicks Publish in Flow, so say that plainly when you report back. Timing is real: delay_hours is measured from signup. Segmentation becomes real branches: give the form field, the comparison and the tag. Every email automatically keeps the unsubscribe link and the goal-tag exit check, so a converted lead stops receiving the sequence.",
+      "BUILD the follow-up you designed. Use when the user approves a follow-up plan, supplies their own emails ('here are my 5 emails'), or asks to change one ('make email 2 less aggressive', 'move it to day 4', 'delete the last one'). You describe the COMPLETE DESIRED STATE of the sequence and a deterministic compiler turns it into a real DRAFT workflow with real email subjects/bodies, real waits, real segmentation branches and a real exit condition, the customer never copy/pastes your emails into the builder. EDITS: re-send the whole desired state with the change applied (include workflow_id). It overwrites, so send every message you want to keep, not just the changed one. CUSTOMER-SUPPLIED COPY IS INSTALLED VERBATIM: never rewrite emails the user gave you unless they asked. The workflow is always created as a DRAFT. It cannot contact anyone until the customer clicks Publish in Flow, so say that plainly when you report back. Timing is real: delay_hours is measured from signup. Segmentation becomes real branches: give the form field, the comparison and the tag. Every email automatically keeps the unsubscribe link and the goal-tag exit check, so a converted lead stops receiving the sequence.",
     parameters: {
       type: "object",
       properties: {
@@ -7098,8 +7098,8 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const campaignName = str(raw, "campaign_name").slice(0, 80);
       const goalTag = str(raw, "goal_tag").toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
       const goalState = str(raw, "goal_state").slice(0, 120);
-      if (!campaignName) return { ok: false, error: "campaign_name is required — name it yourself from the campaign context and call again." };
-      if (!goalTag || !goalState) return { ok: false, error: "goal_tag and goal_state are required (what ends this journey?) — decide them yourself and call again." };
+      if (!campaignName) return { ok: false, error: "campaign_name is required, name it yourself from the campaign context and call again." };
+      if (!goalTag || !goalState) return { ok: false, error: "goal_tag and goal_state are required (what ends this journey?), decide them yourself and call again." };
       const messagesRaw = Array.isArray(r.messages) ? r.messages : [];
       const messages = messagesRaw
         .filter((m): m is Record<string, unknown> => !!m && typeof m === "object")
@@ -7118,7 +7118,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         .filter((m) => m.subject && m.body)
         .slice(0, 12);
       if (messages.length === 0) {
-        return { ok: false, error: "at least one message with a subject and body is required — write them yourself (or use the customer's copy verbatim) and call again." };
+        return { ok: false, error: "at least one message with a subject and body is required. Write them yourself (or use the customer's copy verbatim) and call again." };
       }
       const segmentation = (Array.isArray(r.segmentation) ? r.segmentation : [])
         .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
@@ -7211,7 +7211,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         "Every email carries the unsubscribe link and a goal-tag check, so anyone who converts stops receiving it.",
         "",
         "STATUS",
-        "This is a DRAFT — it cannot contact anyone until you open it in Workflows and click Publish.",
+        "This is a DRAFT. It cannot contact anyone until you open it in Workflows and click Publish.",
       ];
       return { resultText: lines.join("\n"), ref: { kind: "workflow", id: result.workflowId! } };
     },
@@ -7222,11 +7222,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     requiredRole: "subAccountAdmin",
     menuLabel: "Link one funnel's post-signup step to another funnel (multistep journey)",
     description:
-      "Link two EXISTING funnels into a multistep journey: after someone signs up on `funnel_id`, they're sent straight to `next_funnel_id` (the next offer) with a delivery/confirmation bar. Use when the user asks to connect/chain existing pages ('send people from my checklist page to the workshop offer'), to change where a funnel routes after signup, or to fix a chain built out of order. Pass next_funnel_id: null to UNLINK (signups then get the same-page confirmation instead). Both funnels must already exist — use check_funnel_status to find ids.",
+      "Link two EXISTING funnels into a multistep journey: after someone signs up on `funnel_id`, they're sent straight to `next_funnel_id` (the next offer) with a delivery/confirmation bar. Use when the user asks to connect/chain existing pages ('send people from my checklist page to the workshop offer'), to change where a funnel routes after signup, or to fix a chain built out of order. Pass next_funnel_id: null to UNLINK (signups then get the same-page confirmation instead). Both funnels must already exist. Use check_funnel_status to find ids.",
     parameters: {
       type: "object",
       properties: {
-        funnel_id: { type: "string", description: "The upstream funnel (the page people sign up on) — its post-signup destination is what changes." },
+        funnel_id: { type: "string", description: "The upstream funnel (the page people sign up on). Its post-signup destination is what changes." },
         next_funnel_id: { type: ["string", "null"], description: "The funnel to send new signups to (the next offer), or null to unlink." },
         next_cta: { type: "string", description: "Optional button label for the next-offer card on the fallback thank-you page. Max 60 chars." },
       },
@@ -7288,16 +7288,16 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     requiredRole: "subAccountAdmin",
     menuLabel: "Rewrite copy on an existing landing page section",
     description:
-      "REWRITE copy on a section of an EXISTING funnel page. Use when the customer asks you to change wording on a page they are looking at — 'make this headline clearer', 'make this offer easier to understand', 'tighten the FAQ'. " +
+      "REWRITE copy on a section of an EXISTING funnel page. Use when the customer asks you to change wording on a page they are looking at, 'make this headline clearer', 'make this offer easier to understand', 'tighten the FAQ'. " +
       "You are given the page's real current sections in your context; work from THAT draft, never from the funnel's title or from defaults, and never regenerate the whole page when the customer asked about one part. " +
       "Send ONLY the fields you are actually changing: anything you omit is left exactly as the customer has it. This is how their own edits survive. " +
-      "Change copy only. You cannot add, delete, reorder or retype sections here — the customer does that in the editor. " +
+      "Change copy only. You cannot add, delete, reorder or retype sections here, the customer does that in the editor. " +
       "The customer reviews and confirms before anything is written, so propose the real replacement text rather than describing it.",
     parameters: {
       type: "object",
       properties: {
-        funnel_id: { type: "string", description: "The funnel being edited — use the exact funnel_id given in your page context TOOL REFERENCES. Never invent one." },
-        section_id: { type: "string", description: "The section to revise — use the exact section_id from your page context TOOL REFERENCES. If none is given, the customer has not selected a section: ask which part they mean rather than guessing." },
+        funnel_id: { type: "string", description: "The funnel being edited. Use the exact funnel_id given in your page context TOOL REFERENCES. Never invent one." },
+        section_id: { type: "string", description: "The section to revise. Use the exact section_id from your page context TOOL REFERENCES. If none is given, the customer has not selected a section: ask which part they mean rather than guessing." },
         fields: {
           type: "object",
           description:
@@ -7314,7 +7314,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const funnelId = str(raw, "funnel_id");
       const sectionId = str(raw, "section_id");
       if (!funnelId || !sectionId) {
-        return { ok: false, error: "funnel_id and section_id are both required — take them from the page context you were given." };
+        return { ok: false, error: "funnel_id and section_id are both required, take them from the page context you were given." };
       }
       // An allowlist, not a passthrough: a model cannot reach priceCents,
       // formId, stripePriceId or any other field that carries money, wiring or
@@ -7336,7 +7336,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       if (Object.keys(fields).length === 0) {
         return {
           ok: false,
-          error: `no supported copy fields were supplied. Send at least one of: ${[...ALLOWED].join(", ")} — with the real replacement text.`,
+          error: `no supported copy fields were supplied. Send at least one of: ${[...ALLOWED].join(", ")}, with the real replacement text.`,
         };
       }
       return { ok: true, args: { funnelId, sectionId, fields, why: str(raw, "why").slice(0, 200) } };
@@ -7348,7 +7348,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const preview = Object.entries(fields)
         .map(([k, v]) => `${k}: \u201c${v.slice(0, 90)}${v.length > 90 ? "\u2026" : ""}\u201d`)
         .join("  ·  ");
-      return `Rewrite copy on one section${args.why ? ` — ${args.why as string}` : ""}. New text: ${preview}`;
+      return `Rewrite copy on one section${args.why ? `, ${args.why as string}` : ""}. New text: ${preview}`;
     },
     execute: async (ctx, args) => {
       const subAccountId = ctx.subAccountId!;
@@ -7356,7 +7356,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       if (!funnel) throw new CapabilityUserError("I couldn't find that page in this workspace.");
       const sectionId = args.sectionId as string;
       const idx = funnel.sections.findIndex((s) => s.id === sectionId);
-      if (idx < 0) throw new CapabilityUserError("That section isn't on the page any more — reopen it and try again.");
+      if (idx < 0) throw new CapabilityUserError("That section isn't on the page any more, reopen it and try again.");
 
       const fields = args.fields as Record<string, string>;
       // SPREAD, never rebuild: argumentRole, servesBelief and canvas travel
@@ -7371,8 +7371,8 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       return {
         resultText:
           `Updated the ${funnel.sections[idx].type.replace(/_/g, " ")} section on \u201c${funnel.name}\u201d.\n\n` +
-          `\u2022 Only the copy you approved changed — everything else on the page is as you left it.\n` +
-          `\u2022 The page is still ${funnel.status === "published" ? "published — the change is live" : "a draft"}.`,
+          `\u2022 Only the copy you approved changed. Everything else on the page is as you left it.\n` +
+          `\u2022 The page is still ${funnel.status === "published" ? "published, the change is live" : "a draft"}.`,
         ref: { kind: "funnel", id: funnel.id },
       };
     },
@@ -7411,20 +7411,20 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     requiredRole: "subAccountAdmin",
     menuLabel: "Write an email and save it as a reviewable draft",
     description:
-      "WRITE an email and save it as a DRAFT message template in this workspace. Use when the user asks you to write/draft/compose an email — a follow-up, a re-engagement email, a nurture email, an announcement, a promotion. " +
-      "YOU are the copywriter: write the subject and body yourself from the business context in this conversation. Never ask the user to supply the copy — a draft they can edit always beats a question. " +
-      "NOTHING IS SENT. This only creates a draft the human reviews, edits and then sends or attaches to a workflow themselves — real emails to real people are on the other side of that review, so the send is always theirs to make. " +
+      "WRITE an email and save it as a DRAFT message template in this workspace. Use when the user asks you to write/draft/compose an email, a follow-up, a re-engagement email, a nurture email, an announcement, a promotion. " +
+      "YOU are the copywriter: write the subject and body yourself from the business context in this conversation. Never ask the user to supply the copy, a draft they can edit always beats a question. " +
+      "NOTHING IS SENT. This only creates a draft the human reviews, edits and then sends or attaches to a workflow themselves. Real emails to real people are on the other side of that review, so the send is always theirs to make. " +
       "The body MUST contain the literal token {{unsubscribeLink}} (CAN-SPAM); put it on its own line at the end. You may also use {{firstName}}, {{lastName}}, {{email}} and {{businessName}} merge tags. " +
-      "IF A VALIDATION ERROR COMES BACK, fix the arguments yourself and call again immediately — a validation error is an instruction to you, never a question to relay to the user.",
+      "IF A VALIDATION ERROR COMES BACK, fix the arguments yourself and call again immediately, a validation error is an instruction to you, never a question to relay to the user.",
     parameters: {
       type: "object",
       properties: {
         name: { type: "string", description: "Short internal name for the template, e.g. 'Quote follow-up day 3'. Not shown to the recipient." },
-        subject: { type: "string", description: "The email subject line. Specific and concrete — write it yourself." },
+        subject: { type: "string", description: "The email subject line. Specific and concrete. Write it yourself." },
         body: {
           type: "string",
           description:
-            "The full email body as plain text with line breaks. Must include {{unsubscribeLink}} on its own line at the end. Write real, specific copy grounded in the business context — never placeholder text like [insert offer here].",
+            "The full email body as plain text with line breaks. Must include {{unsubscribeLink}} on its own line at the end. Write real, specific copy grounded in the business context, never placeholder text like [insert offer here].",
         },
       },
       required: ["name", "subject", "body"],
@@ -7435,10 +7435,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const name = str(raw, "name").slice(0, 80);
       const subject = str(raw, "subject").slice(0, 200);
       const body = fixLiteralNewlines(str(raw, "body"));
-      if (!name) return { ok: false, error: "name is required — name the template yourself (e.g. 'Quote follow-up day 3') and call again." };
-      if (!subject) return { ok: false, error: "subject is required — YOU are the copywriter: write a specific subject line yourself from the business context and call again. Never ask the user for copy." };
+      if (!name) return { ok: false, error: "name is required, name the template yourself (e.g. 'Quote follow-up day 3') and call again." };
+      if (!subject) return { ok: false, error: "subject is required. YOU are the copywriter: write a specific subject line yourself from the business context and call again. Never ask the user for copy." };
       if (!body || body.length < 40) {
-        return { ok: false, error: "body is required and must be a real email (at least a few sentences) — write it yourself from the business context and call again. Never ask the user for copy." };
+        return { ok: false, error: "body is required and must be a real email (at least a few sentences). Write it yourself from the business context and call again. Never ask the user for copy." };
       }
       // Same CAN-SPAM rule the manual template editor enforces. Surfaced here
       // so the model repairs it itself rather than failing at execute time.
@@ -7449,7 +7449,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       return { ok: true, args: { name, subject, body: body.slice(0, 8000) } };
     },
     summarize: (args) =>
-      `Save a DRAFT email template “${args.name as string}” with subject “${args.subject as string}”. Nothing is sent — you review and send it yourself.`,
+      `Save a DRAFT email template “${args.name as string}” with subject “${args.subject as string}”. Nothing is sent. You review and send it yourself.`,
     execute: async (ctx, args) => {
       try {
         const templateId = await createMessageTemplateServerSide({
@@ -7464,7 +7464,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           resultText:
             `Draft email “${args.name as string}” is saved.\n\n` +
             `• Subject: ${args.subject as string}\n` +
-            `• It's a draft — nothing has been sent to anyone.\n` +
+            `• It's a draft. Nothing has been sent to anyone.\n` +
             `• Review and edit it under Templates, then send it or attach it to a workflow when you're happy.`,
           ref: { kind: "message_template", id: templateId },
         };
@@ -7482,10 +7482,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     description:
       "Generate one of DivineX's longform deliverables for this workspace: VSL/webinar scripts, ad and social copy, lead magnets and documents, sales/discovery/DM scripts, proposals, content plans, 90-day roadmaps, offer write-ups and page copy. " +
       "Use when the user asks for any of those by name or in plain language ('write me a VSL', 'I need a lead magnet', 'draft a proposal', 'give me social posts for this month', 'write a sales script'). " +
-      "It is generated from this workspace's real business, brand voice and diagnosis — so do NOT ask the user to restate their business, audience or offer. " +
+      "It is generated from this workspace's real business, brand voice and diagnosis, so do NOT ask the user to restate their business, audience or offer. " +
       "Pick the asset_type that best matches what they asked for, and put any extra steer (angle, campaign, audience nuance, length) in `prompt`. " +
-      "The result is saved as a reviewable draft in Create — nothing is published or sent. " +
-      "For a landing PAGE that must actually be hosted and take leads, use create_funnel instead — this writes copy/documents, it does not build a live page. For a single email use create_email.",
+      "The result is saved as a reviewable draft in Create. Nothing is published or sent. " +
+      "For a landing PAGE that must actually be hosted and take leads, use create_funnel instead. This writes copy/documents, it does not build a live page. For a single email use create_email.",
     parameters: {
       type: "object",
       properties: {
@@ -7497,7 +7497,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         prompt: {
           type: "string",
           description:
-            "Optional extra direction — the specific angle, offer, campaign or audience nuance for THIS asset. The workspace's business, brand voice and diagnosis are supplied automatically; only add what they wouldn't already contain.",
+            "Optional extra direction, the specific angle, offer, campaign or audience nuance for THIS asset. The workspace's business, brand voice and diagnosis are supplied automatically; only add what they wouldn't already contain.",
         },
       },
       required: ["asset_type"],
@@ -7568,7 +7568,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             // that DO build something (create_funnel, apply_workflow_plan)
             // rather than implying this one does.
             resultText:
-              `Your ${asset.assetType} is ready — “${asset.title}”.\n\n` +
+              `Your ${asset.assetType} is ready, “${asset.title}”.\n\n` +
               `• Written from this workspace's saved business and brand, not a generic template.\n` +
               `• Read it under Create → Assets, where you can copy or download it.\n` +
               `• Want it live rather than written? Ask me to build the page or the follow-up sequence and I'll create it as a real draft you publish.`,
@@ -7581,7 +7581,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // would be false — the asset usually lands a minute or two later.
       return {
         resultText:
-          `I've started writing your ${args.assetType as string} — the longer pieces take a couple of minutes.\n\n` +
+          `I've started writing your ${args.assetType as string}, the longer pieces take a couple of minutes.\n\n` +
           `• It'll appear under Create → Assets when it's done; you don't need to ask again.\n` +
           `• It's written from this workspace's saved business and brand, and arrives as text you can copy or download.`,
       };
@@ -7593,19 +7593,19 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     requiredRole: "subAccountAdmin",
     menuLabel: "Build a lead-capture or qualification form",
     description:
-      "Create a real, hosted lead-capture form in this workspace. Use when the user asks for a form — a contact form, an enquiry form, a quote-request form, a qualification form ('a form to qualify leads'), a waitlist. " +
+      "Create a real, hosted lead-capture form in this workspace. Use when the user asks for a form, a contact form, an enquiry form, a quote-request form, a qualification form ('a form to qualify leads'), a waitlist. " +
       "YOU design the fields from what the business actually needs to know. Ask for the fewest fields that do the job: every extra field costs conversions, so include a field only if the business would act differently based on the answer. " +
       "Name and email are almost always right; add phone when they need to call back, and add ONE qualifying question when the user wants to qualify. Do not build long questionnaires. " +
-      "Every submission becomes a real contact in this workspace, so map each field to the contact record where one fits (name/email/phone/company), and leave mapsTo null for questions that are just context — those land in the contact's notes. " +
+      "Every submission becomes a real contact in this workspace, so map each field to the contact record where one fits (name/email/phone/company), and leave mapsTo null for questions that are just context. Those land in the contact's notes. " +
       "The form is live and embeddable immediately; it does not need approval, because a form does not contact anyone by itself. " +
-      "To put a form ON a landing page, use create_funnel — it builds the page AND its capture form together. Use this when the form is the deliverable.",
+      "To put a form ON a landing page, use create_funnel. It builds the page AND its capture form together. Use this when the form is the deliverable.",
     parameters: {
       type: "object",
       properties: {
         name: { type: "string", description: "Internal name, e.g. 'Roof quote request'. Not shown to the visitor." },
         fields: {
           type: "array",
-          description: "The fields, in the order the visitor sees them. Keep it short — 2 to 5 fields.",
+          description: "The fields, in the order the visitor sees them. Keep it short - 2 to 5 fields.",
           items: {
             type: "object",
             properties: {
@@ -7615,15 +7615,15 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               maps_to: {
                 type: "string",
                 enum: ["name", "email", "phone", "company", "notes", "none"],
-                description: "Where the answer lands on the contact record. Use 'none' only when nothing fits — those answers still reach the contact's notes.",
+                description: "Where the answer lands on the contact record. Use 'none' only when nothing fits. Those answers still reach the contact's notes.",
               },
-              options: { type: "array", items: { type: "string" }, description: "Choices — required for type 'select', ignored otherwise." },
+              options: { type: "array", items: { type: "string" }, description: "Choices, required for type 'select', ignored otherwise." },
             },
             required: ["label", "type", "required", "maps_to"],
             additionalProperties: false,
           },
         },
-        thank_you_message: { type: "string", description: "What the visitor sees after submitting. Write it yourself — warm, specific, and say what happens next." },
+        thank_you_message: { type: "string", description: "What the visitor sees after submitting. Write it yourself. Warm, specific, and say what happens next." },
         tags: { type: "array", items: { type: "string" }, description: "Tags applied to every contact this form creates, so follow-up can target them. 1-2 short tags." },
       },
       required: ["name", "fields"],
@@ -7632,14 +7632,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     validate: (rawIn) => {
       const raw = aliasCamelKeysDeep(deepStripDebris({ ...((rawIn ?? {}) as Record<string, unknown>) }));
       const name = str(raw, "name").slice(0, 80);
-      if (!name) return { ok: false, error: "name is required — name the form yourself (e.g. 'Roof quote request') and call again." };
+      if (!name) return { ok: false, error: "name is required, name the form yourself (e.g. 'Roof quote request') and call again." };
 
       const rawFields = Array.isArray(raw.fields) ? (raw.fields as Record<string, unknown>[]) : [];
       if (rawFields.length === 0) {
-        return { ok: false, error: "fields is required — design the fields yourself from what this business needs to know, then call again. Never ask the user to specify the fields." };
+        return { ok: false, error: "fields is required, design the fields yourself from what this business needs to know, then call again. Never ask the user to specify the fields." };
       }
       if (rawFields.length > 8) {
-        return { ok: false, error: "That is too many fields for a form that converts. Keep it to at most 8 — cut anything the business would not act on — and call again." };
+        return { ok: false, error: "That is too many fields for a form that converts. Keep it to at most 8. Cut anything the business would not act on, and call again." };
       }
 
       const ALLOWED = ["text", "email", "phone", "company", "textarea", "select"];
@@ -7732,11 +7732,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     requiredRole: "subAccountAdmin",
     menuLabel: "Set up a booking page people can pick a time on",
     description:
-      "Create a real booking page — a public link where someone picks an available time and it becomes a confirmed appointment in this workspace's calendar. " +
+      "Create a real booking page, a public link where someone picks an available time and it becomes a confirmed appointment in this workspace's calendar. " +
       "Use when the user wants people to book them: consultations, discovery calls, quotes, appointments, viewings, or when a landing page needs somewhere for 'Book a call' to go. " +
       "YOU choose the name, length and working hours from what the business does. A trades quote visit is not a 15-minute call; a discovery call is not a full day. Ask nothing you can decide sensibly. " +
-      "It is created as a DRAFT so the owner confirms their real availability before anyone can book — never tell the user it is live. They publish it themselves. " +
-      "The timezone must be a real IANA zone (e.g. Australia/Sydney, America/New_York). If you genuinely do not know where the business operates, ask for the city — a booking page in the wrong timezone books people at the wrong hour.",
+      "It is created as a DRAFT so the owner confirms their real availability before anyone can book. Never tell the user it is live. They publish it themselves. " +
+      "The timezone must be a real IANA zone (e.g. Australia/Sydney, America/New_York). If you genuinely do not know where the business operates, ask for the city, a booking page in the wrong timezone books people at the wrong hour.",
     parameters: {
       type: "object",
       properties: {
@@ -7767,7 +7767,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     validate: (rawIn) => {
       const raw = aliasCamelKeysDeep(deepStripDebris({ ...((rawIn ?? {}) as Record<string, unknown>) }));
       const name = str(raw, "name").slice(0, 80);
-      if (!name) return { ok: false, error: "name is required — name the appointment yourself (e.g. 'Free roof inspection') and call again." };
+      if (!name) return { ok: false, error: "name is required, name the appointment yourself (e.g. 'Free roof inspection') and call again." };
 
       const duration = Math.round(num(raw, "duration_minutes"));
       if (!Number.isFinite(duration) || duration < 5 || duration > 480) {
@@ -7775,7 +7775,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       }
 
       const timezone = str(raw, "timezone").trim();
-      if (!timezone) return { ok: false, error: "timezone is required — pass the IANA zone the business operates in (e.g. 'Australia/Sydney') and call again." };
+      if (!timezone) return { ok: false, error: "timezone is required, pass the IANA zone the business operates in (e.g. 'Australia/Sydney') and call again." };
       try {
         // Validated against the runtime's own zone database rather than a
         // hand-kept list: a wrong zone books people at the wrong hour.
@@ -7854,7 +7854,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             `Your booking page “${args.name as string}” is ready as a draft.\n\n` +
             `• ${args.durationMinutes as number} minutes, in ${args.timezone as string}.\n` +
             `• Check the available hours match when you actually take appointments.\n` +
-            `• Publish it under Booking and share the link — bookings land in your calendar and the person gets a confirmation.`,
+            `• Publish it under Booking and share the link, bookings land in your calendar and the person gets a confirmation.`,
           ref: { kind: "booking_page", id: slug },
         };
       } catch (err) {
@@ -7891,8 +7891,8 @@ function inSubAccount(base: AiSuiteCapability): AiSuiteCapability {
     level: "agency",
     requiredRole: "agencyOwner",
     readonly: base.readonly,
-    menuLabel: `${base.menuLabel} — in a sub-account you name`,
-    description: `${base.description} AGENCY VARIANT: performs this inside one of your sub-accounts. Resolve the sub-account's id with list_sub_accounts first — never guess ids.`,
+    menuLabel: `${base.menuLabel}, in a sub-account you name`,
+    description: `${base.description} AGENCY VARIANT: performs this inside one of your sub-accounts. Resolve the sub-account's id with list_sub_accounts first, never guess ids.`,
     parameters: {
       type: "object",
       properties: {
@@ -7916,7 +7916,7 @@ function inSubAccount(base: AiSuiteCapability): AiSuiteCapability {
         return {
           ok: false,
           error:
-            "the target sub-account id is required — I need to look it up first (list_sub_accounts)",
+            "the target sub-account id is required. I need to look it up first (list_sub_accounts)",
         };
       }
       const inner = base.validate(raw);
@@ -7931,7 +7931,7 @@ function inSubAccount(base: AiSuiteCapability): AiSuiteCapability {
       };
     },
     summarize: (args) =>
-      `${base.summarize(args).replace(/\.\s*$/, "")} — in “${
+      `${base.summarize(args).replace(/\.\s*$/, "")}, in “${
         args.subAccountName || args.subAccountId
       }”.`,
     execute: async (ctx, args) => {

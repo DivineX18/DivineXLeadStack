@@ -140,7 +140,7 @@ export function SubAccountCustomFieldsSection() {
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-semibold">Custom fields</h2>
           <p className="text-xs text-muted-foreground">
-            Add your own fields to contacts and deals — text, numbers, dates,
+            Add your own fields to contacts and deals, text, numbers, dates,
             dropdowns, and more. They appear on the contact and deal forms and
             are the target for imported data when migrating from another CRM.
           </p>

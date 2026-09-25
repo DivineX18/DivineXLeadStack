@@ -52,7 +52,7 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          "Email isn't configured on this deployment — set RESEND_API_KEY + EMAIL_FROM to send quotes.",
+          "Email isn't configured on this deployment. Set RESEND_API_KEY + EMAIL_FROM to send quotes.",
       },
       { status: 503 },
     );
@@ -92,7 +92,7 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          "Contact has no email address — add one to their profile, then re-send.",
+          "Contact has no email address. Add one to their profile, then re-send.",
       },
       { status: 400 },
     );
@@ -173,7 +173,7 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          "NEXT_PUBLIC_APP_URL isn't configured — set it so quote links resolve.",
+          "NEXT_PUBLIC_APP_URL isn't configured. Set it so quote links resolve.",
       },
       { status: 503 },
     );

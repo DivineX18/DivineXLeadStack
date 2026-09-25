@@ -78,7 +78,7 @@ const RULES: Record<FunnelSectionType, (c: Record<string, unknown>) => Verdict> 
       ? OK
       : // The page's opening statement. Omitting it is not an option, so this
         // is always reported rather than pruned, and viability fails below.
-        incomplete("The hero has no headline — it is the first thing a visitor reads."),
+        incomplete("The hero has no headline. It is the first thing a visitor reads."),
 
   proof_strip: (c) => {
     if (c.variant === "rating") {
@@ -89,7 +89,7 @@ const RULES: Record<FunnelSectionType, (c: Record<string, unknown>) => Verdict> 
     }
     return filled(c.logos, "url") > 0
       ? OK
-      : empty("The proof strip has no logos in it — it would render as a blank band.");
+      : empty("The proof strip has no logos in it. It would render as a blank band.");
   },
 
   offer: (c) => {
@@ -232,7 +232,7 @@ export function evaluateSection(section: FunnelSection): SectionCompleteness {
   const rule = RULES[section.type];
   const verdict = rule
     ? rule((section.config ?? {}) as Record<string, unknown>)
-    : // An unknown type is not assumed broken — a future section type must not
+    : // An unknown type is not assumed broken, a future section type must not
       // start silently deleting itself on every save.
       OK;
   return { sectionId: section.id, sectionType: section.type, state: verdict.state, reason: verdict.reason };
@@ -286,10 +286,10 @@ export function assessViability(sections: FunnelSection[]): ViabilityResult {
     return { viable: false, reasons: ["The page has no sections left with any content in them."] };
   }
   if (!sections.some(hasPrimaryMessage)) {
-    reasons.push("The page states no headline anywhere — a visitor would not know what it offers.");
+    reasons.push("The page states no headline anywhere, a visitor would not know what it offers.");
   }
   if (!sections.some(hasConversionPath)) {
-    reasons.push("The page gives a visitor no way to act — no form, checkout, booking link or phone number.");
+    reasons.push("The page gives a visitor no way to act, no form, checkout, booking link or phone number.");
   }
   return { viable: reasons.length === 0, reasons };
 }

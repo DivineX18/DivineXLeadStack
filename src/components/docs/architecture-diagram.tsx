@@ -213,7 +213,7 @@ export function ArchitectureDiagram() {
         className="block h-auto w-full min-w-[900px]"
       >
         <title id="architecture-title">
-          LeadStack architecture — eight product domains, one platform
+          LeadStack architecture, eight product domains, one platform
         </title>
         <desc id="architecture-desc">
           Tube-map view of LeadStack&rsquo;s product surface. Eight
@@ -223,7 +223,7 @@ export function ArchitectureDiagram() {
           Public API (cyan, bottom). Stations along each line are labelled
           rounded rectangles for the features in that domain. Contact in
           the CRM line and Sub-Account in the Platform line have thicker
-          borders to mark them as central interchanges — every line
+          borders to mark them as central interchanges, every line
           conceptually passes through them. Four dashed bridges show the
           lead lifecycle flow: Capture and AI Agents feed into Contact;
           Contact feeds into Comms and Sales. A legend strip at the bottom

@@ -91,7 +91,7 @@ export function renderQuoteEmail(
 
   const safeRecipient = recipientName.trim() || "there";
 
-  const subject = `${docLabel} from ${businessName} — ${quote.quoteNumber} (${totalDisplay})`;
+  const subject = `${docLabel} from ${businessName}, ${quote.quoteNumber} (${totalDisplay})`;
 
   const text = [
     `Hi ${safeRecipient},`,
@@ -111,7 +111,7 @@ export function renderQuoteEmail(
     "",
     "Reply to this email if you have any questions.",
     "",
-    `— ${businessName}`,
+    `, ${businessName}`,
   ]
     .filter((line): line is string => line !== null)
     .join("\n");
@@ -185,7 +185,7 @@ export function renderQuoteEmail(
             <td style="padding:16px 32px 28px 32px;border-top:1px solid #e8e8ec;">
               <p style="margin:0;font-size:13px;line-height:1.55;color:#6b6b75;">
                 Reply to this email if you have any questions.<br />
-                &mdash; ${escapeHtml(businessName)}
+, ${escapeHtml(businessName)}
               </p>
             </td>
           </tr>

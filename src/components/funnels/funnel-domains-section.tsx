@@ -53,7 +53,7 @@ function CopyField({ label, value, hint }: { label: string; value: string; hint?
           onClick={() => {
             void navigator.clipboard?.writeText(value).then(
               () => { setCopied(true); setTimeout(() => setCopied(false), 1500); },
-              () => toast.error("Couldn't copy — select the text instead."),
+              () => toast.error("Couldn't copy. Select the text instead."),
             );
           }}
         >
@@ -162,7 +162,7 @@ export function FunnelDomainsSection({
       };
       if (!res.ok || !d.domain) throw new Error(d.error ?? "Couldn't add domain");
       setNewDomain("");
-      toast.success("Domain added — add the DNS record below to verify it.");
+      toast.success("Domain added. Add the DNS record below to verify it.");
       void load();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't add domain");

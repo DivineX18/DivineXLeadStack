@@ -569,7 +569,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
           <DialogTitle>Manage {subAccount.name}</DialogTitle>
           <DialogDescription>
             Agency-level controls for this sub-account. Sub-account admins
-            can&apos;t flip these — that&apos;s the point.
+            can&apos;t flip these, that&apos;s the point.
           </DialogDescription>
         </DialogHeader>
 
@@ -586,7 +586,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
           if (billingState === "comped") return null;
           return (
             <p className="text-xs text-muted-foreground">
-              This client is on a plan — the toggles below are applied from the
+              This client is on a plan, the toggles below are applied from the
               plan bundle at activation and whenever the plan is edited. Manual
               changes still work but a plan edit re-applies the bundle.
             </p>
@@ -698,7 +698,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
           >
             When enabled, this sub-account can place outbound AI voice calls to
             contacts (&quot;Call with AI&quot;). Reuses the same Vapi number as
-            inbound voice. Consumes call minutes and carries compliance weight —
+            inbound voice. Consumes call minutes and carries compliance weight
             a built-in gate enforces opt-out, calling hours, and rate limits, but
             you control whether the feature is available at all. Disabling blocks
             new calls; no resources are torn down.
@@ -728,7 +728,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
           >
             When enabled, this sub-account can connect a Facebook Page +
             Instagram business account so Messenger and IG DMs land in the
-            unified inbox alongside SMS/WhatsApp. <strong>Beta</strong> — both
+            unified inbox alongside SMS/WhatsApp. <strong>Beta</strong>, both
             channels ride one Meta connection and stay completely hidden until
             you switch this on; off is the default for every sub-account.
             Disabling silences and hides the channels; nothing is torn down, so
@@ -736,7 +736,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
             actively use Facebook/Instagram messaging.
             {metaUnconfigured && (
               <span className="mt-1 block font-medium text-amber-600 dark:text-amber-400">
-                Unavailable — set <code>META_APP_ID</code> and{" "}
+                Unavailable. Set <code>META_APP_ID</code> and{" "}
                 <code>META_APP_SECRET</code> on the deployment to enable.
               </span>
             )}
@@ -757,14 +757,14 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
           >
             When enabled, this sub-account can connect a Facebook Page +
             Instagram business account and schedule posts that auto-publish at
-            the chosen time. <strong>Beta</strong> — posting reuses the same
+            the chosen time. <strong>Beta</strong>, posting reuses the same
             Meta connection as the inbox plus extra publish permissions
             (requires Meta App Review). Disabling locks the Social Planner
             sidebar entry and 403s the connect/publish routes; scheduled posts
             and the connection are preserved, so re-enabling resumes instantly.
             {metaUnconfigured && (
               <span className="mt-1 block font-medium text-amber-600 dark:text-amber-400">
-                Unavailable — set <code>META_APP_ID</code> and{" "}
+                Unavailable. Set <code>META_APP_ID</code> and{" "}
                 <code>META_APP_SECRET</code> on the deployment to enable.
               </span>
             )}
@@ -782,7 +782,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
               disabled: saving,
             }}
           >
-            When enabled, this sub-account can run Skool-style community groups —
+            When enabled, this sub-account can run Skool-style community groups
             a member feed, courses, and a leaderboard at a branded public link
             (<code>/c/…</code>). Members sign in with a magic link and become
             CRM contacts. Disabling locks the Community sidebar entry AND takes
@@ -823,11 +823,11 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
                 disabled: saving,
               }}
             >
-              When enabled, this sub-account can prospect local businesses —
+              When enabled, this sub-account can prospect local businesses
               search Google Maps listings by business type + location, see them
               on a map with enriched contact details (phone, website, email),
               and import the good ones as contacts. <strong>Experimental</strong>{" "}
-              — every search spends your agency&apos;s shared Outscraper credits
+, every search spends your agency&apos;s shared Outscraper credits
               (roughly $0.10–0.20 per search), which is why you control who gets
               it. Disabling blocks new searches; nothing is torn down.
             </GateToggle>
@@ -845,7 +845,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
               disabled: saving,
             }}
           >
-            Zeno — the sub-account&apos;s in-app assistant
+            Zeno, the sub-account&apos;s in-app assistant
             that answers &quot;how do I…&quot; questions about the app and can
             perform a few actions (create a contact, task, or workflow), each of
             which the operator confirms before it runs.{" "}
@@ -869,7 +869,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
           >
             When enabled, this sub-account can build first-party
             single-page funnels (lead magnet, VSL, challenge/webinar),
-            hosted directly on this platform — no gitpage.site involved.
+            hosted directly on this platform, no gitpage.site involved.
             Disabling locks the Funnels sidebar entry and the builder API;
             published funnels stay live at their existing URL, so
             re-enabling resumes instantly.
@@ -883,7 +883,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
             title="Custom domains"
           >
             When enabled, this sub-account can point its own domain at a
-            published funnel instead of showing the platform&apos;s URL — a
+            published funnel instead of showing the platform&apos;s URL, a
             natural higher-tier differentiator, since it&apos;s independent of
             the base Funnels gate. Disabling blocks registering new domains;
             already-registered ones are preserved, so re-enabling resumes
@@ -899,7 +899,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
           >
             When enabled, this sub-account can connect its OWN Stripe account
             (paste-a-key, not the agency&apos;s) to sell products directly on
-            funnel pages — real checkout with an order bump and one-click
+            funnel pages, real checkout with an order bump and one-click
             post-purchase upsell/downsell. The sub-account is the merchant of
             record; the agency never touches the money. Disabling blocks new
             checkouts and Stripe connect/reconnect; the connected key and past
@@ -915,7 +915,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
           >
             Unlike every other gate on this dialog, this one controls whether
             the whole Full Ascend shell (not a single module) renders for
-            this sub-account at all — it&apos;s one of two conditions
+            this sub-account at all. It&apos;s one of two conditions
             (alongside an active Ascend↔Flow workspace mapping) required
             before this sub-account&apos;s tier can be full_ascend. Enabling this
             alone is not enough without that mapping already existing.
@@ -949,7 +949,7 @@ export function SubAccountManageDialog({ subAccount, open, onOpenChange }: Props
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
             Permanently deletes <strong>{subAccount.name}</strong> and its
-            settings, members, and templates. Only works if it&apos;s empty — if
+            settings, members, and templates. Only works if it&apos;s empty, if
             it has any contacts, deals, tasks, or other records, deletion is
             blocked. This can&apos;t be undone.
           </p>
@@ -1086,7 +1086,7 @@ function GateToggle({
             <span className="font-medium text-foreground">
               Hide from the sub-account entirely
             </span>{" "}
-            <span className="text-muted-foreground">(default)</span> — omit the
+            <span className="text-muted-foreground">(default)</span>, omit the
             sidebar entry so they never know the feature exists. Uncheck to show
             a greyed <span className="font-medium">Locked</span> item instead (an
             upsell hook).

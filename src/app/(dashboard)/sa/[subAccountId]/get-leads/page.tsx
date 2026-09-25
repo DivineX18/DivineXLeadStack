@@ -60,7 +60,7 @@ type ResultsFilter = "all" | "no-website" | "has-email";
 type ResultsTab = "map" | "list";
 
 const POLL_INTERVAL_MS = 5_000;
-const POLL_CAP = 60; // ~5 minutes — enrichment occasionally dawdles.
+const POLL_CAP = 60; // ~5 minutes, enrichment occasionally dawdles.
 
 interface SearchOrigin {
   latitude: number;
@@ -318,7 +318,7 @@ export default function GetLeadsPage() {
     } else if (typed) {
       if (!process.env.NEXT_PUBLIC_MAPBOX_TOKEN) {
         toast.error(
-          "Typed locations need NEXT_PUBLIC_MAPBOX_TOKEN configured — use “Use my location” instead.",
+          "Typed locations need NEXT_PUBLIC_MAPBOX_TOKEN configured. Use “Use my location” instead.",
         );
         return;
       }
@@ -330,7 +330,7 @@ export default function GetLeadsPage() {
       }
       if (!resolved) {
         setPhase("idle");
-        toast.error(`Couldn't find “${typed}” — try a fuller place name.`);
+        toast.error(`Couldn't find “${typed}”. Try a fuller place name.`);
         return;
       }
     } else {
@@ -659,7 +659,7 @@ export default function GetLeadsPage() {
               value={maxResults}
               onChange={(e) => setMaxResults(Number(e.target.value))}
               disabled={searching}
-              title="Caps how many businesses one search returns — and how many enrichment credits it can spend"
+              title="Caps how many businesses one search returns, and how many enrichment credits it can spend"
               className="flex h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 text-foreground dark:bg-input/30 [&_option]:bg-background [&_option]:text-foreground"
             >
               {RESULT_LIMIT_OPTIONS.map((n) => (
@@ -694,7 +694,7 @@ export default function GetLeadsPage() {
           <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             Searching Google Maps and enriching contact details (emails,
-            socials) for up to {maxResults} businesses — usually takes 1–3
+            socials) for up to {maxResults} businesses. Usually takes 1–3
             minutes. Leave this page open.
           </p>
         )}
@@ -733,7 +733,7 @@ export default function GetLeadsPage() {
                 disabled={importing}
                 placeholder="e.g. plumbers-brisbane"
                 className="h-8 w-52 text-sm"
-                title="Imported contacts get this tag (plus 'get-leads') — target it in Workflows, Broadcasts, and voice campaigns"
+                title="Imported contacts get this tag (plus 'get-leads'), target it in Workflows, Broadcasts, and voice campaigns"
               />
               <Button
                 type="button"
@@ -875,12 +875,12 @@ export default function GetLeadsPage() {
                         </td>
                         <td className="whitespace-nowrap px-3 py-2.5 tabular-nums">
                           {b.phone ?? (
-                            <span className="text-muted-foreground">—</span>
+                            <span className="text-muted-foreground">-</span>
                           )}
                         </td>
                         <td className="max-w-[200px] truncate px-3 py-2.5">
                           {b.email ?? (
-                            <span className="text-muted-foreground">—</span>
+                            <span className="text-muted-foreground">-</span>
                           )}
                         </td>
                         <td className="max-w-[180px] truncate px-3 py-2.5">
@@ -912,11 +912,11 @@ export default function GetLeadsPage() {
                               )}
                             </span>
                           ) : (
-                            <span className="text-muted-foreground">—</span>
+                            <span className="text-muted-foreground">-</span>
                           )}
                         </td>
                         <td className="max-w-[260px] truncate px-3 py-2.5 text-xs text-muted-foreground">
-                          {b.fullAddress ?? "—"}
+                          {b.fullAddress ?? "-"}
                         </td>
                       </tr>
                     );
@@ -1064,9 +1064,9 @@ function ManageServicesDialog({
         <DialogHeader>
           <DialogTitle>Service types</DialogTitle>
           <DialogDescription>
-            These are the business types in your picker. Add your own — they
+            These are the business types in your picker. Add your own. They
             are searched exactly as written (e.g. “vegan bakeries”, “solar
-            installers”) — or delete the ones you never prospect for.
+            installers”), or delete the ones you never prospect for.
           </DialogDescription>
         </DialogHeader>
 
@@ -1174,7 +1174,7 @@ function Header() {
         </span>
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Find local businesses that might need what you sell — search by type
+        Find local businesses that might need what you sell, search by type
         and area, review enriched contact details, then import the good ones
         as contacts.
       </p>

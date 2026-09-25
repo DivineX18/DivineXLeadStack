@@ -43,7 +43,7 @@ export function formatContactDate(
   value: Timestamp | FieldValue | Date | null | undefined,
 ): string {
   const d = toDate(value);
-  if (!d) return "—";
+  if (!d) return "-";
   return d.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",

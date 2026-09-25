@@ -269,7 +269,7 @@ export function SubAccountTerritoriesSection() {
           <p className="mt-0.5 text-sm text-muted-foreground">
             Restrict collaborators to deals and contacts for the regions
             they cover (US states, custom zones, etc.). Off by default
-            — leave off and this sub-account behaves exactly as today.
+. Leave off and this sub-account behaves exactly as today.
           </p>
         </div>
         {scopingOn && (
@@ -320,7 +320,7 @@ export function SubAccountTerritoriesSection() {
       )}
 
       {/* CRUD + list only shown when the toggle is on. Keeps the
-          default-off view minimal — just the toggle. Once enabled,
+          default-off view minimal, just the toggle. Once enabled,
           the admin sees the full configuration surface. */}
       {scopingOn && (
         <div className="mt-5 space-y-5">

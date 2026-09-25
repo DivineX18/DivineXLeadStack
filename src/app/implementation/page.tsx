@@ -12,9 +12,9 @@ import { StepFlow, type FlowStep } from "@/components/landing-custom/step-flow";
 export async function generateMetadata() {
   const brand = await resolveCustomBrand();
   return {
-    title: `Implementation & Onboarding — ${brand.name}`,
-    description: `What CRM onboarding with ${brand.name} actually looks like: tell us about your business, we configure your systems and migrate your existing contacts, connect what you already use, and go live in days — not months.`,
-    openGraph: { title: `Implementation — ${brand.name}`, type: "website" as const },
+    title: `Implementation & Onboarding, ${brand.name}`,
+    description: `What CRM onboarding with ${brand.name} actually looks like: tell us about your business, we configure your systems and migrate your existing contacts, connect what you already use, and go live in days, not months.`,
+    openGraph: { title: `Implementation, ${brand.name}`, type: "website" as const },
   };
 }
 
@@ -27,15 +27,15 @@ const IMPLEMENTATION_FAQS: FaqItem[] = [
   {
     question: "What format do my existing contacts need to be in?",
     answer:
-      "Whatever you've got — a spreadsheet export, a CSV from another CRM, or a live login to your current system. Matching and cleaning the data during import is part of the process, not something you do yourself first.",
+      "Whatever you've got, a spreadsheet export, a CSV from another CRM, or a live login to your current system. Matching and cleaning the data during import is part of the process, not something you do yourself first.",
   },
   {
     question: "Do I need to train my team, or does someone do that for me?",
     answer:
-      "The pipeline and workflows are set up to match how your team already sells, so the learning curve is mostly \"where do I find things,\" not \"how does this work\" — walkthroughs are part of getting set up.",
+      "The pipeline and workflows are set up to match how your team already sells, so the learning curve is mostly \"where do I find things,\" not \"how does this work\". Walkthroughs are part of getting set up.",
   },
   {
-    question: "What if my business is unusual — will the pipeline actually fit?",
+    question: "What if my business is unusual. Will the pipeline actually fit?",
     answer:
       "Pipeline stages are configured around your actual sales process during setup, not left as a generic default you have to adapt to.",
   },
@@ -45,22 +45,22 @@ const STEPS = [
   {
     icon: ClipboardList,
     title: "Tell us about your business",
-    body: "How you currently handle leads, what tools you're already using, and where things tend to slip — a spreadsheet, a shared inbox, a CRM that doesn't fit anymore. No technical setup required on your end for this part; a conversation is enough for us to start building.",
+    body: "How you currently handle leads, what tools you're already using, and where things tend to slip, a spreadsheet, a shared inbox, a CRM that doesn't fit anymore. No technical setup required on your end for this part; a conversation is enough for us to start building.",
   },
   {
     icon: Settings2,
     title: "We configure your systems",
-    body: "Contacts imported, pipeline stages built around how you actually sell, and a follow-up sequence configured — not a generic default template, one matched to your business. If you want an AI agent answering chat, SMS, or calls, its persona and escalation rules get written around your actual services during this step too.",
+    body: "Contacts imported, pipeline stages built around how you actually sell, and a follow-up sequence configured, not a generic default template, one matched to your business. If you want an AI agent answering chat, SMS, or calls, its persona and escalation rules get written around your actual services during this step too.",
   },
   {
     icon: Plug2,
     title: "Connect what you already use",
-    body: "Your sending email, a phone number for SMS and calls, and your calendar. Existing contacts come with you — nothing gets re-entered by hand, and nothing sits half-migrated while you keep working off two systems at once.",
+    body: "Your sending email, a phone number for SMS and calls, and your calendar. Existing contacts come with you. Nothing gets re-entered by hand, and nothing sits half-migrated while you keep working off two systems at once.",
   },
   {
     icon: Rocket,
     title: "Go live",
-    body: "Most teams are running within days, not months. You keep working the way you already do; the system is just underneath it now, catching what used to slip — and every conversation, quote, and booking from day one is already in the record.",
+    body: "Most teams are running within days, not months. You keep working the way you already do; the system is just underneath it now, catching what used to slip, and every conversation, quote, and booking from day one is already in the record.",
   },
 ];
 
@@ -98,7 +98,7 @@ export default async function ImplementationPage() {
               <span className="font-serif font-normal italic">actually looks like</span>.
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-              Not a self-serve wizard you have to figure out alone — a short, direct process from
+              Not a self-serve wizard you have to figure out alone, a short, direct process from
               first conversation to running system.
             </p>
           </div>
@@ -148,7 +148,7 @@ export default async function ImplementationPage() {
               {[
                 { title: "Design the pipeline", body: "Stages get built around how your team already sells, not filled in from a generic template you have to adapt to." },
                 { title: "Write the automations", body: "Speed-to-lead sequences, escalation rules, and the AI agent's persona are configured during setup, not left as a blank builder for you to figure out." },
-                { title: "Clean up the data", body: "Existing contacts get matched and de-duplicated during import — you hand over what you have, not a spreadsheet you've already spent a weekend tidying." },
+                { title: "Clean up the data", body: "Existing contacts get matched and de-duplicated during import. You hand over what you have, not a spreadsheet you've already spent a weekend tidying." },
               ].map(({ title, body }) => (
                 <div
                   key={title}
@@ -169,7 +169,7 @@ export default async function ImplementationPage() {
                 Already using something else?
               </h2>
               <p className="mt-4 text-lg text-muted-foreground">
-                Existing contacts and data come with you — implementation includes bringing your
+                Existing contacts and data come with you. Implementation includes bringing your
                 current system over, not asking you to start from a blank slate. Whatever
                 you&apos;re moving off, the pipeline, contacts, and follow-up rules are rebuilt
                 around your business before you ever log in for the first time.

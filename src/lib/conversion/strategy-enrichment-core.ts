@@ -73,7 +73,7 @@ export function buildStrategyEnrichmentPrompt(strategy: CampaignStrategy): { sys
 
   const system =
     "You are a senior direct-response strategist. Given ONLY the verified facts about a business, offer, and audience, infer the campaign's strategic core. " +
-    "You reason from what is given — you NEVER invent a fact, statistic, proof point, testimonial, guarantee, customer count, or a mechanism the facts don't support. " +
+    "You reason from what is given. You NEVER invent a fact, statistic, proof point, testimonial, guarantee, customer count, or a mechanism the facts don't support. " +
     "If a field cannot be grounded in the provided facts, return null for it rather than guessing. Awareness and sophistication are the exception: infer them from the audience, offer, and traffic, since they are judgements, not facts. " +
     "Return ONLY a JSON object, no markdown, no commentary, with exactly these keys:\n" +
     '{ "centralPromise": string|null, "uniqueMechanism": string|null, "coreBeliefRequired": string|null, "awareness": "unaware"|"problem_aware"|"solution_aware"|"product_aware"|"most_aware"|null, "sophistication": 1|2|3|4|5|null }\n' +
@@ -84,7 +84,7 @@ export function buildStrategyEnrichmentPrompt(strategy: CampaignStrategy): { sys
     "- sophistication: how many times this market has heard claims like this (1 first, 5 burned out).";
 
   const user =
-    `VERIFIED FACTS (the only things known — do not add to them):\n${facts.join("\n")}\n\n` +
+    `VERIFIED FACTS (the only things known. Do not add to them):\n${facts.join("\n")}\n\n` +
     (strategy.unknowns.length
       ? `NOT KNOWN (never invent values for these):\n${strategy.unknowns.map((u) => `- ${u}`).join("\n")}\n\n`
       : "") +

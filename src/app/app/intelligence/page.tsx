@@ -44,7 +44,7 @@ export default async function IntelligencePage() {
     <div className="mx-auto w-full max-w-6xl space-y-6">
       <PageHeader
         title="Intelligence"
-        description="What DivineX knows about your business — growth scans, findings, recommendations and the history behind them."
+        description="What DivineX knows about your business, growth scans, findings, recommendations and the history behind them."
       />
 
       <RunGrowthScanCard saId={workspaceId} hasBusinessProfile={!!mapping?.primaryAscendBusinessProfileId} isFullAscend={isFullAscend} />

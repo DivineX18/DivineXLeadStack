@@ -51,7 +51,7 @@ export async function POST(request: Request) {
   }
   if (!qstashIsConfigured()) {
     return NextResponse.json(
-      { error: "QStash is not configured — bulk send needs the queue." },
+      { error: "QStash is not configured. Bulk send needs the queue." },
       { status: 503 },
     );
   }

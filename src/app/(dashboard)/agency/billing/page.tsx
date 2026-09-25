@@ -149,7 +149,7 @@ export default function AgencyBillingPage() {
       toast.success(
         makeDefault
           ? `"${plan.name}" is now the default plan for new sub-accounts.`
-          : `"${plan.name}" is no longer the default — new sub-accounts start comped.`,
+          : `"${plan.name}" is no longer the default, new sub-accounts start comped.`,
       );
       refreshPlans();
     } catch (err) {
@@ -171,7 +171,7 @@ export default function AgencyBillingPage() {
       if (!res.ok) throw new Error(data.error ?? "Failed to update.");
       toast.success(
         sell
-          ? `"${plan.name}" now appears on your public pricing page — anyone can pay and self-serve a new workspace.`
+          ? `"${plan.name}" now appears on your public pricing page. Anyone can pay and self-serve a new workspace.`
           : `"${plan.name}" removed from the public pricing page.`,
       );
       refreshPlans();
@@ -232,7 +232,7 @@ export default function AgencyBillingPage() {
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-400">
           Stripe isn&apos;t configured on this deployment. Set{" "}
           <code>STRIPE_SECRET_KEY</code> (and the webhook secret) to create
-          plans and charge clients — payments land in <em>your</em> Stripe
+          plans and charge clients, payments land in <em>your</em> Stripe
           account.
         </div>
       )}
@@ -246,10 +246,10 @@ export default function AgencyBillingPage() {
           <div className="h-28 animate-pulse rounded-2xl bg-muted/50" />
         ) : plans.length === 0 ? (
           <div className="rounded-2xl border border-dashed bg-card p-8 text-center text-sm text-muted-foreground">
-            No plans yet. Create your first plan — e.g.{" "}
+            No plans yet. Create your first plan, e.g.{" "}
             <span className="font-medium text-foreground">Starter $97/mo</span>{" "}
             or{" "}
-            <span className="font-medium text-foreground">Pro $297/mo</span> —
+            <span className="font-medium text-foreground">Pro $297/mo</span>
             then assign it to a client from the table below.
           </div>
         ) : (
@@ -321,7 +321,7 @@ export default function AgencyBillingPage() {
                   )}
                   {plan.publicSelfServeEnabled && (
                     <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400">
-                      Live on your public pricing page — anyone can self-serve.
+                      Live on your public pricing page. Anyone can self-serve.
                     </p>
                   )}
                   <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -446,11 +446,11 @@ export default function AgencyBillingPage() {
                       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                         {s.accountNumber !== undefined
                           ? `#${s.accountNumber}`
-                          : "—"}
+                          : "-"}
                       </td>
                       <td className="px-4 py-3 font-medium">{s.name}</td>
                       <td className="px-4 py-3 text-muted-foreground">
-                        {billed ? (billing.planName ?? "—") : "—"}
+                        {billed ? (billing.planName ?? "-") : "-"}
                       </td>
                       <td className="px-4 py-3">
                         <BillingStatusBadge billing={billing} />
@@ -458,7 +458,7 @@ export default function AgencyBillingPage() {
                       <td className="px-4 py-3 text-right tabular-nums">
                         {billed
                           ? `${formatBillingPrice(billing.priceCents, billing.currency)}`
-                          : "—"}
+                          : "-"}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Button

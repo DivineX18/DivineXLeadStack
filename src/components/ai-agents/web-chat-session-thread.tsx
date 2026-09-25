@@ -344,7 +344,7 @@ export function WebChatSessionThread({ sessionId }: Props) {
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
             <strong>Escalation triggered.</strong> The visitor used an
-            escalation keyword — the bot has stopped replying. Follow up
+            escalation keyword, the bot has stopped replying. Follow up
             manually via the captured email/phone above.
           </div>
         </div>

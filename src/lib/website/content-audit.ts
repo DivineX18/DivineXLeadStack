@@ -68,7 +68,7 @@ const PATTERNS: Pattern[] = [
   {
     category: "fabricated_testimonials",
     regex:
-      /<section[^>]*id=["']testimonials["']|class=["'][^"']*testimonial[^"']*["']|\bwhat (?:our|my) (?:customers|clients|students|readers) say\b|["'”][^"'“”]{15,}["'“”]\s*[—–-]\s*[A-Z][a-z]+\s+[A-Z]\.?(?:,|\s)/i,
+      /<section[^>]*id=["']testimonials["']|class=["'][^"']*testimonial[^"']*["']|\bwhat (?:our|my) (?:customers|clients|students|readers) say\b|["'”][^"'“”]{15,}["'“”]\s*[, –-]\s*[A-Z][a-z]+\s+[A-Z]\.?(?:,|\s)/i,
   },
   {
     category: "fabricated_credentials",

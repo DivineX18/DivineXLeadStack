@@ -102,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setAgencyId(null);
           setAgencyRole(null);
           setMemberships([]);
-          setMembershipsLoaded(true); // nothing to load — resolved
+          setMembershipsLoaded(true); // nothing to load, resolved
           setLoading(false);
           return;
         }

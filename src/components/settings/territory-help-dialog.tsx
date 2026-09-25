@@ -40,7 +40,7 @@ export function TerritoryHelpDialog({
             contact&apos;s territory. Each{" "}
             <strong className="text-foreground">member</strong> has a list of
             assigned territories that controls only what they{" "}
-            <em>see</em> — records are never owned by an individual rep.
+            <em>see</em>. Records are never owned by an individual rep.
           </p>
 
           <Section title="Who sees what (scoping on)">
@@ -53,7 +53,7 @@ export function TerritoryHelpDialog({
               ]}
             />
             <p className="mt-2 text-xs text-muted-foreground">
-              Every record always has a territory — a real one or{" "}
+              Every record always has a territory, a real one or{" "}
               <strong>Global</strong>. There&apos;s no &ldquo;unassigned&rdquo;
               state. When scoping is <strong>off</strong>, everyone sees
               everything and the territory tag is stored but ignored.
@@ -79,7 +79,7 @@ export function TerritoryHelpDialog({
             <HelpTable
               head={["Action", "Collaborator", "Admin / Owner"]}
               rows={[
-                ["Re-tag a contact's territory", "No", "Yes — moves the whole account"],
+                ["Re-tag a contact's territory", "No", "Yes, moves the whole account"],
                 ["Change a deal's contact", "No (read-only)", "Yes"],
                 ["Edit a record they can see", "Yes (territory stays put)", "Yes"],
                 ["Change a member's territories", "No", "Yes"],
@@ -95,7 +95,7 @@ export function TerritoryHelpDialog({
             <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
               <li>
                 <strong className="text-foreground">
-                  Only their visibility changes — no records move.
+                  Only their visibility changes, no records move.
                 </strong>{" "}
                 It updates live.
               </li>
@@ -104,7 +104,7 @@ export function TerritoryHelpDialog({
                 (Global stays visible to everyone).
               </li>
               <li>
-                California records stay California — now seen by whoever else
+                California records stay California, now seen by whoever else
                 covers California.
               </li>
               <li>
@@ -129,11 +129,11 @@ export function TerritoryHelpDialog({
               </li>
               <li>
                 California reps stop seeing the account; Utah reps start seeing
-                it — the whole account moves as one unit.
+                it, the whole account moves as one unit.
               </li>
               <li>
                 To make an account visible to every rep again, set it back to{" "}
-                <strong className="text-foreground">Global</strong> — the
+                <strong className="text-foreground">Global</strong>, the
                 shared pool. Global is the floor; there&apos;s no
                 &ldquo;unassigned&rdquo; option.
               </li>

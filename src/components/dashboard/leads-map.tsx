@@ -163,7 +163,7 @@ export function LeadsMap({
       <Card>
         <Header
           title="Where your leads are"
-          subtitle="Map unavailable — Mapbox not configured"
+          subtitle="Map unavailable. Mapbox not configured"
         />
         <div className="flex aspect-[16/9] items-center justify-center rounded-lg border border-dashed bg-background p-6 text-center text-sm text-muted-foreground">
           <div className="max-w-md space-y-2">

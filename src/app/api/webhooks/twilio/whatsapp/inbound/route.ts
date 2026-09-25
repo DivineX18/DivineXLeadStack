@@ -96,7 +96,7 @@ async function resolveRoute(toNumber: string): Promise<ResolvedRoute | null> {
   // as if the channel doesn't exist.
   if (sa.whatsappEnabledByAgency !== true) {
     console.warn(
-      `[twilio/whatsapp] inbound to ${normalisedTo} (sa=${snap.docs[0].id}) but whatsappEnabledByAgency is off — dropping`,
+      `[twilio/whatsapp] inbound to ${normalisedTo} (sa=${snap.docs[0].id}) but whatsappEnabledByAgency is off, dropping`,
     );
     return null;
   }

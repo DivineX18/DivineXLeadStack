@@ -27,7 +27,7 @@ export function GhlImportHelpDialog({
           <DialogTitle>How the GoHighLevel importer works</DialogTitle>
           <DialogDescription>
             Move a client&apos;s CRM data out of GoHighLevel and into this
-            sub-account — safely, and as many times as you need.
+            sub-account, safely, and as many times as you need.
           </DialogDescription>
         </DialogHeader>
 
@@ -37,16 +37,16 @@ export function GhlImportHelpDialog({
               <li>
                 You&apos;re migrating a client off GoHighLevel and want to keep
                 their <strong className="text-foreground">contacts, deal
-                history, and notes</strong> — not start from a blank CRM.
+                history, and notes</strong>, not start from a blank CRM.
               </li>
               <li>
                 You&apos;d like to do it{" "}
                 <strong className="text-foreground">without spreadsheets</strong>
-                {" "}— it pulls straight from GoHighLevel&apos;s API.
+                {" "}. It pulls straight from GoHighLevel&apos;s API.
               </li>
               <li>
                 You want a <strong className="text-foreground">safe, repeatable</strong>{" "}
-                run — re-importing updates records in place instead of
+                run, re-importing updates records in place instead of
                 duplicating them (matched on each record&apos;s GoHighLevel id).
               </li>
             </ul>
@@ -58,11 +58,11 @@ export function GhlImportHelpDialog({
               rows={[
                 [
                   "Contacts",
-                  "Name, email, phone, company, address, tags, and source — plus any custom fields you map.",
+                  "Name, email, phone, company, address, tags, and source, plus any custom fields you map.",
                 ],
                 [
                   "Opportunities",
-                  "Deals — title, value, and stage. Each GHL stage maps to one of your pipeline stages; Won / Lost are honoured.",
+                  "Deals, title, value, and stage. Each GHL stage maps to one of your pipeline stages; Won / Lost are honoured.",
                 ],
                 [
                   "Notes",
@@ -70,7 +70,7 @@ export function GhlImportHelpDialog({
                 ],
                 [
                   "Custom fields",
-                  "GoHighLevel custom fields become LeadStack custom fields — you confirm the names + types before importing.",
+                  "GoHighLevel custom fields become LeadStack custom fields. You confirm the names + types before importing.",
                 ],
               ]}
             />
@@ -83,14 +83,14 @@ export function GhlImportHelpDialog({
                   Workflows, funnels, websites/pages, calendars, forms, and saved
                   templates
                 </strong>{" "}
-                — GoHighLevel can&apos;t export these, so they&apos;re rebuilt
+. GoHighLevel can&apos;t export these, so they&apos;re rebuilt
                 natively in this platform.
               </li>
               <li>
                 <strong className="text-foreground">
                   Files / media and message threads
                 </strong>{" "}
-                (SMS + email conversation history) — not part of this version.
+                (SMS + email conversation history), not part of this version.
               </li>
             </ul>
           </Section>
@@ -98,7 +98,7 @@ export function GhlImportHelpDialog({
           <Section title="The steps">
             <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
               <li>
-                <strong className="text-foreground">Connect</strong> — in
+                <strong className="text-foreground">Connect</strong>, in
                 GoHighLevel, open{" "}
                 <strong className="text-foreground">
                   Settings → Private Integrations
@@ -107,25 +107,25 @@ export function GhlImportHelpDialog({
                 location id. We validate it and read a preview.
               </li>
               <li>
-                <strong className="text-foreground">Review the mapping</strong> —
+                <strong className="text-foreground">Review the mapping</strong>
                 we auto-suggest how GHL pipeline stages + custom fields map in.
                 Adjust anything, then confirm.
               </li>
               <li>
-                <strong className="text-foreground">Run</strong> — the import
+                <strong className="text-foreground">Run</strong>, the import
                 works through contacts → opportunities → notes in the background.
                 You can leave the page; live progress shows created / updated
                 counts as it goes.
               </li>
               <li>
-                <strong className="text-foreground">Done</strong> — a summary
+                <strong className="text-foreground">Done</strong>, a summary
                 shows the totals and lists any skipped records with the reason.
               </li>
             </ol>
           </Section>
 
           <p className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
-            In short: connect, confirm the mapping, and let it run — contacts,
+            In short: connect, confirm the mapping, and let it run, contacts,
             deals, and notes come across, and re-running is always safe.
           </p>
         </div>

@@ -114,7 +114,7 @@ export default async function RevealPage({
               {approvedAssets.length > 0 ? `, with ${approvedAssets.length} approved brand assets` : ""}.
             </p>
             <p className="mt-3 text-sm opacity-55">
-              A full growth diagnosis needs a website scan. You can run one anytime, or start building now — everything
+              A full growth diagnosis needs a website scan. You can run one anytime, or start building now, everything
               you build will use your real business, brand and assets.
             </p>
           </div>

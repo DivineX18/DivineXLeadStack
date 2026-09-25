@@ -66,7 +66,7 @@ export function validateIconPng(
   }
   // +33% base64 overhead over the decoded cap, with slack for padding.
   if (base64.length > ICON_MAX_BYTES * 1.4) {
-    return "Icon is too large — use a simpler image";
+    return "Icon is too large. Use a simpler image";
   }
   let buf: Buffer;
   try {
@@ -75,7 +75,7 @@ export function validateIconPng(
     return "Icon data isn't valid base64";
   }
   if (buf.length > ICON_MAX_BYTES) {
-    return "Icon is too large — use a simpler image";
+    return "Icon is too large. Use a simpler image";
   }
   if (buf.length < 24 || !PNG_SIGNATURE.every((b, i) => buf[i] === b)) {
     return "Icon must be a PNG";

@@ -332,7 +332,7 @@ export function describeMetaSendError(
     case 100:
       return `Meta couldn't deliver this ${platform} message. In Development mode you can only message people who are Testers on your Meta app, and they must have messaged you within the last 24 hours.${ig ? ' Also confirm the Instagram account has "Allow access to messages" turned on.' : ""} See "Testing & troubleshooting" under Settings → Messaging.`;
     case 551:
-      return `This ${platform} user isn't reachable right now — they may have blocked messages, or the 24-hour reply window has closed.`;
+      return `This ${platform} user isn't reachable right now. They may have blocked messages, or the 24-hour reply window has closed.`;
     case 4:
     case 613:
       return `${platform} is rate-limiting messages right now. Wait a minute and try again.`;

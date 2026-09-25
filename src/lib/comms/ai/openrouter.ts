@@ -1,4 +1,5 @@
 import "server-only";
+import { stripEmDashes } from "@/lib/text/dedash";
 
 /**
  * Thin OpenRouter client. OpenRouter exposes an OpenAI-compatible chat
@@ -74,7 +75,7 @@ export async function callAi({
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new Error(
-      "OPENROUTER_API_KEY is not set — AI replies require it. Get a key at openrouter.ai.",
+      "OPENROUTER_API_KEY is not set. AI replies require it. Get a key at openrouter.ai.",
     );
   }
 
@@ -116,7 +117,10 @@ export async function callAi({
 
   const usage = data.usage ?? {};
   return {
-    text,
+    // Every AI reply this product sends, on every channel, leaves through
+    // here, so the em dash rule is enforced at this boundary rather than in
+    // each channel's prompt. See lib/text/dedash.ts.
+    text: stripEmDashes(text),
     promptTokens: usage.prompt_tokens ?? 0,
     completionTokens: usage.completion_tokens ?? 0,
     totalTokens: usage.total_tokens ?? 0,

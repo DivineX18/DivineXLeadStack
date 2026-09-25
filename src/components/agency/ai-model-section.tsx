@@ -80,7 +80,7 @@ export function AiModelSection() {
           <h2 className="text-sm font-semibold">AI model</h2>
           <p className="text-xs text-muted-foreground">
             The default model powering AI Agents across every channel. Set via
-            environment variables — read-only here.
+            environment variables. Read-only here.
           </p>
         </div>
       </div>

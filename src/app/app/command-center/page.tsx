@@ -23,7 +23,7 @@ export default async function CommandCenterPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-[var(--dx-text-primary)]">Command Center</h1>
         <p className="mt-1 text-sm text-[var(--dx-text-muted)]">
-          Manage every workspace in your agency, its provisioning state, product entitlements, and rollout — without leaving Ascend.
+          Manage every workspace in your agency, its provisioning state, product entitlements, and rollout, without leaving Ascend.
         </p>
       </div>
 
@@ -38,7 +38,7 @@ export default async function CommandCenterPage() {
       <section className="rounded-2xl border border-[var(--dx-border-subtle)] p-5" style={{ background: "var(--glass-1)", backdropFilter: "blur(12px)" }}>
         <h2 className="mb-1 text-sm font-medium text-[var(--dx-text-secondary)]">Design Intelligence</h2>
         <p className="mb-4 text-xs text-[var(--dx-text-muted)]">
-          The Landing Page Calibration Engine — every generated funnel is scored against a 13-point premium bar, and
+          The Landing Page Calibration Engine. Every generated funnel is scored against a 13-point premium bar, and
           operator feedback trains the design vault Zeno draws on for every future page, across every workspace.
         </p>
         <DesignIntelligenceSection />

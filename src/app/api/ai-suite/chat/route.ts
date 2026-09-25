@@ -164,7 +164,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "The AI Assistant isn't set up on this deployment yet — contact your workspace admin.",
+          "The AI Assistant isn't set up on this deployment yet. Contact your workspace admin.",
       },
       { status: 503 },
     );
@@ -271,7 +271,7 @@ export async function POST(request: Request) {
         const brand = (snap.brand ?? {}) as { visual?: Record<string, unknown>; voice?: Record<string, unknown> };
         const approved = (snap.assets ?? []).filter((a) => (a.status ?? "approved") === "approved");
         const lines = [
-          `Business: ${business.name ?? "(unnamed)"}${business.type ? ` — ${business.type}` : ""}`,
+          `Business: ${business.name ?? "(unnamed)"}${business.type ? `, ${business.type}` : ""}`,
           business.websiteUrl ? `Website: ${business.websiteUrl}` : "",
           business.audience ? `Audience: ${business.audience}` : "",
           business.offer ? `Primary offer: ${business.offer}` : "",
@@ -280,7 +280,7 @@ export async function POST(request: Request) {
           brand.visual ? `Brand visual: ${JSON.stringify(brand.visual).slice(0, 400)}` : "",
           approved.length
             ? `Approved brand assets (${approved.length}): ${approved.slice(0, 12).map((a) => `#${a.id} ${a.classification ?? "asset"}`).join(", ")}`
-            : "No approved brand assets yet — ask for the ones that would most strengthen the page rather than using stand-ins.",
+            : "No approved brand assets yet. Ask for the ones that would most strengthen the page rather than using stand-ins.",
           "",
         ];
         // ASCEND'S DIAGNOSIS. Rendered as reasoning material, not as fields to
@@ -305,11 +305,11 @@ export async function POST(request: Request) {
             intel.recommendedLeadMagnet ? `Lead magnet that fits: ${intel.recommendedLeadMagnet}` : "",
             intel.scoreLabel ? `Overall growth stage: ${intel.scoreLabel}` : "",
             "",
-            "REASON FROM THIS. When they ask what to do, or ask you to build something, let the constraint and the opportunities shape WHAT you recommend and WHAT you build — not just how you describe it. Do not quote scores, field names or this list back at them; speak as someone who already understands their business. Never claim a diagnosis you were not given.",
+            "REASON FROM THIS. When they ask what to do, or ask you to build something, let the constraint and the opportunities shape WHAT you recommend and WHAT you build, not just how you describe it. Do not quote scores, field names or this list back at them; speak as someone who already understands their business. Never claim a diagnosis you were not given.",
           );
         }
         lines.push(
-          "USE THIS: never ask the customer for anything above — you already know it. Reference offers and assets by their ids. This is DURABLE business truth; campaign-specific intent (what to promote right now, to whom, with what follow-up) is gathered per campaign and never written back here.",
+          "USE THIS: never ask the customer for anything above. You already know it. Reference offers and assets by their ids. This is DURABLE business truth; campaign-specific intent (what to promote right now, to whom, with what follow-up) is gathered per campaign and never written back here.",
         );
         const body = lines.filter(Boolean).join("\n");
         cards.push({
@@ -362,7 +362,7 @@ export async function POST(request: Request) {
               ? `The offer was settled as: ${active.plan.intent.offerState.replace(/_/g, " ")}.`
               : "",
             "",
-            "INHERIT THESE. When you build anything for this campaign — a page, an email, an SMS, a social post, a workflow — use this offer, this audience and this CTA rather than deciding new ones. If the customer asks for something that would change them, say so plainly first: it makes the assets already built inconsistent.",
+            "INHERIT THESE. When you build anything for this campaign (a page, an email, an SMS, a social post, a workflow) use this offer, this audience and this CTA rather than deciding new ones. If the customer asks for something that would change them, say so plainly first: it makes the assets already built inconsistent.",
             stale.length
               ? `${stale.length} campaign asset(s) were built against an earlier decision and are marked as needing an update. Mention this if the customer asks what is outstanding; never quietly rewrite them.`
               : "",
@@ -436,11 +436,11 @@ export async function POST(request: Request) {
       // caused it. So this exits here with something true instead.
       if (call && turn.truncated) {
         console.warn(
-          `[ai-suite/chat] ${call.name} tool call truncated by the output ceiling — not entering the repair loop`,
+          `[ai-suite/chat] ${call.name} tool call truncated by the output ceiling, not entering the repair loop`,
         );
         const response: AiSuiteChatResponse = {
           type: "message",
-          text: "I had your draft nearly written and my response got cut off before I could finish it. That's a limit on my side, not a problem with your brief — send it through again and I'll build it.",
+          text: "I had your draft nearly written and my response got cut off before I could finish it. That's a limit on my side, not a problem with your brief. Send it through again and I'll build it.",
         };
         return NextResponse.json(response);
       }
@@ -461,7 +461,7 @@ export async function POST(request: Request) {
         writeRepairs < MAX_WRITE_REPAIR_HOPS
       ) {
         const attempt = cap.validate(withOperatorFigures(call.args));
-        if (attempt.ok) break; // good args — fall through to the proposal path
+        if (attempt.ok) break; // good args, fall through to the proposal path
         writeRepairs++;
         console.warn(`[ai-suite/chat] ${cap.name} args rejected (repair ${writeRepairs}): ${attempt.error}`);
         llmMessages.push(
@@ -487,7 +487,7 @@ export async function POST(request: Request) {
         cap.level !== lvl ||
         !roleSatisfies(cap.requiredRole, roleCtx)
       ) {
-        break; // not a lookup — fall through to the proposal path below
+        break; // not a lookup, fall through to the proposal path below
       }
       const validated = cap.validate(call.args);
       let lookupResult: string;
@@ -595,7 +595,7 @@ export async function POST(request: Request) {
     type: "message",
     text:
       turn.text ||
-      "I'm not sure how to help with that — could you rephrase, or ask how a feature works?",
+      "I'm not sure how to help with that. Could you rephrase, or ask how a feature works?",
   };
   return NextResponse.json(response);
 }

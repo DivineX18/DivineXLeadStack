@@ -56,7 +56,7 @@ function getAppUrl(): string {
   const url = process.env.NEXT_PUBLIC_APP_URL?.trim();
   if (!url) {
     throw new VapiError(
-      "NEXT_PUBLIC_APP_URL is not set — Vapi must reach our LLM endpoint",
+      "NEXT_PUBLIC_APP_URL is not set. Vapi must reach our LLM endpoint",
       500,
       "",
     );

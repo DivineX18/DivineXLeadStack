@@ -114,7 +114,7 @@ export async function POST(
         quote.status === "paid"
       ) {
         return {
-          error: `Quote was already ${quote.status} — refresh the page to see the latest.`,
+          error: `Quote was already ${quote.status}, refresh the page to see the latest.`,
           status: 409,
         } as const;
       }

@@ -54,7 +54,7 @@ export default function VoiceCampaignDetailPage() {
     if (cancellingMode || !id) return;
     const confirmMsg =
       mode === "all"
-        ? "Stop ALL calls now — including any in progress? Live calls are hung up immediately and queued contacts won't be called."
+        ? "Stop ALL calls now, including any in progress? Live calls are hung up immediately and queued contacts won't be called."
         : "Stop scheduled calls? Contacts not yet called won't be called. Calls already connected will finish on their own.";
     if (!window.confirm(confirmMsg)) return;
     setCancellingMode(mode);
@@ -86,9 +86,9 @@ export default function VoiceCampaignDetailPage() {
         );
       }
       toast.success(
-        `Campaign stopped${parts.length ? ` — ${parts.join(", ")}` : ""}.`,
+        `Campaign stopped${parts.length ? `, ${parts.join(", ")}` : ""}.`,
       );
-    } catch (err) { toast.error(describeError(err, "Network error — try again."), { duration: 12_000 });
+    } catch (err) { toast.error(describeError(err, "Network error. Try again."), { duration: 12_000 });
     } finally {
       setCancellingMode(null);
     }
@@ -202,7 +202,7 @@ export default function VoiceCampaignDetailPage() {
               Started {formatRelativeTime(campaign.createdAt)} by{" "}
               {campaign.createdBy?.displayName ||
                 campaign.createdBy?.email ||
-                "—"}
+                "-"}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -234,7 +234,7 @@ export default function VoiceCampaignDetailPage() {
                   size="sm"
                   onClick={() => stopCampaign("all")}
                   disabled={cancellingMode !== null}
-                  title="Stop everything now — hang up live calls AND cancel queued ones."
+                  title="Stop everything now, hang up live calls AND cancel queued ones."
                 >
                   {cancellingMode === "all" ? (
                     <>
@@ -277,7 +277,7 @@ export default function VoiceCampaignDetailPage() {
           </div>
           {t.queued > 0 && (
             <p className="mt-2 text-xs text-muted-foreground">
-              {t.queued} still queued — calls are paced, and any outside their
+              {t.queued} still queued. Calls are paced, and any outside their
               local calling window are auto-deferred until it opens.
             </p>
           )}
@@ -343,8 +343,8 @@ export default function VoiceCampaignDetailPage() {
                     <span className="font-mono">
                       {formatDuration(r.callDurationSec ?? 0)}
                     </span>
-                  ) : formatContactDate(r.settledAt) === "—" ? (
-                    "—"
+                  ) : formatContactDate(r.settledAt) === "-" ? (
+                    "-"
                   ) : (
                     formatRelativeTime(r.settledAt)
                   )}

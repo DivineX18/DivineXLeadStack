@@ -182,7 +182,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
       { value: "leads_not_closing", label: "Leads don't turn into customers" },
       { value: "no_followup", label: "We don't follow up consistently" },
       { value: "unclear_offer", label: "Our offer isn't landing" },
-      { value: "not_sure", label: "I'm not sure — that's why I'm here" },
+      { value: "not_sure", label: "I'm not sure, that's why I'm here" },
     ],
   },
   {

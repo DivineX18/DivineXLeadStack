@@ -132,7 +132,7 @@ export function WebChatChannelSection() {
       setCopied(true);
       toast.success("Snippet copied");
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) { toast.error(describeError(err, "Couldn't copy — try selecting + copying manually"), { duration: 12_000 });
+    } catch (err) { toast.error(describeError(err, "Couldn't copy. Try selecting + copying manually"), { duration: 12_000 });
     }
   }
 
@@ -185,7 +185,7 @@ export function WebChatChannelSection() {
       }
       if (data.config) setConfig(data.config);
       toast.success("Web Chat settings saved");
-    } catch (err) { toast.error(describeError(err, "Network error — try again"), { duration: 12_000 });
+    } catch (err) { toast.error(describeError(err, "Network error. Try again"), { duration: 12_000 });
     } finally {
       setSaving(false);
     }
@@ -354,7 +354,7 @@ export function WebChatChannelSection() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="wc-model">Model (advanced — blank for default)</Label>
+              <Label htmlFor="wc-model">Model (advanced, blank for default)</Label>
               <Input
                 id="wc-model"
                 value={modelOverride}
@@ -454,7 +454,7 @@ export function WebChatChannelSection() {
             <h3 className="text-sm font-medium">Embed snippet</h3>
             <p className="mt-1 text-xs text-muted-foreground">
               Paste this once into the client&rsquo;s site, just before{" "}
-              <code>&lt;/body&gt;</code>. Works on any framework — static
+              <code>&lt;/body&gt;</code>. Works on any framework, static
               HTML, WordPress, Shopify, Webflow, GitLab Pages, anything.
             </p>
           </div>
@@ -489,7 +489,7 @@ export function WebChatChannelSection() {
           </div>
           {!enabled && (
             <p className="text-[11px] text-amber-600 dark:text-amber-500">
-              Enable + save before installing — the snippet will silently
+              Enable + save before installing, the snippet will silently
               do nothing until the channel is on.
             </p>
           )}

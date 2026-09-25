@@ -108,7 +108,7 @@ export async function POST(
     // duplicate — drop the gate and tell the operator to re-add it.
     payment = null;
     warning =
-      "Payment was removed from the copy — connect a PayPal.me username under Settings → Payments, then re-enable it on the new page.";
+      "Payment was removed from the copy. Connect a PayPal.me username under Settings → Payments, then re-enable it on the new page.";
   }
 
   const draft: BookingPageFormData = {

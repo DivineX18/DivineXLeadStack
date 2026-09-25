@@ -44,7 +44,7 @@ export default async function AssistancePage({
           <p className="font-semibold">Nothing here is worth your money right now.</p>
           <p className="mt-2 opacity-70">
             Based on where your business is, paid assistance would not be the highest-leverage spend. Keep building with
-            Zeno — we will tell you when a specialist would genuinely help.
+            Zeno. We will tell you when a specialist would genuinely help.
           </p>
         </div>
       ) : (

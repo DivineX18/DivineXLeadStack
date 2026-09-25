@@ -295,7 +295,7 @@ export async function maybeRespondWithAi(
       agencyId: subAccount.agencyId,
       subAccountId,
       type: "ai_skipped",
-      content: `AI reply skipped — contact is ${transport.label}-opted-out.`,
+      content: `AI reply skipped. Contact is ${transport.label}-opted-out.`,
       meta: { reason: "contact_opted_out", channel: channelId },
     });
     return { kind: "skipped", reason: "contact_opted_out" };
@@ -308,7 +308,7 @@ export async function maybeRespondWithAi(
       agencyId: subAccount.agencyId,
       subAccountId,
       type: "ai_skipped",
-      content: "AI reply skipped — agent persona prompt is empty.",
+      content: "AI reply skipped. Agent persona prompt is empty.",
       meta: { reason: "no_prompt" },
     });
     return { kind: "skipped", reason: "no_prompt" };
@@ -321,7 +321,7 @@ export async function maybeRespondWithAi(
       agencyId: subAccount.agencyId,
       subAccountId,
       type: "ai_skipped",
-      content: `AI reply skipped — outside business hours (${eff.hoursStart}:00–${eff.hoursEnd}:00 ${eff.timezone}).`,
+      content: `AI reply skipped, outside business hours (${eff.hoursStart}:00–${eff.hoursEnd}:00 ${eff.timezone}).`,
       meta: { reason: "outside_hours" },
     });
     return { kind: "skipped", reason: "outside_hours" };
@@ -354,7 +354,7 @@ export async function maybeRespondWithAi(
       agencyId: subAccount.agencyId,
       subAccountId,
       type: "ai_escalated",
-      content: `AI escalated to human — keyword "${triggered}" matched in inbound message.`,
+      content: `AI escalated to human, keyword "${triggered}" matched in inbound message.`,
       meta: { reason: "escalation_keyword", keyword: triggered, channel: channelId },
     });
     return { kind: "escalated", keyword: triggered };
@@ -370,7 +370,7 @@ export async function maybeRespondWithAi(
       agencyId: subAccount.agencyId,
       subAccountId,
       type: "ai_skipped",
-      content: "AI reply skipped — bot paused after a human took over.",
+      content: "AI reply skipped, bot paused after a human took over.",
       meta: { reason: "bot_paused", channel: channelId },
     });
     return { kind: "skipped", reason: "bot_paused" };
@@ -381,7 +381,7 @@ export async function maybeRespondWithAi(
       agencyId: subAccount.agencyId,
       subAccountId,
       type: "ai_skipped",
-      content: "AI reply skipped — bot turned off for this conversation.",
+      content: "AI reply skipped, bot turned off for this conversation.",
       meta: { reason: "bot_off", channel: channelId },
     });
     return { kind: "skipped", reason: "bot_off" };
@@ -429,7 +429,7 @@ export async function maybeRespondWithAi(
       agencyId: subAccount.agencyId,
       subAccountId,
       type: "ai_skipped",
-      content: `AI reply skipped — LLM call failed: ${msg.slice(0, 200)}`,
+      content: `AI reply skipped. LLM call failed: ${msg.slice(0, 200)}`,
       meta: { reason: "llm_failed", error: msg.slice(0, 500) },
     });
     return { kind: "skipped", reason: "llm_failed" };

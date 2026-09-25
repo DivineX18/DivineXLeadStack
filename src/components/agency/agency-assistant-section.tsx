@@ -40,7 +40,7 @@ export function AgencyAssistantSection() {
       if (!res.ok) throw new Error(payload.error ?? "Could not save.");
       toast.success(
         next
-          ? "Zeno enabled — it now appears in your sidebar."
+          ? "Zeno enabled. It now appears in your sidebar."
           : "Zeno disabled.",
       );
     } catch (err) {
@@ -82,7 +82,7 @@ export function AgencyAssistantSection() {
             (<code>OPENROUTER_API_KEY</code>). When off, the sidebar entry is
             hidden and the assistant refuses requests. Each client&apos;s{" "}
             <span className="font-medium">Zeno</span> is
-            separate — enable it per sub-account under{" "}
+            separate, enable it per sub-account under{" "}
             <Link
               href="/agency/sub-accounts"
               className="underline underline-offset-2"

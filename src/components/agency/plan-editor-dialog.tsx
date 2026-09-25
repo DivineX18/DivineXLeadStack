@@ -209,7 +209,7 @@ export function PlanEditorDialog({ plan, open, onOpenChange, onSaved }: Props) {
               always included. Gate changes re-apply automatically to every
               client currently on this plan.
               {plan &&
-                " Price changes only affect new checkouts — existing subscribers keep their current price."}
+                " Price changes only affect new checkouts, existing subscribers keep their current price."}
             </p>
           </div>
         </div>

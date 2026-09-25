@@ -158,7 +158,7 @@ export function NodeConfigDialog({
                   {manualVars.map((v) => (
                     <Field
                       key={v.position}
-                      label={`Variable {{${v.position}}} — ${v.label}`}
+                      label={`Variable {{${v.position}}}, ${v.label}`}
                       hint="Static text, or merge tags like {{contact.firstName}}."
                     >
                       <Input
@@ -387,7 +387,7 @@ export function NodeConfigDialog({
 
           {step.type === "goal" && (
             <p className="text-muted-foreground text-sm">
-              This step ends the workflow — nothing runs after it on this path.
+              This step ends the workflow. Nothing runs after it on this path.
             </p>
           )}
         </div>

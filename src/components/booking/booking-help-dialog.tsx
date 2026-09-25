@@ -30,7 +30,7 @@ export function BookingHelpDialog({
           <DialogTitle>How booking pages work</DialogTitle>
           <DialogDescription>
             A quick reference for admins setting up + running booking
-            pages. Off by default — create one to switch the feature on
+            pages. Off by default. Create one to switch the feature on
             for this sub-account.
           </DialogDescription>
         </DialogHeader>
@@ -98,14 +98,14 @@ export function BookingHelpDialog({
               </li>
               <li>
                 <strong className="text-foreground">Buffer</strong> is
-                the gap padded between back-to-back meetings — set to
+                the gap padded between back-to-back meetings. Set to
                 0 for tight booking.
               </li>
               <li>
                 <strong className="text-foreground">Working hours</strong>
                 {" "}are per day of the week, multiple ranges allowed
                 (e.g. 9-12, 13-17 to skip lunch). Times sit in the
-                page&apos;s timezone — the visitor sees their own.
+                page&apos;s timezone, the visitor sees their own.
               </li>
               <li>
                 <strong className="text-foreground">Min notice</strong>
@@ -127,7 +127,7 @@ export function BookingHelpDialog({
             <p className="text-muted-foreground">
               When a deposit is required, the visitor lands on a PayPal
               page with the amount pre-filled. PayPal.me doesn&apos;t
-              call back when payment arrives — you watch your PayPal
+              call back when payment arrives. You watch your PayPal
               inbox and click{" "}
               <strong className="text-foreground">Mark as paid</strong>
               {" "}on the event in your calendar. Unpaid holds auto-cancel
@@ -154,7 +154,7 @@ export function BookingHelpDialog({
             />
             <p className="mt-2 text-xs text-muted-foreground">
               All emails send via your sub-account&apos;s verified Resend
-              domain when configured — otherwise the deployment-wide
+              domain when configured, otherwise the deployment-wide
               shared sender.
             </p>
           </Section>
@@ -179,7 +179,7 @@ export function BookingHelpDialog({
               </strong>{" "}
               picker. New contacts created via this page land in that
               territory; defaults to Global (visible to every rep). When
-              territory scoping is off, the picker is hidden entirely —
+              territory scoping is off, the picker is hidden entirely
               new contacts go to Global as the inbound-lead default.
             </p>
             <p className="mt-2 text-xs text-muted-foreground">
@@ -188,7 +188,7 @@ export function BookingHelpDialog({
             </p>
           </Section>
 
-          <Section title="Getting started — your first page">
+          <Section title="Getting started, your first page">
             <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
               <li>
                 Click{" "}
@@ -205,7 +205,7 @@ export function BookingHelpDialog({
                 would you like to discuss?&rdquo;).
               </li>
               <li>
-                Save as a draft — public link stays private. Click
+                Save as a draft. Public link stays private. Click
                 Publish when you&apos;re ready.
               </li>
               <li>
@@ -223,7 +223,7 @@ export function BookingHelpDialog({
             In short: a published booking page is a self-service slot
             picker for your leads. Confirmation, reminders, calendar
             invites, reschedule, cancel, and (optionally) deposit
-            collection are all handled — you just decide who can book
+            collection are all handled. You just decide who can book
             when, and review the resulting bookings in the calendar.
           </p>
         </div>

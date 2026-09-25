@@ -85,7 +85,7 @@ function BuildResult({ resultRef }: { resultRef: { kind: string; id: string } | 
       <div className="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-3">
         <p className="text-xs font-semibold">Your funnel is ready</p>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
-          It is saved as a draft — nothing is public until you publish it.
+          It is saved as a draft. Nothing is public until you publish it.
         </p>
         <div className="mt-2.5 flex flex-wrap gap-2">
           <Button size="sm" render={<Link href={`/preview/funnel/${resultRef.id}`} />}>
@@ -111,7 +111,7 @@ function BuildResult({ resultRef }: { resultRef: { kind: string; id: string } | 
       <div className="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-3">
         <p className="text-xs font-semibold">Your form is live</p>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
-          Share the link or embed it — every submission becomes a contact here.
+          Share the link or embed it, every submission becomes a contact here.
         </p>
         <div className="mt-2.5 flex flex-wrap gap-2">
           <Button size="sm" render={<Link href={`/f/${resultRef.id}`} target="_blank" />}>
@@ -130,7 +130,7 @@ function BuildResult({ resultRef }: { resultRef: { kind: string; id: string } | 
       <div className="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-3">
         <p className="text-xs font-semibold">Your booking page is ready</p>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
-          It is a draft — check the hours match when you actually take
+          It is a draft. Check the hours match when you actually take
           appointments, then publish it.
         </p>
         <div className="mt-2.5 flex flex-wrap gap-2">
@@ -147,7 +147,7 @@ function BuildResult({ resultRef }: { resultRef: { kind: string; id: string } | 
       <div className="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-3">
         <p className="text-xs font-semibold">Your follow-up is ready</p>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
-          Saved as a draft — it cannot contact anyone until you publish it.
+          Saved as a draft. It cannot contact anyone until you publish it.
         </p>
         <div className="mt-2.5 flex flex-wrap gap-2">
           <Button size="sm" render={<Link href={`/app/create/workflows/${resultRef.id}`} />}>
@@ -163,11 +163,11 @@ function BuildResult({ resultRef }: { resultRef: { kind: string; id: string } | 
 
 const LANDING_COPY: Record<AiSuiteLevel, { heading: string; sub: string }> = {
   agency: {
-    heading: "Ask about running your agency — or ask me to do a few things",
+    heading: "Ask about running your agency, or ask me to do a few things",
     sub: "I explain how the platform works, and I can create sub-accounts or change a client's feature gates (you confirm before anything happens).",
   },
   "sub-account": {
-    heading: "Ask how to use this workspace — or ask me to do a few things",
+    heading: "Ask how to use this workspace, or ask me to do a few things",
     sub: "I explain features, and I can create contacts, tasks, or workflows in this client (you confirm before anything happens).",
   },
 };
@@ -711,7 +711,7 @@ function ProposalCard({
               </span>
             </p>
             {/* Nothing was saved, so retrying is safe and cannot duplicate
-                work — say so, then offer the retry. A failure with no way
+                work, say so, then offer the retry. A failure with no way
                 forward is the state customers get stuck in. */}
             <p className="mt-1 text-[11px] text-muted-foreground">
               Nothing was created, so it&apos;s safe to try again.

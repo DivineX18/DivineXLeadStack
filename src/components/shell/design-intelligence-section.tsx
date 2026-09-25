@@ -56,7 +56,7 @@ export function DesignIntelligenceSection() {
       if (!res.ok) throw new Error();
       setPrinciples((prev) => prev?.map((p) => (p.id === id ? { ...p, active } : p)) ?? null);
       toast.success(active ? "Principle re-activated." : "Principle deactivated.");
-    } catch (err) { toast.error(describeError(err, "Couldn't update — try again."), { duration: 12_000 });
+    } catch (err) { toast.error(describeError(err, "Couldn't update. Try again."), { duration: 12_000 });
     } finally {
       setBusyId(null);
     }
@@ -81,7 +81,7 @@ export function DesignIntelligenceSection() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { label: "Pages reviewed", value: summary.totalReviewed },
-          { label: "Avg. score", value: summary.avgScore ?? "—" },
+          { label: "Avg. score", value: summary.avgScore ?? "-" },
           { label: "Below premium bar", value: summary.belowBarCount },
           { label: "Feedback pending", value: summary.pendingFeedbackCount },
         ].map((stat) => (
@@ -99,7 +99,7 @@ export function DesignIntelligenceSection() {
         </div>
         {principles.length === 0 ? (
           <p className="text-xs text-muted-foreground">
-            No learned principles yet — they accumulate automatically as operators leave feedback on generated funnels.
+            No learned principles yet. They accumulate automatically as operators leave feedback on generated funnels.
           </p>
         ) : (
           <ul className="space-y-2">
@@ -131,7 +131,7 @@ export function DesignIntelligenceSection() {
 
       {queue.feedback.filter((f) => f.status === "pending").length > 0 && (
         <div className="rounded-xl border bg-background p-4">
-          <p className="mb-2 text-xs font-medium text-foreground">Calibration queue — pending extraction</p>
+          <p className="mb-2 text-xs font-medium text-foreground">Calibration queue, pending extraction</p>
           <ul className="space-y-1.5 text-xs text-muted-foreground">
             {queue.feedback
               .filter((f) => f.status === "pending")

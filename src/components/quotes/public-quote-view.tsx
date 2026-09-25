@@ -371,7 +371,7 @@ export function PublicQuoteView({
                 )}
                 {!quote.paymentLinkUrl && !stripeEnabled && (
                   <p className="text-sm text-amber-700 dark:text-amber-400">
-                    Payment link not yet generated — please ask the sender
+                    Payment link not yet generated, please ask the sender
                     to re-send.
                   </p>
                 )}
@@ -414,7 +414,7 @@ export function PublicQuoteView({
           )}
           <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
             <ShieldCheck className="h-3 w-3" />
-            Secure link — only the recipient of this email can view it
+            Secure link, only the recipient of this email can view it
           </p>
         </Card>
       )}
@@ -464,7 +464,7 @@ export function PublicQuoteView({
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 rows={3}
-                placeholder="A short note — what would make this work, or why this isn't the right time."
+                placeholder="A short note. What would make this work, or why this isn't the right time."
                 className="mt-1"
               />
             </div>
@@ -525,7 +525,7 @@ function StatusBanner({
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <div>
             <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-              Invoice paid — thank you!
+              Invoice paid, thank you!
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
               A receipt has been emailed. You can close this page.
@@ -542,7 +542,7 @@ function StatusBanner({
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <div>
             <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-              Quote accepted — thank you!
+              Quote accepted, thank you!
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
               The team will be in touch with next steps. You can close

@@ -54,7 +54,7 @@ export default async function PrivacyPage() {
           manage your own customers or leads, you (or your organization) are
           generally the data controller for that customer/lead data, and
           DivineX acts as a data processor on your behalf for that data
-          &mdash; while we are the controller for your own account
+, while we are the controller for your own account
           information (Section 2 below).
         </p>
 
@@ -65,13 +65,13 @@ export default async function PrivacyPage() {
           When you create an account, we collect your name, email address,
           and (through our payment processor) billing information. Firebase
           Authentication is used to manage sign-in; we do not store your
-          password directly &mdash; Firebase handles credential storage.
+          password directly. Firebase handles credential storage.
         </p>
 
         <h3>2.2 Customer/contact data you store in {brand.name}</h3>
         <p>
           {brand.name} lets you store and manage data about your own leads
-          and customers &mdash; names, emails, phone numbers, notes,
+          and customers, names, emails, phone numbers, notes,
           deal/pipeline information, calendar events, form submissions, and
           similar business records you or your team enter or import. This
           data is yours; we process it to provide the Service.
@@ -86,7 +86,7 @@ export default async function PrivacyPage() {
         </p>
         <ul>
           <li>
-            <strong>AI conversation content</strong> &mdash; if you enable an
+            <strong>AI conversation content</strong>, if you enable an
             AI Agent (web chat, SMS, WhatsApp, voice) or use the in-app AI
             assistant, the messages exchanged are stored in our database,
             and the message content is sent to our AI model provider
@@ -108,8 +108,8 @@ export default async function PrivacyPage() {
         <h3>2.4 Files you upload</h3>
         <p>
           Most of {brand.name} does not involve file uploads. Where it does
-          &mdash; currently, profile/cover images for the Community feature
-          (group and course cover images, member avatars) &mdash; uploaded
+, currently, profile/cover images for the Community feature
+          (group and course cover images, member avatars), uploaded
           files are stored via Firebase Storage.
         </p>
 
@@ -163,7 +163,7 @@ export default async function PrivacyPage() {
         <h2>4. Cookies</h2>
         <p>
           {brand.name} uses a small number of functional cookies, all
-          necessary for the Service to work &mdash; we do not use
+          necessary for the Service to work. We do not use
           advertising or cross-site tracking cookies:
         </p>
         <table>
@@ -231,7 +231,7 @@ export default async function PrivacyPage() {
           your PayPal.me link or a Stripe payment option tied to this
           deployment&rsquo;s Stripe account. DivineX is not a party to those
           downstream payments between you and your customers, and is not
-          responsible for disputes arising from them &mdash; but because
+          responsible for disputes arising from them, but because
           card payments there run through the same shared Stripe account,
           that transaction data is processed by Stripe on our behalf as
           well.
@@ -243,7 +243,7 @@ export default async function PrivacyPage() {
           (Google Cloud infrastructure), secured with authentication,
           per-workspace access rules, and encryption in transit (HTTPS) and
           at rest (as provided by Google Cloud). Workspace isolation is
-          enforced at the data layer, not just the UI &mdash; one
+          enforced at the data layer, not just the UI, one
           workspace&rsquo;s data is never readable by another
           workspace&rsquo;s users. Sensitive tokens (API keys, webhook
           secrets) are hashed or encrypted before storage. No security
@@ -339,7 +339,7 @@ export default async function PrivacyPage() {
         <p>
           Deepgram and ElevenLabs are Vapi&rsquo;s own default providers for
           the voice channel (speech-to-text and text-to-speech,
-          respectively) &mdash; we don&rsquo;t connect to them directly, but
+          respectively). We don&rsquo;t connect to them directly, but
           voice call audio passes through them as part of how Vapi delivers
           the feature. Each provider processes only what&rsquo;s needed for
           the feature it powers, and features requiring a given provider are
@@ -367,7 +367,7 @@ export default async function PrivacyPage() {
             Full account or workspace deletion is handled by support
             request
           </strong>{" "}
-          &mdash; contact us to request deletion of your account or data,
+. Contact us to request deletion of your account or data,
           and we will act on verified requests. Depending on your location,
           you may have rights to access, correct, or delete your personal
           information, or to receive a copy of it, under applicable law (for
@@ -396,8 +396,8 @@ export default async function PrivacyPage() {
         <p>
           We may update this Privacy Policy from time to time. We will post
           the updated policy on this page with a new &ldquo;Last
-          updated&rdquo; date and, for material changes &mdash; including
-          turning on any new tracking technology (Section 5) &mdash;
+          updated&rdquo; date and, for material changes, including
+          turning on any new tracking technology (Section 5)
           provide reasonable notice before the change takes effect.
         </p>
 

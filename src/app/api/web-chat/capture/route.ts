@@ -127,7 +127,7 @@ export async function POST(request: Request) {
   if (body.skip) {
     await markCaptureSkipped({ subAccountId, sessionId });
     const skipReply =
-      "No problem — let me know if there's anything else you'd like to ask.";
+      "No problem. Let me know if there's anything else you'd like to ask.";
     await appendMessage({
       subAccountId,
       agencyId: session.agencyId,
@@ -152,13 +152,13 @@ export async function POST(request: Request) {
 
   if (emailRaw && !email) {
     return NextResponse.json(
-      { error: "That email doesn't look right — please check and try again." },
+      { error: "That email doesn't look right, please check and try again." },
       { status: 400, headers },
     );
   }
   if (phoneRaw && !phone) {
     return NextResponse.json(
-      { error: "That phone number doesn't look right — please check and try again." },
+      { error: "That phone number doesn't look right, please check and try again." },
       { status: 400, headers },
     );
   }
@@ -218,7 +218,7 @@ export async function POST(request: Request) {
       err,
     );
     return NextResponse.json(
-      { error: "Couldn't save your details — please try again." },
+      { error: "Couldn't save your details, please try again." },
       { status: 500, headers },
     );
   }

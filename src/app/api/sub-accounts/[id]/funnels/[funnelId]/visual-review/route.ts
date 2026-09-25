@@ -80,7 +80,7 @@ export async function POST(
     const h = (hero?.config as { headline?: string } | undefined)?.headline;
     return typeof h === "string" ? h : "";
   })();
-  const funnelContext = `${funnel.genre} funnel "${funnel.name}"${heroHeadline ? ` — headline: "${heroHeadline}"` : ""}`;
+  const funnelContext = `${funnel.genre} funnel "${funnel.name}"${heroHeadline ? `, headline: "${heroHeadline}"` : ""}`;
 
   const review = await runVisualReview({ imageBase64, funnelContext });
   if (!review) {

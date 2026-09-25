@@ -103,7 +103,7 @@ export async function buildContactContextBlock(
         ? `${d.currency || "USD"} ${d.value.toLocaleString()}`
         : "no value set";
       const age = ageDays !== null ? `${ageDays}d in stage` : "";
-      return `  - "${d.title}" — ${stage.label}${age ? `, ${age}` : ""}, ${value}`;
+      return `  - "${d.title}", ${stage.label}${age ? `, ${age}` : ""}, ${value}`;
     });
     lines.push("Active deals:");
     lines.push(...dealLines);
@@ -150,7 +150,7 @@ function ageInDays(value: Deal["stageChangedAt"]): number | null {
 }
 
 function formatShortDate(value: Timestamp | null): string {
-  if (!value || typeof value.toDate !== "function") return "—";
+  if (!value || typeof value.toDate !== "function") return "-";
   const d = value.toDate();
   const month = String(d.getUTCMonth() + 1).padStart(2, "0");
   const day = String(d.getUTCDate()).padStart(2, "0");

@@ -22,11 +22,11 @@ export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
   const industry = getIndustryBySlug(slug);
   const brand = await resolveCustomBrand();
-  if (!industry) return { title: `Industries — ${brand.name}` };
+  if (!industry) return { title: `Industries, ${brand.name}` };
   return {
-    title: `${industry.metaTitle} — ${brand.name}`,
+    title: `${industry.metaTitle}, ${brand.name}`,
     description: industry.metaDescription,
-    openGraph: { title: `${industry.metaTitle} — ${brand.name}`, type: "website" as const },
+    openGraph: { title: `${industry.metaTitle}, ${brand.name}`, type: "website" as const },
   };
 }
 

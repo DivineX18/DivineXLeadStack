@@ -145,13 +145,13 @@ export function Pricing({
             </span>
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Pick a plan and you&apos;re in — no calls, no waiting on us.
+            Pick a plan and you&apos;re in, no calls, no waiting on us.
           </p>
         </div>
 
         {!configured || plans.length === 0 ? (
           <div className="mx-auto mt-12 max-w-md rounded-2xl border border-dashed bg-card p-8 text-center text-sm text-muted-foreground">
-            Pricing is coming soon — check back shortly.
+            Pricing is coming soon. Check back shortly.
           </div>
         ) : (
           <div
@@ -308,7 +308,7 @@ export function Pricing({
                 apart from the ladder rather than as its final rung, because a
                 dark card reads as a different kind of thing and stops a
                 visitor comparing an annual figure against the monthly ones
-                beside it. It takes an application, never a payment — a 1:1
+                beside it. It takes an application, never a payment, a 1:1
                 engagement a stranger could buy unseen would commit us to
                 delivery nobody had scoped.
 
@@ -376,7 +376,7 @@ export function Pricing({
                 {/* ACCOUNTABILITY STATED, NOT IMPLIED.
                     Traffic execution is delivered by a partner team. Saying
                     "we" about work someone else performs is only honest while
-                    we own the strategy, the reporting and the result — so the
+                    we own the strategy, the reporting and the result, so the
                     card says exactly that rather than leaving a buyer to
                     discover the arrangement after they have signed. */}
                 <p className="mt-5 text-xs leading-relaxed text-slate-400">

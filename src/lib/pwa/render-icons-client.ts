@@ -21,7 +21,7 @@ function loadImage(file: File): Promise<HTMLImageElement> {
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error("Couldn't read that image — try a PNG or JPG."));
+      reject(new Error("Couldn't read that image. Try a PNG or JPG."));
     };
     img.src = url;
   });
@@ -34,10 +34,10 @@ export async function renderIconVariants(
   const w = img.naturalWidth;
   const h = img.naturalHeight;
   if (!w || !h) {
-    throw new Error("Couldn't read that image — try a PNG or JPG.");
+    throw new Error("Couldn't read that image. Try a PNG or JPG.");
   }
   if (Math.max(w, h) < 192) {
-    throw new Error("Image is too small — use at least 512×512 for a crisp icon.");
+    throw new Error("Image is too small. Use at least 512×512 for a crisp icon.");
   }
 
   const out = {} as Record<IconVariantKey, string>;

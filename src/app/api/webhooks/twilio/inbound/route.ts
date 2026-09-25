@@ -174,7 +174,7 @@ export async function POST(request: Request) {
   const route = await resolveRoute(to);
   if (!route) {
     console.warn(
-      `[twilio/inbound] inbound to ${to || "(missing)"} matched no configured number — dropping`,
+      `[twilio/inbound] inbound to ${to || "(missing)"} matched no configured number, dropping`,
     );
     return twimlResponse(emptyTwimlResponse());
   }
@@ -280,7 +280,7 @@ export async function POST(request: Request) {
     );
   } else if (route.mode === "dedicated" && matches.empty) {
     console.warn(
-      `[twilio/inbound] dedicated inbound from ${from} → ${to} (sa=${route.subAccountId}): no contact match — dropping per locked policy`,
+      `[twilio/inbound] dedicated inbound from ${from} → ${to} (sa=${route.subAccountId}): no contact match, dropping per locked policy`,
     );
   }
 
@@ -300,7 +300,7 @@ export async function POST(request: Request) {
     if (!helpReply) {
       console.error(
         `[twilio/inbound] HELP received on ${to} (sa=${route.subAccountId ?? "shared"}) but this workspace has no ` +
-          `configured business name to answer with — no reply sent. Set the workspace name to enable HELP replies.`,
+          `configured business name to answer with, no reply sent. Set the workspace name to enable HELP replies.`,
       );
       return twimlResponse(emptyTwimlResponse());
     }
@@ -383,7 +383,7 @@ export async function POST(request: Request) {
   const e164 = phoneIdentity(fromRaw);
   if (!e164) {
     console.warn(
-      `[twilio/inbound] ${word} from an unparseable sender (mode=${route.mode}) — cannot establish a phone identity, refusing to mutate`,
+      `[twilio/inbound] ${word} from an unparseable sender (mode=${route.mode}), cannot establish a phone identity, refusing to mutate`,
     );
     return twimlResponse(emptyTwimlResponse());
   }
@@ -411,7 +411,7 @@ export async function POST(request: Request) {
   const contactDocs = await findContactsByPhoneIdentity(subAccountId, e164);
   if (contactDocs.length === 0) {
     console.warn(
-      `[twilio/inbound] ${word} recorded for ${e164} in ${subAccountId} with no matching contact — ` +
+      `[twilio/inbound] ${word} recorded for ${e164} in ${subAccountId} with no matching contact, ` +
         `suppression is stored against the number, so a later import cannot resurrect it`,
     );
     return twimlResponse(emptyTwimlResponse());

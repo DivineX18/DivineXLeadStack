@@ -90,7 +90,7 @@ async function mergeConversation(
   const stubConvRef = db.doc(`conversations/${stubId}`);
   const targetConvRef = db.doc(`conversations/${targetId}`);
   const [s, t] = await Promise.all([stubConvRef.get(), targetConvRef.get()]);
-  if (!s.exists) return; // stub never carried a conversation — nothing to merge
+  if (!s.exists) return; // stub never carried a conversation, nothing to merge
   const sc = s.data() ?? {};
 
   if (!t.exists) {

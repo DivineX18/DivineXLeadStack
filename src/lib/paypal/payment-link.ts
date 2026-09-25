@@ -41,7 +41,7 @@ export function buildPaypalInvoiceUrl({
   const totals = computeQuoteTotals(invoice);
   if (totals.total <= 0) {
     throw new Error(
-      `Invoice ${invoice.quoteNumber} has a non-positive total — add line items before sending.`,
+      `Invoice ${invoice.quoteNumber} has a non-positive total. Add line items before sending.`,
     );
   }
 

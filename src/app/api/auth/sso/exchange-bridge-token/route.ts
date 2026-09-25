@@ -74,7 +74,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     approvedRole: bridge.approvedRole,
   });
   if (!access.ok) {
-    return NextResponse.json({ error: "Workspace access changed — please try again" }, { status: 403 });
+    return NextResponse.json({ error: "Workspace access changed, please try again" }, { status: 403 });
   }
 
   let customToken: string;

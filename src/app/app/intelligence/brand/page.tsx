@@ -47,7 +47,7 @@ export default async function IntelligenceBrandPage() {
         />
         <EmptyState
           title="We haven't captured your brand yet"
-          body="Once your business profile is connected, your colors, fonts, logos and imagery appear here — and everything Zeno builds uses them automatically."
+          body="Once your business profile is connected, your colors, fonts, logos and imagery appear here, and everything Zeno builds uses them automatically."
           primary={<PrimaryAction href="/onboarding">Set up your business profile</PrimaryAction>}
         />
       </div>
@@ -109,7 +109,7 @@ export default async function IntelligenceBrandPage() {
             </div>
           ) : (
             <p className="mt-3 text-sm" style={{ color: "var(--dx-text-secondary)" }}>
-              No brand colors captured yet — pages use neutral defaults until we have them.
+              No brand colors captured yet, pages use neutral defaults until we have them.
             </p>
           )}
         </Panel>

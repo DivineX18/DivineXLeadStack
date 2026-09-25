@@ -565,7 +565,7 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
       </aside>
 
       {/* The drawer trims to PWA core items ONLY when running installed
-          (standalone) — regular mobile-browser use keeps the full menu. */}
+          (standalone). Regular mobile-browser use keeps the full menu. */}
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="left" className="w-64 p-0">
           <SheetHeader className="sr-only">

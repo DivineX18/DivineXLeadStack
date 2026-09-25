@@ -117,7 +117,7 @@ export function SubAccountApiRecipesSection() {
         throw new Error(data.error ?? "Failed to mint key.");
       }
       setMintedKey({ recipeId: recipe.id, key: data.key });
-      toast.success("Key created — copy it now, you won't see it again.");
+      toast.success("Key created. Copy it now, you won't see it again.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to mint key.");
     } finally {
@@ -129,7 +129,7 @@ export function SubAccountApiRecipesSection() {
     try {
       await navigator.clipboard.writeText(text);
       toast.success("Copied.");
-    } catch (err) { toast.error(describeError(err, "Clipboard blocked — copy manually."), { duration: 12_000 });
+    } catch (err) { toast.error(describeError(err, "Clipboard blocked. Copy manually."), { duration: 12_000 });
     }
   }
 
@@ -242,7 +242,7 @@ function MetaAdsGuide({
     <div className="mt-4 space-y-4 rounded-lg border bg-background p-4">
       <Step n={1} title="Mint your API key">
         <p>
-          One click — we&apos;ll name it <Code>Zapier · Meta Lead Ads</Code>{" "}
+          One click. We&apos;ll name it <Code>Zapier · Meta Lead Ads</Code>{" "}
           and give it the right permissions. You can revoke it any time
           below.
         </p>
@@ -286,7 +286,7 @@ function MetaAdsGuide({
             Pick <strong>POST</strong>.
           </li>
           <li>
-            Configure the action with the values below — copy each into the
+            Configure the action with the values below. Copy each into the
             matching Zapier field.
           </li>
         </ol>
@@ -330,7 +330,7 @@ function MetaAdsGuide({
           In Zapier hit <strong>Test action</strong>. You should see a 201
           response and a new contact appear in your dashboard within
           seconds. If you see a 401, the Authorization header didn&apos;t copy
-          correctly — re-paste it.
+          correctly, re-paste it.
         </p>
         <p className="mt-2 text-[11px] text-muted-foreground">
           Publish the Zap when the test passes. Meta lead webhooks fire
@@ -366,7 +366,7 @@ function WebsiteFormGuide({
           Open the <strong>Forms</strong> tab in your sidebar (or{" "}
           <ExtLink href={`/sa/${subAccountId}/forms`}>this link</ExtLink>).
           Click into the form you want to receive submissions for. Copy the
-          form id from the URL — it&apos;s the part after <Code>/forms/</Code>.
+          form id from the URL. It&apos;s the part after <Code>/forms/</Code>.
         </p>
         <p className="mt-2 text-[11px] text-muted-foreground">
           Don&apos;t have a form yet? Click <strong>+ New form</strong> in the
@@ -466,7 +466,7 @@ function SlackAlertGuide() {
             Pick <strong>Catch Hook</strong>.
           </li>
           <li>
-            Zapier shows you a <strong>Custom Webhook URL</strong> — copy
+            Zapier shows you a <strong>Custom Webhook URL</strong>. Copy
             it. You&apos;ll paste it into LeadStack in step 3.
           </li>
           <li>
@@ -476,7 +476,7 @@ function SlackAlertGuide() {
           </li>
           <li>
             In the message body, drag Zapier&apos;s data fields into the
-            Slack message — e.g., <Code>{`New lead: {{Contact Name}} ({{Contact Email}})`}</Code>.
+            Slack message, e.g., <Code>{`New lead: {{Contact Name}} ({{Contact Email}})`}</Code>.
           </li>
         </ol>
       </Step>
@@ -485,13 +485,13 @@ function SlackAlertGuide() {
         <p>The popular picks for a sales-ops Slack channel:</p>
         <ul className="ml-4 list-disc space-y-0.5 text-sm">
           <li>
-            <Code>contact.created</Code> — every new lead
+            <Code>contact.created</Code>, every new lead
           </li>
           <li>
-            <Code>deal.won</Code> — every closed deal (the celebration ping)
+            <Code>deal.won</Code>, every closed deal (the celebration ping)
           </li>
           <li>
-            <Code>form.submitted</Code> — every form submission with full
+            <Code>form.submitted</Code>, every form submission with full
             field values
           </li>
         </ul>
@@ -534,7 +534,7 @@ function SlackAlertGuide() {
           Want to skip Zapier and post directly to Slack? Slack accepts a
           specific JSON shape that LeadStack doesn&apos;t emit verbatim. You
           can put a small serverless function (Vercel, Cloudflare Worker)
-          in between to transform — but for most agencies, the Zapier
+          in between to transform, but for most agencies, the Zapier
           bridge is faster to set up + easier to modify.
         </p>
       </Step>
@@ -622,7 +622,7 @@ function KeyReveal({
       <div className="flex items-start gap-2">
         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
         <p className="text-[11px] font-medium text-amber-900 dark:text-amber-200">
-          Key created. Copy it now — you won&apos;t see it again. Stored on
+          Key created. Copy it now. You won&apos;t see it again. Stored on
           your team&apos;s side in Zapier; revoke any time below.
         </p>
       </div>

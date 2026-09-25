@@ -114,7 +114,7 @@ export async function applyWorkflowPlan(input: {
     sequence,
     displayName,
     tag: plan.crmRequirements?.tags?.[0] ?? `${displayName} lead`,
-    confirmationSubject: immediate?.subject ?? `You're in — ${displayName}`,
+    confirmationSubject: immediate?.subject ?? `You're in, ${displayName}`,
     confirmationBody: immediate?.body ?? "Thanks for reaching out. We'll be in touch shortly.",
     ownerNotifyBody: `{{contact.firstName}} ({{contact.email}}) just came through "${displayName}". Apply the "${plan.followUpStrategy.goalTag}" tag the moment they ${plan.followUpStrategy.goalState} and every remaining automated touch stops.`,
     ...(input.funnelId ? { funnelId: input.funnelId } : {}),
@@ -130,7 +130,7 @@ export async function applyWorkflowPlan(input: {
     (await createWorkflowServerSide({
       subAccountId: input.subAccountId,
       createdByUid: input.createdByUid,
-      name: `${displayName} — follow-up`,
+      name: `${displayName}. Follow-up`,
       template: "blank",
     }));
 

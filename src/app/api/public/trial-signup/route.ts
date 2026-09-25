@@ -65,7 +65,7 @@ export async function POST(request: Request) {
   const base = resolveReturnBase(request);
   if (!base) {
     return NextResponse.json(
-      { error: "This deployment isn't fully configured yet — try again shortly." },
+      { error: "This deployment isn't fully configured yet. Try again shortly." },
       { status: 503 },
     );
   }

@@ -108,7 +108,7 @@ export function AiSuiteUsageCard({
               return (
                 <div
                   key={d.date}
-                  title={`${fmtDate(d.date)} — ${plural(d.messages, "message")}, ${plural(
+                  title={`${fmtDate(d.date)}, ${plural(d.messages, "message")}, ${plural(
                     d.actions,
                     "action",
                   )}`}

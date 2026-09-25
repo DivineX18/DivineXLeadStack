@@ -17,7 +17,7 @@ export function ComingSoon({ channelId }: { channelId: AiChannelId }) {
           <Icon className="h-6 w-6" />
         </span>
         <h2 className="text-xl font-semibold tracking-tight">
-          {channel.label} agent — coming soon
+          {channel.label} agent, coming soon
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">{channel.blurb}</p>
 

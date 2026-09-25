@@ -69,7 +69,7 @@ export function AgencyAiKbSection() {
       setChanges(data.changes);
       setSelected(new Set(data.changes.map((c) => c.id)));
       if (data.changes.length === 0) {
-        toast.success("Knowledge base looks up to date — no changes proposed.");
+        toast.success("Knowledge base looks up to date, no changes proposed.");
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Review failed.");
@@ -131,7 +131,7 @@ export function AgencyAiKbSection() {
             <p className="mt-0.5 max-w-xl text-xs text-muted-foreground">
               Review the assistants&apos; knowledge base against the app&apos;s
               current features and apply proposed card updates.{" "}
-              <span className="font-medium">Local development only</span> — the
+              <span className="font-medium">Local development only</span>, the
               update rewrites{" "}
               <code className="rounded bg-muted px-1">knowledge-base.ts</code>,
               which you then commit like any code change.
@@ -151,7 +151,7 @@ export function AgencyAiKbSection() {
       {changes && changes.length > 0 && (
         <div className="mt-4 space-y-2">
           <p className="text-xs text-muted-foreground">
-            {changes.length} proposed change{changes.length === 1 ? "" : "s"} —
+            {changes.length} proposed change{changes.length === 1 ? "" : "s"}
             untick anything you don&apos;t want, then apply.
           </p>
           {changes.map((c) => (
@@ -185,7 +185,7 @@ export function AgencyAiKbSection() {
                 )}
                 {c.card && (
                   <p className="mt-1 line-clamp-3 text-xs text-muted-foreground/80">
-                    <span className="font-medium">{c.card.location}</span> —{" "}
+                    <span className="font-medium">{c.card.location}</span> -{" "}
                     {c.card.body}
                   </p>
                 )}

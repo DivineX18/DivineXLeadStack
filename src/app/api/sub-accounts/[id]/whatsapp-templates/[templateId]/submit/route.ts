@@ -140,7 +140,7 @@ export async function POST(
     });
   } else {
     console.warn(
-      `[whatsapp-templates/submit] QStash not configured — template ${templateId} won't auto-sync approval status`,
+      `[whatsapp-templates/submit] QStash not configured, template ${templateId} won't auto-sync approval status`,
     );
   }
 

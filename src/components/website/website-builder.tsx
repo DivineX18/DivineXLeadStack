@@ -86,7 +86,7 @@ function buildProgressLabel(pollAttempts: number): string {
   const elapsedMin = Math.floor((pollAttempts * 20) / 60);
   if (elapsedMin < 3) return "Building and publishing your site… (usually 2–10 min)";
   if (elapsedMin < 10) return `Building and publishing your site… about ${elapsedMin} min in. This is normal.`;
-  return `Taking longer than usual — about ${elapsedMin} min in. We keep checking for up to 15 minutes.`;
+  return `Taking longer than usual, about ${elapsedMin} min in. We keep checking for up to 15 minutes.`;
 }
 
 
@@ -286,14 +286,14 @@ export function WebsiteBuilder({
     if (niche) {
       setConfig(nicheSample(niche, buildType)());
       toast.success(
-        `Sample data loaded — ${NICHE_META[niche].label} ${buildType === "vsl" ? "VSL" : "site"}.`,
+        `Sample data loaded, ${NICHE_META[niche].label} ${buildType === "vsl" ? "VSL" : "site"}.`,
       );
     } else if (buildType === "vsl") {
       setConfig(sampleVslConfig());
-      toast.success("Sample data loaded — coaching VSL.");
+      toast.success("Sample data loaded, coaching VSL.");
     } else {
       setConfig(sampleWebsiteConfig());
-      toast.success("Sample data loaded — Starbucks Chadstone.");
+      toast.success("Sample data loaded. Starbucks Chadstone.");
     }
     setErrors({});
   }
@@ -326,7 +326,7 @@ export function WebsiteBuilder({
         if (payload.fieldErrors) setErrors(payload.fieldErrors);
         throw new Error(payload.error ?? "Could not start build.");
       }
-      toast.success("Build started — gitpage will let us know when it's live.");
+      toast.success("Build started. Gitpage will let us know when it's live.");
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Could not start build.",
@@ -349,13 +349,13 @@ export function WebsiteBuilder({
       };
       if (!res.ok) throw new Error(payload.error ?? "Could not re-check.");
       if (payload.settled === "ready") {
-        toast.success("Build is live — URL updated.");
+        toast.success("Build is live. URL updated.");
       } else if (payload.settled === "failed") {
         toast.error("Build failed on gitpage's side.");
       } else if (payload.settled === "client-error") {
-        toast.error("gitpage rejected the poll — check the error.");
+        toast.error("gitpage rejected the poll. Check the error.");
       } else {
-        toast.success("Still building — restarted the poll loop.");
+        toast.success("Still building, restarted the poll loop.");
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not re-check.");
@@ -450,14 +450,14 @@ export function WebsiteBuilder({
             <p className="truncate text-sm font-medium">{title}</p>
             {status === "draft" && (
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Draft — not built yet
+                Draft, not built yet
               </p>
             )}
             {isInFlight && (
               <p className="mt-0.5 flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 {status === "queued"
-                  ? "Build queued — gitpage is starting up…"
+                  ? "Build queued. Gitpage is starting up…"
                   : buildProgressLabel(doc.pollAttempts ?? 0)}
               </p>
             )}
@@ -571,7 +571,7 @@ export function WebsiteBuilder({
         <div className="border-t border-destructive/30 bg-destructive/5 px-4 py-3">
           <p className="flex items-center gap-1.5 text-xs font-medium text-destructive">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-            This page may contain generic filler content — review before sharing the link
+            This page may contain generic filler content. Review before sharing the link
           </p>
           <p className="mt-1 text-[11px] text-destructive/80">
             gitpage&apos;s template sometimes invents testimonials, stats, or program details
@@ -622,7 +622,7 @@ export function WebsiteBuilder({
 
               <Section
                 title="Site type"
-                description="Pick the kind of site to generate — switching clears the form."
+                description="Pick the kind of site to generate, switching clears the form."
               >
                 <BuildModePicker
                   value={mode}
@@ -684,7 +684,7 @@ export function WebsiteBuilder({
                 <>
                   <Section
                     title="Basics"
-                    description="The core message — what the site is and who it's for."
+                    description="The core message. What the site is and who it's for."
                   >
                     <div className="grid gap-4">
                       <Field
@@ -798,7 +798,7 @@ export function WebsiteBuilder({
                   {buildType === "vsl" && (
                     <Section
                       title="Video"
-                      description="The VSL needs a video — paste the embed URL (not the watch URL)."
+                      description="The VSL needs a video. Paste the embed URL (not the watch URL)."
                     >
                       <Field
                         label="Video link"
@@ -922,7 +922,7 @@ export function WebsiteBuilder({
                         title="Business details"
                         description={
                           niche
-                            ? "Required — niche templates ship contact.html with name, address, and phone."
+                            ? "Required, niche templates ship contact.html with name, address, and phone."
                             : "Used to populate the contact.html page."
                         }
                       >
@@ -1049,7 +1049,7 @@ export function WebsiteBuilder({
 
                   <Section
                     title="Design"
-                    description="Pick a style — gitpage applies these consistently."
+                    description="Pick a style. Gitpage applies these consistently."
                   >
                     <div className="grid gap-3 sm:grid-cols-2">
                       <Field
@@ -1265,7 +1265,7 @@ function BuildModePicker({
     {
       id: "standard_local",
       label: "Standard local site",
-      hint: "Multi-page site — home, services, contact, terms.",
+      hint: "Multi-page site, home, services, contact, terms.",
     },
     {
       id: "standard_vsl",
@@ -1275,7 +1275,7 @@ function BuildModePicker({
     {
       id: "niche",
       label: "Niche template",
-      hint: "Pre-designed for a specific trade — research-backed sections + copy tone.",
+      hint: "Pre-designed for a specific trade, research-backed sections + copy tone.",
     },
   ];
   return (

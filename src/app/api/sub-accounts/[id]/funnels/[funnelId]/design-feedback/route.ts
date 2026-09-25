@@ -44,7 +44,7 @@ export async function POST(
   }
   if (!whatImproved || !why) {
     return NextResponse.json(
-      { error: "Tell us what you'd change (or what worked) and why — both fields are required." },
+      { error: "Tell us what you'd change (or what worked) and why. Both fields are required." },
       { status: 400 },
     );
   }
@@ -86,7 +86,7 @@ export async function POST(
     return NextResponse.json({
       feedbackId: ref.id,
       extracted: false,
-      error: err instanceof Error ? err.message : "Extraction failed — feedback saved, will retry later.",
+      error: err instanceof Error ? err.message : "Extraction failed. Feedback saved, will retry later.",
     });
   }
 }

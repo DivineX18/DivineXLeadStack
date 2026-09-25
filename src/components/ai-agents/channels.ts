@@ -111,7 +111,7 @@ export const AI_CHANNELS: AiChannel[] = [
     id: "outbound",
     label: "Outbound Voice",
     blurb:
-      "AI proactively calls your contacts with its own persona — one contact at a time or a whole list. Reuses the Voice channel's number.",
+      "AI proactively calls your contacts with its own persona, one contact at a time or a whole list. Reuses the Voice channel's number.",
     icon: PhoneOutgoing,
     group: "outbound",
     comingSoon: false,

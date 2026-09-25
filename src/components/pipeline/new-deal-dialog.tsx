@@ -215,7 +215,7 @@ export function NewDealDialog({
                 id="deal-title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Website rebuild — Acme"
+                placeholder="Website rebuild. Acme"
                 aria-invalid={!!errors.title}
               />
               {errors.title && (

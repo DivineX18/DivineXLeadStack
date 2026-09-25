@@ -94,7 +94,7 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          "Auth token is required. Paste it from your Twilio console — there's no saved token to reuse yet.",
+          "Auth token is required. Paste it from your Twilio console, there's no saved token to reuse yet.",
       },
       { status: 400 },
     );
@@ -133,7 +133,7 @@ export async function POST(
     });
   } else {
     webhookResult.error =
-      "NEXT_PUBLIC_APP_URL is not set on this deployment — webhook URL must be configured manually.";
+      "NEXT_PUBLIC_APP_URL is not set on this deployment, webhook URL must be configured manually.";
   }
 
   // Step 3: persist.

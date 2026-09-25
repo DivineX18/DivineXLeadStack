@@ -13,7 +13,7 @@ const GET_LEADS_CARD: AiSuiteKnowledgeCard = {
   location: "Leads → Get Leads",
   keywords: ["get leads", "prospect", "prospecting", "find businesses", "local business", "google maps", "lead finder", "scrape", "no website", "radius", "map", "import leads", "custom service", "tag"],
   body:
-    "Get Leads finds local businesses that might need whatever you sell. Pick a business type (a curated list, plus your own — admins click Manage services to add or remove service types), set a location (start typing and pick from the suggestions that appear, or use your current location), a radius, and Max results (10/20/40 — this caps how many businesses come back AND how many enrichment credits one search can spend, so you can't burn credits in a single run), then search — results take 1–3 minutes because each business is enriched with emails and social links. Results show on a map and an enriched list (phone, email, website, rating); amber pins and the 'No website' filter flag businesses without a website. Tick the ones you want, optionally edit the 'Tag as' value (pre-filled from the search, e.g. 'plumbers-brisbane'), and click Import to create contacts (source 'Get Leads' plus that tag; duplicates by phone/email are skipped). Follow up using the tag: a Workflow with the 'contact created' trigger filtered to that tag, a Broadcast to that tag's audience, or an outbound voice campaign over it. Results aren't saved — import before leaving the page. It's experimental and agency-gated: if it shows 'Locked', ask your agency owner to enable it. The deployment also needs an Outscraper API key configured (searches spend the agency's Outscraper credits).",
+    "Get Leads finds local businesses that might need whatever you sell. Pick a business type (a curated list, plus your own, admins click Manage services to add or remove service types), set a location (start typing and pick from the suggestions that appear, or use your current location), a radius, and Max results (10/20/40. This caps how many businesses come back AND how many enrichment credits one search can spend, so you can't burn credits in a single run), then search, results take 1–3 minutes because each business is enriched with emails and social links. Results show on a map and an enriched list (phone, email, website, rating); amber pins and the 'No website' filter flag businesses without a website. Tick the ones you want, optionally edit the 'Tag as' value (pre-filled from the search, e.g. 'plumbers-brisbane'), and click Import to create contacts (source 'Get Leads' plus that tag; duplicates by phone/email are skipped). Follow up using the tag: a Workflow with the 'contact created' trigger filtered to that tag, a Broadcast to that tag's audience, or an outbound voice campaign over it. Results aren't saved. Import before leaving the page. It's experimental and agency-gated: if it shows 'Locked', ask your agency owner to enable it. The deployment also needs an Outscraper API key configured (searches spend the agency's Outscraper credits).",
 };
 
 /**
@@ -37,10 +37,10 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     id: "workspace-assistant",
     levels: ["sub-account", "agency"],
     title: "Zeno, your AI assistant",
-    location: "Ask Zeno — available anywhere",
+    location: "Ask Zeno, available anywhere",
     keywords: ["assistant", "zeno", "ai suite", "chatbot", "help", "actions", "confirm", "safe", "permissions", "what can you do"],
     body:
-      "Zeno is DivineX's in-app AI assistant, available at two levels: inside each sub-account (scoped strictly to that one workspace's data) and at the agency level (agency owner only — can answer across sub-accounts and act inside a named one). Both answer how-to questions and perform a fixed set of actions; every action shows a confirmation card and nothing runs until you confirm. All executed actions are audit-logged. Both are OFF by default because replies use the agency's AI credits: the agency owner enables Zeno per sub-account from the Manage dialog, and at the agency level from Agency → Settings → Zeno.",
+      "Zeno is DivineX's in-app AI assistant, available at two levels: inside each sub-account (scoped strictly to that one workspace's data) and at the agency level (agency owner only. Can answer across sub-accounts and act inside a named one). Both answer how-to questions and perform a fixed set of actions; every action shows a confirmation card and nothing runs until you confirm. All executed actions are audit-logged. Both are OFF by default because replies use the agency's AI credits: the agency owner enables Zeno per sub-account from the Manage dialog, and at the agency level from Agency → Settings → Zeno.",
   },
   {
     id: "contacts",
@@ -86,7 +86,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     location: "Leads → Tasks",
     keywords: ["task", "todo", "due", "overdue", "follow up", "reminder"],
     body:
-      "Tasks organizes todos into Today / Overdue / Upcoming / Done, with a due-today badge in the sidebar. Tasks can be linked to a contact. Several features auto-create follow-up tasks — e.g. a Web Chat or Voice lead capture creates a 'follow up' task due today. The assistant can create a task for you, with a due date and an optional linked contact.",
+      "Tasks organizes todos into Today / Overdue / Upcoming / Done, with a due-today badge in the sidebar. Tasks can be linked to a contact. Several features auto-create follow-up tasks, e.g. a Web Chat or Voice lead capture creates a 'follow up' task due today. The assistant can create a task for you, with a due date and an optional linked contact.",
   },
   {
     id: "forms",
@@ -104,7 +104,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     location: "Create → Products",
     keywords: ["product", "catalog", "price", "item", "invoice", "line item"],
     body:
-      "Products is a reusable per-sub-account catalog (name, description, unit price, currency, active flag). When building a quote or invoice, use 'Add from catalog' to snapshot a product into a line item — editing a product later never changes historical quotes/invoices.",
+      "Products is a reusable per-sub-account catalog (name, description, unit price, currency, active flag). When building a quote or invoice, use 'Add from catalog' to snapshot a product into a line item, editing a product later never changes historical quotes/invoices.",
   },
   {
     id: "quotes-invoices",
@@ -122,7 +122,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     location: "Create → Website",
     keywords: ["website", "site", "gitpage", "landing", "publish", "build", "vsl", "niche", "template", "like a site", "gym site"],
     body:
-      "Website builds a marketing site per sub-account via gitpage.site — fill the sectioned form (Basics / Pages / Services / Design / FAQ), choose Local (multi-page) or VSL (single-page video funnel), optionally pick a niche template (Gym & Fitness, Home Services, Real Estate), and click Build. The build queues and publishes to a live URL in a few minutes. Each sub-account can hold up to 5 sites. The assistant can also build a site for you from a description ('build me a gym website like fitness.com') — it can read a reference site for tone, picks the matching niche template, drafts the copy, and submits the build after you confirm; it can also check whether a build is done. Niche templates need the business's street address. This feature is agency-gated: if the Website entry shows a 'Locked' badge, ask your agency owner to enable it.",
+      "Website builds a marketing site per sub-account via gitpage.site. Fill the sectioned form (Basics / Pages / Services / Design / FAQ), choose Local (multi-page) or VSL (single-page video funnel), optionally pick a niche template (Gym & Fitness, Home Services, Real Estate), and click Build. The build queues and publishes to a live URL in a few minutes. Each sub-account can hold up to 5 sites. The assistant can also build a site for you from a description ('build me a gym website like fitness.com'). It can read a reference site for tone, picks the matching niche template, drafts the copy, and submits the build after you confirm; it can also check whether a build is done. Niche templates need the business's street address. This feature is agency-gated: if the Website entry shows a 'Locked' badge, ask your agency owner to enable it.",
   },
   {
     id: "workflows",
@@ -131,7 +131,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     location: "Create → Workflows",
     keywords: ["workflow", "automation", "builder", "speed to lead", "trigger", "sms", "email", "drip", "nurture", "publish", "template"],
     body:
-      "Workflows is a visual automation builder: pick a trigger (e.g. form submitted, contact created, deal stage changed, quote/invoice marked paid), then chain steps like send SMS, send email, wait, and create task. Start from a template — Speed-to-Lead, Appointment Confirmation, Lead Nurture, Stage-Change Follow-up, Post-Purchase Nurture — or blank. Post-Purchase Nurture fires on the 'quote.paid' trigger, which covers BOTH quotes marked paid and invoices marked paid (invoices have no 'accepted' step of their own, so this is the only trigger that fires after a PayPal-paid invoice). Workflows are created as drafts; publish to make them live, and check per-run history under the workflow's Runs. Emails must include the unsubscribe link. Delayed steps run through a background queue, so workflows need QStash configured on the deployment. The assistant can create a workflow from a starter template for you (as a draft). Related settings — the Reply-To address, sending-hours window, and the 'Pause all workflows' switch — live under Settings → Sending preferences (Messaging tab), not on the Workflows page.",
+      "Workflows is a visual automation builder: pick a trigger (e.g. form submitted, contact created, deal stage changed, quote/invoice marked paid), then chain steps like send SMS, send email, wait, and create task. Start from a template. Speed-to-Lead, Appointment Confirmation, Lead Nurture, Stage-Change Follow-up, Post-Purchase Nurture, or blank. Post-Purchase Nurture fires on the 'quote.paid' trigger, which covers BOTH quotes marked paid and invoices marked paid (invoices have no 'accepted' step of their own, so this is the only trigger that fires after a PayPal-paid invoice). Workflows are created as drafts; publish to make them live, and check per-run history under the workflow's Runs. Emails must include the unsubscribe link. Delayed steps run through a background queue, so workflows need QStash configured on the deployment. The assistant can create a workflow from a starter template for you (as a draft). Related settings, the Reply-To address, sending-hours window, and the 'Pause all workflows' switch, live under Settings → Sending preferences (Messaging tab), not on the Workflows page.",
   },
   {
     id: "ai-agents",
@@ -140,7 +140,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     location: "Create → AI Agents",
     keywords: ["ai agent", "bot", "web chat", "sms", "whatsapp", "voice", "persona", "channel", "openrouter", "outbound"],
     body:
-      "AI Agents is one persona (system prompt + business hours + escalation keywords + optional website knowledge base) that answers across channels. Configure the shared persona on the Overview, then enable channels: Web Chat (an embeddable widget), SMS and WhatsApp (auto-replies on the dedicated Twilio number), and Voice (AI answers inbound calls). Outbound Voice proactively dials contacts. Every channel needs a non-empty persona prompt first, and channels that send need a dedicated Twilio number (Settings → SMS). Note: AI Agents answers your CLIENTS' inbound messages — Zeno (this assistant) helps YOU use the app, and is separate.",
+      "AI Agents is one persona (system prompt + business hours + escalation keywords + optional website knowledge base) that answers across channels. Configure the shared persona on the Overview, then enable channels: Web Chat (an embeddable widget), SMS and WhatsApp (auto-replies on the dedicated Twilio number), and Voice (AI answers inbound calls). Outbound Voice proactively dials contacts. Every channel needs a non-empty persona prompt first, and channels that send need a dedicated Twilio number (Settings → SMS). Note: AI Agents answers your CLIENTS' inbound messages. Zeno (this assistant) helps YOU use the app, and is separate.",
   },
   {
     id: "conversations",
@@ -158,7 +158,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     location: "Create → Broadcasts",
     keywords: ["broadcast", "bulk", "email", "blast", "campaign", "audience", "send"],
     body:
-      "Broadcasts sends an email template to a filtered audience (all contacts, a tag, or a pipeline stage). It reuses the automations engine and every email must include the unsubscribe link. Opted-out and email-less contacts are skipped automatically. Broadcasts is agency-gated — if it shows 'Locked', ask your agency owner to enable it. Bulk SMS is not available.",
+      "Broadcasts sends an email template to a filtered audience (all contacts, a tag, or a pipeline stage). It reuses the automations engine and every email must include the unsubscribe link. Opted-out and email-less contacts are skipped automatically. Broadcasts is agency-gated, if it shows 'Locked', ask your agency owner to enable it. Bulk SMS is not available.",
   },
   {
     id: "social",
@@ -176,7 +176,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     location: "Create → Community",
     keywords: ["community", "course", "group", "skool", "classroom", "member", "feed"],
     body:
-      "Community is a Skool-style space with a group feed, a classroom for courses (sections + lessons with YouTube/Vimeo video), leaderboards, and gamification. Groups can be free or paid, open-join or approval-required; members join via magic link and are tied to contacts — share the community's public URL to invite them. It's agency-gated — if 'Locked', ask your agency owner to enable it. The assistant can set up a new free community for you, including its first course and lesson, and give you the live URLs.",
+      "Community is a Skool-style space with a group feed, a classroom for courses (sections + lessons with YouTube/Vimeo video), leaderboards, and gamification. Groups can be free or paid, open-join or approval-required; members join via magic link and are tied to contacts. Share the community's public URL to invite them. It's agency-gated, if 'Locked', ask your agency owner to enable it. The assistant can set up a new free community for you, including its first course and lesson, and give you the live URLs.",
   },
   {
     id: "reports",
@@ -203,7 +203,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     location: "Settings → Sending preferences",
     keywords: ["reply-to", "reply to", "replies", "bounce", "send window", "quiet hours", "sending hours", "pause", "pause workflows", "pause automations", "stop workflows", "kill switch"],
     body:
-      "The Sending preferences card (Settings → Messaging tab) holds three workspace-wide controls. (1) Reply-To email: replies to every automated and broadcast email route to this address — required before using a dedicated sending domain, because the domain has no inbox and replies to it would bounce. (2) Sending hours: an optional window (start hour, end hour, timezone) so workflow messages outside it wait for the next window start instead of sending overnight. (3) Pause all workflows: an emergency stop — while paused, no workflow triggers fire and in-flight runs stop at their next step; resume from the same card. These used to live on the old Automations settings page; they're in Settings now.",
+      "The Sending preferences card (Settings → Messaging tab) holds three workspace-wide controls. (1) Reply-To email: replies to every automated and broadcast email route to this address, required before using a dedicated sending domain, because the domain has no inbox and replies to it would bounce. (2) Sending hours: an optional window (start hour, end hour, timezone) so workflow messages outside it wait for the next window start instead of sending overnight. (3) Pause all workflows: an emergency stop, while paused, no workflow triggers fire and in-flight runs stop at their next step; resume from the same card. These used to live on the old Automations settings page; they're in Settings now.",
   },
   {
     id: "api-webhooks",
@@ -212,7 +212,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     location: "Settings → API Keys / Webhooks",
     keywords: ["webhook", "api", "n8n", "make", "zapier", "integration", "endpoint", "trigger", "automation tool", "signing secret", "events", "rest"],
     body:
-      "Each sub-account can integrate with external tools two ways. (1) Outbound webhooks: register an endpoint URL (from n8n, Make, Zapier, or custom) plus an event allowlist, and matching events (contact.created, deal.won, form.submitted, quote.accepted, booking.created, message.received, …) get POSTed to it, signed Stripe-style with a per-subscription secret. One webhook covers ONE event category — create one per category. Failed deliveries retry with backoff; 10 straight failures auto-pauses the webhook. (2) REST API: mint keys (lsk_live_/lsk_test_) under API Keys for inbound calls. Both require the agency owner to enable API access for this sub-account (a feature gate). The assistant can set up a webhook for you — just say what should trigger it and give the endpoint URL, and it sends a test event to verify it's live. n8n users: n8n shows two URLs per webhook node — the Test URL (/webhook-test/, only works while the editor is listening) and the Production URL (/webhook/, requires the workflow's Active toggle ON). Use the Production URL for permanent hooks.",
+      "Each sub-account can integrate with external tools two ways. (1) Outbound webhooks: register an endpoint URL (from n8n, Make, Zapier, or custom) plus an event allowlist, and matching events (contact.created, deal.won, form.submitted, quote.accepted, booking.created, message.received, …) get POSTed to it, signed Stripe-style with a per-subscription secret. One webhook covers ONE event category. Create one per category. Failed deliveries retry with backoff; 10 straight failures auto-pauses the webhook. (2) REST API: mint keys (lsk_live_/lsk_test_) under API Keys for inbound calls. Both require the agency owner to enable API access for this sub-account (a feature gate). The assistant can set up a webhook for you, just say what should trigger it and give the endpoint URL, and it sends a test event to verify it's live. n8n users: n8n shows two URLs per webhook node, the Test URL (/webhook-test/, only works while the editor is listening) and the Production URL (/webhook/, requires the workflow's Active toggle ON). Use the Production URL for permanent hooks.",
   },
   {
     id: "templates",
@@ -221,7 +221,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     location: "Create → Templates",
     keywords: ["template", "email template", "sms template", "merge tag", "unsubscribe", "message", "reusable"],
     body:
-      "Templates holds reusable email and SMS message bodies with merge tags (e.g. {{contact.firstName}}) that personalize per recipient. Workflows and Broadcasts pick from these templates when sending. Every email template must include {{unsubscribeLink}} — the editor enforces it for compliance.",
+      "Templates holds reusable email and SMS message bodies with merge tags (e.g. {{contact.firstName}}) that personalize per recipient. Workflows and Broadcasts pick from these templates when sending. Every email template must include {{unsubscribeLink}}, the editor enforces it for compliance.",
   },
   {
     id: "dashboard",
@@ -239,7 +239,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     location: "Settings → Logs",
     keywords: ["logs", "delivery", "webhook log", "api log", "debug", "failed", "retry", "redeliver"],
     body:
-      "Logs shows integration history for the workspace: recent public-API requests per key, and outbound webhook events with each delivery attempt (HTTP status, error, retries). Use it to debug an integration — a failing webhook shows the response your endpoint returned, and you can redeliver an event after fixing the endpoint.",
+      "Logs shows integration history for the workspace: recent public-API requests per key, and outbound webhook events with each delivery attempt (HTTP status, error, retries). Use it to debug an integration, a failing webhook shows the response your endpoint returned, and you can redeliver an event after fixing the endpoint.",
   },
   {
     id: "search",
@@ -259,7 +259,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     location: "Agency → Sub-accounts",
     keywords: ["sub-account", "subaccount", "create", "client", "workspace", "new", "add", "manage"],
     body:
-      "Each client gets a sub-account — an isolated workspace with its own contacts, pipeline, and data. Create one from Agency → Sub-accounts → create; it's assigned a human-readable account number automatically and seeded with default templates. Use the per-row Manage button to rename it, manage members, and control its feature gates. Zeno (agency level) can create a sub-account for you, list them with their gates, report a sub-account's record counts and pipeline, and perform workspace actions (contacts, tasks, deals, workflows, webhooks, communities) inside a sub-account you name.",
+      "Each client gets a sub-account, an isolated workspace with its own contacts, pipeline, and data. Create one from Agency → Sub-accounts → create; it's assigned a human-readable account number automatically and seeded with default templates. Use the per-row Manage button to rename it, manage members, and control its feature gates. Zeno (agency level) can create a sub-account for you, list them with their gates, report a sub-account's record counts and pipeline, and perform workspace actions (contacts, tasks, deals, workflows, webhooks, communities) inside a sub-account you name.",
   },
   {
     id: "agency-feature-gates",
@@ -270,7 +270,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     location: "Agency → Sub-accounts → Manage",
     keywords: ["gate", "enable", "disable", "lock", "feature", "permission", "website", "broadcasts", "api", "whatsapp", "social", "community", "assistant"],
     body:
-      "Feature gates let the agency owner turn optional features on or off per sub-account — features that consume agency resources (email sending domains, the public API + webhooks, broadcasts, WhatsApp, outbound voice, website builds, Social Planner, Community, Missed-Call Text-Back, and Zeno at the sub-account level). Every gate is off by default. Open a sub-account's Manage dialog and tick the gates. While a feature is off, its sidebar entry shows a 'Locked' badge (or is hidden if you chose hide-instead-of-lock) and its routes are blocked. Enabling resumes instantly. Zeno (agency level) can flip most gates for you (the email sending domain gate must be changed in the Manage dialog because disabling it tears down the live domain). If a sub-account is on a Client billing plan, that plan's gate bundle is applied automatically at activation and whenever the plan is edited — manual gate changes still work, but a plan edit re-applies the bundle.",
+      "Feature gates let the agency owner turn optional features on or off per sub-account, features that consume agency resources (email sending domains, the public API + webhooks, broadcasts, WhatsApp, outbound voice, website builds, Social Planner, Community, Missed-Call Text-Back, and Zeno at the sub-account level). Every gate is off by default. Open a sub-account's Manage dialog and tick the gates. While a feature is off, its sidebar entry shows a 'Locked' badge (or is hidden if you chose hide-instead-of-lock) and its routes are blocked. Enabling resumes instantly. Zeno (agency level) can flip most gates for you (the email sending domain gate must be changed in the Manage dialog because disabling it tears down the live domain). If a sub-account is on a Client billing plan, that plan's gate bundle is applied automatically at activation and whenever the plan is edited. Manual gate changes still work, but a plan edit re-applies the bundle.",
   },
   {
     id: "agency-client-billing",
@@ -279,7 +279,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     location: "Agency → Client billing",
     keywords: ["billing", "charge", "plan", "subscription", "price", "stripe", "checkout", "invoice client", "mrr", "saas mode", "rebill", "comped", "special price", "paywall"],
     body:
-      "Client billing lets you charge each sub-account a monthly subscription through your own Stripe account (payments land directly in your Stripe — the platform takes no cut). Create plans at Agency → Client billing: each plan is a name, a monthly price, and the bundle of feature gates it unlocks. Assign a plan from that page's Clients table or from Agency → Sub-accounts → Manage → Billing: the workspace goes 'Awaiting payment' and you can copy or email a secure checkout link (re-sending invalidates older links); the client can also pay from an in-app activation screen. When they pay, the plan's features switch on automatically and renewals bill monthly. You can set a per-client special price, switch plans on a live subscription (prorated), or mark a client 'comped' (not billed — the default for every workspace, so nothing changes until you assign a plan). If a renewal fails the client sees a payment banner for a 7-day grace period, then the workspace pauses behind a paywall until they pay — data is never deleted. The Clients table shows each client's plan, status, and your MRR. Requires Stripe (secret key + webhook) configured on the deployment.",
+      "Client billing lets you charge each sub-account a monthly subscription through your own Stripe account (payments land directly in your Stripe, the platform takes no cut). Create plans at Agency → Client billing: each plan is a name, a monthly price, and the bundle of feature gates it unlocks. Assign a plan from that page's Clients table or from Agency → Sub-accounts → Manage → Billing: the workspace goes 'Awaiting payment' and you can copy or email a secure checkout link (re-sending invalidates older links); the client can also pay from an in-app activation screen. When they pay, the plan's features switch on automatically and renewals bill monthly. You can set a per-client special price, switch plans on a live subscription (prorated), or mark a client 'comped' (not billed, the default for every workspace, so nothing changes until you assign a plan). If a renewal fails the client sees a payment banner for a 7-day grace period, then the workspace pauses behind a paywall until they pay. Data is never deleted. The Clients table shows each client's plan, status, and your MRR. Requires Stripe (secret key + webhook) configured on the deployment.",
   },
   {
     id: "workspace-subscription",
@@ -288,7 +288,7 @@ export const AI_SUITE_KNOWLEDGE: AiSuiteKnowledgeCard[] = [
     location: "Settings → Your subscription",
     keywords: ["subscription", "billing", "payment", "card", "invoice", "paywall", "paused", "past due", "update card", "manage billing"],
     body:
-      "If your provider bills this workspace as a subscription, Settings shows a 'Your subscription' card with your plan, monthly price, and status. Workspace admins can click 'Manage billing' to update the card or view invoices on Stripe's secure portal, and 'Complete checkout' if payment is still owed. If a renewal payment fails you'll see a warning banner with time to fix the card; after the grace period the workspace pauses behind a payment screen until it's paid — your data is safe and access restores instantly on payment. Pricing and plan changes are handled by your provider (the agency owner).",
+      "If your provider bills this workspace as a subscription, Settings shows a 'Your subscription' card with your plan, monthly price, and status. Workspace admins can click 'Manage billing' to update the card or view invoices on Stripe's secure portal, and 'Complete checkout' if payment is still owed. If a renewal payment fails you'll see a warning banner with time to fix the card; after the grace period the workspace pauses behind a payment screen until it's paid. Your data is safe and access restores instantly on payment. Pricing and plan changes are handled by your provider (the agency owner).",
   },
   {
     id: "agency-branding",

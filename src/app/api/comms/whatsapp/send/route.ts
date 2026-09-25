@@ -112,7 +112,7 @@ export async function POST(request: Request) {
   if (!withinWindow) {
     return NextResponse.json(
       {
-        error: `WhatsApp's ${windowHours}-hour messaging window is closed — the contact hasn't messaged within that time. Re-opening the conversation requires an approved message template (coming in a later release).`,
+        error: `WhatsApp's ${windowHours}-hour messaging window is closed, the contact hasn't messaged within that time. Re-opening the conversation requires an approved message template (coming in a later release).`,
         code: "session_window_closed",
       },
       { status: 409 },

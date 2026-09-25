@@ -91,8 +91,8 @@ export function FunnelDesignFeedback({
       setSubmitted(true);
       toast.success(
         data.extracted && data.principleId
-          ? "Thanks — Zeno learned a new design principle from this."
-          : "Thanks — feedback saved.",
+          ? "Thanks. Zeno learned a new design principle from this."
+          : "Thanks, feedback saved.",
       );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't save feedback.");
@@ -147,7 +147,7 @@ export function FunnelDesignFeedback({
               {review.belowBar.map((c) => (
                 <li key={c}>
                   <span className="font-medium text-foreground">{DESIGN_REVIEW_CRITERION_LABELS[c]}</span>
-                  {review.notes[c] ? ` — ${review.notes[c]}` : ""}
+                  {review.notes[c] ? `, ${review.notes[c]}` : ""}
                 </li>
               ))}
             </ul>
@@ -161,11 +161,11 @@ export function FunnelDesignFeedback({
 
       <div className="border-t pt-3">
         <p className="mb-2 text-xs font-medium text-foreground">
-          Calibrate Zeno — what worked or didn&apos;t on this page?
+          Calibrate Zeno, what worked or didn&apos;t on this page?
         </p>
         {submitted ? (
           <p className="text-xs text-muted-foreground">
-            Feedback saved — thanks. This is exactly how the design vault gets sharper over time.
+            Feedback saved. Thanks. This is exactly how the design vault gets sharper over time.
           </p>
         ) : (
           <div className="space-y-2">

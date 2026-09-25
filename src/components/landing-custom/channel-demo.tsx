@@ -19,7 +19,7 @@ const CHANNELS: { key: ChannelKey; label: string; icon: typeof MessageSquareText
     window: "yoursite.com",
     turns: [
       { from: "visitor", text: "Do you do same-day estimates?" },
-      { from: "agent", text: "Yes — I can get you booked for today. What's the address and best number to reach you?" },
+      { from: "agent", text: "Yes, I can get you booked for today. What's the address and best number to reach you?" },
     ],
   },
   {
@@ -39,7 +39,7 @@ const CHANNELS: { key: ChannelKey; label: string; icon: typeof MessageSquareText
     window: "Business Account",
     turns: [
       { from: "visitor", text: "Is anyone available this weekend?" },
-      { from: "agent", text: "We have Saturday morning slots open — want me to book one for you now?" },
+      { from: "agent", text: "We have Saturday morning slots open, want me to book one for you now?" },
     ],
   },
   {
@@ -49,7 +49,7 @@ const CHANNELS: { key: ChannelKey; label: string; icon: typeof MessageSquareText
     window: "Inbound call · 0:14",
     turns: [
       { from: "visitor", text: "\"Hi, I'm calling about getting a quote...\"" },
-      { from: "agent", text: "\"Happy to help — can I grab your address and a callback number?\"" },
+      { from: "agent", text: "\"Happy to help. Can I grab your address and a callback number?\"" },
     ],
   },
 ];
@@ -99,7 +99,7 @@ export function ChannelDemo() {
         </div>
       </div>
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        Same persona, same business knowledge — just a different channel.
+        Same persona, same business knowledge, just a different channel.
       </p>
     </div>
   );

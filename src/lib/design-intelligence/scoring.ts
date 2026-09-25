@@ -124,9 +124,9 @@ function buildScoringPrompt(funnel: FunnelDoc): string {
     "You are a senior conversion-focused landing-page design reviewer at a premium agency. " +
     "Score this funnel's structure and copy against each of these 13 criteria, 1-10 (10 = agency-portfolio quality worth $5,000-$20,000): " +
     DESIGN_REVIEW_CRITERIA.join(", ") +
-    '. Be a genuinely critical reviewer — most first-draft pages should NOT score a clean sweep of 10s; reserve 9-10 for work with no real weakness. ' +
-    "For any criterion scoring below 8, write ONE short, concrete, actionable note (max 20 words) on what specifically to fix — never generic praise, never a note on a criterion that scored 8+. " +
-    'Respond with ONLY a JSON object, no markdown, no prose: {"scores": {"visual_hierarchy": 7, ...all 13 keys...}, "notes": {"visual_hierarchy": "..."}} — notes only for keys that scored below 8.\n\n' +
+    '. Be a genuinely critical reviewer. Most first-draft pages should NOT score a clean sweep of 10s; reserve 9-10 for work with no real weakness. ' +
+    "For any criterion scoring below 8, write ONE short, concrete, actionable note (max 20 words) on what specifically to fix, never generic praise, never a note on a criterion that scored 8+. " +
+    'Respond with ONLY a JSON object, no markdown, no prose: {"scores": {"visual_hierarchy": 7,...all 13 keys...}, "notes": {"visual_hierarchy": "..."}}, notes only for keys that scored below 8.\n\n' +
     "FUNNEL TO REVIEW:\n" +
     summary
   );

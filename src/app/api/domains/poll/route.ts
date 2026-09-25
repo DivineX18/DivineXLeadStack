@@ -74,7 +74,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     result = await getServiceCustomDomain(payload.domain);
   } catch (err) {
-    console.warn("[domains/poll] status check threw — rescheduling", err);
+    console.warn("[domains/poll] status check threw, rescheduling", err);
     await reschedule(payload.domain, attempts);
     return NextResponse.json({ ok: true, deferred: "transient" });
   }

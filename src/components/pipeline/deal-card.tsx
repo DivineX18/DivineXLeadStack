@@ -183,7 +183,7 @@ export function DealCard({
           disabled={overlay || savingCompleted}
           title={
             completed
-              ? "Job delivered — click to unmark"
+              ? "Job delivered. Click to unmark"
               : "Mark the job as delivered (can trigger a Google review request)"
           }
           className={cn(

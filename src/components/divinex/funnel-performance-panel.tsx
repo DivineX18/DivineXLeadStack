@@ -62,10 +62,10 @@ export async function FunnelPerformancePanel({ subAccountId }: { subAccountId: s
                 <tr key={r.id} className="border-t" style={{ borderColor: "var(--dx-border-subtle)" }}>
                   <td className="py-2 pr-3" style={{ color: "var(--dx-text-primary)" }}>{r.name}</td>
                   <td className="py-2 text-right tabular-nums" style={{ color: "var(--dx-text-secondary)" }}>
-                    {r.views || "—"}
+                    {r.views || "-"}
                   </td>
                   <td className="py-2 text-right tabular-nums" style={{ color: "var(--dx-text-secondary)" }}>
-                    {r.submissions || "—"}
+                    {r.submissions || "-"}
                   </td>
                   <td className="py-2 text-right tabular-nums" style={{ color: "var(--dx-text-secondary)" }}>
                     {/* No traffic means no conversion rate exists yet — saying

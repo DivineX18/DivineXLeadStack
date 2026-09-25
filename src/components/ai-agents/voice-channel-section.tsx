@@ -50,12 +50,12 @@ const VOICE_OPTIONS: Array<{
   voiceId: string;
   label: string;
 }> = [
-  { provider: "11labs", voiceId: "burt", label: "ElevenLabs — Burt (warm, male)" },
-  { provider: "11labs", voiceId: "andrea", label: "ElevenLabs — Andrea (clear, female)" },
-  { provider: "11labs", voiceId: "rohan", label: "ElevenLabs — Rohan (professional, male)" },
-  { provider: "11labs", voiceId: "lily", label: "ElevenLabs — Lily (friendly, female)" },
-  { provider: "openai", voiceId: "alloy", label: "OpenAI — Alloy (neutral)" },
-  { provider: "openai", voiceId: "shimmer", label: "OpenAI — Shimmer (bright, female)" },
+  { provider: "11labs", voiceId: "burt", label: "ElevenLabs. Burt (warm, male)" },
+  { provider: "11labs", voiceId: "andrea", label: "ElevenLabs. Andrea (clear, female)" },
+  { provider: "11labs", voiceId: "rohan", label: "ElevenLabs. Rohan (professional, male)" },
+  { provider: "11labs", voiceId: "lily", label: "ElevenLabs. Lily (friendly, female)" },
+  { provider: "openai", voiceId: "alloy", label: "OpenAI. Alloy (neutral)" },
+  { provider: "openai", voiceId: "shimmer", label: "OpenAI. Shimmer (bright, female)" },
 ];
 
 function voiceKey(provider: string, voiceId: string): string {
@@ -212,10 +212,10 @@ export function VoiceChannelSection() {
       if (data.config) setConfig(data.config);
       toast.success(
         enabled
-          ? "Voice channel saved — Vapi assistant synced"
+          ? "Voice channel saved. Vapi assistant synced"
           : "Voice channel saved",
       );
-    } catch (err) { toast.error(describeError(err, "Network error — try again"), { duration: 12_000 });
+    } catch (err) { toast.error(describeError(err, "Network error. Try again"), { duration: 12_000 });
     } finally {
       setSaving(false);
     }
@@ -233,7 +233,7 @@ export function VoiceChannelSection() {
             <p className="mt-1 text-sm text-muted-foreground">
               AI answers inbound phone calls, qualifies the caller, and
               books a callback. Persona and KB are shared with SMS + Web
-              Chat —{" "}
+              Chat, {" "}
               <Link
                 href={`/sa/${subAccountId}/ai-agents`}
                 className="text-foreground underline-offset-2 hover:underline"
@@ -321,7 +321,7 @@ export function VoiceChannelSection() {
                 <p className="font-medium text-foreground">
                   My dedicated Twilio number (BYOC){" "}
                   <span className="font-normal text-muted-foreground">
-                    — production
+, production
                   </span>
                 </p>
                 <p className="mt-0.5 text-muted-foreground">
@@ -344,13 +344,13 @@ export function VoiceChannelSection() {
                 <p className="font-medium text-foreground">
                   A number I own in Vapi{" "}
                   <span className="font-normal text-muted-foreground">
-                    — testing / skip Twilio regulatory
+, testing / skip Twilio regulatory
                   </span>
                 </p>
                 <p className="mt-0.5 text-muted-foreground">
                   Skip AU regulatory bundles by attaching to a number
                   you provisioned directly in your Vapi dashboard.
-                  We&apos;ll bind it to a {CUSTOM_BRAND.name}-managed assistant —
+                  We&apos;ll bind it to a {CUSTOM_BRAND.name}-managed assistant
                   any previously-assigned assistant will be replaced.
                 </p>
               </div>
@@ -378,7 +378,7 @@ export function VoiceChannelSection() {
                   >
                     Vapi dashboard → Phone Numbers
                   </a>{" "}
-                  — copy the UUID under the number, not the +1 / +61
+. Copy the UUID under the number, not the +1 / +61
                   number itself.
                 </p>
               </div>
@@ -396,7 +396,7 @@ export function VoiceChannelSection() {
             />
             <p className="text-[11px] text-muted-foreground">
               The very first sentence Vapi speaks when the call connects.
-              Keep it short and natural — long greetings feel robotic.
+              Keep it short and natural, long greetings feel robotic.
             </p>
           </div>
 
@@ -434,7 +434,7 @@ export function VoiceChannelSection() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="voice-model">Model (advanced — blank for default)</Label>
+            <Label htmlFor="voice-model">Model (advanced, blank for default)</Label>
             <Input
               id="voice-model"
               value={modelOverride}
@@ -442,7 +442,7 @@ export function VoiceChannelSection() {
               placeholder="anthropic/claude-haiku-4-5"
             />
             <p className="text-[11px] text-muted-foreground">
-              Default: Claude Haiku 4.5 — fast enough for sub-1s voice
+              Default: Claude Haiku 4.5, fast enough for sub-1s voice
               turns. Sonnet adds latency but reasons better; Opus is
               overkill for live calls.
             </p>

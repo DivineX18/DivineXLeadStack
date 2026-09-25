@@ -80,7 +80,7 @@ export function CustomFieldInputs({
                 onChange={(e) => set(def.key, e.target.value || null)}
                 className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30 [&_option]:bg-background [&_option]:text-foreground"
               >
-                <option value="">—</option>
+                <option value="">-</option>
                 {def.options.map((o) => (
                   <option key={o} value={o}>
                     {o}

@@ -77,7 +77,7 @@ export function CTA({
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
           Pick a plan and get set up yourself, or tell us about your business
-          and we&apos;ll walk you through it — either way, contacts imported,
+          and we&apos;ll walk you through it, either way, contacts imported,
           pipeline configured, ready to run in days, not months.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">

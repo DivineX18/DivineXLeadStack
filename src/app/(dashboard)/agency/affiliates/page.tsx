@@ -100,7 +100,7 @@ export default function AffiliatesListPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Affiliates</h1>
           <p className="text-sm text-muted-foreground">
-            Manually managed — 25% recurring commission by default, per-affiliate configurable. Log a referred
+            Manually managed - 25% recurring commission by default, per-affiliate configurable. Log a referred
             sale from the affiliate&rsquo;s detail page, then mark it paid once you&rsquo;ve sent the money.
           </p>
         </div>

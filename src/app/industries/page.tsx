@@ -13,9 +13,9 @@ export async function generateMetadata() {
   // this the Ascend host served Flow's name, tagline and closing CTA.
   const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   return {
-    title: `Industries — ${brand.name} CRM for Coaches, Agencies, Trades & More`,
+    title: `Industries, ${brand.name} CRM for Coaches, Agencies, Trades & More`,
     description: `${brand.name} adapted to how different industries actually sell: coaches, agencies, home services and trades, real estate, and local service businesses.`,
-    openGraph: { title: `Industries — ${brand.name}`, type: "website" as const },
+    openGraph: { title: `Industries, ${brand.name}`, type: "website" as const },
   };
 }
 
@@ -39,7 +39,7 @@ export default async function IndustriesPage() {
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
               The same platform, configured around the pipeline, follow-up, and booking patterns
-              that fit how you actually work — not a one-size-fits-all sales template.
+              that fit how you actually work, not a one-size-fits-all sales template.
             </p>
           </div>
         </section>

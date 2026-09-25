@@ -165,7 +165,7 @@ export async function transitionLifecycleState(input: {
     if (!allowed.includes(input.to)) {
       throw new LifecycleTransitionError(
         "illegal_transition",
-        `${input.domain}: "${from}" → "${input.to}" is not a legal transition (allowed: ${allowed.join(", ") || "none — terminal state"})`,
+        `${input.domain}: "${from}" → "${input.to}" is not a legal transition (allowed: ${allowed.join(", ") || "none, terminal state"})`,
       );
     }
     const history = [

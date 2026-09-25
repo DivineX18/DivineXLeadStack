@@ -58,7 +58,7 @@ export default function ConversationsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Conversations</h1>
         <p className="text-sm text-muted-foreground">
-          Every SMS &amp; WhatsApp thread, one place — one row per contact.
+          Every SMS &amp; WhatsApp thread, one place, one row per contact.
         </p>
       </div>
 

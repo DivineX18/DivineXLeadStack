@@ -232,7 +232,7 @@ export function OutboundVoiceSection() {
       }
       if (data.config) setConfig(data.config);
       toast.success("Outbound settings saved");
-    } catch (err) { toast.error(describeError(err, "Network error — try again"), { duration: 12_000 });
+    } catch (err) { toast.error(describeError(err, "Network error. Try again"), { duration: 12_000 });
     } finally {
       setSaving(false);
     }
@@ -256,14 +256,14 @@ export function OutboundVoiceSection() {
         toast.error(data.error ?? "Couldn't place the test call.");
         return;
       }
-      toast.success(`Calling ${testPhone.trim()} now — pick up to hear it.`);
+      toast.success(`Calling ${testPhone.trim()} now. Pick up to hear it.`);
       setTestControlUrl(
         typeof (data as { controlUrl?: string }).controlUrl === "string"
           ? (data as { controlUrl?: string }).controlUrl ?? null
           : null,
       );
       startTestProgress();
-    } catch (err) { toast.error(describeError(err, "Network error — try again"), { duration: 12_000 });
+    } catch (err) { toast.error(describeError(err, "Network error. Try again"), { duration: 12_000 });
     } finally {
       setTesting(false);
     }
@@ -286,13 +286,13 @@ export function OutboundVoiceSection() {
       });
       const data = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) {
-        toast.error(data.error ?? "Couldn't end the call — it'll stop at 20s.");
+        toast.error(data.error ?? "Couldn't end the call, it'll stop at 20s.");
         return;
       }
       toast.success("Call ended.");
       stopTestProgress();
       setTestControlUrl(null);
-    } catch (err) { toast.error(describeError(err, "Network error — the call will stop at 20s."), { duration: 12_000 });
+    } catch (err) { toast.error(describeError(err, "Network error, the call will stop at 20s."), { duration: 12_000 });
     } finally {
       setEnding(false);
     }
@@ -309,7 +309,7 @@ export function OutboundVoiceSection() {
             Outbound Voice
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            The AI calls your contacts — one at a time from a contact profile,
+            The AI calls your contacts, one at a time from a contact profile,
             or a whole list via a campaign. It uses its own outbound persona,
             not the shared inbound one.
           </p>
@@ -328,7 +328,7 @@ export function OutboundVoiceSection() {
           {!provisioned && (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-400">
               <strong>Set up the Voice channel first.</strong> Outbound reuses
-              the same number as inbound — enable it once on the{" "}
+              the same number as inbound, enable it once on the{" "}
               <Link
                 href={saPath("/ai-agents/voice")}
                 className="underline-offset-2 hover:underline"
@@ -371,7 +371,7 @@ export function OutboundVoiceSection() {
                   }
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  Used only on outbound calls — separate from the shared inbound
+                  Used only on outbound calls, separate from the shared inbound
                   persona on the Overview tab. Leave blank to fall back to the
                   shared persona (not recommended for outbound). Business hours,
                   KB and contact context still apply.
@@ -475,7 +475,7 @@ export function OutboundVoiceSection() {
                     id="ob-countries"
                     value={countries}
                     onChange={(e) => setCountries(e.target.value)}
-                    placeholder="AU, NZ, US — blank = allow all"
+                    placeholder="AU, NZ, US, blank = allow all"
                     maxLength={200}
                   />
                 </div>
@@ -509,7 +509,7 @@ export function OutboundVoiceSection() {
               <Input
                 value={testPhone}
                 onChange={(e) => setTestPhone(e.target.value)}
-                placeholder="+1 555 123 4567 — a number you can answer"
+                placeholder="+1 555 123 4567, a number you can answer"
                 className="sm:flex-1"
                 disabled={!provisioned}
               />

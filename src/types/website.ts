@@ -398,7 +398,7 @@ export function sampleHomeServicesLocalConfig(): WebsiteConfig {
     build_type: "local",
     niche: "home_services",
     language: "English",
-    heading: "Acme Plumbing — Charlotte's Trusted Plumbers Since 1998",
+    heading: "Acme Plumbing. Charlotte's Trusted Plumbers Since 1998",
     color_scheme: "Standard",
     hero_statement:
       "Licensed, insured, on-time guaranteed. Same-day service across Charlotte.",
@@ -449,7 +449,7 @@ export function sampleHomeServicesVslConfig(): WebsiteConfig {
     build_type: "vsl",
     niche: "home_services",
     language: "English",
-    heading: "Hey Charlotte — Tired of Cold Showers?",
+    heading: "Hey Charlotte. Tired of Cold Showers?",
     color_scheme: "Standard",
     hero_statement:
       "Same-day water heater repair and install with upfront pricing.",
@@ -539,7 +539,7 @@ export function sampleRealEstateVslConfig(): WebsiteConfig {
     build_type: "vsl",
     niche: "real_estate",
     language: "English",
-    heading: "What Is Your UES Home Worth — Today?",
+    heading: "What Is Your UES Home Worth. Today?",
     color_scheme: "Dark Mode",
     hero_statement: "A complimentary, comp-driven valuation in 24 hours.",
     features: "Off-market access, $1.2B career sales, 99% sale-to-list",
@@ -576,7 +576,7 @@ export function sampleGymFitnessLocalConfig(): WebsiteConfig {
     build_type: "local",
     niche: "gym_fitness",
     language: "English",
-    heading: "PEAK — Train Harder. Live Stronger.",
+    heading: "PEAK. Train Harder. Live Stronger.",
     color_scheme: "Dark Mode",
     hero_statement:
       "Coach-led sessions, small-group programming, in the heart of New York.",

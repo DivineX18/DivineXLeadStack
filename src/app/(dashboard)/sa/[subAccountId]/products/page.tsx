@@ -80,7 +80,7 @@ export default function ProductsPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Products</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Reusable line items for quotes and invoices. Snapshotted into each
-            document at the moment of add — editing a product never changes
+            document at the moment of add, editing a product never changes
             historical quotes or invoices.
           </p>
         </div>
@@ -532,7 +532,7 @@ function ProductDialog({
                 />
                 <p className="mt-1.5 text-[10px] text-muted-foreground">
                   Up to 4 MB. The buyer gets a secure download link by
-                  email — the file itself is never public.
+                  email, the file itself is never public.
                 </p>
               </div>
             )}

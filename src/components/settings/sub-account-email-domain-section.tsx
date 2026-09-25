@@ -92,7 +92,7 @@ function ReplyToBanner({ action }: { action: string }) {
         <p className="mt-1">
           Replies to broadcasts and automated emails come back to your Reply-To
           address. Once you send from your own subdomain, that subdomain has no
-          inbox by default — replies to it will bounce unless Reply-To routes
+          inbox by default. Replies to it will bounce unless Reply-To routes
           them elsewhere. Set one in the{" "}
           <span className="font-semibold">Sending preferences</span> card above
           on this page, then come back here to {action}.
@@ -187,7 +187,7 @@ export function SubAccountEmailDomainSection() {
         toast.success("Domain verified. This sub-account now sends from it.");
       } else {
         toast.info(
-          "Not verified yet — DNS can take a few minutes to propagate. Try again shortly.",
+          "Not verified yet. DNS can take a few minutes to propagate. Try again shortly.",
         );
       }
     } catch (err) {
@@ -200,7 +200,7 @@ export function SubAccountEmailDomainSection() {
   async function handleRemove() {
     if (
       !confirm(
-        "Remove this sending domain? Email for this sub-account reverts to the shared sender. The domain is deleted from Resend — re-adding it later requires verifying DNS again.",
+        "Remove this sending domain? Email for this sub-account reverts to the shared sender. The domain is deleted from Resend. Re-adding it later requires verifying DNS again.",
       )
     ) {
       return;
@@ -240,7 +240,7 @@ export function SubAccountEmailDomainSection() {
           <p className="mt-0.5 text-sm text-muted-foreground">
             Send this sub-account&apos;s email from its own domain instead of
             the shared sender. Add a subdomain, drop in the DNS records, and
-            verify. Off by default — until verified, email uses the shared
+            verify. Off by default, until verified, email uses the shared
             deployment sender.
           </p>
         </div>
@@ -277,7 +277,7 @@ export function SubAccountEmailDomainSection() {
               />
               <p className="text-[11px] text-muted-foreground">
                 Use a subdomain (e.g. <code>mail.acme.com</code>), not your root
-                domain — it keeps your main domain&apos;s reputation isolated.
+                domain. It keeps your main domain&apos;s reputation isolated.
               </p>
             </div>
             <div className="space-y-1.5">

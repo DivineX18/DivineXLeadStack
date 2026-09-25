@@ -1,4 +1,5 @@
 import "server-only";
+import { stripEmDashes } from "@/lib/text/dedash";
 
 /**
  * OpenRouter client for the AI Suite.
@@ -158,7 +159,7 @@ export async function runAiSuiteTurn({
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new Error(
-      "OPENROUTER_API_KEY is not set — the AI Suite requires it. Get a key at openrouter.ai.",
+      "OPENROUTER_API_KEY is not set, the AI Suite requires it. Get a key at openrouter.ai.",
     );
   }
 
@@ -263,7 +264,7 @@ export async function runAiSuiteTurn({
       // pipeline tonight) — log it so a truncation-driven pattern shows up.
       console.warn(
         truncated
-          ? `[ai-suite/model] tool-call arguments TRUNCATED at the ${maxTokens}-token ceiling (${rawCall.function.arguments?.length ?? 0} chars received) — the model's answer was cut off, not wrong:`
+          ? `[ai-suite/model] tool-call arguments TRUNCATED at the ${maxTokens}-token ceiling (${rawCall.function.arguments?.length ?? 0} chars received), the model's answer was cut off, not wrong:`
           : "[ai-suite/model] tool-call arguments failed to parse, falling back to {}:",
         err,
         rawCall.function.arguments?.slice(0, 200),
@@ -277,5 +278,8 @@ export async function runAiSuiteTurn({
     };
   }
 
-  return { text, toolCall, truncated };
+  // Zeno's prose leaves through here. Tool-call arguments are deliberately
+  // NOT touched: they carry ids, urls and enum values, not copy, and the
+  // capability that receives them validates them. See lib/text/dedash.ts.
+  return { text: text === null ? text : stripEmDashes(text), toolCall, truncated };
 }

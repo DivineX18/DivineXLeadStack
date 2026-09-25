@@ -60,7 +60,7 @@ export default async function PayStatusPage({
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
               {planName ? `Your ${planName} subscription is live. ` : ""}
-              You&apos;re all set — log in to your workspace to get started.
+              You&apos;re all set, log in to your workspace to get started.
             </p>
             <Link
               href="/login"
@@ -87,7 +87,7 @@ export default async function PayStatusPage({
           <>
             <h1 className="text-xl font-semibold">Payment received</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              We&apos;re activating your workspace — this usually takes a few
+              We&apos;re activating your workspace. This usually takes a few
               seconds. Refresh this page, or log in and you&apos;ll be up and
               running shortly.
             </p>

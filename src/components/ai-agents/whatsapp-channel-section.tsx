@@ -114,7 +114,7 @@ export function WhatsappChannelSection() {
             <h2 className="text-base font-semibold">WhatsApp channel</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               WhatsApp is locked for this sub-account. Your agency controls
-              whether this feature is available — ask your agency owner to
+              whether this feature is available. Ask your agency owner to
               enable WhatsApp from the sub-account&apos;s Manage panel.
             </p>
           </div>
@@ -161,7 +161,7 @@ export function WhatsappChannelSection() {
       }
       if (data.config) setConfig(data.config);
       toast.success("WhatsApp channel saved");
-    } catch (err) { toast.error(describeError(err, "Network error — try again"), { duration: 12_000 });
+    } catch (err) { toast.error(describeError(err, "Network error. Try again"), { duration: 12_000 });
     } finally {
       setSaving(false);
     }
@@ -266,7 +266,7 @@ export function WhatsappChannelSection() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="wa-model">
-                Model (advanced — blank for default)
+                Model (advanced, blank for default)
               </Label>
               <Input
                 id="wa-model"

@@ -120,7 +120,7 @@ export function recommendationsFromGrowthScan(
       // The most actionable thing the scan actually said, in order of how
       // directly it tells the customer what to DO.
       const fix = c.quickWin?.trim() || c.fullFix?.trim() || c.finding?.trim() || "";
-      if (!fix) return null; // honesty guard — never pad the list
+      if (!fix) return null; // honesty guard, never pad the list
       return {
         source: "growth_scan",
         categoryKey: c.key,

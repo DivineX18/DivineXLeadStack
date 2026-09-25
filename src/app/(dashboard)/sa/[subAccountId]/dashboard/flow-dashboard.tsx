@@ -310,7 +310,7 @@ export function FlowDashboard() {
                 <div>
                   <h2 className="text-sm font-semibold">Pipeline snapshot</h2>
                   <p className="text-xs text-muted-foreground">
-                    Deals by stage — click to open the board.
+                    Deals by stage. Click to open the board.
                   </p>
                 </div>
                 <Button
@@ -445,7 +445,7 @@ export function FlowDashboard() {
                                 {c.name || "Unnamed"}
                               </p>
                               <p className="truncate text-xs text-muted-foreground">
-                                {c.email || c.company || "—"}
+                                {c.email || c.company || "-"}
                               </p>
                             </div>
                             <span className="text-[11px] text-muted-foreground">

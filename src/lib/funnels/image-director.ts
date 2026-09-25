@@ -319,7 +319,7 @@ export function planPageVisuals(input: {
           reason: `A gallery needs at least ${MIN_GALLERY_IMAGES} strong photographs; ${forGallery.length} available.`,
         },
       });
-      notes.push("Gallery omitted rather than shown thin — a two-image grid reads as a stub.");
+      notes.push("Gallery omitted rather than shown thin, a two-image grid reads as a stub.");
     }
   }
 

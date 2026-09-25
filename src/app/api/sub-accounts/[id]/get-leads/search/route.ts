@@ -70,7 +70,7 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          "Lead search isn't available — OUTSCRAPER_API_KEY isn't configured on this deployment.",
+          "Lead search isn't available. OUTSCRAPER_API_KEY isn't configured on this deployment.",
       },
       { status: 503 },
     );

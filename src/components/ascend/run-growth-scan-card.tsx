@@ -14,7 +14,7 @@ type ScanState =
   | { phase: "failed"; message: string };
 
 const POLL_INTERVAL_MS = 3000;
-const MAX_POLL_MS = 5 * 60 * 1000; // 5 min — generous relative to the documented 30-90s typical duration; a genuine timeout is reported honestly, never silently treated as success.
+const MAX_POLL_MS = 5 * 60 * 1000; // 5 min, generous relative to the documented 30-90s typical duration; a genuine timeout is reported honestly, never silently treated as success.
 
 /**
  * The unified product's native Growth Scan trigger — replaces the old
@@ -53,7 +53,7 @@ export function RunGrowthScanCard({
   const poll = useCallback(
     async (jobId: number) => {
       if (Date.now() > pollDeadline.current) {
-        setState({ phase: "failed", message: "This scan is taking longer than expected. Check back shortly — it may still complete." });
+        setState({ phase: "failed", message: "This scan is taking longer than expected. Check back shortly. It may still complete." });
         return;
       }
       try {
@@ -116,7 +116,7 @@ export function RunGrowthScanCard({
   if (!isFullAscend) {
     return (
       <AscendCardShell title="Growth Scan">
-        <p className="text-sm text-[var(--dx-text-muted)]">Growth Scans are part of Full Ascend — not available on this workspace&apos;s current plan.</p>
+        <p className="text-sm text-[var(--dx-text-muted)]">Growth Scans are part of Full Ascend, not available on this workspace&apos;s current plan.</p>
       </AscendCardShell>
     );
   }
@@ -125,8 +125,8 @@ export function RunGrowthScanCard({
     return (
       <AscendCardShell title="Growth Scan">
         {/* The old copy promised this "links automatically the next time you
-            sign in through Ascend". It never did — the SSO callback writes a
-            null profile id — so a customer was told to wait for something that
+            sign in through Ascend". It never did, the SSO callback writes a
+            null profile id, so a customer was told to wait for something that
             was never going to happen. Setup is what creates and links the
             profile, so that is what this now points at. */}
         <p className="text-sm text-[var(--dx-text-muted)]">
@@ -145,7 +145,7 @@ export function RunGrowthScanCard({
       {(state.phase === "idle" || state.phase === "starting") && (
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-xs text-[var(--dx-text-muted)]">Website URL (optional — leave blank to use the one on file)</label>
+            <label className="mb-1 block text-xs text-[var(--dx-text-muted)]">Website URL (optional. Leave blank to use the one on file)</label>
             <input
               type="url"
               value={websiteUrl}
@@ -169,7 +169,7 @@ export function RunGrowthScanCard({
       {state.phase === "running" && (
         <div className="flex items-center gap-2 text-sm text-[var(--dx-text-secondary)]">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Scanning your website and analyzing results — this usually takes 30-90 seconds.
+          Scanning your website and analyzing results. This usually takes 30-90 seconds.
         </div>
       )}
 
@@ -177,7 +177,7 @@ export function RunGrowthScanCard({
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm text-emerald-400">
             <CheckCircle2 className="h-4 w-4" />
-            Scan complete — score {state.overallScore}/100 ({state.scoreLabel})
+            Scan complete, score {state.overallScore}/100 ({state.scoreLabel})
           </div>
           <p className="text-xs text-[var(--dx-text-muted)]">Biggest bottleneck: {state.biggestBottleneck}</p>
           <p className="text-xs text-[var(--dx-text-muted)]">Your Growth Score and recommendations below now reflect this scan.</p>

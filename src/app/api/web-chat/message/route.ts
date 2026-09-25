@@ -109,7 +109,7 @@ export async function POST(request: Request) {
         error:
           rl.reason === "session-quota"
             ? "Session message limit reached"
-            : "Too many requests — try again in a bit",
+            : "Too many requests. Try again in a bit",
       },
       {
         status: 429,
@@ -164,7 +164,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         reply:
-          "Sorry — something went wrong on our end. The team has been notified.",
+          "Sorry, something went wrong on our end. The team has been notified.",
         kind: "skipped",
       },
       { status: 200, headers },

@@ -109,7 +109,7 @@ export async function POST(request: Request) {
         status: "failed",
         externalId: null,
         error:
-          "Posting permission missing — reconnect with posting access in Settings → Facebook & Instagram.",
+          "Posting permission missing, reconnect with posting access in Settings → Facebook & Instagram.",
       });
       continue;
     }

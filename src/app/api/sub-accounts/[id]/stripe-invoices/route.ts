@@ -48,7 +48,7 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          "Online payments aren't set up on this deployment yet — contact your workspace admin.",
+          "Online payments aren't set up on this deployment yet. Contact your workspace admin.",
       },
       { status: 503 },
     );

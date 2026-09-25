@@ -34,7 +34,7 @@ function requireConfig(): { apiKey: string; serviceId: string } {
   const serviceId = process.env.RENDER_SERVICE_ID?.trim();
   if (!apiKey || !serviceId) {
     throw new RenderError(
-      "Render is not configured — set RENDER_API_KEY + RENDER_SERVICE_ID.",
+      "Render is not configured. Set RENDER_API_KEY + RENDER_SERVICE_ID.",
     );
   }
   return { apiKey, serviceId };

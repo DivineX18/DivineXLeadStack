@@ -467,7 +467,7 @@ export function SetupEnvForm() {
       setExportCopied(true);
       toast.success("Copied to clipboard");
       setTimeout(() => setExportCopied(false), 2000);
-    } catch (err) { toast.error(describeError(err, "Couldn't copy — select the text and copy manually."), { duration: 12_000 });
+    } catch (err) { toast.error(describeError(err, "Couldn't copy. Select the text and copy manually."), { duration: 12_000 });
     }
   }
 
@@ -523,7 +523,7 @@ export function SetupEnvForm() {
       if (!res.ok) throw new Error(d.error ?? "Redeploy failed.");
       setPendingRedeploy(false);
       toast.success(
-        "Redeploy triggered — new values go live in ~1–3 min. This page shows the old build until it finishes.",
+        "Redeploy triggered. New values go live in ~1–3 min. This page shows the old build until it finishes.",
       );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Redeploy failed.");
@@ -556,7 +556,7 @@ export function SetupEnvForm() {
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
               Turn on to let this form write API keys to Vercel and trigger a
-              redeploy. Optional — you can always set env vars manually.
+              redeploy. Optional. You can always set env vars manually.
               {config.isLocal &&
                 " Running locally, you can write to .env.local below without turning this on."}
             </p>
@@ -576,7 +576,7 @@ export function SetupEnvForm() {
               <code>VERCEL_DEPLOY_HOOK_URL</code> in your Vercel project, then
               redeploy once so this deployment can read them.
               {config.isLocal &&
-                " (Running locally, you can still write to .env.local below — no Vercel needed.)"}
+                " (Running locally, you can still write to.env.local below, no Vercel needed.)"}
             </p>
           </div>
         )}
@@ -599,7 +599,7 @@ export function SetupEnvForm() {
                 {!vercelWritable && (
                   <span className="ml-1 text-xs text-muted-foreground">
                     {!config.vercelWired
-                      ? "(unavailable — Vercel creds not present)"
+                      ? "(unavailable. Vercel creds not present)"
                       : "(turn on Vercel writes above to enable)"}
                   </span>
                 )}
@@ -656,7 +656,7 @@ export function SetupEnvForm() {
 
             {!storedKnown && (
               <p className="rounded-lg bg-muted px-3 py-2 text-[11px] text-muted-foreground">
-                Couldn&rsquo;t read the Vercel env list — &ldquo;Saved · redeploy&rdquo;
+                Couldn&rsquo;t read the Vercel env list, &ldquo;Saved · redeploy&rdquo;
                 states below are approximate (based on the running build only).
               </p>
             )}
@@ -687,8 +687,8 @@ export function SetupEnvForm() {
                     </div>
                     <p className="text-[11px] text-muted-foreground">
                       {aiEnabled
-                        ? "Your OpenRouter key is live — AI Agents can reply, and the ✨ next to any key gives a quick “where do I get this?” guide."
-                        : "Add your OpenRouter API key to power AI Agents — and unlock ✨ “where do I get this?” guides on every key below."}
+                        ? "Your OpenRouter key is live. AI Agents can reply, and the ✨ next to any key gives a quick “where do I get this?” guide."
+                        : "Add your OpenRouter API key to power AI Agents, and unlock ✨ “where do I get this?” guides on every key below."}
                     </p>
                     <div className="divide-y rounded-xl border bg-background">
                       {renderKeyRow(openRouterKey)}
@@ -741,7 +741,7 @@ export function SetupEnvForm() {
                       ))}
                     </div>
                     <p className="text-[11px] text-muted-foreground">
-                      Set these in Vercel to enable the write path — the form
+                      Set these in Vercel to enable the write path, the form
                       can&rsquo;t set its own credentials, and their values are
                       never shown here.
                     </p>
@@ -800,7 +800,7 @@ export function SetupEnvForm() {
 
               {pendingRedeploy && (
                 <span className="text-xs text-sky-600 dark:text-sky-400">
-                  Saved to Vercel — redeploy to activate.
+                  Saved to Vercel, redeploy to activate.
                 </span>
               )}
             </div>
@@ -817,7 +817,7 @@ export function SetupEnvForm() {
             <DialogDescription>
               Your local environment in <code>.env</code> format. In Vercel open
               Project → Settings → Environment Variables, click the key/value
-              field, and paste — it bulk-imports every line at once. Click the
+              field, and paste. It bulk-imports every line at once. Click the
               block below to copy.
             </DialogDescription>
           </DialogHeader>
@@ -868,7 +868,7 @@ export function SetupEnvForm() {
           )}
 
           <p className="text-[11px] text-muted-foreground">
-            These are your real local values, shown unmasked so you can copy them —
+            These are your real local values, shown unmasked so you can copy them
             they&rsquo;re read from <code>.env.local</code> on your machine and are
             only ever exposed in local dev, never on a deployed instance. After
             pasting into Vercel, redeploy there so the new values take effect.
@@ -890,7 +890,7 @@ export function SetupEnvForm() {
               Where to get {guideKey ?? ""}
             </DialogTitle>
             <DialogDescription>
-              AI-written from the LeadStack setup docs — quick orientation, not a
+              AI-written from the LeadStack setup docs, quick orientation, not a
               substitute for the provider&rsquo;s own steps.
             </DialogDescription>
           </DialogHeader>

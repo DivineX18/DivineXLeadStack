@@ -170,7 +170,7 @@ export function SubAccountGoogleReviewSection() {
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-semibold">Google reviews</h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Ask customers for a Google review by SMS or WhatsApp — automatically
+            Ask customers for a Google review by SMS or WhatsApp, automatically
             after a quote/invoice is marked paid, or on demand from a contact.
             Find your link in Google Business Profile → &ldquo;Get more
             reviews&rdquo;.
@@ -194,7 +194,7 @@ export function SubAccountGoogleReviewSection() {
         <div className="space-y-1.5">
           <Label>Channel</Label>
           <p className="text-[11px] text-muted-foreground">
-            Review requests send on <strong>one</strong> channel — pick the one
+            Review requests send on <strong>one</strong> channel. Pick the one
             to use. The green outline marks the active channel.
           </p>
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -211,7 +211,7 @@ export function SubAccountGoogleReviewSection() {
               label="WhatsApp · Template"
               hint={
                 whatsappTemplateReady
-                  ? "Approved template — works anytime"
+                  ? "Approved template. Works anytime"
                   : "Needs an approved template"
               }
               onClick={() =>
@@ -224,7 +224,7 @@ export function SubAccountGoogleReviewSection() {
               label="WhatsApp · Manual"
               hint={
                 whatsappBaseReady
-                  ? "Free-form, in-window — no template"
+                  ? "Free-form, in-window, no template"
                   : "Needs a WhatsApp sender"
               }
               onClick={() => whatsappBaseReady && setChannel("whatsapp_manual")}
@@ -272,12 +272,12 @@ export function SubAccountGoogleReviewSection() {
               className="resize-none text-sm"
             />
             <p className="text-[11px] text-muted-foreground">
-              {"Tags: {{firstName}}, {{businessName}}, {{reviewUrl}} — must include {{reviewUrl}}."}
+              {"Tags: {{firstName}}, {{businessName}}, {{reviewUrl}}. Must include {{reviewUrl}}."}
               {channel === "whatsapp_manual" && (
                 <>
                   {" "}
                   WhatsApp Manual only sends while the customer&apos;s 24h window
-                  is open (e.g. they just messaged) — best used from the inbox
+                  is open (e.g. they just messaged), best used from the inbox
                   &ldquo;Ask for review&rdquo; button.
                 </>
               )}
@@ -334,7 +334,7 @@ export function SubAccountGoogleReviewSection() {
           </label>
           {!autoSupported && (
             <p className="text-[11px] text-muted-foreground">
-              WhatsApp Manual can&apos;t auto-send — it only works while the
+              WhatsApp Manual can&apos;t auto-send. It only works while the
               customer&apos;s 24h window is open. Use it from the inbox
               &ldquo;Ask for review&rdquo; button, or pick SMS / WhatsApp
               Template for automatic sends.

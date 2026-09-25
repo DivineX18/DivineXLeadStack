@@ -13,9 +13,9 @@ export async function generateMetadata() {
   // this the Ascend host served Flow's name, tagline and closing CTA.
   const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   return {
-    title: `Resources — ${brand.name} Guides on CRM, Pipeline & Follow-Up`,
-    description: `Practical guides on lead follow-up, pipeline design, AI-assisted response, and appointment scheduling — from the team behind ${brand.name}.`,
-    openGraph: { title: `Resources — ${brand.name}`, type: "website" as const },
+    title: `Resources, ${brand.name} Guides on CRM, Pipeline & Follow-Up`,
+    description: `Practical guides on lead follow-up, pipeline design, AI-assisted response, and appointment scheduling, from the team behind ${brand.name}.`,
+    openGraph: { title: `Resources, ${brand.name}`, type: "website" as const },
   };
 }
 
@@ -40,7 +40,7 @@ export default async function ResourcesPage() {
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
               How response time, pipeline design, AI-assisted follow-up, and scheduling actually
-              work — and how to fix the parts that are quietly costing you leads.
+              work, and how to fix the parts that are quietly costing you leads.
             </p>
           </div>
         </section>

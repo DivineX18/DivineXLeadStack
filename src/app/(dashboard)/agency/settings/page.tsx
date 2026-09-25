@@ -51,7 +51,7 @@ export default function AgencySettingsPage() {
           <h2 className="text-sm font-semibold">Guided setup</h2>
           <p className="text-xs text-muted-foreground">
             Optionally enter your remaining API keys in-app and have them written
-            to Vercel for you — an alternative to editing environment variables
+            to Vercel for you, an alternative to editing environment variables
             by hand.
           </p>
         </div>

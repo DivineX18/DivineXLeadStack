@@ -171,7 +171,7 @@ export async function POST(request: Request) {
       const delay =
         code === "outside_window"
           ? Math.max(60, compliance.retryAfterSec ?? 3600)
-          : 30; // rate_limited — short backoff
+          : 30; // rate_limited, short backoff
       await recRef.update({ attempts: FieldValue.increment(1) });
       await publishCallback({
         pathname: "/api/comms/voice/campaign/step",

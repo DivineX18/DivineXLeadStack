@@ -46,7 +46,7 @@ export function OverviewTab({ agencyName }: { agencyName: string }) {
             <p className="mt-1 text-sm text-muted-foreground">
               An agency CRM in a box: capture leads with hosted forms,
               respond instantly with automations, manage the whole sales
-              pipeline, and stand up client marketing sites — each client
+              pipeline, and stand up client marketing sites, each client
               isolated in their own sub-account workspace.
             </p>
           </div>
@@ -86,7 +86,7 @@ export function OverviewTab({ agencyName }: { agencyName: string }) {
 
           <WorkflowCard
             title="Lead capture & instant response"
-            description="A visitor submits a form. The contact gets created, the matching automation fires, and within seconds they receive an SMS and email reply — while the lead lands at the top of your pipeline."
+            description="A visitor submits a form. The contact gets created, the matching automation fires, and within seconds they receive an SMS and email reply, while the lead lands at the top of your pipeline."
             highlight
           >
             <WorkflowDiagram
@@ -127,7 +127,7 @@ export function OverviewTab({ agencyName }: { agencyName: string }) {
 
           <WorkflowCard
             title="AI Agents (Voice + SMS + Web Chat)"
-            description="Configure one persona that powers every channel. Voice calls answer the sub-account's phone number; SMS auto-replies route through the same number; the Web Chat widget embeds on the client's site. When the bot captures a name/email/phone — by voice, text, or chat form — a Contact is created, a follow-up Task is added to today's queue, and the escalation email fires."
+            description="Configure one persona that powers every channel. Voice calls answer the sub-account's phone number; SMS auto-replies route through the same number; the Web Chat widget embeds on the client's site. When the bot captures a name/email/phone (by voice, text, or chat form) a Contact is created, a follow-up Task is added to today's queue, and the escalation email fires."
             highlight
           >
             <WorkflowDiagram
@@ -202,7 +202,7 @@ export function OverviewTab({ agencyName }: { agencyName: string }) {
 
           <WorkflowCard
             title="Pipeline → Reports"
-            description="Drag deals through stages on the Kanban board. Reports update automatically — funnel, won-revenue, leads-by-source — all date-rangeable."
+            description="Drag deals through stages on the Kanban board. Reports update automatically (funnel, won-revenue, leads-by-source) all date-rangeable."
           >
             <WorkflowDiagram
               steps={[

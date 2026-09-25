@@ -88,7 +88,7 @@ export async function POST(request: Request) {
 
   if (rejected.length > 0) {
     return NextResponse.json(
-      { error: "Some values were rejected — nothing was written.", rejected },
+      { error: "Some values were rejected. Nothing was written.", rejected },
       { status: 422 },
     );
   }

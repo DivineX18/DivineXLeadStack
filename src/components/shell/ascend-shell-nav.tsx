@@ -44,7 +44,7 @@ export function AscendShellNav({ sections, ariaLabel = "Lifecycle navigation" }:
                 role="button"
                 tabIndex={0}
                 aria-disabled="true"
-                aria-label={`${section.label} — locked. ${reason}`}
+                aria-label={`${section.label}, locked. ${reason}`}
                 className="flex cursor-not-allowed items-center justify-between gap-2 rounded-md px-3 py-2 text-sm text-[var(--dx-text-muted)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--dx-focus)]"
               >
                 <span>{section.label}</span>

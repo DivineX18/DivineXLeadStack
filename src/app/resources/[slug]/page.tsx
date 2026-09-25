@@ -21,9 +21,9 @@ export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
   const post = getResourcePostBySlug(slug);
   const brand = await resolveCustomBrand();
-  if (!post) return { title: `Resources — ${brand.name}` };
+  if (!post) return { title: `Resources, ${brand.name}` };
   return {
-    title: `${post.title} — ${brand.name}`,
+    title: `${post.title}, ${brand.name}`,
     description: post.metaDescription,
     openGraph: { title: post.title, description: post.metaDescription, type: "article" as const },
   };

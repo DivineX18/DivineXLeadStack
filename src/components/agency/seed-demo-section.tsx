@@ -22,7 +22,7 @@ export function SeedDemoSection() {
     if (busy) return;
     if (
       !confirm(
-        "Seed sub-account #1004 with 300 contacts (200 around London, 100 worldwide), ~80 deals across pipeline stages, and matching activities? Existing data on #1004 is left alone — this only ADDS records tagged 'seed'.",
+        "Seed sub-account #1004 with 300 contacts (200 around London, 100 worldwide), ~80 deals across pipeline stages, and matching activities? Existing data on #1004 is left alone. This only ADDS records tagged 'seed'.",
       )
     ) {
       return;

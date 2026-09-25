@@ -139,7 +139,7 @@ export async function POST(
       });
       return NextResponse.json({ ok: true, settled: "client-error" });
     }
-    console.warn("[whatsapp-templates/poll] status fetch threw — rescheduling", err);
+    console.warn("[whatsapp-templates/poll] status fetch threw, rescheduling", err);
     await ref.update({
       pollAttempts: attempts,
       updatedAt: FieldValue.serverTimestamp(),

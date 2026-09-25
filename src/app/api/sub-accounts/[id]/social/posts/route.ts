@@ -156,7 +156,7 @@ export async function POST(
       return NextResponse.json(
         {
           error:
-            "Scheduling isn't available — QStash isn't configured on this deployment.",
+            "Scheduling isn't available. QStash isn't configured on this deployment.",
         },
         { status: 503 },
       );

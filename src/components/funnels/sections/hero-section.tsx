@@ -355,7 +355,7 @@ export function HeroSection({
           </div>
           {/* THE DELIVERABLE, WHERE THE PHOTOGRAPH WOULD HAVE BEEN.
               A one-fold opt-in page is a single hero, so if its fold carries no
-              visual the whole page carries none — which is what the lead-magnet
+              visual the whole page carries none, which is what the lead-magnet
               fixture shipped. Its category also forbids stock photography, and
               correctly so, which left the mid-page proof beat with nowhere to
               go. Showing the guide's own contents beside the headline puts the

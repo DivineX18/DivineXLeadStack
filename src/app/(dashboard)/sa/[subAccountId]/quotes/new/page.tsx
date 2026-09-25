@@ -120,8 +120,8 @@ export default function NewQuotePage() {
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {kind === "invoice"
-            ? "Build the line items and totals. Save as draft now — sending emails the recipient a link to pay by card or PayPal."
-            : "Build the line items, totals, and terms. Save as a draft now — send to the recipient when you're ready."}
+            ? "Build the line items and totals. Save as draft now, sending emails the recipient a link to pay by card or PayPal."
+            : "Build the line items, totals, and terms. Save as a draft now. Send to the recipient when you're ready."}
         </p>
       </div>
 
@@ -147,7 +147,7 @@ export default function NewQuotePage() {
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
           {kind === "invoice"
-            ? "Skip the estimate step — go straight to a payable invoice."
+            ? "Skip the estimate step. Go straight to a payable invoice."
             : "Send an estimate that the recipient can accept or decline. Convert to an invoice once accepted."}
         </p>
       </Card>

@@ -47,7 +47,7 @@ export function RecommendedNextActionCard({
         // Names the FINAL IA destination. This previously pointed at a
         // lifecycle section P0.3 removed, sending customers to a place that
         // no longer exists in the navigation.
-        <p className="text-sm text-[var(--dx-text-muted)]">Nothing to recommend yet — run a Growth Scan or CRO Audit from Intelligence.</p>
+        <p className="text-sm text-[var(--dx-text-muted)]">Nothing to recommend yet. Run a Growth Scan or CRO Audit from Intelligence.</p>
       )}
     </AscendCardShell>
   );
@@ -67,7 +67,7 @@ export function RecommendationsListCard({ recommendations }: { recommendations: 
         </ul>
       ) : (
         <p className="text-sm text-[var(--dx-text-muted)]">
-          {recommendations.meta.status === "unavailable" ? "Unavailable right now." : "No recommendations yet — run a CRO Audit to generate some."}
+          {recommendations.meta.status === "unavailable" ? "Unavailable right now." : "No recommendations yet. Run a CRO Audit to generate some."}
         </p>
       )}
     </AscendCardShell>

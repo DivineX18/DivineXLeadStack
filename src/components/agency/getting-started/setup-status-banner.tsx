@@ -77,7 +77,7 @@ export function SetupStatusBanner() {
                 ` (${summary.missingRequiredKeys} required ${
                   summary.missingRequiredKeys === 1 ? "key" : "keys"
                 } missing)`}
-              . Core features can&apos;t run until these are set — Guided setup
+              . Core features can&apos;t run until these are set. Guided setup
               walks you through each key and writes it for you.
             </p>
           </div>
@@ -108,12 +108,12 @@ export function SetupStatusBanner() {
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-sky-700 dark:text-sky-400">
-            Core setup complete — {summary.featuresConfigured} of{" "}
+            Core setup complete, {summary.featuresConfigured} of{" "}
             {summary.featuresTotal} optional integrations configured
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             Still available: {shown}
-            {more > 0 && ` +${more} more`}. Each unlocks a feature — add them
+            {more > 0 && ` +${more} more`}. Each unlocks a feature. Add them
             anytime in Guided setup.
           </p>
         </div>

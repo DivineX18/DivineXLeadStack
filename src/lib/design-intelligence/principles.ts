@@ -116,11 +116,11 @@ export function renderPrinciplesAsCards(
     byCategory.set(p.category, list);
   }
   const CATEGORY_TITLES: Record<DesignPrincipleCategory, string> = {
-    visual_system: "Learned design principles — visual systems",
-    section_pattern: "Learned design principles — section patterns",
-    typography_system: "Learned design principles — typography",
-    cro_principle: "Learned design principles — conversion (CRO)",
-    archetype_note: "Learned design principles — archetype notes",
+    visual_system: "Learned design principles, visual systems",
+    section_pattern: "Learned design principles, section patterns",
+    typography_system: "Learned design principles, typography",
+    cro_principle: "Learned design principles, conversion (CRO)",
+    archetype_note: "Learned design principles, archetype notes",
   };
   const cards: AiSuiteKnowledgeCard[] = [];
   for (const [category, list] of byCategory) {
@@ -131,7 +131,7 @@ export function renderPrinciplesAsCards(
       location: "Design Knowledge Vault (Command Center → Design Intelligence)",
       keywords: ["design", "funnel", "landing page", "archetype", category],
       body:
-        "Apply these when relevant to this funnel's business/archetype — they were learned from real operator feedback and design reviews, not invented:\n" +
+        "Apply these when relevant to this funnel's business/archetype. They were learned from real operator feedback and design reviews, not invented:\n" +
         list.map((p) => `- ${p.text}`).join("\n"),
     });
   }

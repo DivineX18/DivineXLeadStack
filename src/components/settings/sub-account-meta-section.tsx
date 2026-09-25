@@ -37,7 +37,7 @@ const STATUS_MESSAGES: Record<
   connected: { ok: true, text: "Facebook + Instagram connected." },
   connected_no_sub: {
     ok: false,
-    text: "Connected, but the page webhook subscription failed — try Disconnect then Connect again.",
+    text: "Connected, but the page webhook subscription failed. Try Disconnect then Connect again.",
   },
   cancelled: { ok: false, text: "Connection cancelled." },
   bad_state: { ok: false, text: "Connection failed a security check. Try again." },
@@ -115,7 +115,7 @@ export function SubAccountMetaSection() {
   async function handleDisconnect() {
     if (
       !confirm(
-        "Disconnect Facebook + Instagram for this sub-account? This removes the shared connection — Messenger/IG DMs stop landing in the inbox AND the Social Planner can no longer publish. Message history + scheduled posts are kept; you can reconnect anytime.",
+        "Disconnect Facebook + Instagram for this sub-account? This removes the shared connection. Messenger/IG DMs stop landing in the inbox AND the Social Planner can no longer publish. Message history + scheduled posts are kept; you can reconnect anytime.",
       )
     ) {
       return;
@@ -256,7 +256,7 @@ export function SubAccountMetaSection() {
         <p className="mt-1">
           The agency registers these in the Meta app (Webhooks + Facebook Login
           → Valid OAuth redirect URIs) <strong>once for the whole deployment</strong>
-          — they&apos;re the same for every sub-account, so new clients connect with
+. They&apos;re the same for every sub-account, so new clients connect with
           no extra Meta setup. Beta access also requires Meta App Review for
           messaging permissions.
         </p>
@@ -303,7 +303,7 @@ export function SubAccountMetaSection() {
         <p className="mt-2 flex items-start gap-1.5">
           <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
           <span>
-            Beta — Meta App Review is required for messaging permissions
+            Beta. Meta App Review is required for messaging permissions
             (inbox){socialOn && " and posting permissions (Social Planner)"}.
             Until approved, only app admins/testers can connect.
           </span>
@@ -332,7 +332,7 @@ export function SubAccountMetaSection() {
                   instagram_manage_messages
                 </code>{" "}
                 only reach the general public after <strong>App Review</strong>.
-                This is a Meta restriction — it can&apos;t be bypassed in the app.
+                This is a Meta restriction. It can&apos;t be bypassed in the app.
               </p>
             </div>
 
@@ -358,7 +358,7 @@ export function SubAccountMetaSection() {
                 </li>
                 <li>
                   The user you&apos;re messaging is <strong>also a Tester</strong>{" "}
-                  on the app — in Dev mode you can&apos;t message arbitrary users.
+                  on the app. In Dev mode you can&apos;t message arbitrary users.
                   Tip: DM the business from a second IG account that&apos;s also a
                   Tester, then reply from here.
                 </li>
@@ -376,7 +376,7 @@ export function SubAccountMetaSection() {
               <ul className="mt-1 space-y-1">
                 <li>
                   <strong>&ldquo;not authorized yet&rdquo; (codes 10 / 200):</strong>{" "}
-                  permission not granted, or the account isn&apos;t a Tester —
+                  permission not granted, or the account isn&apos;t a Tester
                   add them as a Tester, or complete App Review to go live.
                 </li>
                 <li>
@@ -386,7 +386,7 @@ export function SubAccountMetaSection() {
                 </li>
                 <li>
                   <strong>&ldquo;window closed&rdquo;:</strong> 24 hours have
-                  passed since their last message — re-opening needs a message
+                  passed since their last message. Re-opening needs a message
                   tag (a later release).
                 </li>
                 <li>
@@ -398,7 +398,7 @@ export function SubAccountMetaSection() {
 
             <p className="text-muted-foreground">
               The permanent fix for production is <strong>Meta App Review</strong>{" "}
-              for the messaging permissions — start it early, approval can take
+              for the messaging permissions. Start it early, approval can take
               days to weeks.
             </p>
           </div>

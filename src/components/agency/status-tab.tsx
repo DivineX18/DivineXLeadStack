@@ -94,7 +94,7 @@ export function StatusTab() {
             ) : loading ? (
               <>Running checks…</>
             ) : (
-              <>—</>
+              <>-</>
             )}
             {results && (
               <>
@@ -155,7 +155,7 @@ export function StatusTab() {
           <LegendItem
             colorClass="bg-amber-500"
             label="Needs attention"
-            title="Partially set up or degraded — e.g. a credential present but a sender domain / webhook not finished."
+            title="Partially set up or degraded, e.g. a credential present but a sender domain / webhook not finished."
           />
           <LegendItem
             colorClass="bg-rose-500"
@@ -165,7 +165,7 @@ export function StatusTab() {
           <LegendItem
             colorClass="bg-muted-foreground/40"
             label="Optional / off"
-            title="An optional integration that isn't configured. Not an error — this feature is simply turned off."
+            title="An optional integration that isn't configured. Not an error. This feature is simply turned off."
           />
         </div>
       </div>

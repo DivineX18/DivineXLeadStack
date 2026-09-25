@@ -60,7 +60,7 @@ function speedToLeadSeed(): Pick<
       id: "n1",
       type: "send_sms",
       config: {
-        body: "Hi {{contact.firstName}}, thanks for reaching out — we got your message and will be in touch shortly.",
+        body: "Hi {{contact.firstName}}, thanks for reaching out. We got your message and will be in touch shortly.",
       },
       next: "n2",
     },
@@ -102,7 +102,7 @@ function appointmentConfirmationSeed(): Seed {
       id: "n1",
       type: "send_sms",
       config: {
-        body: "Hi {{contact.firstName}}, your booking is confirmed. We've emailed you the details — see you soon!",
+        body: "Hi {{contact.firstName}}, your booking is confirmed. We've emailed you the details. See you soon!",
       },
       next: "n2",
     },
@@ -111,7 +111,7 @@ function appointmentConfirmationSeed(): Seed {
       type: "send_email",
       config: {
         subject: "Your booking is confirmed",
-        body: "Hi {{contact.firstName}},\n\nThanks for booking with us — your appointment is confirmed. If anything changes, just reply to this email and we'll help you reschedule.\n\nSee you soon.\n\n{{unsubscribeLink}}",
+        body: "Hi {{contact.firstName}},\n\nThanks for booking with us. Your appointment is confirmed. If anything changes, just reply to this email and we'll help you reschedule.\n\nSee you soon.\n\n{{unsubscribeLink}}",
       },
       next: "n3",
     },
@@ -161,7 +161,7 @@ function leadNurtureSeed(): Seed {
       type: "send_email",
       config: {
         subject: "Thanks for reaching out",
-        body: "Hi {{contact.firstName}},\n\nThanks for getting in touch. Over the next few days I'll share a couple of things that should help — and whenever you're ready to talk, just reply.\n\n{{unsubscribeLink}}",
+        body: "Hi {{contact.firstName}},\n\nThanks for getting in touch. Over the next few days I'll share a couple of things that should help, and whenever you're ready to talk, just reply.\n\n{{unsubscribeLink}}",
       },
       next: "n3",
     },
@@ -190,7 +190,7 @@ function leadNurtureSeed(): Seed {
       id: "n6",
       type: "send_sms",
       config: {
-        body: "Hi {{contact.firstName}}, it's the team — any questions I can help with? Happy to jump on a quick call.",
+        body: "Hi {{contact.firstName}}, it's the team. Any questions I can help with? Happy to jump on a quick call.",
       },
       next: "n7",
     },
@@ -222,7 +222,7 @@ function leadNurtureSeed(): Seed {
         recipient: "owner",
         to: "",
         subject: "Nurtured lead engaged",
-        body: "{{contact.name}} ({{contact.email}}) replied during the nurture sequence — worth a personal follow-up.",
+        body: "{{contact.name}} ({{contact.email}}) replied during the nurture sequence, worth a personal follow-up.",
       },
       next: null,
     },
@@ -250,7 +250,7 @@ function stageChangeFollowupSeed(): Seed {
       id: "n1",
       type: "create_task",
       config: {
-        title: "Follow up with {{contact.name}} — pipeline stage changed",
+        title: "Follow up with {{contact.name}}, pipeline stage changed",
         dueInDays: 1,
       },
       next: "n2",
@@ -293,7 +293,7 @@ function postPurchaseNurtureSeed(): Seed {
       type: "send_email",
       config: {
         subject: "Thanks for your order, {{contact.firstName}}!",
-        body: "Hi {{contact.firstName}},\n\nThank you — your order is confirmed and paid. If anything's missing or you have a question, just reply to this email and we'll sort it out.\n\n{{unsubscribeLink}}",
+        body: "Hi {{contact.firstName}},\n\nThank you. Your order is confirmed and paid. If anything's missing or you have a question, just reply to this email and we'll sort it out.\n\n{{unsubscribeLink}}",
       },
       next: "n3",
     },
@@ -308,7 +308,7 @@ function postPurchaseNurtureSeed(): Seed {
       type: "send_email",
       config: {
         subject: "How's everything going, {{contact.firstName}}?",
-        body: "Hi {{contact.firstName}},\n\nJust checking in a couple of days after your purchase — how's it going so far? Reply and let me know if you have any questions or need a hand with anything.\n\n{{unsubscribeLink}}",
+        body: "Hi {{contact.firstName}},\n\nJust checking in a couple of days after your purchase, how's it going so far? Reply and let me know if you have any questions or need a hand with anything.\n\n{{unsubscribeLink}}",
       },
       next: "n5",
     },

@@ -172,7 +172,7 @@ export function TemplateEditor({
           placeholder="Welcome SMS"
         />
         <p className="text-[11px] text-muted-foreground">
-          Internal label only — shown in the automation picker.
+          Internal label only, shown in the automation picker.
         </p>
       </div>
 
@@ -224,8 +224,8 @@ export function TemplateEditor({
           rows={type === "email" ? 12 : 6}
           placeholder={
             type === "email"
-              ? "Hey {{contact.firstName}},\n\nThanks for reaching out — ...\n\n{{unsubscribeLink}}"
-              : "Hey {{contact.firstName}}, thanks for reaching out — quick reply when you can?"
+              ? "Hey {{contact.firstName}},\n\nThanks for reaching out,...\n\n{{unsubscribeLink}}"
+              : "Hey {{contact.firstName}}, thanks for reaching out. Quick reply when you can?"
           }
           className="font-mono text-sm"
         />

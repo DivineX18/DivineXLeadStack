@@ -24,7 +24,7 @@ export function IntelligenceStatusBadge({ meta }: { meta: IntelligenceFetchMeta 
 
   const label: Record<Exclude<IntelligenceFetchMeta["status"], "ok">, string> = {
     cached: `Updated ${meta.fetchedAt ? relativeTime(meta.fetchedAt) : "recently"}`,
-    stale: `Stale — as of ${meta.fetchedAt ? relativeTime(meta.fetchedAt) : "earlier"}`,
+    stale: `Stale, as of ${meta.fetchedAt ? relativeTime(meta.fetchedAt) : "earlier"}`,
     unavailable: "Unavailable",
     timeout: "Timed out",
     empty: "No data yet",

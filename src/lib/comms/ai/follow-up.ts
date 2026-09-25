@@ -178,7 +178,7 @@ export async function createCaptureFollowUp(
         });
 
         const text = [
-          `New ${input.channelLabel} lead — ${identity}`,
+          `New ${input.channelLabel} lead, ${identity}`,
           "",
           input.capturedName ? `Name: ${input.capturedName}` : null,
           input.capturedEmail ? `Email: ${input.capturedEmail}` : null,

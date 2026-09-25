@@ -294,7 +294,7 @@ function BookingRow({
         hour: "numeric",
         minute: "2-digit",
       }).format(startAt)
-    : "—";
+    : "-";
 
   return (
     <li>

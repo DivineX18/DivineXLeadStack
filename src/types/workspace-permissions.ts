@@ -123,7 +123,7 @@ export type RequiredAscendTier = "full_ascend";
 
 export interface PermissionRequirements {
   featureGate?: RequiredFeatureGate;
-  ascendTier?: RequiredAscendTier; // never set today — see above
+  ascendTier?: RequiredAscendTier; // never set today. See above
 }
 
 // ── Decision contract ─────────────────────────────────────────────────────

@@ -184,7 +184,7 @@ export async function checkOutboundCompliance(input: {
     return {
       allowed: false,
       code: "rate_limited",
-      reason: "Too many calls placed in the last minute — try again shortly.",
+      reason: "Too many calls placed in the last minute. Try again shortly.",
       retryAfterSec: 60,
       e164,
     };

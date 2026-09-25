@@ -57,7 +57,7 @@ export async function POST(request: Request) {
   const limit = checkAndCount(ip);
   if (!limit.ok) {
     return NextResponse.json(
-      { error: "Too many attempts — please try again shortly." },
+      { error: "Too many attempts, please try again shortly." },
       { status: 429, headers: { "Retry-After": String(limit.retryAfterSec) } },
     );
   }
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
   const base = resolveReturnBase(request);
   if (!base) {
     return NextResponse.json(
-      { error: "This deployment isn't fully configured yet — try again shortly." },
+      { error: "This deployment isn't fully configured yet. Try again shortly." },
       { status: 503 },
     );
   }

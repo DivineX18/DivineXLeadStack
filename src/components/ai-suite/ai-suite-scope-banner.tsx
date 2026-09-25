@@ -42,7 +42,7 @@ export function AiSuiteScopeBanner({
             <BetaPill />
           </p>
           <p className="text-xs text-muted-foreground">
-            Agency level — actions here can affect every client (create
+            Agency level. Actions here can affect every client (create
             sub-accounts, change feature gates).
           </p>
         </div>
@@ -62,7 +62,7 @@ export function AiSuiteScopeBanner({
           <BetaPill />
         </p>
         <p className="text-xs text-muted-foreground">
-          Scoped to this client — everything here stays inside {name}.
+          Scoped to this client. Everything here stays inside {name}.
         </p>
       </div>
     </div>

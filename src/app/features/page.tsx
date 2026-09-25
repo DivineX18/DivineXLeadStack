@@ -34,9 +34,9 @@ export async function generateMetadata() {
   // this the Ascend host served Flow's name, tagline and closing CTA.
   const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   return {
-    title: `Features — ${brand.name} CRM, Pipeline & AI Agent Tools`,
+    title: `Features, ${brand.name} CRM, Pipeline & AI Agent Tools`,
     description: `Every real, shipped ${brand.name} feature: AI agents across web chat, SMS, WhatsApp and voice, contacts and sales pipeline, quotes and invoicing, lead capture forms, booking pages, and a public API.`,
-    openGraph: { title: `Features — ${brand.name}`, type: "website" as const },
+    openGraph: { title: `Features, ${brand.name}`, type: "website" as const },
   };
 }
 
@@ -44,43 +44,43 @@ const FEATURES_FAQS: FaqItem[] = [
   {
     question: "Which channels can the AI agent actually answer?",
     answer:
-      "Web chat, SMS, WhatsApp, and inbound phone calls, all from one configured persona — plus outbound voice for proactive calling, behind its own compliance gate.",
+      "Web chat, SMS, WhatsApp, and inbound phone calls, all from one configured persona, plus outbound voice for proactive calling, behind its own compliance gate.",
   },
   {
     question: "Can I use my own phone number and sending domain?",
     answer:
-      "Yes — a dedicated phone number for SMS and calls, and a dedicated email sending domain, are both available so outbound messages carry your brand instead of a shared one.",
+      "Yes, a dedicated phone number for SMS and calls, and a dedicated email sending domain, are both available so outbound messages carry your brand instead of a shared one.",
   },
   {
     question: "Is the pipeline customizable, or fixed to six stages?",
     answer:
-      "Six stages is the shipped default (New through Won/Lost) built around how most sales pipelines actually run — deals, values, and stage timing are all yours to work with inside it.",
+      "Six stages is the shipped default (New through Won/Lost) built around how most sales pipelines actually run. Deals, values, and stage timing are all yours to work with inside it.",
   },
   {
     question: "Do forms and booking pages need a developer to set up?",
     answer:
-      "No — the form builder is drag-and-drop with six field types, and booking pages are configured through settings, not code. Both are ready to embed or share as a link immediately.",
+      "No, the form builder is drag-and-drop with six field types, and booking pages are configured through settings, not code. Both are ready to embed or share as a link immediately.",
   },
   {
     question: "Is there really a public API, or just a promise of one?",
     answer:
-      "It's live today — REST endpoints for contacts, deals, tasks, events, and form submissions, plus signed outbound webhooks, documented and ready to connect to Zapier, Make, or a custom script.",
+      "It's live today. REST endpoints for contacts, deals, tasks, events, and form submissions, plus signed outbound webhooks, documented and ready to connect to Zapier, Make, or a custom script.",
   },
 ];
 
 interface Feature { icon: typeof Bot; title: string; body: string }
 
 const AI_AGENTS: Feature[] = [
-  { icon: Bot, title: "One persona, every channel", body: "Write the system prompt, business hours, and escalation rules once. The same agent answers web chat, SMS, WhatsApp, and phone calls — no re-training four different bots." },
+  { icon: Bot, title: "One persona, every channel", body: "Write the system prompt, business hours, and escalation rules once. The same agent answers web chat, SMS, WhatsApp, and phone calls, no re-training four different bots." },
   { icon: MessageSquareText, title: "Embeddable web chat", body: "A one-line snippet drops a chat widget on any site. It can capture a name, email, and phone inline mid-conversation and hand off a Task the moment it does." },
-  { icon: Phone, title: "AI answers the phone", body: "Inbound calls get picked up, qualified, and — if the caller wants a callback — booked, using the same persona and the same context as every other channel." },
+  { icon: Phone, title: "AI answers the phone", body: "Inbound calls get picked up, qualified, and (if the caller wants a callback) booked, using the same persona and the same context as every other channel." },
   { icon: PhoneOutgoing, title: "Outbound voice, on your terms", body: "Click-to-call a single contact or launch a filtered campaign. A built-in compliance gate checks opt-out status, calling windows, and contact frequency before anything dials." },
 ];
 
 const CAPTURE: Feature[] = [
-  { icon: FileText, title: "Forms that build themselves", body: "A drag-order field builder, six field types, and a public hosted page or iframe embed. Every submission auto-creates a contact — and a deal, if you want one." },
-  { icon: CalendarClock, title: "Booking pages", body: "Share one link. Visitors pick an open slot, get an ICS-confirmed booking by email, and reminders send themselves — reschedules and cancellations included." },
-  { icon: ShareIcon, title: "Attribution that survives the click", body: "UTM source, medium, campaign, fbclid, and gclid are captured on every form submission and stored on the contact — so \"where did this lead actually come from\" has a real answer." },
+  { icon: FileText, title: "Forms that build themselves", body: "A drag-order field builder, six field types, and a public hosted page or iframe embed. Every submission auto-creates a contact, and a deal, if you want one." },
+  { icon: CalendarClock, title: "Booking pages", body: "Share one link. Visitors pick an open slot, get an ICS-confirmed booking by email, and reminders send themselves, reschedules and cancellations included." },
+  { icon: ShareIcon, title: "Attribution that survives the click", body: "UTM source, medium, campaign, fbclid, and gclid are captured on every form submission and stored on the contact, so \"where did this lead actually come from\" has a real answer." },
 ];
 
 const LEAD_CAPTURE_FLOW: FlowStep[] = [
@@ -94,14 +94,14 @@ const LEAD_CAPTURE_FLOW: FlowStep[] = [
 
 const OPERATE: Feature[] = [
   { icon: Users, title: "Contacts built for speed", body: "A fast, searchable list, CSV import in seconds, and a profile page with notes and a unified activity timeline pulling every email, text, call, and form fill into one feed." },
-  { icon: KanbanSquare, title: "A pipeline that shows the truth", body: "Six-stage Kanban board, drag-and-drop, days-in-stage on every card, and a lost-reason prompt — so next quarter's forecast is built on more than a guess." },
+  { icon: KanbanSquare, title: "A pipeline that shows the truth", body: "Six-stage Kanban board, drag-and-drop, days-in-stage on every card, and a lost-reason prompt, so next quarter's forecast is built on more than a guess." },
   { icon: Calendar, title: "One calendar, contact-linked", body: "A month grid, a due-today badge in the sidebar, and every event tied back to the contact it's about." },
-  { icon: CheckSquare, title: "Tasks that don't get lost", body: "Today, Overdue, Upcoming, Done — linked to the contact they're about, so follow-up never depends on remembering." },
+  { icon: CheckSquare, title: "Tasks that don't get lost", body: "Today, Overdue, Upcoming, Done, linked to the contact they're about, so follow-up never depends on remembering." },
   { icon: Search, title: "Find anything in one keystroke", body: "Cmd+K searches contacts, deals, tasks, events, and forms from anywhere in the app." },
 ];
 
 const CLOSE: Feature[] = [
-  { icon: Receipt, title: "Quotes clients can accept from their inbox", body: "Build a line-itemed quote with discount, tax, and terms, send it, and the recipient can accept, decline, or pay right from the email — no phone tag." },
+  { icon: Receipt, title: "Quotes clients can accept from their inbox", body: "Build a line-itemed quote with discount, tax, and terms, send it, and the recipient can accept, decline, or pay right from the email, no phone tag." },
   { icon: Zap, title: "Speed-to-lead automation", body: "A form submission can trigger an SMS and email sequence within seconds of arriving, with send-window and opt-out handling built in." },
   { icon: Mail, title: "Email and SMS from the same record", body: "Send from a contact's profile; replies route back to your own inbox, not a shared mailbox everyone has to check." },
 ];
@@ -114,8 +114,8 @@ const AUTOMATION_FLOW: FlowStep[] = [
 ];
 
 const REPORT: Feature[] = [
-  { icon: Globe, title: "Launch a client site in minutes", body: "Spin up a marketing site or a video-sales-letter funnel from a sectioned form — a live URL in one to three minutes." },
-  { icon: Webhook, title: "A public API that isn't an afterthought", body: "REST endpoints for contacts, deals, tasks, events, and form submissions, plus signed outbound webhooks — so a script or a Zapier flow sees exactly what your team sees." },
+  { icon: Globe, title: "Launch a client site in minutes", body: "Spin up a marketing site or a video-sales-letter funnel from a sectioned form, a live URL in one to three minutes." },
+  { icon: Webhook, title: "A public API that isn't an afterthought", body: "REST endpoints for contacts, deals, tasks, events, and form submissions, plus signed outbound webhooks, so a script or a Zapier flow sees exactly what your team sees." },
 ];
 
 function FeatureGroup({
@@ -197,7 +197,7 @@ export default async function FeaturesPage() {
         <FeatureGroup
           eyebrow="AI Agents"
           title="One persona. Every channel."
-          body="Configure the agent once — it answers consistently everywhere your leads actually reach out. Switch channels below to see the same conversation happen on each one."
+          body="Configure the agent once. It answers consistently everywhere your leads actually reach out. Switch channels below to see the same conversation happen on each one."
           items={AI_AGENTS}
           visual={<ChannelDemo />}
         />
@@ -205,7 +205,7 @@ export default async function FeaturesPage() {
           <FeatureGroup
             eyebrow="Capture"
             title="Turn visitors into contacts, automatically"
-            body="One form submission cascades through every channel on its own — watch the same lead move end to end."
+            body="One form submission cascades through every channel on its own, watch the same lead move end to end."
             items={CAPTURE}
             visual={<StepFlow steps={LEAD_CAPTURE_FLOW} />}
             tone="muted"
@@ -215,7 +215,7 @@ export default async function FeaturesPage() {
           <FeatureGroup
             eyebrow="Operate"
             title="The day-to-day, without the sprawl"
-            body="Contacts, pipeline, calendar, and tasks — connected, not scattered across tabs."
+            body="Contacts, pipeline, calendar, and tasks, connected, not scattered across tabs."
             items={OPERATE}
           />
         </div>

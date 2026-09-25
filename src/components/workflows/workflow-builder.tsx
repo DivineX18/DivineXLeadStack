@@ -491,26 +491,26 @@ function ReadinessChips({
       badges.push({
         code: "SA",
         title:
-          "Sub-account sender — this sub-account's own dedicated Twilio number is configured; SMS sends from it.",
+          "Sub-account sender. This sub-account's own dedicated Twilio number is configured; SMS sends from it.",
       });
     if (detail.smsAgency)
       badges.push({
         code: "A",
         title:
-          "Agency sender — the shared, deployment-wide Twilio sender is available to this sub-account.",
+          "Agency sender, the shared, deployment-wide Twilio sender is available to this sub-account.",
       });
   } else if (requirement === "email") {
     if (detail.emailSub)
       badges.push({
         code: "SA",
         title:
-          "Sub-account sender — this sub-account's own verified sending domain is active; email sends from it.",
+          "Sub-account sender. This sub-account's own verified sending domain is active; email sends from it.",
       });
     if (detail.emailAgency)
       badges.push({
         code: "A",
         title:
-          "Agency sender — the shared, deployment-wide email sender is available to this sub-account.",
+          "Agency sender, the shared, deployment-wide email sender is available to this sub-account.",
       });
   } else if (
     detail.whatsappGate &&
@@ -521,7 +521,7 @@ function ReadinessChips({
     badges.push({
       code: "SA",
       title:
-        "Sub-account sender — WhatsApp is enabled, a sender is configured, and at least one approved template exists.",
+        "Sub-account sender. WhatsApp is enabled, a sender is configured, and at least one approved template exists.",
     });
   }
 
@@ -599,7 +599,7 @@ function StepCard({
               : "text-muted-foreground"
           )}
         >
-          {unmet ? "Won't run — integration not configured" : nodeSummary(step)}
+          {unmet ? "Won't run, integration not configured" : nodeSummary(step)}
         </div>
         {requirement && (
           <ReadinessChips requirement={requirement} detail={readiness.detail} />

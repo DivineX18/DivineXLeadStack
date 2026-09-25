@@ -86,7 +86,7 @@ export default function CommunityRosterPage({
         method: "POST",
       });
       if (!res.ok) throw new Error();
-      toast.success("Marked paid — access granted");
+      toast.success("Marked paid, access granted");
     } catch (err) { toast.error(describeError(err, "Couldn't mark paid"), { duration: 12_000 });
     } finally {
       setBusy(null);

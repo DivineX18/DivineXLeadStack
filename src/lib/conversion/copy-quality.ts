@@ -92,38 +92,38 @@ const FABRICATION = [
   // words of a people/usage noun, so "10,000+ happy customers" and "500+
   // satisfied clients" are caught, not just "500 customers". A bare small
   // literal ("3 clients") is left alone to keep the HIGH signal precise.
-  { re: /\b(?:\d[\d,]{2,}\+?|\d+\+)\s*(?:[a-z]+\s+){0,2}(customers|clients|users|members|businesses|companies|people|students|patients|families|subscribers|downloads|reviews)\b/i, severity: "high" as const, note: "Looks like an invented customer/usage count — only use real, supplied numbers." },
+  { re: /\b(?:\d[\d,]{2,}\+?|\d+\+)\s*(?:[a-z]+\s+){0,2}(customers|clients|users|members|businesses|companies|people|students|patients|families|subscribers|downloads|reviews)\b/i, severity: "high" as const, note: "Looks like an invented customer/usage count, only use real, supplied numbers." },
   // Star ratings.
-  { re: /\b\d(\.\d)?\s?(?:\/\s?5\s?)?(?:star|stars|★)\b/i, severity: "medium" as const, note: "Star-rating claim — must be a real, verifiable rating, not generated." },
+  { re: /\b\d(\.\d)?\s?(?:\/\s?5\s?)?(?:star|stars|★)\b/i, severity: "medium" as const, note: "Star-rating claim, must be a real, verifiable rating, not generated." },
   // Bare statistic percentages (excluding pricing discounts, handled below).
-  { re: /\b\d{1,3}(\.\d+)?\s?%/, severity: "medium" as const, note: "Percentage/statistic claim — verify it's a real, sourced number, not fabricated." },
+  { re: /\b\d{1,3}(\.\d+)?\s?%/, severity: "medium" as const, note: "Percentage/statistic claim. Verify it's a real, sourced number, not fabricated." },
   // Unverified authority/proof phrases.
-  { re: /\b(as seen (on|in)|featured (on|in)|trusted by|voted (the )?(#?1|best|number one))\b/i, severity: "medium" as const, note: "Unverified proof/authority claim — only include if genuinely true and supplied." },
+  { re: /\b(as seen (on|in)|featured (on|in)|trusted by|voted (the )?(#?1|best|number one))\b/i, severity: "medium" as const, note: "Unverified proof/authority claim. Only include if genuinely true and supplied." },
   // Guarantee/refund claims — elevated to HIGH after the 10-customer stress
   // test shipped an invented "7-day money-back guarantee" on a page whose
   // brief explicitly supplied none. A fabricated refund promise is a legal
   // commitment the business never made; it must trip the review flag.
-  { re: /\b(100%\s?guarantee|guaranteed results|money[- ]back guarantee|full refund|we(?:'ll| will)? refund)\b/i, severity: "high" as const, note: "Guarantee/refund claim — only state a guarantee the business actually offers, with terms." },
+  { re: /\b(100%\s?guarantee|guaranteed results|money[- ]back guarantee|full refund|we(?:'ll| will)? refund)\b/i, severity: "high" as const, note: "Guarantee/refund claim, only state a guarantee the business actually offers, with terms." },
   // Legal/organizational status — tax-deductibility, charity registration,
   // licensure. Invented org status is a compliance violation, not weak copy.
-  { re: /\b(tax[- ]deductible|501\s?\(?c\)?\s?\(?3\)?|registered (?:charity|nonprofit)|licensed (?:and|&) insured)\b/i, severity: "high" as const, note: "Legal/organizational status claim — only include if the business actually stated it." },
+  { re: /\b(tax[- ]deductible|501\s?\(?c\)?\s?\(?3\)?|registered (?:charity|nonprofit)|licensed (?:and|&) insured)\b/i, severity: "high" as const, note: "Legal/organizational status claim. Only include if the business actually stated it." },
   // Clinical/professional endorsement claims.
-  { re: /\b(dermatologist|clinically|doctor|physician|fda)[- ](tested|approved|recommended|endorsed)\b/i, severity: "high" as const, note: "Clinical/professional endorsement — only include if genuinely supplied by the business." },
+  { re: /\b(dermatologist|clinically|doctor|physician|fda)[- ](tested|approved|recommended|endorsed)\b/i, severity: "high" as const, note: "Clinical/professional endorsement. Only include if genuinely supplied by the business." },
   // Invented capacity/scarcity mechanics (cohort caps, application windows).
-  { re: /\b(only \d+ (?:spots|seats|places|openings)|\d+ (?:participants|spots|seats|clients) maximum|one application per (?:quarter|month|year)|limited (?:spots|seats|availability))\b/i, severity: "high" as const, note: "Capacity/scarcity claim — never invent caps or windows the business didn't state." },
+  { re: /\b(only \d+ (?:spots|seats|places|openings)|\d+ (?:participants|spots|seats|clients) maximum|one application per (?:quarter|month|year)|limited (?:spots|seats|availability))\b/i, severity: "high" as const, note: "Capacity/scarcity claim, never invent caps or windows the business didn't state." },
   // Invented response/arrival-time promises ("answer in 60 seconds",
   // "on-site within 2 hours") — a service-speed commitment the business
   // never stated. Caught live: a generated HVAC hero promised "a real
   // answer in 60 seconds" when the supplied fact was only "a dispatcher
   // answers during operating hours".
-  { re: /\b(?:answer|response|reply|arrive|arrival|on.?site|call(?:ed)?\s?back)\w*\b.{0,25}\b(?:in|within)\s+\d+\s*(?:seconds?|minutes?|hours?)\b|\b(?:in|within)\s+\d+\s*(?:seconds?|minutes?|hours?)\b.{0,25}\b(?:answer|response|arrival|on.?site)\b/i, severity: "high" as const, note: "Response/arrival-time promise — only state a speed commitment the business actually made." },
+  { re: /\b(?:answer|response|reply|arrive|arrival|on.?site|call(?:ed)?\s?back)\w*\b.{0,25}\b(?:in|within)\s+\d+\s*(?:seconds?|minutes?|hours?)\b|\b(?:in|within)\s+\d+\s*(?:seconds?|minutes?|hours?)\b.{0,25}\b(?:answer|response|arrival|on.?site)\b/i, severity: "high" as const, note: "Response/arrival-time promise, only state a speed commitment the business actually made." },
   // Invented dollar-outcome promises ("reclaim $300-$800/month", "save
   // $2,000 a year") — caught in the Evidence Composition certification:
   // the model attached unsupplied recovery figures to a real audience
   // stat. An outcome number the business never stated is fabricated proof.
-  { re: /\b(?:save|reclaim|recover|find|earn|add|make)\w*\s+(?:up to\s+)?\$\d[\d,]*(?:\s*[-–]\s*\$?\d[\d,]*)?(?:\s*\/?\s*(?:mo|month|week|year|yr|day))?\b/i, severity: "high" as const, note: "Dollar-outcome promise — only state a figure the business actually supplied." },
+  { re: /\b(?:save|reclaim|recover|find|earn|add|make)\w*\s+(?:up to\s+)?\$\d[\d,]*(?:\s*[-–]\s*\$?\d[\d,]*)?(?:\s*\/?\s*(?:mo|month|week|year|yr|day))?\b/i, severity: "high" as const, note: "Dollar-outcome promise, only state a figure the business actually supplied." },
   // Invented impact ratios ("$25/month funds one child's program").
-  { re: /\$\d+(?:\/(?:mo|month))?\s+(?:funds|provides|feeds|educates|sponsors|buys)\s+(?:one|a|an|\d+)\b/i, severity: "high" as const, note: "Impact-ratio claim — only use a real, supplied program figure." },
+  { re: /\$\d+(?:\/(?:mo|month))?\s+(?:funds|provides|feeds|educates|sponsors|buys)\s+(?:one|a|an|\d+)\b/i, severity: "high" as const, note: "Impact-ratio claim, only use a real, supplied program figure." },
 ];
 
 /** Config keys that never hold marketing copy — skipped during extraction. */
@@ -197,7 +197,7 @@ function evaluateField(sectionType: string, field: string, text: string, issues:
 
   // Unreplaced template placeholder — always a shipping bug.
   if (TEMPLATE_PLACEHOLDER.test(text)) {
-    issues.push({ kind: "possible_fabrication", severity: "high", sectionType, field, excerpt: excerpt(text), note: "Template placeholder / fill-in-the-blank (e.g. [YEAR], [Child intro: …]) — replace with real content or delete before publishing." });
+    issues.push({ kind: "possible_fabrication", severity: "high", sectionType, field, excerpt: excerpt(text), note: "Template placeholder / fill-in-the-blank (e.g. [YEAR], [Child intro: …]), replace with real content or delete before publishing." });
   }
 
   // Headline laws (hero headline + section headers only).
@@ -208,10 +208,10 @@ function evaluateField(sectionType: string, field: string, text: string, issues:
     // not a prohibition — the failure mode is spending the headline position
     // on an action that carries little information.
     if (BOOKING_VERB_OPENER.test(text.trim())) {
-      issues.push({ kind: "weak_headline", severity: "low", sectionType, field, excerpt: excerpt(text), note: "Headline opens with an action verb — check it still communicates a concrete offer/outcome, not just the ask. Fine if the action itself carries the value." });
+      issues.push({ kind: "weak_headline", severity: "low", sectionType, field, excerpt: excerpt(text), note: "Headline opens with an action verb. Check it still communicates a concrete offer/outcome, not just the ask. Fine if the action itself carries the value." });
     }
     if (HEADLINE_NEGATIVES.test(text)) {
-      issues.push({ kind: "weak_headline", severity: "low", sectionType, field, excerpt: excerpt(text), note: "Headline negates an objection the prospect may not have had — check the negative frame reflects a demonstrated belief and beats positive framing." });
+      issues.push({ kind: "weak_headline", severity: "low", sectionType, field, excerpt: excerpt(text), note: "Headline negates an objection the prospect may not have had. Check the negative frame reflects a demonstrated belief and beats positive framing." });
     }
   }
 
@@ -219,7 +219,7 @@ function evaluateField(sectionType: string, field: string, text: string, issues:
   for (const w of BANNED_BUZZWORDS) {
     const re = new RegExp(`(^|[^a-z])${w.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}([^a-z]|$)`, "i");
     if (re.test(lower)) {
-      issues.push({ kind: "generic_filler", severity: "medium", sectionType, field, excerpt: excerpt(text), note: `Generic buzzword "${w}" — replace with a specific outcome, number, or mechanism.` });
+      issues.push({ kind: "generic_filler", severity: "medium", sectionType, field, excerpt: excerpt(text), note: `Generic buzzword "${w}", replace with a specific outcome, number, or mechanism.` });
       break; // one filler flag per field is enough signal
     }
   }
@@ -237,7 +237,7 @@ function evaluateField(sectionType: string, field: string, text: string, issues:
   if (isCtaField(field)) {
     const norm = lower.trim().replace(/[.!→>]+$/, "").trim();
     if (VAGUE_CTAS.has(norm)) {
-      issues.push({ kind: "vague_cta", severity: "medium", sectionType, field, excerpt: excerpt(text), note: `CTA "${text.trim()}" states the mechanic, not the outcome — say what they get.` });
+      issues.push({ kind: "vague_cta", severity: "medium", sectionType, field, excerpt: excerpt(text), note: `CTA "${text.trim()}" states the mechanic, not the outcome, say what they get.` });
     }
   }
 
@@ -245,7 +245,7 @@ function evaluateField(sectionType: string, field: string, text: string, issues:
   if (/headline/i.test(field)) {
     for (const re of NAME_SWAP_PATTERNS) {
       if (re.test(text)) {
-        issues.push({ kind: "name_swap_generic", severity: "medium", sectionType, field, excerpt: excerpt(text), note: "Headline would be true with the business name swapped out — make it specific to this offer/audience." });
+        issues.push({ kind: "name_swap_generic", severity: "medium", sectionType, field, excerpt: excerpt(text), note: "Headline would be true with the business name swapped out, make it specific to this offer/audience." });
         break;
       }
     }

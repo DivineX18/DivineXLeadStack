@@ -85,7 +85,7 @@ function Heading() {
         <h1 className="text-2xl font-semibold tracking-tight">Logs</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Inspect recent public-API requests and outbound webhook deliveries
-          for this sub-account. Read-only — useful for debugging integrations
+          for this sub-account. Read-only, useful for debugging integrations
           and failed deliveries.
         </p>
       </div>

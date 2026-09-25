@@ -205,7 +205,7 @@ export async function GET(
       {
         error: "availability_compute_failed",
         message:
-          "Couldn't compute availability — the booking page config may be malformed (working hours / timezone / duration).",
+          "Couldn't compute availability, the booking page config may be malformed (working hours / timezone / duration).",
       },
       { status: 500 },
     );

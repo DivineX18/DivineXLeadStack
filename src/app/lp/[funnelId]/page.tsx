@@ -80,7 +80,7 @@ export default async function PublicFunnelPage({
           style={{ backgroundColor: accent }}
         >
           <span>
-            ✓ You&apos;re in — {welcomeBannerMessage({ hasDownload: !!welcome.magnetUrl, deliveryLive: welcome.deliveryLive })}
+            ✓ You&apos;re in, {welcomeBannerMessage({ hasDownload: !!welcome.magnetUrl, deliveryLive: welcome.deliveryLive })}
           </span>
           {welcome.magnetUrl && (
             <a

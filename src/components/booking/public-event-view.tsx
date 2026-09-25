@@ -294,7 +294,7 @@ export function PublicEventView(props: Props) {
           <section className="space-y-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-center text-sm text-amber-700 dark:text-amber-400">
             <p className="font-medium">Awaiting payment</p>
             <p className="text-xs">
-              Pay to confirm — we&apos;ll send a confirmation once the
+              Pay to confirm. We&apos;ll send a confirmation once the
               payment lands.
             </p>
             <a

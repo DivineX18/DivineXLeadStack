@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
   if (!emailIsConfigured()) {
     return NextResponse.json(
-      { error: "Contact form isn't configured on this deployment yet — email us directly." },
+      { error: "Contact form isn't configured on this deployment yet. Email us directly." },
       { status: 503 },
     );
   }

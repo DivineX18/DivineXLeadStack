@@ -38,7 +38,7 @@ export default function AgencySetupPage() {
         <p className="text-sm text-muted-foreground">
           Optionally enter your remaining API keys here and let LeadStack write
           them to Vercel (and your local <code>.env.local</code>) for you. This
-          is an alternative to setting environment variables by hand — both
+          is an alternative to setting environment variables by hand, both
           paths are fully supported.
         </p>
       </div>

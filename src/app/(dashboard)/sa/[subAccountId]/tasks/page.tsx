@@ -245,7 +245,7 @@ function EmptyState({
     },
     overdue: {
       title: "No overdue tasks",
-      desc: "Clean slate — nothing's slipped.",
+      desc: "Clean slate, nothing's slipped.",
     },
     upcoming: {
       title: "No upcoming tasks",

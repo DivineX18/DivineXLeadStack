@@ -53,19 +53,19 @@ function describe(f: FunnelDoc): { stateLabel: string; stage: PlanStage } {
     // A draft that still needs real photography is a DIFFERENT customer
     // situation from a draft that is simply unreviewed — say which.
     draft: outstandingRequired > 0
-      ? { stateLabel: `Built — needs ${outstandingRequired} photo${outstandingRequired === 1 ? "" : "s"} from you`, stage: "needs_you" }
-      : { stateLabel: "Built — ready for your review", stage: "needs_you" },
-    ready_for_review: { stateLabel: "Built — ready for your review", stage: "needs_you" },
+      ? { stateLabel: `Built. Needs ${outstandingRequired} photo${outstandingRequired === 1 ? "" : "s"} from you`, stage: "needs_you" }
+      : { stateLabel: "Built, ready for your review", stage: "needs_you" },
+    ready_for_review: { stateLabel: "Built, ready for your review", stage: "needs_you" },
     changes_requested: { stateLabel: "Changes requested", stage: "needs_you" },
     // THE LAW, IN THE LABEL. Approving does not publish, so the label must
     // never let "Approved" read as finished.
-    approved: { stateLabel: "Approved — not published yet", stage: "in_progress" },
+    approved: { stateLabel: "Approved, not published yet", stage: "in_progress" },
     scheduled: { stateLabel: "Scheduled to go live", stage: "in_progress" },
     published: { stateLabel: "Live", stage: "live" },
     paused: { stateLabel: "Paused", stage: "inactive" },
     archived: { stateLabel: "Archived", stage: "inactive" },
   };
-  return byStatus[f.status] ?? { stateLabel: "Built — ready for your review", stage: "needs_you" };
+  return byStatus[f.status] ?? { stateLabel: "Built, ready for your review", stage: "needs_you" };
 }
 
 function nextActionFor(f: FunnelDoc, stage: PlanStage): GrowthPlanItem["nextAction"] {
@@ -86,12 +86,12 @@ function reviewNotesFor(f: FunnelDoc): string[] {
   if (required.length > 0) {
     notes.push(`${required.length} photo${required.length === 1 ? "" : "s"} still needed before this works properly.`);
   } else if (outstanding.length > 0) {
-    notes.push(`Publishable now — ${outstanding.length} real photo${outstanding.length === 1 ? "" : "s"} would make it stronger.`);
+    notes.push(`Publishable now, ${outstanding.length} real photo${outstanding.length === 1 ? "" : "s"} would make it stronger.`);
   }
   // Customer-level only. The Critic's findings and reasoning stay internal
   // (U1); the customer is told a review happened, not what the model thought.
   if (!f.criticVerdict) notes.push("Not reviewed yet.");
-  if (f.status !== "published") notes.push("Not public yet — publishing is a separate step you control.");
+  if (f.status !== "published") notes.push("Not public yet. Publishing is a separate step you control.");
   return notes;
 }
 

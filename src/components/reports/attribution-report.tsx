@@ -340,12 +340,12 @@ function Cells({ stats, currency }: { stats: RowStats; currency: string }) {
         {stats.wonValue > 0 ? (
           formatCurrency(stats.wonValue, currency)
         ) : (
-          <span className="text-muted-foreground">—</span>
+          <span className="text-muted-foreground">-</span>
         )}
       </td>
       <td className="px-5 py-2.5 text-right tabular-nums">
         {conversion === null ? (
-          <span className="text-muted-foreground">—</span>
+          <span className="text-muted-foreground">-</span>
         ) : (
           `${conversion}%`
         )}

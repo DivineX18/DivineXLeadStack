@@ -125,7 +125,7 @@ function canvasWrapStyle(
       return {
         backgroundImage: `linear-gradient(180deg, ${accentColor}14 0%, ${accentColor}05 100%)`,
       };
-    case "photographic": // v1: designed immersive fallback — never a fabricated stock photo
+    case "photographic": // v1: designed immersive fallback, never a fabricated stock photo
     case "dark_immersive":
       return pageDark
         ? {
@@ -312,7 +312,7 @@ export function PublicFunnelView({
                   successRedirect={
                     funnel.status === "published"
                       ? funnel.bridge?.nextFunnelId
-                        ? // Straight to the next offer — no extra click. The
+                        ? // Straight to the next offer, no extra click. The
                           // offer page shows a confirmation bar (?welcome=1)
                           // with the delivery note + download link, so the
                           // visitor still sees their signup landed.
@@ -334,11 +334,11 @@ export function PublicFunnelView({
                           // less than before.
                           message: funnel.leadMagnetAsset
                             ? deliveryLive
-                              ? "Check your inbox — your download is on its way to your email. You can also grab it right here:"
+                              ? "Check your inbox. Your download is on its way to your email. You can also grab it right here:"
                               : "Your download is ready right here:"
                             : deliveryLive
-                              ? "Check your inbox — everything you need is on its way to your email."
-                              : "Thanks — we've got your details and someone will be in touch.",
+                              ? "Check your inbox. Everything you need is on its way to your email."
+                              : "Thanks, we've got your details and someone will be in touch.",
                           downloadUrl: funnel.leadMagnetAsset?.url,
                           downloadName: funnel.leadMagnetAsset?.filename,
                         }

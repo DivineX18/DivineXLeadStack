@@ -64,7 +64,7 @@ export function AssessmentHistoryCard({ dashboardSummary }: { dashboardSummary: 
         </p>
       )}
       <p className="mt-3 text-[11px] text-[var(--dx-text-primary)]/30">
-        Showing the latest assessment only — full paginated history is a follow-up once a dedicated bridge endpoint exists.
+        Showing the latest assessment only. Full paginated history is a follow-up once a dedicated bridge endpoint exists.
       </p>
     </AscendCardShell>
   );

@@ -32,7 +32,7 @@ export async function POST(
 
   if (!aiIsConfigured()) {
     return NextResponse.json(
-      { error: "AI Agents isn't configured on this deployment — set OPENROUTER_API_KEY to enable design reviews." },
+      { error: "AI Agents isn't configured on this deployment. Set OPENROUTER_API_KEY to enable design reviews." },
       { status: 503 },
     );
   }

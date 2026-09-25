@@ -22,7 +22,7 @@ const TEMPLATE_DOWNLOAD_FILENAME = `${CUSTOM_BRAND.name.toLowerCase().replace(/[
 type MappableField = "name" | "email" | "phone" | "company" | "source" | "tags";
 
 const CONTACT_FIELDS: { value: MappableField | ""; label: string }[] = [
-  { value: "", label: "— Skip column —" },
+  { value: "", label: ". Skip column, " },
   { value: "name", label: "Name" },
   { value: "email", label: "Email" },
   { value: "phone", label: "Phone" },
@@ -183,7 +183,7 @@ export function ImportContactsDialog({
           }`,
         );
       } else {
-        toast.error("No contacts imported — check the errors below.");
+        toast.error("No contacts imported. Check the errors below.");
       }
     } finally {
       setImporting(false);
@@ -203,7 +203,7 @@ export function ImportContactsDialog({
           <SheetTitle>Import contacts from CSV</SheetTitle>
           <SheetDescription>
             Drop a CSV export from Sheets, HubSpot, Pipedrive, or anywhere else
-            — we&apos;ll auto-match the columns. Need a starting point?{" "}
+. We&apos;ll auto-match the columns. Need a starting point?{" "}
             <a
               href="/contacts-template.csv"
               download={TEMPLATE_DOWNLOAD_FILENAME}
@@ -277,7 +277,7 @@ export function ImportContactsDialog({
                           <td className="px-3 py-2 font-medium">{h}</td>
                           <td className="px-3 py-2 text-xs text-muted-foreground">
                             {rows.slice(0, 2).map((r) => r[h]).filter(Boolean).join(" · ") ||
-                              "—"}
+                              "-"}
                           </td>
                           <td className="px-3 py-2">
                             <select
@@ -305,7 +305,7 @@ export function ImportContactsDialog({
                 {!hasEmailColumn && (
                   <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
                     <AlertCircle className="h-3.5 w-3.5" />
-                    Map at least one column to Email — rows without emails get
+                    Map at least one column to Email, rows without emails get
                     skipped.
                   </p>
                 )}

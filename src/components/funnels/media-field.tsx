@@ -112,7 +112,7 @@ export function VideoField({
         ? "YouTube link recognised."
         : result.provider === "vimeo"
           ? "Vimeo link recognised."
-          : "Using this link as-is — it must be embeddable.",
+          : "Using this link as-is. It must be embeddable.",
     );
   }
 
@@ -126,7 +126,7 @@ export function VideoField({
         className="h-9"
       />
       <p className="text-xs text-muted-foreground">
-        {note ?? "Paste the normal link from your browser — we'll turn it into an embed."}
+        {note ?? "Paste the normal link from your browser, we'll turn it into an embed."}
       </p>
     </div>
   );

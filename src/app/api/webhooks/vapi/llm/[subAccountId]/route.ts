@@ -187,7 +187,7 @@ export async function POST(
     const provided = new URL(request.url).searchParams.get("s");
     const expected = process.env.VAPI_WEBHOOK_SECRET?.trim();
     console.warn(
-      `[vapi/llm] 401 — webhook secret mismatch. providedSecret=${
+      `[vapi/llm] 401, webhook secret mismatch. providedSecret=${
         provided ? "present" : "MISSING"
       } serverSecretConfigured=${expected ? "yes" : "NO"} ` +
         `match=${provided?.trim() === expected}. ` +
@@ -314,7 +314,7 @@ export async function POST(
     // visible in the server logs, and degrade gracefully so the live call
     // doesn't drop with a provider-fault 500.
     console.error(
-      `[vapi/llm] UNHANDLED error sa=${subAccountId} —`,
+      `[vapi/llm] UNHANDLED error sa=${subAccountId} -`,
       outerErr,
     );
     const fallbackText =

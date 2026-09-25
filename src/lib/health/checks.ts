@@ -63,7 +63,7 @@ function rollupMessage(status: HealthStatus, label: string): string {
     case "ok":
       return `${label} configured and reachable.`;
     case "partial":
-      return `${label} partially configured — see details.`;
+      return `${label} partially configured. See details.`;
     case "missing":
       return `${label} not configured.`;
     case "error":
@@ -157,7 +157,7 @@ async function checkFirebaseAdmin(): Promise<IntegrationHealth> {
     subChecks.push({
       label: "Firestore admin ping",
       status: "skipped",
-      detail: "Skipped — env vars missing.",
+      detail: "Skipped, env vars missing.",
     });
   }
 
@@ -258,7 +258,7 @@ async function checkStripe(): Promise<IntegrationHealth> {
     subChecks.push({
       label: "Live API ping",
       status: "skipped",
-      detail: "Skipped — env vars missing.",
+      detail: "Skipped, env vars missing.",
     });
   }
 
@@ -351,7 +351,7 @@ async function checkResend(): Promise<IntegrationHealth> {
           label: "Sender domain",
           status: "partial",
           detail:
-            "Using Resend's sandbox domain — fine for testing, untrusted in production.",
+            "Using Resend's sandbox domain, fine for testing, untrusted in production.",
         });
       }
     }
@@ -359,7 +359,7 @@ async function checkResend(): Promise<IntegrationHealth> {
     subChecks.push({
       label: "Live API ping",
       status: "skipped",
-      detail: "Skipped — env vars missing.",
+      detail: "Skipped, env vars missing.",
     });
   }
 
@@ -470,7 +470,7 @@ async function checkTwilio(): Promise<IntegrationHealth> {
           subChecks.push({
             label: "Inbound webhook URL",
             status: "partial",
-            detail: `Twilio is POSTing to ${actual} — expected ${expected}.`,
+            detail: `Twilio is POSTing to ${actual}, expected ${expected}.`,
           });
         }
       }
@@ -479,7 +479,7 @@ async function checkTwilio(): Promise<IntegrationHealth> {
     subChecks.push({
       label: "Live API ping",
       status: "skipped",
-      detail: "Skipped — env vars missing.",
+      detail: "Skipped, env vars missing.",
     });
   }
 
@@ -494,7 +494,7 @@ async function checkTwilio(): Promise<IntegrationHealth> {
     label: "Dedicated SMS + WhatsApp",
     status: "skipped",
     detail:
-      "Configured per sub-account (each sub-account's own Twilio creds + WhatsApp sender, behind the agency WhatsApp gate) — not covered by this agency-level check.",
+      "Configured per sub-account (each sub-account's own Twilio creds + WhatsApp sender, behind the agency WhatsApp gate), not covered by this agency-level check.",
   });
 
   const status = rollup(subChecks);
@@ -552,7 +552,7 @@ async function checkQstash(): Promise<IntegrationHealth> {
     subChecks.push({
       label: "Live API ping",
       status: "skipped",
-      detail: "Skipped — env vars missing.",
+      detail: "Skipped, env vars missing.",
     });
   }
 
@@ -587,7 +587,7 @@ async function checkAutomationsSecret(): Promise<IntegrationHealth> {
     status: ok ? "ok" : "missing",
     message: ok
       ? "Unsubscribe HMAC secret configured."
-      : "Unsubscribe HMAC secret missing — links would fail to verify.",
+      : "Unsubscribe HMAC secret missing. Links would fail to verify.",
     subChecks,
   };
 }
@@ -671,8 +671,8 @@ async function checkMapbox(): Promise<IntegrationHealth> {
     detail: formatOk
       ? undefined
       : token.startsWith("sk.")
-        ? "Secret token (sk.*) detected. NEVER put a secret token in NEXT_PUBLIC_* — it's shipped to every client. Use a public token (pk.*)."
-        : "Token doesn't start with `pk.` — Mapbox public tokens have that prefix.",
+        ? "Secret token (sk.*) detected. NEVER put a secret token in NEXT_PUBLIC_*, it's shipped to every client. Use a public token (pk.*)."
+        : "Token doesn't start with `pk.`. Mapbox public tokens have that prefix.",
   });
 
   const ping = await withTimeout(async () => {
@@ -905,7 +905,7 @@ async function checkVapi(): Promise<IntegrationHealth> {
     subChecks.push({
       label: "Live API ping",
       status: "skipped",
-      detail: "Skipped — env vars missing.",
+      detail: "Skipped, env vars missing.",
     });
   }
 
@@ -953,7 +953,7 @@ async function checkMeta(): Promise<IntegrationHealth> {
           label: "META_APP_SECRET",
           status: appSecret ? "ok" : "missing",
           detail:
-            "Optional. Both META_APP_ID + META_APP_SECRET power the unified inbox (Messenger + IG DMs) AND the Social Planner — one connection serves both.",
+            "Optional. Both META_APP_ID + META_APP_SECRET power the unified inbox (Messenger + IG DMs) AND the Social Planner, one connection serves both.",
         },
       ],
     };
@@ -1001,7 +1001,7 @@ async function checkMeta(): Promise<IntegrationHealth> {
     status: verifyToken ? "ok" : "partial",
     detail: verifyToken
       ? "Echoed during the inbound webhook handshake."
-      : "Missing — inbound Messenger/Instagram messages won't reach the INBOX until it's set. The Social Planner (outbound posting) is unaffected.",
+      : "Missing, inbound Messenger/Instagram messages won't reach the INBOX until it's set. The Social Planner (outbound posting) is unaffected.",
   });
 
   // Informational only — posting permissions can't be verified from env vars.
@@ -1012,7 +1012,7 @@ async function checkMeta(): Promise<IntegrationHealth> {
     label: "Social Planner posting",
     status: "skipped",
     detail:
-      "Posting (pages_manage_posts + instagram_content_publish) requires Meta App Review and is granted per-connection — verified by the capability badges on the Settings → Facebook & Instagram card, not by this env-level check.",
+      "Posting (pages_manage_posts + instagram_content_publish) requires Meta App Review and is granted per-connection, verified by the capability badges on the Settings → Facebook & Instagram card, not by this env-level check.",
   });
 
   const status = rollup(subChecks);

@@ -185,7 +185,7 @@ export async function moveDeal(
     type: "pipeline_moved",
     createdBy: opts.userId,
     content: `Deal "${deal.title}" moved from ${getStage(deal.stageId).label} to ${getStage(newStageId).label}${
-      newStageId === "lost" && opts.lostReason ? ` — ${opts.lostReason}` : ""
+      newStageId === "lost" && opts.lostReason ? `, ${opts.lostReason}` : ""
     }`,
     meta: {
       dealId: deal.id,

@@ -82,7 +82,7 @@ export function AscendRolloutSection() {
         <div>
           <h2 className="text-sm font-semibold">Ascend OS rollout</h2>
           <p className="text-xs text-muted-foreground">
-            Controls whether the Full Ascend unified shell activates at all —
+            Controls whether the Full Ascend unified shell activates at all
             off by default deployment-wide until switched on here, regardless
             of any individual sub-account&apos;s entitlements.
           </p>

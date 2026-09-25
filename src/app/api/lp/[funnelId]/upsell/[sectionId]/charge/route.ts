@@ -91,7 +91,7 @@ export async function POST(
   const nextUrlFor = (targetFunnelId: string | null | undefined) =>
     targetFunnelId
       ? `/lp/${targetFunnelId}?session_id=${body.checkoutSessionId}`
-      : // End of the chain — the order-confirmation thank-you page
+      : // End of the chain, the order-confirmation thank-you page
         // ("add the thank you after the checkout page").
         `/lp/${funnelId}/thanks?paid=1`;
 

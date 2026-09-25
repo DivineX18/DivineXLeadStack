@@ -35,7 +35,7 @@ export function ConditionsEditor({
     <div className="space-y-2">
       {all.length === 0 && (
         <p className="text-xs text-muted-foreground">
-          No conditions — runs for everyone (trigger) / always takes the “yes”
+          No conditions. Runs for everyone (trigger) / always takes the “yes”
           path (if/else).
         </p>
       )}

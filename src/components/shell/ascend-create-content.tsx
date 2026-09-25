@@ -76,7 +76,7 @@ export function AscendCreateContent({
   isAdmin,
   websiteMaxSites,
   title = "Create",
-  description = "Build funnels and websites — the same proven builders, native to Ascend.",
+  description = "Build funnels and websites, the same proven builders, native to Ascend.",
   // The canonical Ascend funnel editor is /create/funnel/{id} (singular). The
   // plural default sent every click through the /create/funnels/{id} legacy
   // shim, which exists only to redirect old links and costs a round trip; and
@@ -283,7 +283,7 @@ function AscendWebsitesSection({
       const res = await fetch(`/api/sub-accounts/${saId}/website`, { method: "POST" });
       const payload = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(payload.error ?? "Could not add website.");
-      toast.success("New website draft added — fill it in and build.");
+      toast.success("New website draft added. Fill it in and build.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not add website.");
     } finally {
@@ -366,7 +366,7 @@ function ActivationGate({ state, onRefresh }: { state: GitpageGateState; onRefre
     setRefreshing(true);
     try {
       const ok = await onRefresh();
-      toast[ok ? "success" : "error"](ok ? "Status refreshed." : "Couldn't refresh — try again.");
+      toast[ok ? "success" : "error"](ok ? "Status refreshed." : "Couldn't refresh. Try again.");
     } finally {
       setRefreshing(false);
     }
@@ -387,7 +387,7 @@ function ActivationGate({ state, onRefresh }: { state: GitpageGateState; onRefre
           </h3>
           {keyInvalid ? (
             <p className="mt-1 text-sm text-muted-foreground">
-              The website-builder API key was rejected — it may have been rotated upstream. Update{" "}
+              The website-builder API key was rejected. It may have been rotated upstream. Update{" "}
               <code>GITPAGE_API_KEY</code> in your hosting env vars and redeploy.
             </p>
           ) : (

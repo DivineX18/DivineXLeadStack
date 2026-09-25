@@ -22,7 +22,7 @@ function getSecret(): string {
   const secret = process.env.AUTOMATIONS_TOKEN_SECRET;
   if (!secret) {
     throw new Error(
-      "AUTOMATIONS_TOKEN_SECRET is not set — required to sign community member tokens.",
+      "AUTOMATIONS_TOKEN_SECRET is not set, required to sign community member tokens.",
     );
   }
   return secret;

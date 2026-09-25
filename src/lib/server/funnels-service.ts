@@ -175,8 +175,8 @@ export async function createFunnelServerSide(opts: {
             config: {
               headline:
                 opts.chainRole === "downsell"
-                  ? "Wait — how about this instead?"
-                  : "Wait — add this to your order?",
+                  ? "Wait, how about this instead?"
+                  : "Wait. Add this to your order?",
               bullets: [],
               priceCents: 0,
               acceptLabel: "Yes, add it!",
@@ -458,7 +458,7 @@ async function assertNoChainCycle(
     const next = queue.shift()!;
     if (next === funnelId) {
       throw new FunnelValidationError(
-        "This chain loops back to the funnel you're editing — a customer could get stuck. Fix the accept/decline links before saving.",
+        "This chain loops back to the funnel you're editing, a customer could get stuck. Fix the accept/decline links before saving.",
       );
     }
     if (visited.has(next) || visited.size > 200) continue;
@@ -563,7 +563,7 @@ export async function updateFunnelServerSide(opts: {
     if (blanks.length > 0) {
       throw new FunnelValidationError(
         `Fill in or remove these empty sections before publishing: ${blanks
-          .map((b) => `${b.sectionType} — ${b.reason}`)
+          .map((b) => `${b.sectionType}, ${b.reason}`)
           .join(" ")}`,
       );
     }
@@ -656,7 +656,7 @@ export async function deleteFunnelServerSide(
     .get();
   if (!linkedChildren.empty) {
     throw new FunnelValidationError(
-      "This funnel has linked upsell/downsell steps — remove those from the Post-purchase flow panel first.",
+      "This funnel has linked upsell/downsell steps. Remove those from the Post-purchase flow panel first.",
     );
   }
 

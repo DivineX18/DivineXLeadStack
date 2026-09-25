@@ -136,7 +136,7 @@ export function composeStrategyNodes(input: ComposeStrategyInput): {
   nodes.goal = {
     id: "goal",
     type: "goal",
-    config: { label: `Goal reached — ${plan.goalState}` },
+    config: { label: `Goal reached, ${plan.goalState}` },
     next: null,
   };
 
@@ -235,7 +235,7 @@ export function composeStrategyNodes(input: ComposeStrategyInput): {
   nodes.task = {
     id: "task",
     type: "create_task",
-    config: { title: `Follow up with {{contact.firstName}} — ${displayName} (${plan.goalState} not reached)`, dueInDays: 0 },
+    config: { title: `Follow up with {{contact.firstName}}, ${displayName} (${plan.goalState} not reached)`, dueInDays: 0 },
     next: null,
   };
 

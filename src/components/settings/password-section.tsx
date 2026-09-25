@@ -54,7 +54,7 @@ export function PasswordSection() {
       if (code.includes("auth/wrong-password") || code.includes("auth/invalid-credential")) {
         toast.error("Current password is incorrect.");
       } else if (code.includes("auth/weak-password")) {
-        toast.error("New password is too weak — try a longer one.");
+        toast.error("New password is too weak. Try a longer one.");
       } else if (code.includes("auth/too-many-requests")) {
         toast.error("Too many attempts. Try again in a few minutes.");
       } else if (code.includes("auth/requires-recent-login")) {

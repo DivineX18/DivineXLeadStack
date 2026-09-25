@@ -108,7 +108,7 @@ export function SubAccountWebhooksSection() {
           <div className="min-w-0 flex-1">
             <h2 className="text-base font-semibold">Webhooks</h2>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              POST events to your own endpoints — Slack, Make.com, n8n, or
+              POST events to your own endpoints. Slack, Make.com, n8n, or
               a custom server.
             </p>
           </div>
@@ -265,7 +265,7 @@ export function SubAccountWebhooksSection() {
     try {
       await navigator.clipboard.writeText(secret);
       toast.success("Copied to clipboard.");
-    } catch (err) { toast.error(describeError(err, "Clipboard blocked — copy manually."), { duration: 12_000 });
+    } catch (err) { toast.error(describeError(err, "Clipboard blocked. Copy manually."), { duration: 12_000 });
     }
   }
 
@@ -299,7 +299,7 @@ export function SubAccountWebhooksSection() {
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-semibold">Webhooks</h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            POST events to your own endpoints — Slack, Make.com, n8n, or a
+            POST events to your own endpoints. Slack, Make.com, n8n, or a
             custom server. Each delivery is signed with HMAC-SHA256 so you
             can verify it came from us.
           </p>
@@ -378,7 +378,7 @@ export function SubAccountWebhooksSection() {
             <Label>Events ({form.events.size} selected)</Label>
             <p className="text-[11px] text-muted-foreground">
               A webhook subscribes to one category. Pick events from a single
-              category below — the rest lock until you clear your selection.
+              category below, the rest lock until you clear your selection.
             </p>
             <div className="space-y-3 rounded-lg border p-3">
               {WEBHOOK_EVENT_CATEGORIES.map((group) => {
@@ -588,7 +588,7 @@ function SubRow({
           <p className="mt-1 text-[11px] text-muted-foreground">
             {lastDelivery
               ? `last delivery ${lastDelivery.toLocaleString()} (HTTP ${
-                  sub.lastDeliveryStatus ?? "—"
+                  sub.lastDeliveryStatus ?? "-"
                 })`
               : "no deliveries yet"}
             {sub.consecutiveFailures > 0 && (
@@ -686,7 +686,7 @@ function RevealPanel({
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-            Copy your signing secret now — you won&apos;t see it again
+            Copy your signing secret now. You won&apos;t see it again
           </p>
           <p className="mt-0.5 text-xs text-amber-800/80 dark:text-amber-200/70">
             Verify the <code>LeadStack-Signature</code> header on each

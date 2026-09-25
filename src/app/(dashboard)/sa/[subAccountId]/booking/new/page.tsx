@@ -30,7 +30,7 @@ export default function NewBookingPagePage() {
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Create the public URL leads will use to grab a slot. Save as a
-          draft first — publish when you&apos;re ready to share.
+          draft first, publish when you&apos;re ready to share.
         </p>
       </header>
 

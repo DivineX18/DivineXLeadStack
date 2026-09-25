@@ -122,7 +122,7 @@ export async function POST(
       const tpl = tplSnap.exists ? (tplSnap.data() as WhatsappTemplateDoc) : null;
       if (!tpl || tpl.status !== "approved" || !tpl.contentSid) {
         return NextResponse.json(
-          { error: "That WhatsApp template isn't approved yet — only approved templates can be used." },
+          { error: "That WhatsApp template isn't approved yet. Only approved templates can be used." },
           { status: 400 },
         );
       }

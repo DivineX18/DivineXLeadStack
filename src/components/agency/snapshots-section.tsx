@@ -47,7 +47,7 @@ export function SnapshotsSection({ subs }: { subs: SubOption[] }) {
 
   const subLabel = useCallback(
     (id: string | null) => {
-      if (!id) return "—";
+      if (!id) return "-";
       const s = subs.find((x) => x.id === id);
       if (!s) return id.slice(0, 8);
       return s.accountNumber ? `#${s.accountNumber} ${s.name}` : s.name;
@@ -206,9 +206,9 @@ export function SnapshotsSection({ subs }: { subs: SubOption[] }) {
 
       <p className="mt-3 text-xs text-muted-foreground">
         Apply a snapshot when you{" "}
-        <strong>create a new sub-account</strong> — pick it from the{" "}
+        <strong>create a new sub-account</strong>. Pick it from the{" "}
         &ldquo;Start from a snapshot&rdquo; dropdown on the new sub-account form.
-        Imported workflows arrive as <strong>drafts</strong> — review and
+        Imported workflows arrive as <strong>drafts</strong>. Review and
         activate them in the new sub-account. A workflow triggered by a form in
         the same snapshot is auto-linked to the imported form; any other
         form/WhatsApp-template reference is cleared for you to reconnect.

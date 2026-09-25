@@ -70,7 +70,7 @@ export function formatBillingPrice(
   priceCents: number | null | undefined,
   currency: string | null | undefined,
 ): string {
-  if (typeof priceCents !== "number" || !currency) return "—";
+  if (typeof priceCents !== "number" || !currency) return "-";
   const code = currency.toUpperCase();
   try {
     return new Intl.NumberFormat("en-US", {

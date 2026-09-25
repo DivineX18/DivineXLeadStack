@@ -37,14 +37,14 @@ export const TEMPLATE_PRESETS: ReadonlyArray<TemplatePreset> = [
     subject: "Thanks for getting in touch, {{contact.firstName}}",
     body: `Hi {{contact.firstName}},
 
-Thanks for reaching out to {{workspace.name}} — your message landed and we'll be in touch within 24 hours.
+Thanks for reaching out to {{workspace.name}}, your message landed and we'll be in touch within 24 hours.
 
 If anything's urgent in the meantime, just reply to this email.
 
 Cheers,
 {{owner.firstName}}
 
-—
+
 Don't want emails like this? {{unsubscribeLink}}`,
   },
   {
@@ -53,7 +53,7 @@ Don't want emails like this? {{unsubscribeLink}}`,
     description: "Short reply that sets expectations.",
     type: "sms",
     subject: "",
-    body: "Hi {{contact.firstName}}, thanks for reaching out to {{workspace.name}} — we'll be in touch within 24 hours. Reply STOP to opt out.",
+    body: "Hi {{contact.firstName}}, thanks for reaching out to {{workspace.name}}, we'll be in touch within 24 hours. Reply STOP to opt out.",
   },
   {
     id: "notify-owner-email",
@@ -70,7 +70,7 @@ Phone: {{contact.phone}}
 
 Reply to them directly at {{contact.email}}, or open the lead to follow up.
 
-—
+
 {{unsubscribeLink}}`,
   },
 ];

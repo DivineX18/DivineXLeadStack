@@ -37,7 +37,7 @@ export const FLOW_OPERATIONS_TOUR: TourDef = {
   version: 1,
   steps: [
     {
-      title: "You're in Flow — your Operations workspace",
+      title: "You're in Flow, your Operations workspace",
       body:
         "This is the execution half of your growth system. Ascend tells you what to do; " +
         "Flow is where you do it.",
@@ -47,7 +47,7 @@ export const FLOW_OPERATIONS_TOUR: TourDef = {
       title: "Everything you operate lives here",
       body:
         "CRM and leads, pipelines, funnels and websites, forms and booking, campaigns, " +
-        "follow-up and automations — all in this workspace.",
+        "follow-up and automations, all in this workspace.",
     },
     {
       anchor: "nav-intelligence-return",
@@ -86,7 +86,7 @@ export const FLOW_ONLY_TOUR: TourDef = {
       anchor: "nav-contacts",
       title: "Manage",
       body:
-        "Contacts is your CRM — every lead, their history, and every conversation in one place. " +
+        "Contacts is your CRM, every lead, their history, and every conversation in one place. " +
         "Pipeline tracks each deal through its stages.",
     },
     {
@@ -100,7 +100,7 @@ export const FLOW_ONLY_TOUR: TourDef = {
       anchor: "nav-workflows",
       title: "Automate",
       body:
-        "Workflows handle the follow-up for you — respond the moment a lead arrives, nurture " +
+        "Workflows handle the follow-up for you, respond the moment a lead arrives, nurture " +
         "over time, and chase what goes quiet. Broadcasts send to a whole segment at once.",
     },
     {

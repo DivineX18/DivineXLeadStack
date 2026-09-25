@@ -44,7 +44,7 @@ function requireConfig(): { token: string; projectId: string; teamId?: string } 
   const projectId = process.env.VERCEL_PROJECT_ID?.trim();
   if (!token || !projectId) {
     throw new VercelError(
-      "Vercel is not configured — set VERCEL_TOKEN + VERCEL_PROJECT_ID.",
+      "Vercel is not configured. Set VERCEL_TOKEN + VERCEL_PROJECT_ID.",
     );
   }
   const teamId = process.env.VERCEL_TEAM_ID?.trim() || undefined;

@@ -106,7 +106,7 @@ export default function BroadcastsListPage() {
                     <p className="ml-9 mt-1 text-xs text-muted-foreground">
                       {audienceLabel(b.audienceFilter)} ·{" "}
                       {formatRelativeTime(b.createdAt)} · by{" "}
-                      {b.createdBy?.displayName || b.createdBy?.email || "—"}
+                      {b.createdBy?.displayName || b.createdBy?.email || "-"}
                     </p>
                   </div>
                   <div className="flex items-center gap-4 text-xs">

@@ -102,7 +102,7 @@ function defaultActivityContent(
   const totalDisplay = formatCurrency(totals.total, quote.currency);
   const label = quote.kind === "invoice" ? "Invoice" : "Quote";
   const base = `${label} ${quote.quoteNumber} (${totalDisplay})`;
-  const suffix = extra ? ` — ${extra}` : "";
+  const suffix = extra ? `, ${extra}` : "";
   switch (event) {
     case "quote_sent":
       return `${base} sent to recipient${suffix}.`;

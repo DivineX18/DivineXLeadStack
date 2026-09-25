@@ -40,7 +40,7 @@ export function AppIconSection() {
       if (!res.ok) throw new Error(payload.error ?? "Upload failed.");
       setPreviewNonce(Date.now());
       toast.success(
-        "App icon updated — new installs use it right away. Already-installed devices keep the old icon until they reinstall.",
+        "App icon updated, new installs use it right away. Already-installed devices keep the old icon until they reinstall.",
       );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed.");
@@ -74,7 +74,7 @@ export function AppIconSection() {
           <h2 className="text-sm font-semibold">Mobile app icon</h2>
           <p className="text-xs text-muted-foreground">
             The home-screen icon shown when someone installs your app on
-            their phone. Separate from the logo above — icons need a square
+            their phone. Separate from the logo above, icons need a square
             mark, not a wide wordmark.
           </p>
         </div>
@@ -105,7 +105,7 @@ export function AppIconSection() {
           <p className="text-xs text-muted-foreground">
             Upload a square image, ideally 512×512 or larger (PNG, JPG, WebP,
             or SVG). We generate every size phones need, including the padded
-            variant Android crops into a circle — shown right.
+            variant Android crops into a circle, shown right.
           </p>
         </div>
       </div>

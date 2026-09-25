@@ -27,10 +27,10 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata() {
   const brand = await resolveCustomBrand();
   return {
-    title: `Pricing — ${brand.name} CRM & Growth Operations Platform`,
-    description: `Simple, transparent CRM pricing for ${brand.name}. One monthly subscription for contacts, pipeline, AI agents, quotes, booking pages, and more — cancel anytime, no contract.`,
+    title: `Pricing, ${brand.name} CRM & Growth Operations Platform`,
+    description: `Simple, transparent CRM pricing for ${brand.name}. One monthly subscription for contacts, pipeline, AI agents, quotes, booking pages, and more. Cancel anytime, no contract.`,
     openGraph: {
-      title: `Pricing — ${brand.name}`,
+      title: `Pricing, ${brand.name}`,
       description: `Simple, transparent CRM pricing. One monthly subscription, cancel anytime.`,
       type: "website" as const,
     },
@@ -41,9 +41,9 @@ const INCLUDED = [
   { icon: Users2, label: "Contacts", body: "A searchable list, CSV import, and a profile page with a unified activity timeline." },
   { icon: KanbanSquare, label: "Pipeline", body: "A six-stage Kanban board with drag-and-drop deals and days-in-stage tracking." },
   { icon: Calendar, label: "Calendar & tasks", body: "A shared calendar and a task list, both linked back to the contact they're about." },
-  { icon: CheckSquare, label: "Forms & booking pages", body: "Lead-capture forms and a public booking page — both write straight into contacts." },
+  { icon: CheckSquare, label: "Forms & booking pages", body: "Lead-capture forms and a public booking page, both write straight into contacts." },
   { icon: Receipt, label: "Quotes", body: "Line-itemed quotes clients can accept or pay directly from their inbox." },
-  { icon: Bot, label: "AI agents", body: "Channel-by-channel AI availability varies by plan — every plan includes the core CRM above." },
+  { icon: Bot, label: "AI agents", body: "Channel-by-channel AI availability varies by plan. Every plan includes the core CRM above." },
 ];
 
 /**
@@ -67,29 +67,29 @@ function trialFaqAnswer(plans: PublicPlanSummary[]): string {
     plans.length > withTrial.length
       ? " The other plans above bill from the start; if you'd like to see one before committing, get in touch and we'll walk you through it."
       : "";
-  return `Yes — ${named}. You enter a card when you start, so there's no second signup step when the trial converts, and you aren't charged until the trial ends. Cancel any time before then and you pay nothing.${rest}`;
+  return `Yes, ${named}. You enter a card when you start, so there's no second signup step when the trial converts, and you aren't charged until the trial ends. Cancel any time before then and you pay nothing.${rest}`;
 }
 
 const BILLING_FAQS: FaqItem[] = [
   {
     question: "Can I switch plans later?",
     answer:
-      "Yes. Upgrading or downgrading takes effect on your next billing cycle, and your data — contacts, pipeline, everything — stays exactly where it is.",
+      "Yes. Upgrading or downgrading takes effect on your next billing cycle, and your data (contacts, pipeline, everything) stays exactly where it is.",
   },
   {
     question: "What happens to my data if I cancel?",
     answer:
-      "You keep access through the end of the period you've already paid for. Your data isn't deleted on cancellation — export it as a CSV whenever you want.",
+      "You keep access through the end of the period you've already paid for. Your data isn't deleted on cancellation. Export it as a CSV whenever you want.",
   },
   {
     question: "Do you charge per user or per contact?",
     answer:
-      "Pricing is a flat monthly subscription per workspace — check each plan's included team size above rather than a per-seat or per-contact fee that scales against you as you grow.",
+      "Pricing is a flat monthly subscription per workspace. Check each plan's included team size above rather than a per-seat or per-contact fee that scales against you as you grow.",
   },
   {
     question: "Is support included?",
     answer:
-      "Yes — every plan includes direct support. There's no separate paid support tier to unlock a real response.",
+      "Yes, every plan includes direct support. There's no separate paid support tier to unlock a real response.",
   },
 ];
 
@@ -104,12 +104,12 @@ function pricingPageFaqs(plans: PublicPlanSummary[]): FaqItem[] {
   {
     question: "What happens to my existing contacts when I sign up?",
     answer:
-      "Send over whatever you've got — a spreadsheet, an export from another CRM — and they're imported, matched, and ready to work from before you finish setup. No manual re-entry.",
+      "Send over whatever you've got (a spreadsheet, an export from another CRM) and they're imported, matched, and ready to work from before you finish setup. No manual re-entry.",
   },
   {
     question: "Is my data safe?",
     answer:
-      "Your workspace is yours alone — only you and the people you invite can access it. Data is encrypted at rest, and you can export everything as a CSV whenever you want.",
+      "Your workspace is yours alone, only you and the people you invite can access it. Data is encrypted at rest, and you can export everything as a CSV whenever you want.",
   },
   ];
 }
@@ -117,7 +117,7 @@ function pricingPageFaqs(plans: PublicPlanSummary[]): FaqItem[] {
 const CONSOLIDATES = [
   { icon: MessageSquareText, label: "A separate texting/AI-answering tool", body: "SMS, WhatsApp, and web chat auto-replies are part of the platform, not a bolt-on line item." },
   { icon: CalendarClock, label: "A separate booking-link tool", body: "Booking pages with ICS confirmations and reminders are included, not a third-party subscription." },
-  { icon: FileText, label: "A separate quoting/invoicing tool", body: "Line-itemed quotes clients can accept or pay from their inbox — no export-to-PDF workaround." },
+  { icon: FileText, label: "A separate quoting/invoicing tool", body: "Line-itemed quotes clients can accept or pay from their inbox, no export-to-PDF workaround." },
 ];
 
 /**
@@ -163,8 +163,8 @@ export default async function PricingPage() {
               <span className="font-serif font-normal italic">pricing that stays simple</span>.
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-              One monthly subscription covers the platform — contacts, pipeline, calendar, tasks,
-              forms, booking pages, and quotes — with AI agents and channel add-ons layered in by
+              One monthly subscription covers the platform, contacts, pipeline, calendar, tasks,
+              forms, booking pages, and quotes, with AI agents and channel add-ons layered in by
               plan. No setup fee, no annual lock-in, cancel anytime.
             </p>
           </div>
@@ -181,7 +181,7 @@ export default async function PricingPage() {
               </h2>
               <p className="mt-3 text-muted-foreground">
                 Contacts, pipeline, calendar, tasks, forms, booking pages, and quotes aren&apos;t a
-                higher-tier upsell — they&apos;re the baseline every workspace starts with. Plans
+                higher-tier upsell. They&apos;re the baseline every workspace starts with. Plans
                 differ on which AI channels and add-ons are turned on, not on whether you can run
                 your day-to-day operations.
               </p>

@@ -38,7 +38,7 @@ export function renderProductDeliveryEmail(
   const safeRecipient = recipientName.trim() || "there";
   const plural = links.length > 1;
 
-  const subject = `Your download${plural ? "s are" : " is"} ready — ${businessName}`;
+  const subject = `Your download${plural ? "s are" : " is"} ready, ${businessName}`;
 
   const text = [
     `Hi ${safeRecipient},`,
@@ -50,7 +50,7 @@ export function renderProductDeliveryEmail(
     "",
     "Each link expires after 30 days. Reply to this email if you need a fresh one after that.",
     "",
-    `— ${businessName}`,
+    `, ${businessName}`,
   ].join("\n");
 
   const linkRows = links
@@ -109,8 +109,8 @@ export function renderProductDeliveryEmail(
           <tr>
             <td style="padding:16px 32px 28px 32px;border-top:1px solid #e8e8ec;">
               <p style="margin:0;font-size:13px;line-height:1.55;color:#6b6b75;">
-                Each link expires after 30 days — reply to this email if you need a fresh one after that.<br />
-                &mdash; ${escapeHtml(businessName)}
+                Each link expires after 30 days. Reply to this email if you need a fresh one after that.<br />
+, ${escapeHtml(businessName)}
               </p>
             </td>
           </tr>

@@ -352,7 +352,7 @@ export function GhlImportWizard() {
   return (
     <Card
       title={done ? "Import finished" : "Importing…"}
-      desc={done ? "Here's the summary of what came across." : "Running in the background — you can leave this page; it keeps going."}
+      desc={done ? "Here's the summary of what came across." : "Running in the background. You can leave this page; it keeps going."}
     >
       <div className="space-y-4">
         <div className="flex items-center gap-2 text-sm">
@@ -375,7 +375,7 @@ export function GhlImportWizard() {
                 <span className="text-xs text-muted-foreground">
                   {t
                     ? `${t.created} created · ${t.updated} updated${t.failed ? ` · ${t.failed} failed` : ""}`
-                    : "—"}
+                    : "-"}
                 </span>
               </div>
             );

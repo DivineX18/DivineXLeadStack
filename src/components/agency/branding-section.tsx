@@ -175,7 +175,7 @@ export function BrandingSection() {
           />
         </div>
         <p className="text-[11px] text-muted-foreground">
-          Bare domain only — no https://, no trailing slash. Surfaced in the
+          Bare domain only, no https://, no trailing slash. Surfaced in the
           landing footer.
         </p>
       </div>

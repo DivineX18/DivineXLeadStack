@@ -68,7 +68,7 @@ export async function generateMetadata(): Promise<Metadata> {
   // Ascend leads with the diagnosis, which is the whole positioning: it starts
   // before execution. Flow keeps its own line untouched — it is a standalone
   // product and this pass is not about restating it.
-  const ascendTitle = "Ascend — Find what's costing you leads. Then fix it.";
+  const ascendTitle = "Ascend. Find what's costing you leads. Then fix it.";
   const ascendDescription =
     "Ascend analyzes your website and marketing to identify the biggest constraint holding back conversions, shows you what to fix first, and helps you put the fix into action.";
 
@@ -76,7 +76,7 @@ export async function generateMetadata(): Promise<Metadata> {
   metadataBase: new URL(siteUrl),
   ...(LANDING_VARIANT === "custom"
     ? {
-        title: `${CUSTOM_BRAND.name} — ${CUSTOM_BRAND.tagline}`,
+        title: `${CUSTOM_BRAND.name}, ${CUSTOM_BRAND.tagline}`,
         description: CUSTOM_BRAND.shortDescription,
         openGraph: {
           title: CUSTOM_BRAND.name,
@@ -94,7 +94,7 @@ export async function generateMetadata(): Promise<Metadata> {
         },
       }
     : {
-        title: "LeadStack — The all-in-one CRM for teams that actually close",
+        title: "LeadStack, The all-in-one CRM for teams that actually close",
         description:
           "Capture leads, run pipelines, and book meetings from one simple workspace. Built for small teams that want to replace five tools with one.",
         openGraph: {

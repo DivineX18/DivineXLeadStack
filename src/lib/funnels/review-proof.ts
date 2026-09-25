@@ -54,7 +54,7 @@ export function parseReviewProofInput(input: unknown): { ok: true; value: Verifi
   }
 
   const reviewSource = typeof raw.reviewSource === "string" ? raw.reviewSource.trim() : "";
-  if (!reviewSource) return { ok: false, error: "reviewSource is required — a rating has to say whose reviews it is" };
+  if (!reviewSource) return { ok: false, error: "reviewSource is required, a rating has to say whose reviews it is" };
   if (reviewSource.length > MAX_SOURCE_LENGTH) return { ok: false, error: `reviewSource must be ${MAX_SOURCE_LENGTH} characters or fewer` };
   if (/^https?:/i.test(reviewSource)) return { ok: false, error: "reviewSource is a name like \"Google\", not a link" };
 

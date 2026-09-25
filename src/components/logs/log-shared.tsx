@@ -8,9 +8,9 @@ export type ModeFilter = "all" | "live" | "test";
 
 /** Absolute local timestamp, matching the webhook settings rows. */
 export function fmtTime(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime()) || d.getTime() === 0) return "—";
+  if (Number.isNaN(d.getTime()) || d.getTime() === 0) return "-";
   return d.toLocaleString();
 }
 

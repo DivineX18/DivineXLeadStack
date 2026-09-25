@@ -69,7 +69,7 @@ export function SubAccountPlanBillingSection() {
                 <span className="font-medium text-foreground">
                   {billing.planName}
                 </span>{" "}
-                — {priceLabel}/month, billed automatically.
+, {priceLabel}/month, billed automatically.
               </>
             ) : (
               "This workspace is billed monthly."

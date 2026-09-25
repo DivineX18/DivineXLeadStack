@@ -259,7 +259,7 @@ export async function handlePublicSelfServeSignupCheckoutCompleted(
     });
     return true;
   });
-  if (!claimed) return; // Already processed (or in flight) — retry no-op.
+  if (!claimed) return; // Already processed (or in flight), retry no-op.
 
   try {
     const agencyId = session.metadata?.agencyId;
@@ -304,7 +304,7 @@ export async function handlePublicSelfServeSignupCheckoutCompleted(
       const claims = (existingUser.customClaims ?? {}) as { status?: string };
       if (existingUser.disabled || claims.status === "removed") {
         throw new Error(
-          `Existing account ${existingUser.uid} (${email}) is disabled/removed — refusing to provision a new workspace for it`,
+          `Existing account ${existingUser.uid} (${email}) is disabled/removed, refusing to provision a new workspace for it`,
         );
       }
       uid = existingUser.uid;
@@ -387,7 +387,7 @@ export async function handlePublicSelfServeSignupCheckoutCompleted(
     );
     if (gateResult.skippedMetaGates.length > 0) {
       console.warn(
-        `[public-signup] plan ${plan.id} wants Meta gates but the deployment lacks META_APP_ID/SECRET — left off for ${subAccountId}`,
+        `[public-signup] plan ${plan.id} wants Meta gates but the deployment lacks META_APP_ID/SECRET, left off for ${subAccountId}`,
       );
     }
 
@@ -517,7 +517,7 @@ async function notifySupportOfFailure(
   const message = err instanceof Error ? err.message : String(err);
   await sendEmail({
     to: supportEmail,
-    subject: "Self-serve signup failed — customer paid, workspace not created",
+    subject: "Self-serve signup failed, customer paid, workspace not created",
     text: [
       `A self-serve checkout (Stripe session ${sessionId}) completed payment but workspace provisioning failed:`,
       "",
@@ -603,7 +603,7 @@ function renderReadyText({
   return [
     `Thanks for subscribing to ${planName} on ${brandName}!`,
     "",
-    `Your new workspace "${workspaceName}" is ready. You already have an account, so there's nothing to activate — just sign in and it'll be in your workspace switcher.`,
+    `Your new workspace "${workspaceName}" is ready. You already have an account, so there's nothing to activate, just sign in and it'll be in your workspace switcher.`,
     ...(appUrl ? ["", `Open ${brandName}:`, appUrl] : []),
   ].join("\n");
 }
@@ -630,7 +630,7 @@ function renderReadyHtml({
     title: "Your new workspace is ready",
     bodyHtml: `
       <p style="margin:0 0 8px 0; font-size:15px; line-height:1.5; color:#4a4a55;">Thanks for subscribing to <strong style="color:#0a0a0f;">${plan}</strong> on ${brand}!</p>
-      <p style="margin:0 0 24px 0; font-size:15px; line-height:1.5; color:#4a4a55;">Your new workspace <strong style="color:#0a0a0f;">${ws}</strong> is ready. You already have an account, so there's nothing to activate — just sign in and it'll be in your workspace switcher.</p>
+      <p style="margin:0 0 24px 0; font-size:15px; line-height:1.5; color:#4a4a55;">Your new workspace <strong style="color:#0a0a0f;">${ws}</strong> is ready. You already have an account, so there's nothing to activate, just sign in and it'll be in your workspace switcher.</p>
       ${cta}
     `,
   });

@@ -279,7 +279,7 @@ export const VISUAL_ARCHETYPES: Record<VisualArchetype, VisualArchetypeDefinitio
     id: "direct_response",
     label: "Direct Response",
     audienceHint: "The default for high-converting sales & lead pages (offers, lead magnets, VSLs, applications, webinars, most local-service lead-gen). ClickFunnels/Brunson-style.",
-    characteristics: "High-contrast — LIGHT by default (clean near-white base, one punchy high-visibility CTA color, near-black oversized headlines, strong accent bands + a single dark punch section), or a bold dark VSL treatment when the offer suits it. Sharp layered cards, images/video throughout, high energy — engineered to convert, never the washed gray/blue 'template' look and never tastefully minimal.",
+    characteristics: "High-contrast. LIGHT by default (clean near-white base, one punchy high-visibility CTA color, near-black oversized headlines, strong accent bands + a single dark punch section), or a bold dark VSL treatment when the offer suits it. Sharp layered cards, images/video throughout, high energy, engineered to convert, never the washed gray/blue 'template' look and never tastefully minimal.",
     palettes: [
       // Bold LIGHT defaults — a clean near-white sales letter with a STRONG
       // saturated accent + high-visibility colored CTA and near-black oversized

@@ -68,7 +68,7 @@ export function ContactsTable({ contacts, search, territories = [] }: Props) {
               {row.original.email}
             </span>
           ) : (
-            <span className="text-xs text-muted-foreground">—</span>
+            <span className="text-xs text-muted-foreground">-</span>
           ),
       },
       {
@@ -81,7 +81,7 @@ export function ContactsTable({ contacts, search, territories = [] }: Props) {
               {row.original.phone}
             </span>
           ) : (
-            <span className="text-xs text-muted-foreground">—</span>
+            <span className="text-xs text-muted-foreground">-</span>
           ),
       },
       {
@@ -92,7 +92,7 @@ export function ContactsTable({ contacts, search, territories = [] }: Props) {
           row.original.company ? (
             <span className="text-sm">{row.original.company}</span>
           ) : (
-            <span className="text-xs text-muted-foreground">—</span>
+            <span className="text-xs text-muted-foreground">-</span>
           ),
       },
       {

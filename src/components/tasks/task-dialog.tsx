@@ -214,7 +214,7 @@ export function TaskDialog({
                   contacts={contacts}
                   value={contactId ?? ""}
                   onChange={(id) => setContactId(id)}
-                  placeholder="Optional — link to a contact"
+                  placeholder="Optional, link to a contact"
                   title="Link a contact"
                 />
               </div>

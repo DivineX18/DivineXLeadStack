@@ -33,7 +33,7 @@ export function TestimonialsSection({
               <p className="text-[1.02rem] leading-relaxed opacity-90">&ldquo;{t.quote}&rdquo;</p>
               <p className="mt-4 text-sm font-semibold tracking-tight opacity-70">
                 {t.name}
-                {t.detail && <span className="font-normal opacity-70"> — {t.detail}</span>}
+                {t.detail && <span className="font-normal opacity-70"> - {t.detail}</span>}
               </p>
             </div>
           ))}

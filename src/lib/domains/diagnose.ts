@@ -30,7 +30,7 @@ export function diagnosisAdvice(d: DomainDiagnosis): string {
     case "wrong_target":
       return "A record exists but points somewhere else. Update it to the target below and check again.";
     case "correct_pending":
-      return "Your record looks right. DNS changes can take up to a few hours to spread worldwide — we keep checking automatically.";
+      return "Your record looks right. DNS changes can take up to a few hours to spread worldwide. We keep checking automatically.";
     case "resolved":
       return "DNS is resolving. We're finishing the secure certificate, which usually takes a few minutes.";
     case "unknown":
