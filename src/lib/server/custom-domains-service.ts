@@ -52,8 +52,10 @@ export async function addCustomDomain(opts: {
   if (domain.split(".").length < 3) {
     return {
       ok: false,
+      // A flat technical rejection sent the customer away with nothing to do.
+      // The fix is the same one every host recommends, so say it.
       error:
-        "Use a subdomain (e.g. leads.yourbrand.com), not a root domain — root domains need a different DNS setup this feature doesn't support yet.",
+        `Connect www.${domain} instead. Root domains need a DNS record type we don't support yet, so connect the www version here, then redirect ${domain} to www.${domain} at the company that manages your domain. We don't perform that redirect for you.`,
     };
   }
 

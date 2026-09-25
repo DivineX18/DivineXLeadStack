@@ -1,13 +1,6 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "paths": {
-      "@/*": [
-        "../src/*"
-      ],
-      "server-only": [
-        "./stub-server-only.ts"
-      ]
-    }
+    "paths": { "@/*": ["../src/*"], "server-only": ["./stub-server-only.ts"] }
   }
 }
