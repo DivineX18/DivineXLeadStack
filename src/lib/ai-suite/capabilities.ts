@@ -472,6 +472,45 @@ function str(raw: unknown, key: string): string {
   return typeof v === "string" ? stripToolSyntaxDebris(v.trim()) : "";
 }
 
+/**
+ * VALIDATE MUST BE IDEMPOTENT, because it runs twice.
+ *
+ * The chat route validates the model's snake_case args and puts
+ * `validated.args` in the proposal. The confirm route then re-validates that
+ * same object, deliberately: the client's payload is never trusted, so the
+ * server checks it again before executing. That is a security control and it
+ * is not going anywhere.
+ *
+ * It means validate(validate(x).args) has to succeed. A validate that reads
+ * `campaign_name` and returns `campaignName` breaks that: the second pass
+ * sees no campaign_name, fails, and the customer is told "That request is
+ * missing something I need" for a proposal that was perfectly valid. The
+ * capability can never be confirmed, only proposed.
+ *
+ * These read either casing, so a renamed output still parses on the way back
+ * in. See scripts/verify-capability-idempotency.mts, which holds the property
+ * for every capability rather than just the one that broke.
+ */
+const toCamel = (key: string): string => key.replace(/_([a-z])/g, (_m, c: string) => c.toUpperCase());
+
+/** String arg, read by its schema name or the camelCase name validate emits. */
+function strEither(raw: unknown, key: string): string {
+  return str(raw, key) || str(raw, toCamel(key));
+}
+
+/** Array arg, same rule. */
+function arrEither(raw: unknown, key: string): unknown[] {
+  const r = raw as Record<string, unknown>;
+  const a = r?.[key] ?? r?.[toCamel(key)];
+  return Array.isArray(a) ? a : [];
+}
+
+/** Numeric arg, same rule. Returns NaN when neither key holds a number. */
+function numEither(raw: unknown, key: string): number {
+  const a = num(raw, key);
+  return Number.isFinite(a) ? a : num(raw, toCamel(key));
+}
+
 /** Recursively apply stripToolSyntaxDebris to every string in a raw args
  *  payload — covers array items (bullets sent as a real array) and nested
  *  objects (stage_content, sales_argument) that never pass through str(). */
@@ -7095,12 +7134,12 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     },
     validate: (raw) => {
       const r = raw as Record<string, unknown>;
-      const campaignName = str(raw, "campaign_name").slice(0, 80);
-      const goalTag = str(raw, "goal_tag").toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
-      const goalState = str(raw, "goal_state").slice(0, 120);
+      const campaignName = strEither(raw, "campaign_name").slice(0, 80);
+      const goalTag = strEither(raw, "goal_tag").toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+      const goalState = strEither(raw, "goal_state").slice(0, 120);
       if (!campaignName) return { ok: false, error: "campaign_name is required, name it yourself from the campaign context and call again." };
       if (!goalTag || !goalState) return { ok: false, error: "goal_tag and goal_state are required (what ends this journey?), decide them yourself and call again." };
-      const messagesRaw = Array.isArray(r.messages) ? r.messages : [];
+      const messagesRaw = arrEither(raw, "messages");
       const messages = messagesRaw
         .filter((m): m is Record<string, unknown> => !!m && typeof m === "object")
         .map((m) => ({
@@ -7109,8 +7148,8 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           subject: typeof m.subject === "string" ? stripToolSyntaxDebris(m.subject.trim()).slice(0, 160) : "",
           body: typeof m.body === "string" ? stripToolSyntaxDebris(fixLiteralNewlines(m.body.trim())) : "",
           purpose: typeof m.purpose === "string" ? m.purpose.trim().slice(0, 120) : "",
-          commType: (["transactional", "operational", "reminder", "nurture", "recovery", "sales_followup", "stewardship", "reactivation"].includes(m.comm_type as string)
-            ? m.comm_type
+          commType: (["transactional", "operational", "reminder", "nurture", "recovery", "sales_followup", "stewardship", "reactivation"].includes((m.comm_type ?? m.commType) as string)
+            ? (m.comm_type ?? m.commType)
             : "nurture") as "transactional" | "nurture",
           origin: (m.origin === "supplied" ? "supplied" : "generated") as "supplied" | "generated",
           anchorOffsetHours: null,
@@ -7120,7 +7159,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       if (messages.length === 0) {
         return { ok: false, error: "at least one message with a subject and body is required. Write them yourself (or use the customer's copy verbatim) and call again." };
       }
-      const segmentation = (Array.isArray(r.segmentation) ? r.segmentation : [])
+      const segmentation = arrEither(raw, "segmentation")
         .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
         .map((x) => ({
           field: String(x.field ?? "").trim().slice(0, 60),
@@ -7131,7 +7170,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         }))
         .filter((x) => x.field && x.tag)
         .slice(0, 8);
-      const formFields = (Array.isArray(r.form_fields) ? r.form_fields : [])
+      const formFields = arrEither(raw, "form_fields")
         .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
         .map((x) => ({
           name: String(x.name ?? "").trim().slice(0, 60),
@@ -7144,11 +7183,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         ok: true,
         args: {
           campaignName,
-          formId: str(raw, "form_id").trim() || null,
-          workflowId: str(raw, "workflow_id").trim() || null,
+          formId: strEither(raw, "form_id").trim() || null,
+          workflowId: strEither(raw, "workflow_id").trim() || null,
           goalTag,
           goalState,
-          handoffDays: Number.isFinite(Number(r.handoff_days)) ? Math.max(0, Math.min(30, Number(r.handoff_days))) : 3,
+          handoffDays: Number.isFinite(numEither(raw, "handoff_days")) ? Math.max(0, Math.min(30, numEither(raw, "handoff_days"))) : 3,
           messages,
           segmentation,
           formFields,
@@ -7170,7 +7209,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         planVersion: 1 as const,
         status: "approved" as const,
         intent: {
-          businessProfileId: 0,
+          // Null, not 0: there is no Ascend business profile behind a
+          // workflow-only plan, and 0 is a falsy id that read as "missing"
+          // to the validator.
+          businessProfileId: null,
           subAccountId: ctx.subAccountId!,
           objective: args.objective as "leads",
         },

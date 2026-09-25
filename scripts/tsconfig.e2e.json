@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.verify.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["../src/*"],
+      "server-only": ["./stub-server-only.ts"],
+      "@/lib/server/workflows-service": ["./stub-workflows-service.ts"]
+    }
+  }
+}

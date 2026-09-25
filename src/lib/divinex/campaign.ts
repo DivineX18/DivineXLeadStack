@@ -42,8 +42,18 @@ export type OfferState =
   | "create_new";
 
 export interface CampaignIntent {
-  /** Canonical linkage — the plan never restates business truth. */
-  businessProfileId: number;
+  /**
+   * Canonical linkage, so the plan never restates business truth.
+   *
+   * Null on a WORKFLOW-ONLY plan. apply_workflow_plan builds a follow-up
+   * sequence from copy the customer or the assistant already wrote; it never
+   * reads the Ascend profile, and applyWorkflowPlan() touches nothing on this
+   * object except intent.objective. It used to pass 0 to satisfy the type,
+   * which is falsy, so the required-field check rejected every plan it built
+   * and the capability could not run at all. A plan with no profile behind it
+   * says so instead of lying with a zero.
+   */
+  businessProfileId: number | null;
   /** How the offer was arrived at. Absent on plans written before this
    *  existed — readers must treat undefined as "unclassified", never as
    *  permission to invent an offer. */
@@ -221,9 +231,20 @@ export function renderPlanSummary(plan: CampaignPlan): string {
 }
 
 /** Deterministic validation before anything is written to Flow. */
-export function validateCampaignPlan(plan: CampaignPlan): { ok: true } | { ok: false; errors: string[] } {
+export function validateCampaignPlan(
+  plan: CampaignPlan,
+  /**
+   * `requireBusinessProfile` defaults to TRUE so every existing caller keeps
+   * the check it has today. Only the workflow-only path opts out, and only
+   * because nothing on that path reads the field: requiring an id there
+   * guarded nothing and blocked everything.
+   */
+  opts: { requireBusinessProfile?: boolean } = {},
+): { ok: true } | { ok: false; errors: string[] } {
   const errors: string[] = [];
-  if (!plan.intent?.businessProfileId) errors.push("intent.businessProfileId is required");
+  if (opts.requireBusinessProfile !== false && !plan.intent?.businessProfileId) {
+    errors.push("intent.businessProfileId is required");
+  }
   if (!plan.intent?.subAccountId) errors.push("intent.subAccountId is required");
   if (!plan.intent?.objective) errors.push("intent.objective is required");
   if (!plan.followUpStrategy?.goalTag) errors.push("followUpStrategy.goalTag is required");

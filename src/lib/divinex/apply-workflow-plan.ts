@@ -82,7 +82,10 @@ export async function applyWorkflowPlan(input: {
   hasEventTime?: boolean;
   displayName?: string;
 }): Promise<ApplyResult> {
-  const validation = validateCampaignPlan(input.plan);
+  // Workflow-only: this function reads intent.objective and nothing else off
+  // the plan, so a business profile id is not a prerequisite for building a
+  // follow-up sequence. Every other check still runs.
+  const validation = validateCampaignPlan(input.plan, { requireBusinessProfile: false });
   if (!validation.ok) return { ok: false, errors: validation.errors };
 
   const plan = input.plan;
@@ -130,7 +133,7 @@ export async function applyWorkflowPlan(input: {
     (await createWorkflowServerSide({
       subAccountId: input.subAccountId,
       createdByUid: input.createdByUid,
-      name: `${displayName}. Follow-up`,
+      name: `${displayName}: follow-up`,
       template: "blank",
     }));
 
