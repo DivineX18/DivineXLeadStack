@@ -10,6 +10,11 @@
  * Run: npx tsx --tsconfig ./scripts/tsconfig.verify.json scripts/verify-website-fact-grounding.mts
  */
 import fs from "node:fs";
+import {
+  formatBusinessHours,
+  normalizeBusinessProfile,
+  publicBusinessAddress,
+} from "../src/lib/business-profile/profile";
 const src = fs.readFileSync("src/lib/ai-suite/capabilities.ts", "utf8");
 let fails = 0;
 const ck = (n: string, ok: boolean, d = "") => { console.log(`${ok ? "PASS" : "FAIL"}  ${n}${d ? ` — ${d}` : ""}`); if (!ok) fails++; };
@@ -22,7 +27,12 @@ ck("city/state/zip/country likewise",
   && /business_zip: verified\.zip/.test(src) && /business_country: verified\.country/.test(src));
 ck("phone comes from the verified record", /business_phone: verified\.phone/.test(src));
 ck("email comes from the verified record", /business_email: contactEmail/.test(src) && /const contactEmail = verified\.email/.test(src));
-ck("opening hours are never invented", /opening_hours: ""/.test(src));
+// Hours now HAVE a verified source (Settings -> Business profile). The rule
+// is unchanged: they are read, never invented. formatBusinessHours() returns
+// "" for a workspace that stated none — proved in verify-business-profile.
+ck("opening hours come from the verified record, never the model",
+  /opening_hours: verified\.hours/.test(src)
+  && !/opening_hours: (business|args)\./.test(src));
 ck("model-supplied cta_link is ignored", !/\(args\.ctaLink as string\) \|\|/.test(src));
 ck("CTA falls back to saved booking link or the site's own contact",
   /const ctaLink = bookingLink \|\| \(wantsContactPage \? "#contact" : ""\)/.test(src));
@@ -45,10 +55,12 @@ const drop = (raw?: string | null) => {
 const verified = (sub: Record<string, unknown>, ac: { email?: string | null; phone?: string | null }) => {
   const s2 = (v: unknown) => (typeof v === "string" ? v.trim() : "");
   const b = s2(sub.bookingLink);
-  const a = (sub.businessAddress ?? {}) as Record<string, unknown>;
+  const r = normalizeBusinessProfile(sub.businessProfile);
+  const saved = r.ok ? r.value : null;
+  const a = publicBusinessAddress(saved);
   return { phone: drop(ac.phone), email: s2(ac.email).toLowerCase(),
     bookingLink: /^https?:\/\//i.test(b) ? b : "",
-    street: s2(a.street), city: s2(a.city), state: s2(a.state), zip: s2(a.zip), country: s2(a.country) };
+    hours: formatBusinessHours(saved?.hours), ...a };
 };
 const sparse = verified({}, {});
 ck("no street invented", sparse.street === "");
@@ -56,11 +68,12 @@ ck("no city/state/zip invented", sparse.city === "" && sparse.state === "" && sp
 ck("no phone invented", sparse.phone === "");
 ck("no email invented", sparse.email === "");
 ck("no booking URL invented", sparse.bookingLink === "");
+ck("no opening hours invented", sparse.hours === "");
 
 console.log("\n── scenario 2: complete profile, real values preserved ──");
 const full = verified(
   { bookingLink: "https://cal.com/apex/consult",
-    businessAddress: { street: "900 Main St", city: "Houston", state: "TX", zip: "77002", country: "US" } },
+    businessProfile: { street: "900 Main St", city: "Houston", state: "TX", zip: "77002", country: "US" } },
   { email: "Hello@ApexHVAC.com", phone: "(713) 226-4000" },
 );
 ck("real street preserved", full.street === "900 Main St");

@@ -464,6 +464,14 @@ export interface SubAccountDoc {
    */
   accountContact: AccountContact | null;
   /**
+   * Operator-supplied facts about the business itself — address, hours,
+   * public name, website. Read by website generation as the authoritative
+   * source for anything factual. Optional: absent on every workspace
+   * created before the field existed, and absent is a valid steady state
+   * for a workspace that has never filled it in. See {@link BusinessProfile}.
+   */
+  businessProfile?: BusinessProfile | null;
+  /**
    * Per-sub-account PayPal connection used for the Products + Invoices
    * payment flow. v1 uses paypal.me links — sub-account owner pastes
    * their PayPal.me username; on invoice send we generate
@@ -584,6 +592,61 @@ export interface AccountContact {
   name: string | null;
   email: string | null;
   phone: string | null;
+}
+
+export type BusinessWeekday =
+  | "mon"
+  | "tue"
+  | "wed"
+  | "thu"
+  | "fri"
+  | "sat"
+  | "sun";
+
+/** One weekday. `open`/`close` are 24-hour "HH:MM", empty when unstated. */
+export interface BusinessHoursDay {
+  closed: boolean;
+  open: string;
+  close: string;
+}
+
+export type BusinessHours = Record<BusinessWeekday, BusinessHoursDay>;
+
+/**
+ * VERIFIED BUSINESS INFORMATION — operator-supplied facts about a real place.
+ *
+ * Distinct from {@link AccountContact}, which is the PERSON an agency speaks
+ * to about this workspace. This is the BUSINESS itself: what a customer would
+ * see on a published site, in a local-business schema block, or on an invoice.
+ *
+ * Every field is optional and every one is written only through Settings. AI
+ * generation reads these and never populates them, because an address, a set
+ * of opening hours and a phone number are claims about a real place rather
+ * than copy. See `lib/business-profile/profile.ts`.
+ *
+ * Optional on the doc so the many workspaces created before this field
+ * existed keep reading and writing normally with no migration.
+ */
+export interface BusinessProfile {
+  /** Public/trading name. Falls back to the AI agent profile, then the
+   *  sub-account's own name, when unset. */
+  businessName: string | null;
+  websiteUrl: string | null;
+  street: string | null;
+  street2: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  country: string | null;
+  /**
+   * Whether the address may appear on a public page. False is the correct
+   * answer for a service-area, remote or home-based business that still
+   * needs an address on file. Enforced at the read, in
+   * `publicBusinessAddress()`, so no caller can forget it.
+   */
+  addressPublic: boolean;
+  /** Null when the operator has stated no hours at all. */
+  hours: BusinessHours | null;
 }
 
 export interface TwilioConfig {

@@ -13,6 +13,7 @@ import {
   SubAccountNotFoundError,
 } from "@/lib/server/sub-accounts-service";
 import type { SendWindow, AccountContact } from "@/types";
+import { normalizeBusinessProfile } from "@/lib/business-profile/profile";
 
 interface PatchBody {
   name?: string;
@@ -26,6 +27,9 @@ interface PatchBody {
     email?: string | null;
     phone?: string | null;
   } | null;
+  /** Operator-supplied business facts. Validated by
+   *  normalizeBusinessProfile(); never written by generation. */
+  businessProfile?: unknown;
 }
 
 const URL_RE = /^https?:\/\/.+/i;
@@ -189,6 +193,21 @@ export async function PATCH(
             };
       update.accountContact = normalized;
     }
+  }
+
+  // VERIFIED BUSINESS INFORMATION.
+  //
+  // Normalisation is shared with website generation rather than re-derived
+  // here, so what this route accepts and what a generated site reads can
+  // never drift apart. A profile that states nothing is stored as null: a
+  // sparse workspace stays sparse instead of recording a wall of empty
+  // strings that later reads as a deliberate "this business has no address".
+  if (body.businessProfile !== undefined) {
+    const result = normalizeBusinessProfile(body.businessProfile);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    update.businessProfile = result.value;
   }
 
   if (Object.keys(update).length === 1) {

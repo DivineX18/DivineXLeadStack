@@ -148,7 +148,9 @@ export default function SettingsPage() {
         {/* ---------- Admin: contact, branding, plan, members, territories,
             calendar, payments, data ---------- */}
         <TabsContent value="admin" className="mt-6 space-y-6">
-          {/* Account contact — the human at the client this sub-account belongs to. */}
+          {/* Business profile — the human at the client, plus the verified
+              business facts (address, hours, public name) that website
+              generation reads. Operator-written only; AI never fills these. */}
           <SubAccountContactSection />
 
           {/* Branding — the client's logo, used on quote/invoice emails, public

@@ -176,6 +176,12 @@ import {
 } from "@/types/website";
 import type { AiSuiteLevel } from "@/types/ai-suite";
 
+import {
+  formatBusinessHours,
+  normalizeBusinessProfile,
+  publicBusinessAddress,
+} from "@/lib/business-profile/profile";
+
 /**
  * The AI Suite capability registry — the ENTIRE set of things the assistant
  * can do. This list is the contract: the model can only ever invoke a
@@ -778,8 +784,9 @@ function verifiedBusinessFacts(
   sub: Record<string, unknown>,
   accountContact: { name?: string | null; email?: string | null; phone?: string | null },
 ): {
-  phone: string; email: string; bookingLink: string;
+  businessName: string; phone: string; email: string; bookingLink: string;
   street: string; city: string; state: string; zip: string; country: string;
+  hours: string; websiteUrl: string;
 } {
   const str2 = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
   // Operator-entered under Settings → Account contact. The 555 guard still
@@ -788,14 +795,21 @@ function verifiedBusinessFacts(
   const email = str2(accountContact.email).toLowerCase();
   const bookingRaw = str2(sub.bookingLink);
   const bookingLink = /^https?:\/\//i.test(bookingRaw) ? bookingRaw : "";
-  // Address has NO verified home in Ascend today — AccountContact carries
-  // name/email/phone only. Read it if a workspace ever stores one, and treat
-  // its absence as absence rather than an invitation to invent.
-  const addr = (sub.businessAddress ?? {}) as Record<string, unknown>;
+  // Settings → Business profile. Normalised through the same function the
+  // save route uses, so a value that was accepted there reads identically
+  // here. publicBusinessAddress() applies the operator's "show address
+  // publicly" choice, which is why the address is never read off the raw
+  // record: a home-based trade keeps its address on file and off its site.
+  const profile = normalizeBusinessProfile(sub.businessProfile);
+  const saved = profile.ok ? profile.value : null;
+  const addr = publicBusinessAddress(saved);
   return {
+    businessName: saved?.businessName ?? "",
     phone, email, bookingLink,
-    street: str2(addr.street), city: str2(addr.city),
-    state: str2(addr.state), zip: str2(addr.zip), country: str2(addr.country),
+    street: addr.street, city: addr.city,
+    state: addr.state, zip: addr.zip, country: addr.country,
+    hours: formatBusinessHours(saved?.hours),
+    websiteUrl: saved?.websiteUrl ?? "",
   };
 }
 
@@ -3497,8 +3511,16 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         config.business_details = needsBusinessDetails
           ? {
               ...blankBusinessDetails(),
+              // Saved business profile first: it is the one place an
+              // operator has stated their public trading name. The AI agent
+              // profile and the workspace label remain fallbacks so a
+              // workspace that predates the field keeps building.
               business_name:
-                business.name || profileBusinessName || (sub.name as string) || "",
+                verified.businessName ||
+                business.name ||
+                profileBusinessName ||
+                (sub.name as string) ||
+                "",
               // ADDRESS, PHONE, EMAIL AND HOURS ARE FACTS, NOT COPY.
               // Verified workspace record only. Where nothing is stored the
               // field goes out EMPTY: an empty address is honest, an invented
@@ -3511,10 +3533,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               business_zip: verified.zip,
               business_phone: verified.phone,
               business_email: contactEmail,
-              // No verified source for opening hours exists, so none is sent.
-              // "Mon-Fri 9-5" invented for a 24/7 emergency trade is a lie a
+              // Structured hours the operator saved, rendered by
+              // formatBusinessHours(). Still "" when they saved none: an
+              // invented "Mon-Fri 9-5" on a 24/7 emergency trade is a lie a
               // customer acts on at 2am.
-              opening_hours: "",
+              opening_hours: verified.hours,
             }
           : null;
       }
