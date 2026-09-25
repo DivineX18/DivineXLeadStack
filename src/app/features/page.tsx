@@ -38,7 +38,7 @@ export async function generateMetadata() {
   const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   return {
     title: `Features | ${brand.name} CRM, Pipeline & AI Agent Tools`,
-    description: `Every real, shipped ${brand.name} feature: AI agents across web chat, SMS, WhatsApp and voice, contacts and sales pipeline, quotes and invoicing, lead capture forms, booking pages, and a public API.`,
+    description: `Every shipped ${brand.name} feature: AI agents across web chat, SMS, WhatsApp and voice, sales pipeline, quotes, forms, booking pages, and a public API.`,
     openGraph: { title: `Features | ${brand.name}`, type: "website" as const },
   };
 }

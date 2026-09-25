@@ -16,7 +16,7 @@ export async function generateMetadata() {
   const brand = await resolveCustomBrand();
   return {
     title: `Implementation & Onboarding | ${brand.name}`,
-    description: `What CRM onboarding with ${brand.name} actually looks like: tell us about your business, we configure your systems and migrate your existing contacts, connect what you already use, and go live in days, not months.`,
+    description: `What onboarding with ${brand.name} actually looks like: we configure your pipeline, migrate your existing contacts, connect what you already use, and go live in days.`,
     openGraph: { title: `Implementation | ${brand.name}`, type: "website" as const },
   };
 }

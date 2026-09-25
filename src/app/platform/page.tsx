@@ -18,7 +18,7 @@ export async function generateMetadata() {
   const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   return {
     title: `Platform | ${brand.name} Growth Operations Platform`,
-    description: `How ${brand.name} works: capture leads, respond instantly with AI agents, organize the follow-up in a real pipeline, get paid, and see what's working, one growth operations platform, not five tools stitched together.`,
+    description: `How ${brand.name} works: capture leads, respond instantly with AI agents, run the follow-up in a real pipeline, and get paid. One platform, not five stitched together.`,
     openGraph: { title: `Platform | ${brand.name}`, type: "website" as const },
   };
 }
