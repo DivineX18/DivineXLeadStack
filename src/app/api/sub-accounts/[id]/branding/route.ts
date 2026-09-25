@@ -8,22 +8,27 @@ import { requireSubAccountAdmin } from "@/lib/auth/require-tenancy";
 /**
  * PATCH /api/sub-accounts/[id]/branding
  *
- * Update this sub-account's external-facing branding. v1 = logo URL only
- * (paste a public https URL). Renders on quote/invoice emails, public
- * /q/[token] pages, and PDFs — the surfaces this client's customers see.
+ * Update this sub-account's external-facing branding: the logo URL (a public
+ * https URL) and the accent colour. Renders on quote/invoice emails, public
+ * /q/[token] pages, PDFs, and the call-to-action buttons in automated emails,
+ * the surfaces this client's customers see.
  *
  * Auth: sub-account admin OR agency owner (via requireSubAccountAdmin).
  *
- * Body: { logoUrl: string | null }
- *   - null  → wipe the logo
- *   - ""    → wipe the logo
- *   - any other string → must start with http(s)://
+ * Body: { logoUrl?: string | null, brandColor?: string | null }
+ *   - null or "" → wipe the field
+ *   - logoUrl    → must start with http(s)://
+ *   - brandColor → a hex colour ("#059669" or "#0a0"); null restores the
+ *     product accent. Validated rather than stored as typed, because it goes
+ *     straight into a style attribute in an email.
  */
 
 const URL_RE = /^https?:\/\/.+/i;
+const HEX_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 
 interface PatchBody {
   logoUrl?: string | null;
+  brandColor?: string | null;
 }
 
 export async function PATCH(
@@ -55,6 +60,24 @@ export async function PATCH(
         );
       }
       updates.logoUrl = trimmed.slice(0, 2_000);
+    }
+  }
+
+  if ("brandColor" in body) {
+    if (body.brandColor === null || body.brandColor === "") {
+      updates.brandColor = null;
+    } else if (typeof body.brandColor === "string") {
+      const trimmed = body.brandColor.trim();
+      // This value is interpolated into a style attribute in an email. Only
+      // a hex colour is ever written, so nothing else can reach that
+      // attribute no matter what is typed here.
+      if (!HEX_RE.test(trimmed)) {
+        return NextResponse.json(
+          { error: "brandColor must be a hex colour, for example #059669." },
+          { status: 400 },
+        );
+      }
+      updates.brandColor = trimmed.toLowerCase();
     }
   }
 

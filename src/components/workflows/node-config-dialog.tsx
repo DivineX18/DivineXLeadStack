@@ -18,6 +18,7 @@ import { ConditionsEditor } from "./conditions-editor";
 import type { BuilderStep } from "@/lib/workflows/builder-tree";
 import type { ConditionGroup, NotifyRecipient } from "@/types/workflows";
 import type { WhatsappTemplateVariable } from "@/types/whatsapp-templates";
+import { BUTTON_SYNTAX_HELP } from "@/lib/email/body";
 
 type Cfg = Record<string, unknown>;
 
@@ -82,7 +83,7 @@ export function NodeConfigDialog({
               </Field>
               <Field
                 label="Body"
-                hint="Supports {{contact.firstName}} etc. Include {{unsubscribeLink}} for compliance."
+                hint={`Supports {{contact.firstName}} etc. Include {{unsubscribeLink}} for compliance. ${BUTTON_SYNTAX_HELP}`}
               >
                 <Textarea
                   rows={6}

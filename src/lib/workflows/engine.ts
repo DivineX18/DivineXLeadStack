@@ -45,6 +45,11 @@ import type {
   WorkflowRunHistoryEntry,
   WorkflowTriggerType,
 } from "@/types/workflows";
+import {
+  renderBodyHtml,
+  renderBodyText,
+  resolveBrandColors,
+} from "@/lib/email/body";
 
 const VALID_STAGE_IDS = PIPELINE_STAGES.map((s) => s.id);
 
@@ -106,30 +111,19 @@ function mergeSubject(
 }
 
 /**
- * Split a resolved body into paragraph <p> tags. When `unsub` is given, a
- * paragraph that is JUST the unsubscribe token (the common case — every
- * seed template puts it on its own trailing line) renders as a small muted
- * footer with a top rule, instead of a bare link mid-paragraph; an inline
- * occurrence (atypical, but not unsupported) still gets a styled anchor.
+ * Body → HTML for a workflow email.
+ *
+ * Delegates to the shared renderer, which escapes everything that is not a
+ * recognised button. That matters here specifically: the body arrives with
+ * merge tags ALREADY resolved, so before this a contact whose name contained
+ * markup had it injected into every email their record touched.
  */
 function bodyToHtml(
   resolved: string,
-  unsub?: { token: string; href: string }
+  unsub?: { token: string; href: string },
+  brandColor?: string | null,
 ): string {
-  const anchor = unsub
-    ? `<a href="${unsub.href}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a>`
-    : "";
-  return resolved
-    .split(/\n\s*\n/)
-    .filter((p) => p.trim().length > 0)
-    .map((raw) => {
-      if (unsub && raw.trim() === unsub.token) {
-        return `<p style="margin:24px 0 0;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af;">${anchor}</p>`;
-      }
-      const withLink = unsub ? raw.split(unsub.token).join(anchor) : raw;
-      return `<p style="margin:0 0 16px;">${withLink.replace(/\r?\n/g, "<br>")}</p>`;
-    })
-    .join("");
+  return renderBodyHtml(resolved, { unsub, colors: resolveBrandColors(brandColor) });
 }
 
 /** Shared card wrapper for every workflow-sent email (customer sends AND
@@ -162,9 +156,9 @@ const execSendEmail: NodeExecutor = async (ctx) => {
     cfg.subject ?? "",
     mergeSubject(ctx, unsubscribeLink)
   );
-  const text = resolveMergeTags(
-    cfg.body ?? "",
-    mergeSubject(ctx, unsubscribeLink)
+  // A plain-text reader must get "Label: https://…", not the button markup.
+  const text = renderBodyText(
+    resolveMergeTags(cfg.body ?? "", mergeSubject(ctx, unsubscribeLink))
   );
   const resolvedForHtml = resolveMergeTags(
     cfg.body ?? "",
@@ -172,7 +166,11 @@ const execSendEmail: NodeExecutor = async (ctx) => {
   );
   const html = wrapEmailHtml(
     ctx.subAccount?.name ?? "",
-    bodyToHtml(resolvedForHtml, { token: UNSUB_TOKEN, href: unsubscribeLink })
+    bodyToHtml(
+      resolvedForHtml,
+      { token: UNSUB_TOKEN, href: unsubscribeLink },
+      ctx.subAccount?.brandColor
+    )
   );
 
   try {
@@ -551,7 +549,10 @@ const execNotify: NodeExecutor = async (ctx) => {
     mergeSubject(ctx, "")
   );
   const text = resolveMergeTags(cfg.body ?? "", mergeSubject(ctx, ""));
-  const html = wrapEmailHtml(ctx.subAccount?.name ?? "", bodyToHtml(text));
+  const html = wrapEmailHtml(
+    ctx.subAccount?.name ?? "",
+    bodyToHtml(text, undefined, ctx.subAccount?.brandColor)
+  );
   try {
     await sendEmail({
       to,

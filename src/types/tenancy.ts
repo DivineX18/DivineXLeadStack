@@ -531,6 +531,16 @@ export interface SubAccountDoc {
    */
   logoUrl: string | null;
   /**
+   * Accent colour for anything this workspace sends, as a hex string
+   * ("#059669"). Today that is the call-to-action buttons in automated
+   * emails: filled for a primary button, and the border and text of a
+   * secondary one.
+   *
+   * Null means the product accent, which is what every workspace got before
+   * this existed, so nothing changes for a workspace that never sets it.
+   */
+  brandColor?: string | null;
+  /**
    * Opt-in territory scoping. When true, collaborators only see deals
    * and contacts whose `territoryId` is in their `assignedTerritoryIds`.
    * Admins and the agency owner are unaffected. When false (the

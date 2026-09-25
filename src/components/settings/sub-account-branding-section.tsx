@@ -7,6 +7,7 @@ import { useSubAccount } from "@/context/sub-account-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DEFAULT_ACCENT } from "@/lib/email/body";
 
 /**
  * Sub-account branding settings. v1 supports a single field — logo URL —
@@ -18,10 +19,16 @@ import { Label } from "@/components/ui/label";
  */
 
 const URL_RE = /^https?:\/\/.+/i;
+const HEX_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+/** What the accent is actually used for, so the field is not a mystery. */
+const ACCENT_HELP =
+  "Used for the call-to-action buttons in automated emails. Leave blank for the default green.";
 
 export function SubAccountBrandingSection() {
   const { subAccountId, subAccount, isAdmin } = useSubAccount();
   const [logoUrl, setLogoUrl] = useState("");
+  const [brandColor, setBrandColor] = useState("");
   const [saving, setSaving] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
@@ -31,6 +38,7 @@ export function SubAccountBrandingSection() {
   useEffect(() => {
     if (!hydrated && subAccount) {
       setLogoUrl(subAccount.logoUrl ?? "");
+      setBrandColor(subAccount.brandColor ?? "");
       setHydrated(true);
     }
   }, [hydrated, subAccount]);
@@ -44,12 +52,17 @@ export function SubAccountBrandingSection() {
       toast.error("Logo URL must start with http:// or https://.");
       return;
     }
+    const color = brandColor.trim();
+    if (color && !HEX_RE.test(color)) {
+      toast.error("Accent colour must be a hex value, for example #059669.");
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch(`/api/sub-accounts/${subAccountId}/branding`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ logoUrl: trimmed || null }),
+        body: JSON.stringify({ logoUrl: trimmed || null, brandColor: color || null }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
@@ -84,6 +97,28 @@ export function SubAccountBrandingSection() {
             Doesn&apos;t affect the CRM sidebar (that&apos;s agency-level).
           </p>
         </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="sa-brand-color">Accent colour</Label>
+        <div className="flex items-center gap-2">
+          <input
+            id="sa-brand-color-swatch"
+            type="color"
+            aria-label="Pick an accent colour"
+            value={HEX_RE.test(brandColor.trim()) ? brandColor.trim() : DEFAULT_ACCENT}
+            onChange={(e) => setBrandColor(e.target.value)}
+            className="h-9 w-12 cursor-pointer rounded-md border bg-background p-1"
+          />
+          <Input
+            id="sa-brand-color"
+            value={brandColor}
+            onChange={(e) => setBrandColor(e.target.value)}
+            placeholder={DEFAULT_ACCENT}
+            className="font-mono"
+          />
+        </div>
+        <p className="text-[11px] text-muted-foreground">{ACCENT_HELP}</p>
       </div>
 
       <div className="space-y-1.5">
