@@ -32,7 +32,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Free Growth Scan. Find what's costing you leads | Ascend",
   description:
-    "Enter your website and Ascend will analyze your marketing, identify your biggest growth constraint, and show you what to fix first. Free growth assessment, no software setup required.",
+    "Enter your website and Ascend analyzes your marketing, names your biggest growth constraint, and shows you what to fix first. Free, no software setup.",
   robots: { index: true, follow: true },
   // The root layout stamps Flow's social identity (og:title, og:site_name,
   // apple-mobile-web-app-title) from CUSTOM_BRAND onto every page. On an
