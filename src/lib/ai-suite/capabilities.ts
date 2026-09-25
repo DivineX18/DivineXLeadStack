@@ -754,6 +754,52 @@ function dropFictionalPhone(raw: string | null | undefined): string {
   return /^\+?1?\d{3}555\d{4}$/.test(v.replace(/[^\d]/g, "")) ? "" : v;
 }
 
+/**
+ * FACTS COME FROM THE WORKSPACE. COPY COMES FROM THE MODEL.
+ *
+ * The Apex build published "1234 Westheimer Rd" and a CTA pointing at
+ * "https://www.apexhomeservices.com/contact". Neither string exists anywhere
+ * in this codebase, so neither was a fixture or a default: the model supplied
+ * them through the tool's own `business` and `cta_link` arguments, and nothing
+ * compared them to anything.
+ *
+ * That is the fabrication path, and a blacklist of bad values cannot close it
+ * — the next invented address will be a different plausible street. The only
+ * fix that generalises is to stop accepting factual identity from the model at
+ * all. A street address, a phone number, an email, a booking URL and a domain
+ * are claims about a real business; they can be READ from what the operator
+ * saved, never WRITTEN by a generator.
+ *
+ * So these fields are sourced from verified workspace records only, and a
+ * missing one stays missing. Headlines, benefits, service descriptions and
+ * every other piece of COPY are still entirely the model's job.
+ */
+function verifiedBusinessFacts(
+  sub: Record<string, unknown>,
+  accountContact: { name?: string | null; email?: string | null; phone?: string | null },
+): {
+  phone: string; email: string; bookingLink: string;
+  street: string; city: string; state: string; zip: string; country: string;
+} {
+  const str2 = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
+  // Operator-entered under Settings → Account contact. The 555 guard still
+  // applies: a saved number is trusted, a fictional one is not.
+  const phone = dropFictionalPhone(str2(accountContact.phone));
+  const email = str2(accountContact.email).toLowerCase();
+  const bookingRaw = str2(sub.bookingLink);
+  const bookingLink = /^https?:\/\//i.test(bookingRaw) ? bookingRaw : "";
+  // Address has NO verified home in Ascend today — AccountContact carries
+  // name/email/phone only. Read it if a workspace ever stores one, and treat
+  // its absence as absence rather than an invitation to invent.
+  const addr = (sub.businessAddress ?? {}) as Record<string, unknown>;
+  return {
+    phone, email, bookingLink,
+    street: str2(addr.street), city: str2(addr.city),
+    state: str2(addr.state), zip: str2(addr.zip), country: str2(addr.country),
+  };
+}
+
+
 export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
   // ═══ Agency level ════════════════════════════════════════════════════════
   {
@@ -3255,18 +3301,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
 
       const wantsContactPage =
         (raw as Record<string, unknown>)?.include_contact_page === true;
-      if (
-        buildType === "local" &&
-        (niche || wantsContactPage) &&
-        (!business.street || !business.city)
-      ) {
-        return {
-          ok: false,
-          error: niche
-            ? "niche templates include a contact page, which needs the business's street address and city — ask the user for them (or use niche 'none' without a contact page)"
-            : "a contact page needs the business's street address and city — ask the user for them (or leave the contact page off)",
-        };
-      }
+      // THE OLD GATE ACCEPTED A STREET THE MODEL SUPPLIED, which is exactly
+      // how an invented address passed validation and reached a published
+      // site. The address is now read from the verified workspace record at
+      // execute time, so a model-written one is no longer evidence of
+      // anything. A niche build with no stored address degrades to a site
+      // without a contact page rather than inventing one.
+      void wantsContactPage;
 
       return {
         ok: true,
@@ -3366,11 +3407,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         (profileSnap.data()?.businessName as string | undefined) ?? "";
 
       const business = args.business as Record<string, string>;
-      const contactEmail =
-        (args.contactEmail as string) ||
-        business.email ||
-        accountContact.email ||
-        "";
+      // Verified record wins outright; the model's values are copy inputs and
+      // are not consulted for any factual identity field. See
+      // verifiedBusinessFacts().
+      const verified = verifiedBusinessFacts(sub, accountContact);
+      const contactEmail = verified.email;
       // BUILD IS NOT PUBLISH, AND THIS ACTION USED TO TREAT THEM AS ONE.
       //
       // websites-service already draws the line correctly:
@@ -3389,10 +3430,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // short list of what to add before publishing. Nothing is invented to
       // satisfy a validator, and the build-time validation itself is
       // untouched: it still runs, just at the point it is actually about.
-      const bookingLink =
-        typeof sub.bookingLink === "string" && /^https?:\/\//i.test(sub.bookingLink)
-          ? sub.bookingLink
-          : "";
+      const bookingLink = verified.bookingLink;
       // "Use the contact page" is a destination a customer can legitimately
       // ask for, and the schema had no way to express it: cta_link must be an
       // absolute URL, and a site that does not exist yet has no URL to give.
@@ -3400,8 +3438,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // contact page or section.
       const wantsContactPage =
         (args.includeContactPage as boolean) || (args.niche as string | null) !== null;
-      const ctaLink =
-        (args.ctaLink as string) || bookingLink || (wantsContactPage ? "#contact" : "");
+      // The model's cta_link is deliberately ignored: it is a destination, not
+      // copy, and an invented domain is exactly what shipped on Apex. The
+      // saved booking link is verified; otherwise the site's own contact
+      // section is the honest destination.
+      const ctaLink = bookingLink || (wantsContactPage ? "#contact" : "");
 
       /** What a human still has to supply before this site should go live. */
       const prePublish: string[] = [];
@@ -3458,20 +3499,22 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               ...blankBusinessDetails(),
               business_name:
                 business.name || profileBusinessName || (sub.name as string) || "",
-              business_street: business.street,
-              business_city: business.city,
-              business_state: business.state,
-              business_country: business.country,
-              business_zip: business.zip,
-              // FICTIONAL-NUMBER GUARD — the funnel path has had this since the
-              // 10-funnel certification; the website path never did, and the
-              // Apex human test published "(713) 555-0147" to a live business
-              // site. NANP 555 exchanges are reserved for fiction, so a number
-              // matching one is treated as absent. A missing phone is a gap the
-              // operator fills in; a fake one is a lie a customer might dial.
-              business_phone: dropFictionalPhone(business.phone) || accountContact.phone || "",
-              business_email: business.email || contactEmail,
-              opening_hours: business.opening_hours,
+              // ADDRESS, PHONE, EMAIL AND HOURS ARE FACTS, NOT COPY.
+              // Verified workspace record only. Where nothing is stored the
+              // field goes out EMPTY: an empty address is honest, an invented
+              // one is a claim about a real place. The 555 guard still applies
+              // inside verifiedBusinessFacts().
+              business_street: verified.street,
+              business_city: verified.city,
+              business_state: verified.state,
+              business_country: verified.country,
+              business_zip: verified.zip,
+              business_phone: verified.phone,
+              business_email: contactEmail,
+              // No verified source for opening hours exists, so none is sent.
+              // "Mon-Fri 9-5" invented for a 24/7 emergency trade is a lie a
+              // customer acts on at 2am.
+              opening_hours: "",
             }
           : null;
       }
