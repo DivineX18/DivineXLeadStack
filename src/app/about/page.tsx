@@ -11,6 +11,9 @@ import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
 import { ChatCta, ChatLink } from "./chat-cta";
+import { siteOrigin } from "@/lib/seo/site";
+import { FaqSection } from "@/components/seo/faq-section";
+import { PRODUCT_FAQS } from "@/data/product-faqs";
 
 /**
  * About page — branches on LANDING_VARIANT like every other dual-render
@@ -26,9 +29,9 @@ export async function generateMetadata() {
     // this the Ascend host served Flow's name, tagline and closing CTA.
     const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
     return {
-      title: `About, ${brand.name}`,
+      title: `About | ${brand.name}`,
       description: `${brand.name} is DivineX's growth operations platform. Built to run the day-to-day of a growing business: leads, follow-up, pipeline, and getting paid, in one place.`,
-      openGraph: { title: `About, ${brand.name}`, type: "website" as const },
+      openGraph: { title: `About | ${brand.name}`, type: "website" as const },
     };
   }
   return {
@@ -104,7 +107,7 @@ export default async function AboutPage() {
     // Host-aware, exactly as / and /pricing already resolve it. Without
     // this the Ascend host served Flow's name, tagline and closing CTA.
     const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
+    const baseUrl = await siteOrigin();
 
     return (
       <div className="marketing-accent flex min-h-screen flex-col">
@@ -252,6 +255,11 @@ export default async function AboutPage() {
           </section>
 
           <CustomCTA brand={brand} product={await resolveProductSurface()} />
+          {/* The three-product question is asked before any other, and no
+              public page answered it. FaqSection emits its own FAQPage markup
+              from the same array it renders, so the copy and the structured
+              data cannot drift apart. */}
+          <FaqSection items={PRODUCT_FAQS} supportEmail={brand.supportEmail} />
         </main>
         <CustomFooter brand={brand} />
       </div>

@@ -21,16 +21,17 @@ import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { Pricing as CustomPricing } from "@/components/landing-custom/pricing";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
+import { siteOrigin } from "@/lib/seo/site";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
   const brand = await resolveCustomBrand();
   return {
-    title: `Pricing, ${brand.name} CRM & Growth Operations Platform`,
+    title: `Pricing | ${brand.name} CRM & Growth Operations Platform`,
     description: `Simple, transparent CRM pricing for ${brand.name}. One monthly subscription for contacts, pipeline, AI agents, quotes, booking pages, and more. Cancel anytime, no contract.`,
     openGraph: {
-      title: `Pricing, ${brand.name}`,
+      title: `Pricing | ${brand.name}`,
       description: `Simple, transparent CRM pricing. One monthly subscription, cancel anytime.`,
       type: "website" as const,
     },
@@ -136,7 +137,7 @@ export default async function PricingPage() {
   ]);
   // The Unified site must call itself Unified, not Flow. Logo untouched.
   const brand = brandForProduct(rawBrand, product);
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
+  const baseUrl = await siteOrigin();
   const faqs = pricingPageFaqs(plans);
   const faqSchema = {
     "@context": "https://schema.org",

@@ -8,15 +8,18 @@ import { FaqAccordion, type FaqItem } from "@/components/landing-custom/faq-acco
 import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
+import { siteOrigin } from "@/lib/seo/site";
+import { JsonLd } from "@/components/seo/json-ld";
+import { serviceSchema } from "@/lib/seo/schema";
 
 export async function generateMetadata() {
   // Host-aware, exactly as / and /pricing already resolve it. Without
   // this the Ascend host served Flow's name, tagline and closing CTA.
   const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   return {
-    title: `Platform, ${brand.name} Growth Operations Platform`,
+    title: `Platform | ${brand.name} Growth Operations Platform`,
     description: `How ${brand.name} works: capture leads, respond instantly with AI agents, organize the follow-up in a real pipeline, get paid, and see what's working, one growth operations platform, not five tools stitched together.`,
-    openGraph: { title: `Platform, ${brand.name}`, type: "website" as const },
+    openGraph: { title: `Platform | ${brand.name}`, type: "website" as const },
   };
 }
 
@@ -89,7 +92,7 @@ export default async function PlatformPage() {
   // Host-aware, exactly as / and /pricing already resolve it. Without
   // this the Ascend host served Flow's name, tagline and closing CTA.
   const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
+  const baseUrl = await siteOrigin();
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -103,6 +106,17 @@ export default async function PlatformPage() {
   return (
     <div className="marketing-accent flex min-h-screen flex-col">
       <OrganizationSchema brand={brand} baseUrl={baseUrl} />
+      {/* What is actually sold on this page. Service is the type that
+          carries a capability offered by an organisation, and none of the
+          capability pages declared one. */}
+      <JsonLd
+        data={serviceSchema({
+          name: 'Growth operations platform',
+          url: `${baseUrl}/platform`,
+          description: 'Contacts, pipeline, calendar, tasks, forms, quotes, booking pages, and funnels in one workspace, with AI agents answering across web chat, SMS, WhatsApp, and voice.',
+          providerName: brand.name,
+        })}
+      />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <CustomNavbar brand={brand} />
       <main className="flex-1">

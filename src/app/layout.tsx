@@ -8,6 +8,9 @@ import { PwaLinks } from "@/components/pwa/pwa-links";
 import { CUSTOM_BRAND, LANDING_VARIANT } from "@/config/landing";
 import { resolveProductSurface } from "@/lib/landing/resolve-product-surface";
 import "./globals.css";
+import { siteOrigin } from "@/lib/seo/site";
+import { JsonLd } from "@/components/seo/json-ld";
+import { websiteSchema } from "@/lib/seo/schema";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -72,11 +75,27 @@ export async function generateMetadata(): Promise<Metadata> {
   const ascendDescription =
     "Ascend analyzes your website and marketing to identify the biggest constraint holding back conversions, shows you what to fix first, and helps you put the fix into action.";
 
+  // HOST-AWARE BASE + A CANONICAL ON EVERY PAGE.
+  //
+  // metadataBase was pinned to CUSTOM_BRAND.primaryDomain, so every absolute
+  // URL Next.js derived from it named one host while the request may have
+  // arrived at the other. It now follows the request, through the same
+  // validated-host resolution robots.ts and sitemap.ts use.
+  //
+  // `canonical: "./"` is resolved by Next.js against the CURRENT route, so
+  // one declaration here gives all 26 public pages their own canonical on
+  // the host they were actually served from. Before this, not one page
+  // emitted a canonical at all, while both hostnames served the identical
+  // marketing site: two complete copies competing with each other, with the
+  // winner picked by a crawler rather than by us. A page needing a different
+  // canonical can still override this.
+  const requestOrigin = await siteOrigin();
   const base: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(requestOrigin),
+  alternates: { canonical: "./" },
   ...(LANDING_VARIANT === "custom"
     ? {
-        title: `${CUSTOM_BRAND.name}, ${CUSTOM_BRAND.tagline}`,
+        title: `${CUSTOM_BRAND.name} | ${CUSTOM_BRAND.tagline}`,
         description: CUSTOM_BRAND.shortDescription,
         openGraph: {
           title: CUSTOM_BRAND.name,
@@ -94,7 +113,7 @@ export async function generateMetadata(): Promise<Metadata> {
         },
       }
     : {
-        title: "LeadStack, The all-in-one CRM for teams that actually close",
+        title: "LeadStack | The all-in-one CRM for teams that actually close",
         description:
           "Capture leads, run pipelines, and book meetings from one simple workspace. Built for small teams that want to replace five tools with one.",
         openGraph: {
@@ -165,13 +184,36 @@ export const viewport: Viewport = {
   themeColor: "#18181b",
 };
 
-export default function RootLayout({
+/**
+ * WebSite is the one piece of structured data that belongs to the site rather
+ * than to a page, and nothing emitted it. It is declared once here, on the
+ * host the request actually arrived at, so both surfaces describe themselves
+ * instead of one describing the other.
+ *
+ * No SearchAction: there is no public search endpoint to point at, and
+ * declaring one that does not exist is a claim, not markup.
+ */
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const origin = await siteOrigin();
+  const product = await resolveProductSurface();
+  const siteName = product === "unified" ? "Ascend" : CUSTOM_BRAND.name;
+
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <JsonLd
+          data={websiteSchema({
+            name: siteName,
+            url: origin,
+            description: CUSTOM_BRAND.shortDescription,
+            publisherName: CUSTOM_BRAND.parentCompany ?? siteName,
+          })}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} antialiased`}
       >

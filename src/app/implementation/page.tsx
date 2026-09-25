@@ -8,13 +8,16 @@ import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
 import { StepFlow, type FlowStep } from "@/components/landing-custom/step-flow";
+import { siteOrigin } from "@/lib/seo/site";
+import { JsonLd } from "@/components/seo/json-ld";
+import { serviceSchema } from "@/lib/seo/schema";
 
 export async function generateMetadata() {
   const brand = await resolveCustomBrand();
   return {
-    title: `Implementation & Onboarding, ${brand.name}`,
+    title: `Implementation & Onboarding | ${brand.name}`,
     description: `What CRM onboarding with ${brand.name} actually looks like: tell us about your business, we configure your systems and migrate your existing contacts, connect what you already use, and go live in days, not months.`,
-    openGraph: { title: `Implementation, ${brand.name}`, type: "website" as const },
+    openGraph: { title: `Implementation | ${brand.name}`, type: "website" as const },
   };
 }
 
@@ -73,7 +76,7 @@ const IMPLEMENTATION_FLOW: FlowStep[] = [
 
 export default async function ImplementationPage() {
   const brand = await resolveCustomBrand();
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
+  const baseUrl = await siteOrigin();
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -87,6 +90,17 @@ export default async function ImplementationPage() {
   return (
     <div className="marketing-accent flex min-h-screen flex-col">
       <OrganizationSchema brand={brand} baseUrl={baseUrl} />
+      {/* What is actually sold on this page. Service is the type that
+          carries a capability offered by an organisation, and none of the
+          capability pages declared one. */}
+      <JsonLd
+        data={serviceSchema({
+          name: 'Implementation and onboarding',
+          url: `${baseUrl}/implementation`,
+          description: 'Data import and de-duplication, pipeline and workflow configuration, channel setup, and team onboarding.',
+          providerName: brand.name,
+        })}
+      />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <CustomNavbar brand={brand} />
       <main className="flex-1">

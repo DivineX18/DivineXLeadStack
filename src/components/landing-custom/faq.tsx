@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ResolvedBrand } from "@/config/landing";
 import { FaqAccordion } from "./faq-accordion";
+import { FaqSection } from "@/components/seo/faq-section";
+import { PRODUCT_FAQS_SHORT } from "@/data/product-faqs";
 
 export const HOMEPAGE_FAQS = [
   {
@@ -35,7 +37,26 @@ export const HOMEPAGE_FAQS = [
   },
 ];
 
+/**
+ * The homepage FAQ.
+ *
+ * It rendered six questions and emitted no FAQPage markup at all, so the
+ * content was on the page and search engines were told nothing about it.
+ * It also never mentioned Zeno or Ascend, which meant the homepage could not
+ * answer the most common pre-purchase question there is: which of these three
+ * things am I buying. Both are fixed by delegating to FaqSection, which emits
+ * the schema from the same array it renders.
+ */
 export function FAQ({ brand }: { brand: ResolvedBrand }) {
+  return (
+    <FaqSection
+      items={[...HOMEPAGE_FAQS, ...PRODUCT_FAQS_SHORT]}
+      supportEmail={brand.supportEmail}
+    />
+  );
+}
+
+export function LegacyFAQ({ brand }: { brand: ResolvedBrand }) {
   return (
     <section id="faq" className="border-t py-24">
       <div className="container mx-auto px-4">

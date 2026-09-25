@@ -7,15 +7,20 @@ import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
 import { INDUSTRIES } from "@/data/industries";
+import { siteOrigin } from "@/lib/seo/site";
+import { FaqSection } from "@/components/seo/faq-section";
+import { PRODUCT_FAQS } from "@/data/product-faqs";
+import { JsonLd } from "@/components/seo/json-ld";
+import { itemListSchema } from "@/lib/seo/schema";
 
 export async function generateMetadata() {
   // Host-aware, exactly as / and /pricing already resolve it. Without
   // this the Ascend host served Flow's name, tagline and closing CTA.
   const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   return {
-    title: `Industries, ${brand.name} CRM for Coaches, Agencies, Trades & More`,
+    title: `Industries | ${brand.name} CRM for Coaches, Agencies, Trades & More`,
     description: `${brand.name} adapted to how different industries actually sell: coaches, agencies, home services and trades, real estate, and local service businesses.`,
-    openGraph: { title: `Industries, ${brand.name}`, type: "website" as const },
+    openGraph: { title: `Industries | ${brand.name}`, type: "website" as const },
   };
 }
 
@@ -23,11 +28,19 @@ export default async function IndustriesPage() {
   // Host-aware, exactly as / and /pricing already resolve it. Without
   // this the Ascend host served Flow's name, tagline and closing CTA.
   const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
+  const baseUrl = await siteOrigin();
 
   return (
     <div className="marketing-accent flex min-h-screen flex-col">
       <OrganizationSchema brand={brand} baseUrl={baseUrl} />
+      {/* A hub whose whole job is to list the industry pages. ItemList is
+          what tells a crawler that, and it is how the set gets treated as a
+          set rather than as one page that happens to have links on it. */}
+      <JsonLd
+        data={itemListSchema(
+          INDUSTRIES.map((i) => ({ name: i.name, url: `${baseUrl}/industries/${i.slug}` })),
+        )}
+      />
       <CustomNavbar brand={brand} />
       <main className="flex-1">
         <section className="py-20 text-center md:py-24">
@@ -65,6 +78,11 @@ export default async function IndustriesPage() {
         </section>
 
         <CustomCTA brand={brand} product={await resolveProductSurface()} />
+        {/* The three-product question is asked before any other, and no
+            public page answered it. FaqSection emits its own FAQPage markup
+            from the same array it renders, so the copy and the structured
+            data cannot drift apart. */}
+        <FaqSection items={PRODUCT_FAQS} supportEmail={brand.supportEmail} />
       </main>
       <CustomFooter brand={brand} />
     </div>

@@ -9,6 +9,7 @@ import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
 import { INDUSTRIES, getIndustryBySlug } from "@/data/industries";
+import { siteOrigin } from "@/lib/seo/site";
 
 export function generateStaticParams() {
   return INDUSTRIES.map((i) => ({ slug: i.slug }));
@@ -24,9 +25,9 @@ export async function generateMetadata({ params }: PageProps) {
   const brand = await resolveCustomBrand();
   if (!industry) return { title: `Industries, ${brand.name}` };
   return {
-    title: `${industry.metaTitle}, ${brand.name}`,
+    title: `${industry.metaTitle} | ${brand.name}`,
     description: industry.metaDescription,
-    openGraph: { title: `${industry.metaTitle}, ${brand.name}`, type: "website" as const },
+    openGraph: { title: `${industry.metaTitle} | ${brand.name}`, type: "website" as const },
   };
 }
 
@@ -36,7 +37,7 @@ export default async function IndustryDetailPage({ params }: PageProps) {
   if (!industry) notFound();
 
   const brand = await resolveCustomBrand();
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
+  const baseUrl = await siteOrigin();
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",

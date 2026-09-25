@@ -42,6 +42,9 @@ import { Footer as CustomFooter } from "@/components/landing-custom/footer";
 import { IndustryShowcase } from "@/components/landing-custom/industry-showcase";
 import { INDUSTRIES } from "@/data/industries";
 import { FunnelPageView } from "@/components/analytics/funnel-page-view";
+import { siteOrigin } from "@/lib/seo/site";
+import { JsonLd } from "@/components/seo/json-ld";
+import { softwareApplicationSchema } from "@/lib/seo/schema";
 
 /**
  * Renders one of two landing pages based on src/config/landing.ts.
@@ -101,11 +104,29 @@ export default async function HomePage() {
     ]);
     // The Unified site must call itself Unified, not Flow. Logo untouched.
     const brand = brandForProduct(rawBrand, product);
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
+    const baseUrl = await siteOrigin();
     return (
       <div className="marketing-accent flex min-h-screen flex-col">
         <OrganizationSchema brand={brand} baseUrl={baseUrl} />
         <ProductSchema brand={brand} baseUrl={baseUrl} plans={plans} />
+        {/* SoftwareApplication is the honest type for what this is, and it is
+            what earns the category and price treatment in a result. Product
+            above stays, because the pricing offers really are offers. Both
+            read the same live plan data, so neither can quote a price the
+            page does not show. */}
+        <JsonLd
+          data={softwareApplicationSchema({
+            name: brand.name,
+            url: baseUrl,
+            description: brand.shortDescription,
+            offers: plans.map((plan) => ({
+              name: plan.name,
+              price: (plan.priceMonthlyCents / 100).toFixed(2),
+              currency: plan.currency.toUpperCase(),
+              url: `${baseUrl}/pricing`,
+            })),
+          })}
+        />
         <CustomNavbar brand={brand} />
         <main className="flex-1">
           {/* A. Only on the Ascend surface: the Flow homepage is a different

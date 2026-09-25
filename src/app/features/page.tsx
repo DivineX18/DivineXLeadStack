@@ -28,15 +28,18 @@ import {
   Webhook,
   Zap,
 } from "lucide-react";
+import { siteOrigin } from "@/lib/seo/site";
+import { JsonLd } from "@/components/seo/json-ld";
+import { serviceSchema } from "@/lib/seo/schema";
 
 export async function generateMetadata() {
   // Host-aware, exactly as / and /pricing already resolve it. Without
   // this the Ascend host served Flow's name, tagline and closing CTA.
   const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   return {
-    title: `Features, ${brand.name} CRM, Pipeline & AI Agent Tools`,
+    title: `Features | ${brand.name} CRM, Pipeline & AI Agent Tools`,
     description: `Every real, shipped ${brand.name} feature: AI agents across web chat, SMS, WhatsApp and voice, contacts and sales pipeline, quotes and invoicing, lead capture forms, booking pages, and a public API.`,
-    openGraph: { title: `Features, ${brand.name}`, type: "website" as const },
+    openGraph: { title: `Features | ${brand.name}`, type: "website" as const },
   };
 }
 
@@ -164,7 +167,7 @@ export default async function FeaturesPage() {
   // Host-aware, exactly as / and /pricing already resolve it. Without
   // this the Ascend host served Flow's name, tagline and closing CTA.
   const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
+  const baseUrl = await siteOrigin();
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -178,6 +181,17 @@ export default async function FeaturesPage() {
   return (
     <div className="marketing-accent flex min-h-screen flex-col">
       <OrganizationSchema brand={brand} baseUrl={baseUrl} />
+      {/* What is actually sold on this page. Service is the type that
+          carries a capability offered by an organisation, and none of the
+          capability pages declared one. */}
+      <JsonLd
+        data={serviceSchema({
+          name: 'CRM and AI agent features',
+          url: `${baseUrl}/features`,
+          description: 'Every shipped capability: AI agents across web chat, SMS, WhatsApp and voice, pipeline, quotes, booking pages, forms, broadcasts, funnels, and a public API.',
+          providerName: brand.name,
+        })}
+      />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <CustomNavbar brand={brand} />
       <main className="flex-1">

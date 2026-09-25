@@ -4,19 +4,22 @@ import { OrganizationSchema } from "@/components/landing-custom/site-schema";
 import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
 import { ContactForm } from "@/components/landing-custom/contact-form";
+import { siteOrigin } from "@/lib/seo/site";
+import { FaqSection } from "@/components/seo/faq-section";
+import { PRODUCT_FAQS } from "@/data/product-faqs";
 
 export async function generateMetadata() {
   const brand = await resolveCustomBrand();
   return {
-    title: `Contact, ${brand.name}`,
-    description: `Get in touch with the ${brand.name} team.`,
-    openGraph: { title: `Contact, ${brand.name}`, type: "website" as const },
+    title: `Contact | ${brand.name}`,
+    description: `Talk to a real person about ${brand.name}: what it does, whether it fits how your team works, pricing, and moving your existing contacts across.`,
+    openGraph: { title: `Contact | ${brand.name}`, type: "website" as const },
   };
 }
 
 export default async function ContactPage() {
   const brand = await resolveCustomBrand();
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
+  const baseUrl = await siteOrigin();
 
   return (
     <div className="marketing-accent flex min-h-screen flex-col">
@@ -54,6 +57,11 @@ export default async function ContactPage() {
             </div>
           </div>
         </section>
+        {/* The three-product question is asked before any other, and no
+            public page answered it. FaqSection emits its own FAQPage markup
+            from the same array it renders, so the copy and the structured
+            data cannot drift apart. */}
+        <FaqSection items={PRODUCT_FAQS} supportEmail={brand.supportEmail} />
       </main>
       <CustomFooter brand={brand} />
     </div>

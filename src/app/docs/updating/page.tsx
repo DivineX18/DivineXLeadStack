@@ -25,7 +25,7 @@ import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 export async function generateMetadata() {
   const brand = await resolveCustomBrand();
   return {
-    title: `Keeping your app up to date, ${brand.name}`,
+    title: `Keeping your app up to date | ${brand.name}`,
     description:
       "How to pull the latest official LeadStack build into your own customised version of the app, without losing your changes.",
   };

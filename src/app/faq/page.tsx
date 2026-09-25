@@ -7,15 +7,17 @@ import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
 import { FaqAccordion, type FaqItem } from "@/components/landing-custom/faq-accordion";
 import { HOMEPAGE_FAQS } from "@/components/landing-custom/faq";
+import { siteOrigin } from "@/lib/seo/site";
+import { PRODUCT_FAQS } from "@/data/product-faqs";
 
 export async function generateMetadata() {
   // Host-aware, exactly as / and /pricing already resolve it. Without
   // this the Ascend host served Flow's name, tagline and closing CTA.
   const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
   return {
-    title: `FAQ, ${brand.name}`,
-    description: `Answers about getting started, billing, the AI agents, team access, and support on ${brand.name}.`,
-    openGraph: { title: `FAQ, ${brand.name}`, type: "website" as const },
+    title: `FAQ | ${brand.name}`,
+    description: `Answers about Zeno, Flow, and Ascend, plus getting started, billing, the AI agents, team access, and support on ${brand.name}.`,
+    openGraph: { title: `FAQ | ${brand.name}`, type: "website" as const },
   };
 }
 
@@ -56,8 +58,11 @@ export default async function FaqPage() {
   // Host-aware, exactly as / and /pricing already resolve it. Without
   // this the Ascend host served Flow's name, tagline and closing CTA.
   const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
-  const allFaqs = [...HOMEPAGE_FAQS, ...MORE_FAQS];
+  const baseUrl = await siteOrigin();
+  // The product questions lead, because "which of these three am I buying"
+  // is asked before any question about billing or AI agents, and until now no
+  // public page answered it at all.
+  const allFaqs = [...PRODUCT_FAQS, ...HOMEPAGE_FAQS, ...MORE_FAQS];
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",

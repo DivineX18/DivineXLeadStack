@@ -8,6 +8,7 @@ import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
 import { ResourceBody } from "@/components/landing-custom/resource-body";
 import { RESOURCE_POSTS, getResourcePostBySlug } from "@/data/resources-posts";
+import { siteOrigin } from "@/lib/seo/site";
 
 export function generateStaticParams() {
   return RESOURCE_POSTS.map((p) => ({ slug: p.slug }));
@@ -23,7 +24,7 @@ export async function generateMetadata({ params }: PageProps) {
   const brand = await resolveCustomBrand();
   if (!post) return { title: `Resources, ${brand.name}` };
   return {
-    title: `${post.title}, ${brand.name}`,
+    title: `${post.title} | ${brand.name}`,
     description: post.metaDescription,
     openGraph: { title: post.title, description: post.metaDescription, type: "article" as const },
   };
@@ -35,7 +36,7 @@ export default async function ResourcePostPage({ params }: PageProps) {
   if (!post) notFound();
 
   const brand = await resolveCustomBrand();
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `https://${brand.primaryDomain}`;
+  const baseUrl = await siteOrigin();
   const postUrl = `${baseUrl}/resources/${post.slug}`;
 
   const articleSchema = {

@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { LANDING_VARIANT } from "@/config/landing";
 import { INDUSTRIES } from "@/data/industries";
 import { RESOURCE_POSTS } from "@/data/resources-posts";
+import { siteOrigin } from "@/lib/seo/site";
 
 /**
  * Sitemap. Next.js 15 picks this file up automatically and serves the
@@ -10,13 +11,16 @@ import { RESOURCE_POSTS } from "@/data/resources-posts";
  * Variant-aware: the LeadStack-branded deployment publishes the public
  * docs + comparison pages it actually hosts. White-label buyer clones
  * (LANDING_VARIANT === "custom") publish only the buyer's own marketing
- * surface — listing LeadStack's vs pages in their sitemap would
- * advertise 404s.
+ * surface. Listing LeadStack's vs pages in their sitemap would advertise
+ * 404s.
+ *
+ * HOST-AWARE, for the same reason robots.ts is: one deployment answers on
+ * more than one hostname, and a sitemap that lists another host's URLs is
+ * worse than no sitemap. Each host now lists itself, and each page carries a
+ * canonical pointing at the host it was served from.
  */
-export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
-    "https://leadstack.dev";
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const baseUrl = await siteOrigin();
   const now = new Date();
 
   const sharedEntries: MetadataRoute.Sitemap = [
