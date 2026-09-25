@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Logo } from "./logo";
 
 /**
@@ -31,10 +31,24 @@ export function BrandLogo({
   idSuffix: string;
 }) {
   const [failed, setFailed] = useState(false);
+  const ref = useRef<HTMLImageElement | null>(null);
+
+  // onError alone is not enough. The <img> is server-rendered, so the browser
+  // can fire its error event BEFORE React hydrates and attaches the handler,
+  // and the fallback never runs. That is exactly what happened in production:
+  // the mobile render recovered and the desktop one kept two broken images.
+  // A finished image that decoded to nothing is a failed image, whenever the
+  // event happened to fire.
+  useEffect(() => {
+    const el = ref.current;
+    if (el && el.complete && el.naturalWidth === 0) setFailed(true);
+  }, [logoUrl]);
+
   if (!logoUrl || failed) return <Logo size={size} idSuffix={idSuffix} />;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
+      ref={ref}
       src={logoUrl}
       alt={`${name} logo`}
       className={imgClassName}
