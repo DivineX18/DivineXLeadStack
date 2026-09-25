@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { GrowthScanner } from "@/components/growth-scan/growth-scanner";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import { brandForProduct, resolveProductSurface } from "@/lib/landing/resolve-product-surface";
-import { Navbar as CustomNavbar } from "@/components/landing-custom/navbar";
-import { Footer as CustomFooter } from "@/components/landing-custom/footer";
+import Link from "next/link";
+import { BrandLogo } from "@/components/landing-custom/brand-logo";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +26,14 @@ export const dynamic = "force-dynamic";
  * identity under them. That is the most expensive place to look untrustworthy,
  * because it is the page asking for an email address.
  *
- * It now uses the same navbar, the same footer and the same design tokens as
- * the rest of the marketing site. The layout of the ask is untouched.
+ * It now carries the mark and the same design tokens as the rest of the
+ * marketing site, and nothing else. The full navbar and footer were tried
+ * first and removed deliberately: a scan page earns its keep by getting one
+ * thing done, and a nav with five menus plus a footer with sixteen links is
+ * sixteen ways to leave before entering an email address. The logo alone
+ * answers "whose page is this", which was the actual problem.
+ *
+ * The layout of the ask is untouched.
  */
 export const metadata: Metadata = {
   title: "Free Growth Scan. Find what's costing you leads | Ascend",
@@ -56,10 +62,30 @@ export default async function GrowthScannerPage() {
   const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
 
   return (
-    <div className="marketing-accent flex min-h-dvh flex-col">
-      <CustomNavbar brand={brand} />
+    <div className="marketing-accent flex min-h-dvh flex-col bg-background text-foreground">
+      {/* The mark, and nothing that competes with the form. It links home
+          because a logo that does not is a dead end for anyone who wants to
+          know who we are before typing their address. */}
+      <header className="px-5 py-6 sm:px-8">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-xl font-bold"
+          aria-label={`${brand.name} home`}
+        >
+          <BrandLogo
+            logoUrl={brand.logoUrl}
+            name={brand.name}
+            size={24}
+            idSuffix="-scan"
+            imgClassName="h-6 w-auto max-w-[120px] object-contain"
+          />
+          <span className="bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-300 bg-clip-text text-transparent">
+            {brand.name}
+          </span>
+        </Link>
+      </header>
+
       <GrowthScanner brandName={brand.name} />
-      <CustomFooter brand={brand} />
     </div>
   );
 }
