@@ -154,6 +154,23 @@ export function AscendCreateContent({
             below, or pick <strong>Lead magnet</strong> when you create a new funnel. Upload
             a PDF in the builder and it is attached to the follow-up email automatically.
           </p>
+          {/* TWO THINGS SHARE THE NAME, SO SAY WHICH IS WHICH.
+              This tab builds the opt-in page and the delivery. Writing the
+              document itself is Marketing Assets, where "Lead Magnet" and
+              "Lead Magnet Full Draft" are generation types. Without this line
+              a customer sees the words twice and has to guess. */}
+          <p className="mt-2 max-w-2xl text-sm text-[var(--dx-text-muted)]">
+            Writing the document itself happens in{" "}
+            <button
+              type="button"
+              onClick={() => setCategory("assets")}
+              className="underline underline-offset-2 hover:text-[var(--dx-text-primary)]"
+            >
+              Marketing Assets
+            </button>
+            , where Zeno drafts it from your business. This tab is the page that
+            delivers it.
+          </p>
           <div className="mt-6">
             <FunnelsList saId={saId} baseHref={funnelBaseHref} />
           </div>
