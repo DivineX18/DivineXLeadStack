@@ -23,14 +23,24 @@
 export type ButtonStyle = "primary" | "secondary";
 
 export interface BrandColors {
-  /** Fill for the primary button, and the border/text for the secondary. */
+  /** Fill for the primary button. */
   accent: string;
   /** Text on top of the accent fill, chosen for contrast. */
   onAccent: string;
+  /** Border and text for the secondary button. */
+  secondary: string;
 }
 
-/** The product's own accent, used when a workspace has not set one. */
-export const DEFAULT_ACCENT = "#059669";
+/**
+ * The brand's two colours.
+ *
+ * The secondary is a SEPARATE colour, not a lighter treatment of the
+ * primary: the outlined button is deep teal against the jade fill, which is
+ * the pairing the brand actually uses. Deriving one from the other would have
+ * produced an outlined jade button nobody asked for.
+ */
+export const DEFAULT_ACCENT = "#00A68F";
+export const DEFAULT_SECONDARY = "#005372";
 
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 
@@ -56,11 +66,19 @@ function readableOn(hex: string): string {
   return luminance > 0.45 ? "#111827" : "#ffffff";
 }
 
-/** Brand colours for this workspace, falling back to the product accent. */
-export function resolveBrandColors(brandColor?: string | null): BrandColors {
-  const raw = (brandColor ?? "").trim();
-  const accent = HEX.test(raw) ? raw : DEFAULT_ACCENT;
-  return { accent, onAccent: readableOn(accent) };
+/** Brand colours for this workspace, falling back to the brand's own. */
+export function resolveBrandColors(
+  brandColor?: string | null,
+  brandColorSecondary?: string | null,
+): BrandColors {
+  const primary = (brandColor ?? "").trim();
+  const second = (brandColorSecondary ?? "").trim();
+  const accent = HEX.test(primary) ? primary : DEFAULT_ACCENT;
+  return {
+    accent,
+    onAccent: readableOn(accent),
+    secondary: HEX.test(second) ? second : DEFAULT_SECONDARY,
+  };
 }
 
 /**
@@ -105,13 +123,16 @@ export function renderButtonHtml(btn: ParsedButton, colors: BrandColors): string
   const label = escapeHtml(btn.label);
   const href = escapeHtml(btn.href);
   const filled = btn.style === "primary";
-  const cell = filled
-    ? `background-color:${colors.accent};border:2px solid ${colors.accent};border-radius:8px;`
-    : `background-color:#ffffff;border:2px solid ${colors.accent};border-radius:8px;`;
-  const textColor = filled ? colors.onAccent : colors.accent;
+  const fill = filled ? colors.accent : "#ffffff";
+  const edge = filled ? colors.accent : colors.secondary;
+  const textColor = filled ? colors.onAccent : colors.secondary;
+  // bgcolor as well as the style: older Outlook builds honour the ATTRIBUTE
+  // and drop background-color, which would leave a filled button white with
+  // white text on it. mso-padding-alt gives Word the box it will not take
+  // from an inline element.
   return (
     `<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin:24px 0;border-collapse:separate;">` +
-    `<tr><td align="center" style="${cell}padding:13px 26px;">` +
+    `<tr><td align="center" bgcolor="${fill}" style="background-color:${fill};border:2px solid ${edge};border-radius:8px;mso-padding-alt:13px 26px;padding:13px 26px;">` +
     `<a href="${href}" style="display:inline-block;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;line-height:1;color:${textColor};text-decoration:none;">${label}</a>` +
     `</td></tr></table>`
   );

@@ -121,9 +121,12 @@ function mergeSubject(
 function bodyToHtml(
   resolved: string,
   unsub?: { token: string; href: string },
-  brandColor?: string | null,
+  brand?: { primary?: string | null; secondary?: string | null },
 ): string {
-  return renderBodyHtml(resolved, { unsub, colors: resolveBrandColors(brandColor) });
+  return renderBodyHtml(resolved, {
+    unsub,
+    colors: resolveBrandColors(brand?.primary, brand?.secondary),
+  });
 }
 
 /** Shared card wrapper for every workflow-sent email (customer sends AND
@@ -169,7 +172,10 @@ const execSendEmail: NodeExecutor = async (ctx) => {
     bodyToHtml(
       resolvedForHtml,
       { token: UNSUB_TOKEN, href: unsubscribeLink },
-      ctx.subAccount?.brandColor
+      {
+        primary: ctx.subAccount?.brandColor,
+        secondary: ctx.subAccount?.brandColorSecondary,
+      }
     )
   );
 
@@ -551,7 +557,10 @@ const execNotify: NodeExecutor = async (ctx) => {
   const text = resolveMergeTags(cfg.body ?? "", mergeSubject(ctx, ""));
   const html = wrapEmailHtml(
     ctx.subAccount?.name ?? "",
-    bodyToHtml(text, undefined, ctx.subAccount?.brandColor)
+    bodyToHtml(text, undefined, {
+      primary: ctx.subAccount?.brandColor,
+      secondary: ctx.subAccount?.brandColorSecondary,
+    })
   );
   try {
     await sendEmail({

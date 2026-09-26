@@ -29,6 +29,7 @@ const HEX_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 interface PatchBody {
   logoUrl?: string | null;
   brandColor?: string | null;
+  brandColorSecondary?: string | null;
 }
 
 export async function PATCH(
@@ -78,6 +79,21 @@ export async function PATCH(
         );
       }
       updates.brandColor = trimmed.toLowerCase();
+    }
+  }
+
+  if ("brandColorSecondary" in body) {
+    if (body.brandColorSecondary === null || body.brandColorSecondary === "") {
+      updates.brandColorSecondary = null;
+    } else if (typeof body.brandColorSecondary === "string") {
+      const trimmed = body.brandColorSecondary.trim();
+      if (!HEX_RE.test(trimmed)) {
+        return NextResponse.json(
+          { error: "brandColorSecondary must be a hex colour, for example #005372." },
+          { status: 400 },
+        );
+      }
+      updates.brandColorSecondary = trimmed.toLowerCase();
     }
   }
 

@@ -541,6 +541,12 @@ export interface SubAccountDoc {
    */
   brandColor?: string | null;
   /**
+   * The outlined (secondary) button's border and text. A separate colour
+   * rather than a treatment of the primary, because the brand pairs a jade
+   * fill with a deep-teal outline. Null means the brand default.
+   */
+  brandColorSecondary?: string | null;
+  /**
    * Opt-in territory scoping. When true, collaborators only see deals
    * and contacts whose `territoryId` is in their `assignedTerritoryIds`.
    * Admins and the agency owner are unaffected. When false (the

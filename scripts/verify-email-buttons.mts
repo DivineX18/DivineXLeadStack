@@ -13,6 +13,7 @@
 import fs from "node:fs";
 import {
   DEFAULT_ACCENT,
+  DEFAULT_SECONDARY,
   parseButtonLine,
   renderBodyHtml,
   renderBodyText,
@@ -77,20 +78,44 @@ console.log("\n-- the button renders as something mail clients agree on --");
   ck("the prose above it is still a paragraph", html.includes("<p style=\"margin:0 0 16px;\">Ready when you are.</p>"));
 }
 
-console.log("\n-- primary is filled, secondary is outlined --");
+console.log("\n-- the brand's two colours --");
 {
-  const colors = resolveBrandColors("#7c3aed");
-  const primary = renderBodyHtml(`[button: Go](${BOOK})`, { colors });
-  const secondary = renderBodyHtml(`[button secondary: Go](${BOOK})`, { colors });
-  ck("primary fills with the brand colour", primary.includes("background-color:#7c3aed"));
+  ck("the jade fill is the primary default", DEFAULT_ACCENT.toLowerCase() === "#00a68f");
+  ck("the deep teal is the secondary default", DEFAULT_SECONDARY.toLowerCase() === "#005372");
+
+  const primary = renderBodyHtml(`[button: Go](${BOOK})`);
+  const secondary = renderBodyHtml(`[button secondary: Go](${BOOK})`);
+  ck("primary fills with the jade", primary.includes("background-color:#00A68F"));
+  ck("primary text is readable on jade", primary.includes("color:#ffffff"));
   ck("secondary does not fill", secondary.includes("background-color:#ffffff"));
-  ck("secondary is outlined in the brand colour", secondary.includes("border:2px solid #7c3aed"));
-  ck("secondary text is the brand colour", secondary.includes("color:#7c3aed"));
-  ck("an unset workspace gets the product accent",
-    renderBodyHtml(`[button: Go](${BOOK})`).includes(DEFAULT_ACCENT));
+  ck("secondary is outlined in the deep teal", secondary.includes("border:2px solid #005372"));
+  ck("secondary text is the deep teal", secondary.includes("color:#005372"));
+  // The secondary is its OWN colour, not a treatment of the primary.
+  ck("the secondary is not derived from the primary", !secondary.includes("#00A68F"));
+
+  const custom = resolveBrandColors("#7c3aed", "#1e293b");
+  const p2 = renderBodyHtml(`[button: Go](${BOOK})`, { colors: custom });
+  const s2 = renderBodyHtml(`[button secondary: Go](${BOOK})`, { colors: custom });
+  ck("a workspace can override the fill", p2.includes("background-color:#7c3aed"));
+  ck("and the outline, independently", s2.includes("border:2px solid #1e293b"));
   ck("a bad colour falls back rather than reaching the style attribute",
-    renderBodyHtml(`[button: Go](${BOOK})`, { colors: resolveBrandColors("red; } evil {") })
+    renderBodyHtml(`[button: Go](${BOOK})`, { colors: resolveBrandColors("red; } evil {", "x") })
       .includes(DEFAULT_ACCENT));
+}
+
+console.log("\n-- what Outlook needs, specifically --");
+{
+  const html = renderBodyHtml(`[button: Book a call](${BOOK})`);
+  // Word drops background-color often enough that the attribute has to be
+  // there too, or a filled button renders white with white text on it.
+  ck("the fill is also a bgcolor attribute", /bgcolor="#00A68F"/.test(html));
+  ck("mso-padding-alt gives Word the box it will not take from an inline element",
+    html.includes("mso-padding-alt:13px 26px"));
+  ck("the anchor carries an explicit line-height", html.includes("line-height:1;"));
+  ck("no shorthand background property Word ignores", !/[^-]background:/.test(html));
+  ck("nothing Outlook cannot lay out: no flex, grid or position",
+    !/display:\s*(flex|grid)/.test(html) && !/position:/.test(html));
+  ck("the table is presentational", html.includes('role="presentation"'));
 }
 {
   // A pale brand colour with white text is a CTA nobody can read.

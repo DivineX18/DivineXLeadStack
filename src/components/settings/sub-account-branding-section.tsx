@@ -7,7 +7,7 @@ import { useSubAccount } from "@/context/sub-account-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DEFAULT_ACCENT } from "@/lib/email/body";
+import { DEFAULT_ACCENT, DEFAULT_SECONDARY } from "@/lib/email/body";
 
 /**
  * Sub-account branding settings. v1 supports a single field — logo URL —
@@ -23,12 +23,13 @@ const HEX_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 
 /** What the accent is actually used for, so the field is not a mystery. */
 const ACCENT_HELP =
-  "Used for the call-to-action buttons in automated emails. Leave blank for the default green.";
+  "Used for the call-to-action buttons in automated emails. Leave either blank for the brand default.";
 
 export function SubAccountBrandingSection() {
   const { subAccountId, subAccount, isAdmin } = useSubAccount();
   const [logoUrl, setLogoUrl] = useState("");
   const [brandColor, setBrandColor] = useState("");
+  const [brandColorSecondary, setBrandColorSecondary] = useState("");
   const [saving, setSaving] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
@@ -39,6 +40,7 @@ export function SubAccountBrandingSection() {
     if (!hydrated && subAccount) {
       setLogoUrl(subAccount.logoUrl ?? "");
       setBrandColor(subAccount.brandColor ?? "");
+      setBrandColorSecondary(subAccount.brandColorSecondary ?? "");
       setHydrated(true);
     }
   }, [hydrated, subAccount]);
@@ -53,8 +55,13 @@ export function SubAccountBrandingSection() {
       return;
     }
     const color = brandColor.trim();
+    const color2 = brandColorSecondary.trim();
     if (color && !HEX_RE.test(color)) {
-      toast.error("Accent colour must be a hex value, for example #059669.");
+      toast.error("Button colour must be a hex value, for example #00A68F.");
+      return;
+    }
+    if (color2 && !HEX_RE.test(color2)) {
+      toast.error("Outlined button colour must be a hex value, for example #005372.");
       return;
     }
     setSaving(true);
@@ -62,7 +69,11 @@ export function SubAccountBrandingSection() {
       const res = await fetch(`/api/sub-accounts/${subAccountId}/branding`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ logoUrl: trimmed || null, brandColor: color || null }),
+        body: JSON.stringify({
+          logoUrl: trimmed || null,
+          brandColor: color || null,
+          brandColorSecondary: color2 || null,
+        }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
@@ -99,27 +110,60 @@ export function SubAccountBrandingSection() {
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="sa-brand-color">Accent colour</Label>
-        <div className="flex items-center gap-2">
-          <input
-            id="sa-brand-color-swatch"
-            type="color"
-            aria-label="Pick an accent colour"
-            value={HEX_RE.test(brandColor.trim()) ? brandColor.trim() : DEFAULT_ACCENT}
-            onChange={(e) => setBrandColor(e.target.value)}
-            className="h-9 w-12 cursor-pointer rounded-md border bg-background p-1"
-          />
-          <Input
-            id="sa-brand-color"
-            value={brandColor}
-            onChange={(e) => setBrandColor(e.target.value)}
-            placeholder={DEFAULT_ACCENT}
-            className="font-mono"
-          />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="sa-brand-color">Button colour</Label>
+          <div className="flex items-center gap-2">
+            <input
+              id="sa-brand-color-swatch"
+              type="color"
+              aria-label="Pick the filled button colour"
+              value={HEX_RE.test(brandColor.trim()) ? brandColor.trim() : DEFAULT_ACCENT}
+              onChange={(e) => setBrandColor(e.target.value)}
+              className="h-9 w-12 shrink-0 cursor-pointer rounded-md border bg-background p-1"
+            />
+            <Input
+              id="sa-brand-color"
+              value={brandColor}
+              onChange={(e) => setBrandColor(e.target.value)}
+              placeholder={DEFAULT_ACCENT}
+              className="font-mono"
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            The filled, primary call to action.
+          </p>
         </div>
-        <p className="text-[11px] text-muted-foreground">{ACCENT_HELP}</p>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="sa-brand-color-2">Outlined button colour</Label>
+          <div className="flex items-center gap-2">
+            <input
+              id="sa-brand-color-2-swatch"
+              type="color"
+              aria-label="Pick the outlined button colour"
+              value={
+                HEX_RE.test(brandColorSecondary.trim())
+                  ? brandColorSecondary.trim()
+                  : DEFAULT_SECONDARY
+              }
+              onChange={(e) => setBrandColorSecondary(e.target.value)}
+              className="h-9 w-12 shrink-0 cursor-pointer rounded-md border bg-background p-1"
+            />
+            <Input
+              id="sa-brand-color-2"
+              value={brandColorSecondary}
+              onChange={(e) => setBrandColorSecondary(e.target.value)}
+              placeholder={DEFAULT_SECONDARY}
+              className="font-mono"
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            The border and text of the quieter, secondary action.
+          </p>
+        </div>
       </div>
+      <p className="text-[11px] text-muted-foreground">{ACCENT_HELP}</p>
 
       <div className="space-y-1.5">
         <Label htmlFor="sa-logo-url">Logo URL</Label>
