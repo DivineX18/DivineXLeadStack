@@ -690,3 +690,91 @@ function renderAddedHtml({
 </body>
 </html>`;
 }
+
+/**
+ * Changing a member's role, in one place.
+ *
+ * The logic lived inline in the members PATCH route. It is shared now so the
+ * route and the assistant cannot drift: the role vocabulary, the two
+ * documents that must both be written, and the guards are one implementation.
+ *
+ * TWO DOCUMENTS, ALWAYS TOGETHER. The membership row is the authority, and
+ * `userMemberships/{uid}/subAccounts/{saId}` is the denormalised index the
+ * workspace switcher reads. Writing one without the other leaves a member
+ * whose role depends on which screen you look at.
+ */
+export type SubAccountMemberRole = "admin" | "collaborator";
+
+export type MemberRoleResult =
+  | { ok: true; uid: string; who: string; role: SubAccountMemberRole; previous: SubAccountMemberRole }
+  | { ok: false; reason: "missing" | "self" | "unchanged" };
+
+export async function updateSubAccountMemberRoleServerSide(opts: {
+  subAccountId: string;
+  targetUid: string;
+  role: SubAccountMemberRole;
+  /** The person making the change, so they cannot demote themselves out of
+   *  the ability to undo it. */
+  actingUid: string;
+}): Promise<MemberRoleResult> {
+  const db = getAdminDb();
+  // The membership path is the tenancy boundary: a uid belonging to some
+  // other workspace resolves to a path that does not exist here, so a
+  // foreign id is indistinguishable from a missing one.
+  const memberRef = db.doc(
+    `subAccounts/${opts.subAccountId}/subAccountMembers/${opts.targetUid}`,
+  );
+  const snap = await memberRef.get();
+  if (!snap.exists) return { ok: false, reason: "missing" };
+
+  const data = snap.data()!;
+  if (data.status === "removed") return { ok: false, reason: "missing" };
+
+  const previous = (data.role as SubAccountMemberRole) ?? "collaborator";
+
+  // The DELETE route already refuses self-removal for the same reason: an
+  // admin who demotes themselves loses member management and cannot put it
+  // back. This mirrors that rule rather than inventing a new one.
+  if (opts.targetUid === opts.actingUid && opts.role !== "admin") {
+    return { ok: false, reason: "self" };
+  }
+  if (previous === opts.role) return { ok: false, reason: "unchanged" };
+
+  const batch = db.batch();
+  batch.update(memberRef, { role: opts.role });
+  batch.update(
+    db.doc(`userMemberships/${opts.targetUid}/subAccounts/${opts.subAccountId}`),
+    { role: opts.role },
+  );
+  await batch.commit();
+
+  return {
+    ok: true,
+    uid: opts.targetUid,
+    who: (data.displayName as string) || (data.email as string) || opts.targetUid,
+    role: opts.role,
+    previous,
+  };
+}
+
+/** This workspace's active members, with the uid a role change needs. */
+export async function listSubAccountMembersServerSide(
+  subAccountId: string,
+): Promise<{ uid: string; who: string; email: string | null; role: string; status: string }[]> {
+  const snap = await getAdminDb()
+    .collection(`subAccounts/${subAccountId}/subAccountMembers`)
+    .limit(100)
+    .get();
+  return snap.docs
+    .map((d) => {
+      const x = d.data();
+      return {
+        uid: d.id,
+        who: (x.displayName as string) || (x.email as string) || d.id,
+        email: (x.email as string) ?? null,
+        role: String(x.role ?? "collaborator"),
+        status: String(x.status ?? "active"),
+      };
+    })
+    .filter((m) => m.status !== "removed");
+}

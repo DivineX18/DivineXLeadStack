@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import { requireSubAccountAdmin } from "@/lib/auth/require-tenancy";
+import { updateSubAccountMemberRoleServerSide } from "@/lib/server/members-service";
 
 /**
  * Sub-account-level member management.
@@ -43,16 +44,26 @@ export async function PATCH(
     return NextResponse.json({ error: "Not a member" }, { status: 404 });
   }
 
-  const indexRef = db.doc(
-    `userMemberships/${targetUid}/subAccounts/${subAccountId}`,
-  );
-
   const memberPatch: Record<string, unknown> = {};
-  const indexPatch: Record<string, unknown> = {};
 
   if (body.role === "admin" || body.role === "collaborator") {
+    const res = await updateSubAccountMemberRoleServerSide({
+      subAccountId,
+      targetUid,
+      role: body.role,
+      actingUid: access.uid,
+    });
+    if (!res.ok && res.reason === "self") {
+      return NextResponse.json(
+        { error: "You can't remove your own admin access. Ask the agency owner." },
+        { status: 400 },
+      );
+    }
+    if (!res.ok && res.reason === "missing") {
+      return NextResponse.json({ error: "Not a member" }, { status: 404 });
+    }
+    // "unchanged" is not an error: the role already is what was asked for.
     memberPatch.role = body.role;
-    indexPatch.role = body.role;
   }
 
   if (Array.isArray(body.assignedTerritoryIds)) {
@@ -100,12 +111,17 @@ export async function PATCH(
     );
   }
 
-  const batch = db.batch();
-  batch.update(memberRef, memberPatch);
-  if (Object.keys(indexPatch).length > 0) {
-    batch.update(indexRef, indexPatch);
+  // The role was already written by the service above; only territories
+  // remain for this batch.
+  const territoryPatch: Record<string, unknown> = {};
+  if ("assignedTerritoryIds" in memberPatch) {
+    territoryPatch.assignedTerritoryIds = memberPatch.assignedTerritoryIds;
   }
-  await batch.commit();
+  if (Object.keys(territoryPatch).length > 0) {
+    // The switcher index carries the role only, which the service already
+    // wrote. Territories live on the membership row alone.
+    await memberRef.update(territoryPatch);
+  }
 
   return NextResponse.json({
     ok: true,

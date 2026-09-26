@@ -2887,7 +2887,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             (data.displayName as string) || (data.email as string) || d.id;
           const email =
             data.displayName && data.email ? ` (${data.email})` : "";
-          return `- ${who}${email}, role: ${data.role ?? "member"}${
+          return `- ${who}${email} (id: ${d.id}), role: ${data.role ?? "member"}${
             data.status && data.status !== "active" ? `, ${data.status}` : ""
           }`;
         });
@@ -3697,11 +3697,16 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       }
       const lines = snap.docs.map((d) => {
         const w = d.data() as Record<string, unknown>;
-        const name =
-          (w.name as string) ||
-          ((w.config as { heading?: string } | undefined)?.heading ?? "Untitled site");
+        const cfg = (w.config ?? {}) as Record<string, string | undefined>;
+        const name = (w.name as string) || (cfg.heading ?? "Untitled site");
         const status = w.status as string;
         const contentFlags = w.contentFlags as unknown[] | null | undefined;
+        // The id and the current copy come back so update_website can change
+        // one line without the model reconstructing the whole config.
+        const editable = (["heading", "hero_statement", "features", "benefits", "services_list"] as const)
+          .map((k) => (cfg[k] ? `      ${k}: ${String(cfg[k]).slice(0, 300)}` : null))
+          .filter(Boolean)
+          .join("\n");
         const detail =
           status === "ready" && w.liveUrl
             ? `live at ${w.liveUrl}`
@@ -3714,7 +3719,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           status === "ready" && contentFlags && contentFlags.length > 0
             ? " ⚠️ may contain generic filler content (fake testimonials/stats/program details). Tell the user to review before sharing this link"
             : "";
-        return `- “${name}”: ${detail}${flagWarning}`;
+        return `- “${name}” (id: ${d.id}): ${detail}${flagWarning}${editable ? `\n${editable}` : ""}`;
       });
       return {
         resultText: `Websites in this workspace:\n${lines.join("\n")}`,
@@ -7653,6 +7658,187 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         );
       }
       return { resultText: `Updated the event "${res.title}".`, ref: { kind: "event", id: res.id } };
+    },
+  },
+  {
+    /**
+     * Change a website's COPY. It does not build.
+     *
+     * The stored config is the last-built one, and the builder form hydrates
+     * from it, so an edit here leaves the operator exactly where they would
+     * be after typing the change themselves: the new words are in the form,
+     * and the live site is untouched until someone builds. Building is a
+     * separate button in the product, so it is a separate capability here.
+     *
+     * The patch is merged key by key into the stored config, so a request
+     * that mentions one line cannot erase the sections it said nothing about.
+     */
+    name: "update_website",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Change the wording on a website (does not publish)",
+    description:
+      "Change the copy on an EXISTING website: its name, heading, hero statement, features, benefits or services list. Call check_website_status first to get the site id and see the current wording, and work from that. This saves the change to the site's configuration; it does NOT publish. Tell the customer the site still shows the old words until they rebuild, and use rebuild_website when they ask for it. Address, phone, email and opening hours are NOT editable here: those are facts read from the workspace's business profile, and a generated page may never invent them.",
+    parameters: {
+      type: "object",
+      properties: {
+        site_id: { type: "string", description: "The website to change (from check_website_status)." },
+        name: { type: "string", description: "Optional new internal label for the site card." },
+        heading: { type: "string", description: "Optional new main heading." },
+        hero_statement: { type: "string", description: "Optional new hero statement." },
+        features: { type: "string", description: "Optional new features, three short comma-separated phrases." },
+        benefits: { type: "string", description: "Optional new benefits, three short comma-separated phrases." },
+        services_list: { type: "string", description: "Optional new services list." },
+      },
+      required: ["site_id"],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const siteId = strEither(raw, "site_id").trim();
+      if (!siteId) return { ok: false, error: "site_id is required. Call check_website_status to get it." };
+      const patch: Record<string, string> = {};
+      for (const key of ["name", "heading", "hero_statement", "features", "benefits", "services_list"]) {
+        const v = stripToolSyntaxDebris(strEither(raw, key).trim());
+        if (v) patch[key] = v;
+      }
+      if (Object.keys(patch).length === 0) {
+        return { ok: false, error: "Nothing to change. Send at least one of name, heading, hero_statement, features, benefits or services_list." };
+      }
+      return { ok: true, args: { siteId, ...patch } };
+    },
+    summarize: (args) => {
+      const fields = Object.keys(args).filter((k) => k !== "siteId");
+      return `Update ${fields.join(", ")} on this website. It won't publish until you rebuild.`;
+    },
+    execute: async (ctx, args) => {
+      const { patchWebsiteCopyServerSide } = await import("@/lib/server/websites-service");
+      const { siteId, ...patch } = args as Record<string, string>;
+      const res = await patchWebsiteCopyServerSide({
+        subAccountId: ctx.subAccountId!,
+        siteId,
+        patch,
+      });
+      if (!res.ok && res.reason === "building") {
+        throw new CapabilityUserError(
+          "That site is building right now. Wait for it to finish, then change it, or the saved words won't match the site that appears.",
+        );
+      }
+      if (!res.ok) throw new CapabilityUserError("That website no longer exists.");
+      return {
+        resultText:
+          `Updated ${res.changed.join(", ")} on “${res.name}”.\n\n` +
+          (res.wasPublished
+            ? "• The live site still shows the old wording. Ask me to rebuild it when you're ready to publish."
+            : "• It's still a draft. Ask me to build it when you're ready."),
+        ref: { kind: "website", id: res.siteId },
+      };
+    },
+  },
+  {
+    /**
+     * Publishing is its own act, and says so.
+     *
+     * It rebuilds from the STORED config rather than anything the model
+     * supplies, so a rebuild can never quietly change the page as well. The
+     * existing build service keeps every guard it has: validation, the
+     * gitpage key check, and the slot rule, which already treats a rebuild
+     * of a site that owns its slot as the same website rather than another.
+     */
+    name: "rebuild_website",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Publish a website's saved changes (rebuild)",
+    description:
+      "Rebuild an EXISTING website from its saved configuration, which is what makes earlier edits go live. Use only when the customer has asked to publish or rebuild. It replaces what is currently live, so never call it as a side effect of an edit. It does not use up another website slot.",
+    parameters: {
+      type: "object",
+      properties: {
+        site_id: { type: "string", description: "The website to rebuild (from check_website_status)." },
+      },
+      required: ["site_id"],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const siteId = strEither(raw, "site_id").trim();
+      if (!siteId) return { ok: false, error: "site_id is required. Call check_website_status to get it." };
+      return { ok: true, args: { siteId } };
+    },
+    summarize: () => "Rebuild this website, replacing what is currently live.",
+    execute: async (ctx, args) => {
+      const { getWebsiteForSubAccount, submitWebsiteBuildForSubAccount, WebsiteServiceError } = await import(
+        "@/lib/server/websites-service"
+      );
+      const site = await getWebsiteForSubAccount(ctx.subAccountId!, args.siteId as string);
+      if (!site) throw new CapabilityUserError("That website no longer exists.");
+      if (site.status === "queued" || site.status === "building") {
+        throw new CapabilityUserError("That site is already building. Wait for it to finish first.");
+      }
+      try {
+        await submitWebsiteBuildForSubAccount({
+          subAccountId: ctx.subAccountId!,
+          siteId: site.id,
+          config: site.config,
+          buildByUid: ctx.uid,
+        });
+      } catch (err) {
+        if (err instanceof WebsiteServiceError) throw new CapabilityUserError(err.message);
+        throw err;
+      }
+      return {
+        resultText:
+          `Rebuilding “${site.name}”. It usually takes two to ten minutes, and I'll have the new address when it's done.\n\n` +
+          "• Ask me to check the website status to see when it's live.",
+        ref: { kind: "website", id: site.id },
+      };
+    },
+  },
+  {
+    name: "update_member_role",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Change a member's role in this workspace",
+    description:
+      "Change an existing member's role between admin (manages the workspace and its members) and collaborator (works with the data, no workspace settings). Call list_members first to get the person's id. This does not remove anyone and does not invite anyone.",
+    parameters: {
+      type: "object",
+      properties: {
+        member_id: { type: "string", description: "The member to change (the id from list_members)." },
+        role: { type: "string", enum: ["admin", "collaborator"], description: "The role to give them." },
+      },
+      required: ["member_id", "role"],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const memberId = strEither(raw, "member_id").trim();
+      const role = strEither(raw, "role").trim().toLowerCase();
+      if (!memberId) return { ok: false, error: "member_id is required. Call list_members to get it." };
+      if (role !== "admin" && role !== "collaborator") {
+        return { ok: false, error: "role must be either admin or collaborator." };
+      }
+      return { ok: true, args: { memberId, role } };
+    },
+    summarize: (args) => `Make this member ${args.role === "admin" ? "an admin" : "a collaborator"}.`,
+    execute: async (ctx, args) => {
+      const { updateSubAccountMemberRoleServerSide } = await import("@/lib/server/members-service");
+      const res = await updateSubAccountMemberRoleServerSide({
+        subAccountId: ctx.subAccountId!,
+        targetUid: args.memberId as string,
+        role: args.role as "admin" | "collaborator",
+        actingUid: ctx.uid,
+      });
+      if (!res.ok && res.reason === "self") {
+        throw new CapabilityUserError(
+          "You can't remove your own admin access, because you'd lose the ability to put it back. Ask the agency owner to do it.",
+        );
+      }
+      if (!res.ok && res.reason === "unchanged") {
+        throw new CapabilityUserError("They already have that role, so there's nothing to change.");
+      }
+      if (!res.ok) throw new CapabilityUserError("That person isn't a member of this workspace.");
+      return {
+        resultText: `${res.who} is now ${res.role === "admin" ? "an admin" : "a collaborator"} (was ${res.previous}).`,
+        ref: { kind: "member", id: res.uid },
+      };
     },
   },
   {

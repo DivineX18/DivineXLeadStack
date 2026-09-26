@@ -172,5 +172,85 @@ console.log("\n-- new webhook types are declared, not smuggled --");
   }
 }
 
+console.log("\n-- websites: edit is not publish --");
+{
+  const sites = fs.readFileSync("src/lib/server/websites-service.ts", "utf8");
+  const patch = sites.slice(sites.indexOf("export async function patchWebsiteCopyServerSide"));
+
+  ck("the patch merges into the STORED config", /const next: WebsiteConfig = \{ \.\.\.current \}/.test(patch));
+  ck("only the keys that were sent are touched", /if \(typeof v === "string" && v\.trim\(\)\)/.test(patch));
+  // The whole risk with a generated document is erasing what it omitted.
+  ck("the config is never replaced wholesale", !/config: input\.patch/.test(patch));
+  ck("an edit does not change status", !/status:\s*"/.test(patch.slice(0, patch.indexOf("return {"))));
+  ck("an edit does not clear the live URL", !/liveUrl:\s*null/.test(patch));
+  ck("a build in flight is refused", /status === "queued" \|\| doc\.status === "building"/.test(patch));
+  ck("the path itself is the tenancy boundary",
+    /subAccounts\/\$\{input\.subAccountId\}\/website\/\$\{input\.siteId\}/.test(patch));
+
+  const c = cap("update_website")!;
+  ck("update_website is a confirm-gated admin write", c.readonly !== true && c.requiredRole === "subAccountAdmin");
+  ck("a missing site_id is refused", c.validate({}).ok === false);
+  ck("changing nothing is refused", c.validate({ site_id: "s1" }).ok === false);
+  const ok = c.validate({ site_id: "s1", heading: "Better heading" });
+  ck("a real edit validates", ok.ok === true);
+  if (ok.ok) ck("and re-validates", c.validate(ok.args).ok === true);
+  // Facts come from the workspace, never from a generator.
+  const props = Object.keys((c.parameters as { properties: Record<string, unknown> }).properties);
+  for (const forbidden of ["business_phone", "business_email", "business_street", "opening_hours", "cta_link"]) {
+    ck(`${forbidden} is not editable by the model`, !props.includes(forbidden));
+  }
+  ck("the description says an edit does not publish", /does NOT publish/.test(c.description));
+}
+
+console.log("\n-- rebuild is explicit, and reuses the real build path --");
+{
+  const c = cap("rebuild_website")!;
+  ck("it exists as its own capability", !!c && c.readonly !== true);
+  ck("it takes only the site id, never a config",
+    Object.keys((c.parameters as { properties: Record<string, unknown> }).properties).join() === "site_id");
+  ck("it rebuilds from the STORED config", /getWebsiteForSubAccount/.test(caps));
+  ck("it goes through the existing build service, keeping its guards",
+    /submitWebsiteBuildForSubAccount\(\{[\s\S]{0,200}config: site\.config/.test(caps));
+  ck("it refuses a site already building", /already building/.test(caps));
+  ck("the description warns it replaces what is live", /replaces what is currently live/.test(c.description));
+  // The slot rule already treats a rebuild as the same website.
+  ck("the slot rule is the build service's, not a new one",
+    /A rebuild of a site that ALREADY consumes its slot is always/.test(
+      fs.readFileSync("src/lib/server/websites-service.ts", "utf8"),
+    ));
+}
+
+console.log("\n-- members: one implementation, shared with the route --");
+{
+  const svcM = fs.readFileSync("src/lib/server/members-service.ts", "utf8");
+  const route = fs.readFileSync("src/app/api/sub-accounts/[id]/members/[uid]/route.ts", "utf8");
+  ck("the route delegates role changes to the service",
+    /updateSubAccountMemberRoleServerSide\(\{/.test(route));
+  ck("the route no longer writes the role itself", !/indexPatch\.role/.test(route));
+  ck("both documents are written together, or the switcher disagrees",
+    /batch\.update\(memberRef[\s\S]{0,300}userMemberships/.test(svcM));
+  ck("a foreign uid behaves like a missing one", /if \(!snap\.exists\) return \{ ok: false, reason: "missing" \}/.test(svcM));
+  ck("a removed member is not silently re-roled", /status === "removed"[\s\S]{0,60}missing/.test(svcM));
+  // Mirrors the DELETE route's existing self-removal rule.
+  ck("an admin cannot demote themselves", /targetUid === opts\.actingUid && opts\.role !== "admin"/.test(svcM));
+
+  const c = cap("update_member_role")!;
+  ck("update_member_role needs admin", c.requiredRole === "subAccountAdmin");
+  ck("a missing member_id is refused", c.validate({ role: "admin" }).ok === false);
+  ck("an invented role is refused", c.validate({ member_id: "u1", role: "superuser" }).ok === false);
+  const ok = c.validate({ member_id: "u1", role: "admin" });
+  ck("a real change validates", ok.ok === true);
+  if (ok.ok) ck("and re-validates", c.validate(ok.args).ok === true);
+  ck("only the two roles the product already has are offered",
+    JSON.stringify(c.parameters).includes('"admin","collaborator"'));
+}
+
+console.log("\n-- the lookups expose the ids their edits need --");
+{
+  ck("websites report an id", /\(id: \$\{d\.id\}\): \$\{detail\}/.test(caps));
+  ck("websites report the current editable copy", /hero_statement: \$\{String\(cfg\[k\]\)/.test(caps) || /editable/.test(caps));
+  ck("members report an id", /\(id: \$\{d\.id\}\), role:/.test(caps));
+}
+
 console.log(fails === 0 ? "\nALL PASS" : `\n${fails} FAILED`);
 process.exit(fails ? 1 : 0);

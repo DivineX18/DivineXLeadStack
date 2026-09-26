@@ -370,3 +370,110 @@ export async function submitWebsiteBuildForSubAccount(input: {
     estimatedDurationSeconds: submission.estimatedDurationSeconds,
   };
 }
+
+/** The copy fields an assistant may change on a website. */
+export interface WebsiteCopyPatch {
+  name?: string;
+  heading?: string;
+  hero_statement?: string;
+  features?: string;
+  benefits?: string;
+  services_list?: string;
+}
+
+export type WebsitePatchResult =
+  | { ok: true; siteId: string; name: string; changed: string[]; wasPublished: boolean }
+  | { ok: false; reason: "missing" | "building" };
+
+/**
+ * PATCH A WEBSITE'S COPY. It does not build, and it never replaces the config.
+ *
+ * Three things about this architecture decide the shape:
+ *
+ *  1. `config` on the doc is the LAST-BUILT config. There is no separate
+ *     draft store: the builder holds edits in component state and persists
+ *     them only when the operator presses Build. So an edit here lands in
+ *     exactly the place the form hydrates from, and the operator sees it
+ *     next time they open the builder, which is the same position they are
+ *     in after typing a change themselves.
+ *  2. Building is a SEPARATE, explicit act in the UI, so it is separate
+ *     here. A model edit must not silently republish a live site.
+ *  3. The stored config is read and merged key by key. A partial payload
+ *     can never erase a section the request said nothing about, which is
+ *     the whole risk with a generated document.
+ *
+ * Deliberately NOT patchable: the address, phone, email and opening hours.
+ * Those are operator-supplied facts about a real place, read from the
+ * workspace by verifiedBusinessFacts(), and a generator may never write
+ * them. See lib/ai-suite/capabilities.ts.
+ */
+export async function patchWebsiteCopyServerSide(input: {
+  subAccountId: string;
+  siteId: string;
+  patch: WebsiteCopyPatch;
+}): Promise<WebsitePatchResult> {
+  const db = getAdminDb();
+  // The document path is itself the tenancy boundary: a site id from
+  // another workspace resolves to a path that does not exist here, so a
+  // foreign id behaves exactly like a missing one.
+  const ref = db.doc(`subAccounts/${input.subAccountId}/website/${input.siteId}`);
+  const snap = await ref.get();
+  if (!snap.exists) return { ok: false, reason: "missing" };
+
+  const doc = snap.data() as { status?: string; liveUrl?: string | null; name?: string; config?: WebsiteConfig };
+  // A queued or building site has a job in flight at gitpage. Changing the
+  // config underneath it would mean the stored config no longer describes
+  // the site that is about to appear.
+  if (doc.status === "queued" || doc.status === "building") {
+    return { ok: false, reason: "building" };
+  }
+
+  const current = (doc.config ?? blankWebsiteConfig()) as WebsiteConfig;
+  const next: WebsiteConfig = { ...current };
+  const changed: string[] = [];
+  const COPY_KEYS = ["heading", "hero_statement", "features", "benefits", "services_list"] as const;
+  for (const key of COPY_KEYS) {
+    const v = input.patch[key];
+    if (typeof v === "string" && v.trim()) {
+      (next as unknown as Record<string, unknown>)[key] = v.trim();
+      changed.push(key);
+    }
+  }
+
+  const update: Record<string, unknown> = { config: next, updatedAt: FieldValue.serverTimestamp() };
+  if (typeof input.patch.name === "string" && input.patch.name.trim()) {
+    update.name = input.patch.name.trim().slice(0, 80);
+    changed.push("name");
+  }
+  if (changed.length === 0) return { ok: false, reason: "missing" };
+
+  // status, liveUrl and gitpageJobId are deliberately absent: an edit does
+  // not change what is currently published, and does not consume a slot.
+  await ref.set(update, { merge: true });
+
+  return {
+    ok: true,
+    siteId: input.siteId,
+    name: String(update.name ?? doc.name ?? next.heading ?? "Untitled site"),
+    changed,
+    wasPublished: doc.status === "ready" && !!doc.liveUrl,
+  };
+}
+
+/** The stored config for a site, for an explicit rebuild that must not
+ *  invent one. Null when the site does not exist in this workspace. */
+export async function getWebsiteForSubAccount(
+  subAccountId: string,
+  siteId: string,
+): Promise<{ id: string; name: string; status: string; liveUrl: string | null; config: WebsiteConfig } | null> {
+  const snap = await getAdminDb().doc(`subAccounts/${subAccountId}/website/${siteId}`).get();
+  if (!snap.exists) return null;
+  const d = snap.data() as { name?: string; status?: string; liveUrl?: string | null; config?: WebsiteConfig };
+  return {
+    id: siteId,
+    name: d.name ?? d.config?.heading ?? "Untitled site",
+    status: d.status ?? "draft",
+    liveUrl: d.liveUrl ?? null,
+    config: (d.config ?? blankWebsiteConfig()) as WebsiteConfig,
+  };
+}
