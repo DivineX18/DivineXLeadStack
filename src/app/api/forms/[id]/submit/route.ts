@@ -1,3 +1,4 @@
+import { resolveFormClientIp } from "@/lib/forms/client-ip";
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
@@ -10,7 +11,6 @@ import { emitContactCreatedById } from "@/lib/server/contacts-service";
 import { emitDealCreatedById } from "@/lib/server/deals-service";
 import {
   EMPTY_LOCATION,
-  ipFromRequest,
   locationFromIp,
   locationFromPhone,
   mergeLocation,
@@ -134,7 +134,9 @@ async function handleSubmit(
 ) {
   const { id } = await ctx.params;
 
-  const ipForRateLimit = ipFromRequest(request) ?? "unknown";
+  // Trusted client IP (see lib/forms/client-ip.ts): not the spoofable X-Forwarded-For.
+  const clientIp = resolveFormClientIp(request.headers);
+  const ipForRateLimit = clientIp;
   const rl = checkFormSubmitRateLimit(ipForRateLimit);
   if (!rl.ok) {
     return jsonWithCors(
@@ -231,7 +233,7 @@ async function handleSubmit(
   // phone country-code parsing is the fallback. Both fail soft — if neither
   // resolves, the contact still saves with null location fields and the
   // dashboard map just doesn't pin them.
-  const ip = ipFromRequest(request);
+  const ip = clientIp === "unknown" ? null : clientIp;
   const [ipLoc, phoneLoc] = await Promise.all([
     ip ? locationFromIp(ip) : Promise.resolve(EMPTY_LOCATION),
     Promise.resolve(locationFromPhone(mapped.phone)),
