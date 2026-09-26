@@ -132,7 +132,7 @@ export async function POST(request: Request) {
   }
 
   // ── Auth + (for sub-accounts) the agency gate. The route decides who can
-  // act here — never the model.
+  // act here, never the model.
   let roleCtx: RoleCtx;
   let actionCtx: AiSuiteActionContext;
   let usageAgencyId = "";
@@ -266,13 +266,13 @@ export async function POST(request: Request) {
     .join("\n");
   const cards = retrieveKnowledge(retrievalQuery, lvl);
 
-  // Calibration Engine v1 — inject the Design Knowledge Vault's learned
+  // Calibration Engine v1, inject the Design Knowledge Vault's learned
   // principles as additional REFERENCE MATERIAL cards, exactly like the
   // static knowledge base above, whenever this turn can call create_funnel.
   // This is the actual "gets better every week" mechanism: every principle
   // extracted from operator feedback (see lib/design-intelligence) makes
   // every future funnel generation smarter platform-wide, with zero
-  // changes needed to buildAiSuiteSystemPrompt's own rendering — it already
+  // changes needed to buildAiSuiteSystemPrompt's own rendering, it already
   // knows how to render an AiSuiteKnowledgeCard[]. Best-effort: a vault
   // read failure must never block the chat turn itself.
   if (actionNames.some((a) => a.name === "create_funnel")) {
@@ -280,14 +280,14 @@ export async function POST(request: Request) {
       const principles = await listActivePrinciplesForArchetype(null);
       cards.push(...renderPrinciplesAsCards(principles));
     } catch {
-      // Swallowed — Zeno still generates funnels fine with zero learned
+      // Swallowed, Zeno still generates funnels fine with zero learned
       // principles, same as before this feature existed.
     }
-    // Conversion Engine (P1) — inject the DivineX Conversion Framework Library
+    // Conversion Engine (P1), inject the DivineX Conversion Framework Library
     // as REFERENCE MATERIAL so Zeno REASONS from distilled principles when it
     // builds a funnel: awareness/sophistication routing, page-architecture-by-
     // intent, offer value-stacking, honest proof/guarantee/urgency, and
-    // message-matched email sequences — principles applied to THIS business,
+    // message-matched email sequences, principles applied to THIS business,
     // never a fixed template. The full library is injected (not a per-strategy
     // subset) because the model reasons with it BEFORE it picks a genre; the
     // per-strategy selection is used later by the Build-Campaign orchestrator.
@@ -295,10 +295,10 @@ export async function POST(request: Request) {
     // the same AiSuiteKnowledgeCard mechanism the prompt builder already knows,
     // so buildAiSuiteSystemPrompt needs zero changes.
     cards.push(...renderFrameworksAsCards(CONVERSION_FRAMEWORKS));
-    // Ascend Intelligence Library (synced frameworks — see
+    // Ascend Intelligence Library (synced frameworks, see
     // lib/conversion/ascend-frameworks.ts). Best-effort: zero synced docs or
     // a read failure leaves the context exactly as before the bridge existed.
-    // DIVINEX SLICE 7 — shared Zeno context: the canonical Business/Brand
+    // DIVINEX SLICE 7, shared Zeno context: the canonical Business/Brand
     // profile reaches Flow's Zeno the same way frameworks do, so one
     // strategist knows the business across both products. Best-effort;
     // no snapshot = today's context exactly.
@@ -306,7 +306,7 @@ export async function POST(request: Request) {
       // Authorized accessor, not the raw snapshot: this block puts the
       // business's name, website, audience, offers, brand voice and palette
       // straight into Zeno's context, so a foreign profile here does not just
-      // mislead a page — it tells the strategist it IS another company.
+      // mislead a page, it tells the strategist it IS another company.
       const { getAuthorizedProfileSnapshotOrNull } = await import("@/lib/divinex/authorized-profile");
       const snap = await getAuthorizedProfileSnapshotOrNull(actionCtx.subAccountId!);
       if (snap) {
@@ -329,7 +329,7 @@ export async function POST(request: Request) {
         // ASCEND'S DIAGNOSIS. Rendered as reasoning material, not as fields to
         // recite: Zeno should conclude "your constraint is conversion, so
         // build X", never read a score aloud. Absent intelligence stays
-        // absent — an undiagnosed business must not be told it was diagnosed.
+        // absent, an undiagnosed business must not be told it was diagnosed.
         const intel = (snap as { intelligence?: {
           primaryConstraint?: string;
           opportunities?: { title: string; why?: string }[];
@@ -365,22 +365,22 @@ export async function POST(request: Request) {
         });
       }
     } catch {
-      // Swallowed — Zeno works without the profile, same as before.
+      // Swallowed, Zeno works without the profile, same as before.
     }
     try {
       const { listAscendFrameworks, renderAscendFrameworksAsCards } = await import("@/lib/conversion/ascend-frameworks");
       cards.push(...renderAscendFrameworksAsCards(await listAscendFrameworks()));
     } catch {
-      // Swallowed — same rationale as the learned-principles read above.
+      // Swallowed, same rationale as the learned-principles read above.
     }
 
-    // ACTIVE CAMPAIGN — the approved decisions downstream assets inherit.
+    // ACTIVE CAMPAIGN, the approved decisions downstream assets inherit.
     //
     // This is what stops each generator independently re-deciding the offer,
     // audience and CTA. It is deliberately a CONTEXT CARD rather than a new
     // parameter on every capability: the generators stay untouched, and a
     // workspace with no campaign is simply a workspace where this card is
-    // absent — individual creation keeps working exactly as before.
+    // absent, individual creation keeps working exactly as before.
     try {
       const { listCampaigns } = await import("@/lib/server/campaigns-service");
       const campaigns = await listCampaigns(actionCtx.subAccountId!);
@@ -413,10 +413,10 @@ export async function POST(request: Request) {
         });
       }
     } catch {
-      // Swallowed — a campaign is optional context, never a prerequisite.
+      // Swallowed, a campaign is optional context, never a prerequisite.
     }
 
-    // P0.6 PHASE 2 — page + artifact context.
+    // P0.6 PHASE 2, page + artifact context.
     //
     // The route is normalized to one of the final IA surfaces (an arbitrary
     // string can never reach the prompt), and the artifact is resolved from
@@ -434,7 +434,7 @@ export async function POST(request: Request) {
       const card = renderPageContextCard(surface, artifact);
       if (card) cards.push(card);
     } catch {
-      // Swallowed — Zeno works without page context, exactly as before.
+      // Swallowed, Zeno works without page context, exactly as before.
     }
   }
 
@@ -479,7 +479,7 @@ export async function POST(request: Request) {
       // received it. Handing the resulting empty args to the repair loop below
       // asks it to fix work it already did correctly, spends two more calls
       // failing the same way, and finishes by telling the customer to describe
-      // their offer in more detail — when an unusually DETAILED brief is what
+      // their offer in more detail, when an unusually DETAILED brief is what
       // caused it. So this exits here with something true instead.
       if (call && turn.truncated) {
         console.warn(
@@ -498,7 +498,7 @@ export async function POST(request: Request) {
       // A WRITE the model got wrong: hand the validation error back to it so
       // it can fix the arguments, the same way a lookup result goes back.
       // Without this the turn dead-ends and the customer is shown the raw
-      // instruction text ("YOU are the copywriter…") — internal prompt
+      // instruction text ("YOU are the copywriter…"), internal prompt
       // engineering surfacing as a question, and the build never happens.
       if (
         cap &&
@@ -623,8 +623,8 @@ export async function POST(request: Request) {
   });
 
   // Did the model request a write action? Validate it and surface a
-  // proposal — nothing executes here. (A readonly call landing here means
-  // the lookup hop cap was hit — treat it as text, never as a proposal.)
+  // proposal, nothing executes here. (A readonly call landing here means
+  // the lookup hop cap was hit, treat it as text, never as a proposal.)
   if (turn.toolCall) {
     const cap = getCapability(turn.toolCall.name);
     if (cap && !cap.readonly && cap.level === lvl) {
@@ -642,7 +642,7 @@ export async function POST(request: Request) {
         return NextResponse.json(response);
       }
       // Still wrong after its repair attempts. validate() errors are written
-      // for the model, not the customer — surfacing one verbatim shows people
+      // for the model, not the customer, surfacing one verbatim shows people
       // internal instructions. Log the real reason, say something true and
       // useful instead.
       console.warn(`[ai-suite/chat] ${cap.name} args still invalid after ${writeRepairs} repair(s): ${validated.error}`);

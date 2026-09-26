@@ -79,7 +79,7 @@ import type { OfferConfig, IncludedConfig, CtaBannerConfig, FunnelDoc, FunnelSec
 import { imageryConfigured, searchSubjectImages } from "@/lib/funnels/imagery";
 // NOTE: `planMediaIntents` / `selectRelevantMedia` / `stockAllowedFor` are no
 // longer imported here. They belonged to the autonomous business-level
-// photography pass, which the visual story replaced — see the note where it
+// photography pass, which the visual story replaced, see the note where it
 // used to run. `selectRelevantMedia` still guards every photograph; it is now
 // called by the source hierarchy, per beat, instead of by this file.
 import { inferAuthenticityCategory, assetManifest, TRUST_QUESTIONS } from "@/lib/funnels/authenticity";
@@ -183,7 +183,7 @@ import {
 } from "@/lib/business-profile/profile";
 
 /**
- * The AI Suite capability registry — the ENTIRE set of things the assistant
+ * The AI Suite capability registry, the ENTIRE set of things the assistant
  * can do. This list is the contract: the model can only ever invoke a
  * capability named here, every capability wraps an existing guarded write
  * path, and the confirm endpoint re-checks the caller's permission and
@@ -191,9 +191,9 @@ import {
  * impossible for the agent to do.
  *
  * Two classes of capability:
- *   - **writes** (default) — surfaced as a proposal the user must confirm
+ *   - **writes** (default), surfaced as a proposal the user must confirm
  *     before the confirm route executes them.
- *   - **lookups** (`readonly: true`) — non-destructive reads the chat route
+ *   - **lookups** (`readonly: true`), non-destructive reads the chat route
  *     executes immediately (no confirm card) and feeds back to the model, so
  *     it can answer state questions and resolve names to ids before
  *     proposing a write. A lookup must never mutate anything.
@@ -204,7 +204,7 @@ import {
 
 /**
  * An execute-time failure whose message is safe (and useful) to show the
- * user verbatim — a gate that's off, a record that doesn't belong to this
+ * user verbatim, a gate that's off, a record that doesn't belong to this
  * tenant, etc. The confirm + chat routes surface `message` directly;
  * any other thrown error stays a generic "the action failed".
  */
@@ -218,7 +218,7 @@ export type RequiredRole =
 
 /**
  * Everything a capability needs to run, resolved from the AUTHENTICATED
- * caller — never from anything the model produced. `subAccountId`/`agencyId`
+ * caller, never from anything the model produced. `subAccountId`/`agencyId`
  * come from the session, so the model cannot target a different tenant.
  */
 export interface AiSuiteActionContext {
@@ -253,14 +253,14 @@ export interface CustomerCompletion {
   outcome: string;
   /** Anything genuinely needing their attention before this goes anywhere. */
   review: string[];
-  /** Direct actions on the artifact — Preview / Review / Approve / Continue. */
+  /** Direct actions on the artifact, Preview / Review / Approve / Continue. */
   nextActions: { label: string; kind: "preview" | "review" | "edit" | "approve" | "continue" }[];
 }
 
 export interface ExecuteResult {
   /** INTERNAL. Human-readable confirmation for the MODEL (or, for readonly
    *  lookups, the tool result fed back to it). May contain raw ids and
-   *  internal parameter names — it must never be rendered to a customer.
+   *  internal parameter names, it must never be rendered to a customer.
    *  See CustomerCompletion above. */
   resultText: string;
   /** The single authoritative customer-facing completion. When present, the
@@ -272,7 +272,7 @@ export interface ExecuteResult {
    * Lookup-only: a same-origin destination the chat UI renders as an
    * "Open …" button (the chat route short-circuits with `resultText` as the
    * user-facing message). Built server-side from the caller's own
-   * memberships — never from a model-composed URL.
+   * memberships, never from a model-composed URL.
    */
   navigate?: { href: string; label: string };
 }
@@ -285,18 +285,18 @@ export interface AiSuiteCapability {
   name: string;
   level: AiSuiteLevel;
   requiredRole: RequiredRole;
-  /** Read-only lookup — executes immediately in the chat route, no confirm
+  /** Read-only lookup, executes immediately in the chat route, no confirm
    *  card. MUST NOT mutate anything. Absent/false = confirm-gated write. */
   readonly?: boolean;
   /** Short human-readable menu line, used when the assistant answers
-   *  "what can you do?" — plain language, no tool-name jargon. */
+   *  "what can you do?", plain language, no tool-name jargon. */
   menuLabel: string;
   /** Shown to the model as the tool description. */
   description: string;
   /** JSON Schema for the tool parameters (OpenAI/OpenRouter shape). */
   parameters: Record<string, unknown>;
   /** Re-validate + normalize args. Runs BEFORE proposing and again before
-   *  executing — the model's output is never trusted directly. */
+   *  executing, the model's output is never trusted directly. */
   validate: (raw: unknown) => ValidateResult;
   /** One-line human summary shown on the confirm card. */
   summarize: (args: Record<string, unknown>) => string;
@@ -315,7 +315,7 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 /**
  * Strip tool-call syntax debris from a model-supplied string. Found live
  * 2026-08-26 (multistep e2e smoke): a malformed tool call leaked literal
- * scaffolding — "…take home.</anheadline> <parameter name=…" — into a
+ * scaffolding, "…take home.</anheadline> <parameter name=…", into a
  * funnel hero subheadline, which was then STORED and rendered verbatim on
  * the live page. Marketing copy / names / labels never legitimately
  * contain XML-ish tool-syntax tags, so removing these exact families
@@ -323,25 +323,32 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
  * genuine content; an unterminated trailing fragment is stripped too.
  */
 /** House style, enforced in CODE per the standing directive (prompt-only
- *  enforcement has failed before): no em dashes in customer-facing copy —
- *  they read as AI-generated. " — " and "word—word" become ", "; tight
- *  numeric en-dash ranges (10–14 weeks) are legitimate and preserved. */
+ *  enforcement has failed before): no em dashes in customer-facing copy,
+ *  they read as AI-generated. Spaced and unspaced em dashes both become a
+ *  comma and a space; tight numeric en-dash ranges (10-14 weeks) are
+ *  legitimate and preserved.
+ *
+ *  The em dash below is built from its code point on purpose. A repo-wide
+ *  sweep for the character rewrote this very regex into one matching a plain
+ *  hyphen, so the sanitiser started replacing every ordinary hyphen with a
+ *  comma. A sanitiser that contains the thing it removes will eventually be
+ *  edited by a tool that removes it. */
 function stripEmDashes(text: string): string {
   return text
-    .replace(/\s*—\s*/g, ", ")
+    .replace(new RegExp(`\\s*${String.fromCharCode(0x2014)}\\s*`, "g"), ", ")
     .replace(/(\D)\s+–\s+(\D)/g, "$1, $2")
     .replace(/,\s*,/g, ",")
     .replace(/\s+([.,;:])/g, "$1");
 }
 
 /** Ungrounded dollar-outcome promises ("reclaim $300-$800/month") are
- *  removed at the SENTENCE level from model-authored copy — deterministic
+ *  removed at the SENTENCE level from model-authored copy, deterministic
  *  claim safety, not just a review flag. Rationale: every verifiable
  *  quantified fact flows through a typed supplied channel (price_cents,
  *  real_rating, event_start_at, supplied_evidence_*); dollar-OUTCOME
  *  figures have no such channel, so a model-authored outcome number is
  *  ungrounded by construction. A business with a real, provable figure
- *  adds it in the builder — operator-typed copy is operator-owned (the
+ *  adds it in the builder, operator-typed copy is operator-owned (the
  *  same trust contract as testimonials). Prices ("the $39 kit") carry no
  *  outcome verb and are untouched. */
 const OUTCOME_CLAIM = /\b(?:save|reclaim|recover|find|earn|add|make|generate)\w*\s+(?:you\s+|up to\s+)?\$\d[\d,]*(?:\s*[-–]\s*\$?\d[\d,]*)?(?:\s*\/?\s*(?:mo|month|week|year|yr|day))?\b/i;
@@ -452,13 +459,13 @@ function stripToolSyntaxDebris(text: string): string {
   // TRUNCATE at the first debris tag rather than excising tags inline:
   // everything after leaked scaffolding belongs to a DIFFERENT parameter
   // (live case: '…take home.</anheadline> <parameter name="eyebrow">AFTER
-  // YOUR GUIDE' — inline removal would weld "AFTER YOUR GUIDE" onto the
+  // YOUR GUIDE', inline removal would weld "AFTER YOUR GUIDE" onto the
   // subheadline; truncation keeps each field's own content only).
   const i = text.search(/<\/?(?:an[a-z_]*|parameter|invoke|function[a-z_]*)\b/i);
   return stripUngroundedOutcomeClaims(stripEmDashes(i === -1 ? text : text.slice(0, i))).trim();
 }
 
-/** Numeric arg reader — models send numbers as strings often enough that a
+/** Numeric arg reader, models send numbers as strings often enough that a
  *  bare cast would silently produce NaN and fail a range check for the wrong
  *  reason. */
 function num(raw: unknown, key: string): number {
@@ -512,7 +519,7 @@ function numEither(raw: unknown, key: string): number {
 }
 
 /** Recursively apply stripToolSyntaxDebris to every string in a raw args
- *  payload — covers array items (bullets sent as a real array) and nested
+ *  payload, covers array items (bullets sent as a real array) and nested
  *  objects (stage_content, sales_argument) that never pass through str(). */
 function deepStripDebris<T>(value: T): T {
   if (typeof value === "string") return stripToolSyntaxDebris(value) as unknown as T;
@@ -526,7 +533,7 @@ function deepStripDebris<T>(value: T): T {
 }
 
 /**
- * VALIDATE IDEMPOTENCY — deep, non-destructive camelCase → snake_case aliasing.
+ * VALIDATE IDEMPOTENCY, deep, non-destructive camelCase → snake_case aliasing.
  *
  * validate() runs TWICE against different key styles: the chat route validates
  * the model's raw snake_case tool call, and the confirm route re-validates the
@@ -538,13 +545,13 @@ function deepStripDebris<T>(value: T): T {
  * drifted: 16 of create_funnel's fields were missing from it, including the
  * entire Sales Argument Plan, decision complexity, campaign energy/humanity,
  * traffic temperature, the real rating and the supplied evidence logos. That
- * is the root cause of the traced negative fixture — the page was composed
+ * is the root cause of the traced negative fixture, the page was composed
  * with no argument behind it because the argument never survived confirmation.
  *
  * A map that must be updated by hand every time a field is added will drift
  * again. This derives the alias instead, and does it RECURSIVELY, so nested
  * plans (sales_argument.belief_chain, automation_plan.goal_tag) round-trip
- * too — something a top-level rename map structurally could not do.
+ * too, something a top-level rename map structurally could not do.
  *
  * Non-destructive: an existing snake_case key always wins, so a real model
  * payload is never rewritten by its own alias.
@@ -564,11 +571,11 @@ function aliasCamelKeysDeep<T>(value: T): T {
 /**
  * Some model responses write the literal two-character sequence "\n" as
  * TEXT inside a multi-paragraph string (rather than a real newline
- * character) — found live 2026-08-02: a generated confirmation email's
+ * character), found live 2026-08-02: a generated confirmation email's
  * numbered list rendered as "...next:\n\n1. We'll review...\n2. We'll
  * reach out..." with the backslash-n visible as literal text in the send
- * dialog. This isn't something a tool description can reliably prevent —
- * it's a JSON-escaping slip on the model's side — so normalize
+ * dialog. This isn't something a tool description can reliably prevent -
+ * it's a JSON-escaping slip on the model's side, so normalize
  * defensively wherever free text can contain intended line breaks. A
  * literal "\n"/"\r\n" substring has no legitimate reason to appear in
  * real prose, so this can't misfire on genuine content.
@@ -578,7 +585,7 @@ function fixLiteralNewlines(text: string): string {
 }
 
 /**
- * Length-caps a single-line copy field WITHOUT cutting mid-word — found
+ * Length-caps a single-line copy field WITHOUT cutting mid-word, found
  * live during the LC 1.0 launch-candidate review (2026-08-03): a plain
  * `.slice(0, 140)` on subheadline/cta_banner_subtext regularly produced
  * text ending mid-word ("...every morn", "...keep it go") whenever the
@@ -672,7 +679,7 @@ function toDate(raw: unknown): Date | null {
 /**
  * Resolve contact display names for listing lines (id → name), anchored to
  * one sub-account. Contacts whose `subAccountId` doesn't match are silently
- * dropped — defense-in-depth so this helper stays safe even if a future
+ * dropped, defense-in-depth so this helper stays safe even if a future
  * caller feeds it ids that didn't come from a tenant-scoped query (today's
  * callers pass ids off already-tenant-filtered task/event docs).
  */
@@ -710,7 +717,7 @@ const WORKFLOW_TEMPLATES: Record<WorkflowTemplate, string> = {
 
 /**
  * Feature gates the assistant may flip, keyed by the friendly name the model
- * uses. Mirrors the agency feature-gates PATCH route — with one deliberate
+ * uses. Mirrors the agency feature-gates PATCH route, with one deliberate
  * omission: `emailDomainEnabled` is excluded because disabling it TEARS DOWN
  * the sub-account's live Resend sending domain; that destructive path stays
  * in the Manage dialog where its warning UI lives.
@@ -753,7 +760,7 @@ const FEATURE_GATES: Record<
     label: "Funnel checkout (Stripe)",
   },
   // Unlike every other gate here, this one also feeds
-  // evaluate-workspace-entitlements.ts's effectiveTier computation — it's
+  // evaluate-workspace-entitlements.ts's effectiveTier computation, it's
   // one of two conditions (alongside an active Ascend<->Flow workspace
   // mapping) required before a sub-account reaches full_ascend. Enabling
   // it here alone won't activate the Full Ascend shell without that
@@ -762,9 +769,9 @@ const FEATURE_GATES: Record<
     field: "ascendIntelligenceEnabledByAgency",
     label: "Ascend Intelligence (Full Ascend shell)",
   },
-  // Get Leads is PARKED — while the flag is on the assistant can't flip (or
+  // Get Leads is PARKED, while the flag is on the assistant can't flip (or
   // report) its gate, matching the hidden Manage-dialog toggle. When
-  // un-parked, enabling doesn't require OUTSCRAPER_API_KEY to be set —
+  // un-parked, enabling doesn't require OUTSCRAPER_API_KEY to be set -
   // searches just 503 with a friendly message until the key exists.
   ...(GET_LEADS_PARKED
     ? {}
@@ -809,7 +816,7 @@ function dropFictionalPhone(raw: string | null | undefined): string {
  * compared them to anything.
  *
  * That is the fabrication path, and a blacklist of bad values cannot close it
- * — the next invented address will be a different plausible street. The only
+ *, the next invented address will be a different plausible street. The only
  * fix that generalises is to stop accepting factual identity from the model at
  * all. A street address, a phone number, an email, a booking URL and a domain
  * are claims about a real business; they can be READ from what the operator
@@ -1063,7 +1070,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const g = FEATURE_GATES[args.gate as string];
       const ref = getAdminDb().doc(`subAccounts/${args.subAccountId as string}`);
       const snap = await ref.get();
-      // The id came from the model — re-anchor it to the caller's own agency
+      // The id came from the model, re-anchor it to the caller's own agency
       // so a wrong/crafted id can never reach another tenant.
       if (!snap.exists || snap.data()?.agencyId !== ctx.agencyId) {
         throw new CapabilityUserError("That sub-account wasn't found in this agency.");
@@ -1162,7 +1169,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     validate: () => ({ ok: true, args: {} }),
     summarize: () => "Check your workspace access.",
     execute: async (ctx) => {
-      // The caller's OWN membership index — the same list their workspace
+      // The caller's OWN membership index, the same list their workspace
       // switcher shows. Keyed by the session uid; the model has no way to
       // point this at another user.
       const snap = await getAdminDb()
@@ -1215,7 +1222,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     summarize: (args) => `Open the “${args.query}” workspace.`,
     execute: async (ctx, args) => {
       const q = (args.query as string).toLowerCase().replace(/^#/, "");
-      // The caller's OWN membership index — a link can only ever be built to
+      // The caller's OWN membership index, a link can only ever be built to
       // a workspace they already belong to.
       const snap = await getAdminDb()
         .collection(`userMemberships/${ctx.uid}/subAccounts`)
@@ -1564,7 +1571,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         args.currency as string,
       )}) for ${args.contactName} in ${getStage(args.stage as PipelineStageId).label}.`,
     execute: async (ctx, args) => {
-      // The contact id came from the model — verify it's in THIS workspace.
+      // The contact id came from the model, verify it's in THIS workspace.
       const c = await getAdminDb().doc(`contacts/${args.contactId as string}`).get();
       if (!c.exists || c.data()?.subAccountId !== ctx.subAccountId) {
         throw new CapabilityUserError("That contact wasn't found in this workspace.");
@@ -1650,7 +1657,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         getStage(args.stage as PipelineStageId).label
       }${args.lostReason ? ` (reason: ${args.lostReason})` : ""}.`,
     execute: async (ctx, args) => {
-      // The deal id came from the model — verify it's in THIS workspace.
+      // The deal id came from the model, verify it's in THIS workspace.
       const snap = await getAdminDb().doc(`deals/${args.dealId as string}`).get();
       if (!snap.exists || snap.data()?.subAccountId !== ctx.subAccountId) {
         throw new CapabilityUserError("That deal wasn't found in this workspace.");
@@ -1893,7 +1900,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         : base;
     },
     execute: async (ctx, args) => {
-      // Same agency gate as the dashboard's webhook mint route — webhooks
+      // Same agency gate as the dashboard's webhook mint route, webhooks
       // are part of the public-API surface, so they share the kill switch.
       const subSnap = await getAdminDb()
         .doc(`subAccounts/${ctx.subAccountId!}`)
@@ -1918,7 +1925,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
 
       // Liveness check: one synchronous signed test delivery, so the user
       // hears "created AND your endpoint answered" in one breath. The
-      // messaging is tool-aware — n8n's test-vs-production URL trap is the
+      // messaging is tool-aware, n8n's test-vs-production URL trap is the
       // top real-world failure mode, so call it out specifically.
       const test = await sendDirectTestDelivery(doc);
       const urlInfo = detectAutomationUrl(doc.url);
@@ -2324,7 +2331,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       return `Update “${args.contactName || args.contactId}”: ${changes.join(", ") || "no changes"}.`;
     },
     execute: async (ctx, args) => {
-      // The contact id came from the model — verify it's in THIS workspace
+      // The contact id came from the model, verify it's in THIS workspace
       // before writing (same guard move_deal_stage uses for deals).
       const snap = await getAdminDb().doc(`contacts/${args.contactId as string}`).get();
       if (!snap.exists || snap.data()?.subAccountId !== ctx.subAccountId) {
@@ -2409,7 +2416,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     execute: async (ctx, args) => {
       const contactId = (args.contactId as string) || null;
       if (contactId) {
-        // The id came from the model — verify it's a real contact in THIS
+        // The id came from the model, verify it's a real contact in THIS
         // sub-account before linking, so a wrong/crafted id can't attach the
         // task to another tenant's record.
         const c = await getAdminDb().doc(`contacts/${contactId}`).get();
@@ -2608,7 +2615,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     summarize: (args) =>
       `Mark the task “${args.taskTitle || args.taskId}” as done.`,
     execute: async (ctx, args) => {
-      // The id came from the model — verify it's in THIS workspace.
+      // The id came from the model, verify it's in THIS workspace.
       const snap = await getAdminDb().doc(`tasks/${args.taskId as string}`).get();
       if (!snap.exists || snap.data()?.subAccountId !== ctx.subAccountId) {
         throw new CapabilityUserError("That task wasn't found in this workspace.");
@@ -2817,7 +2824,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     execute: async (ctx, args) => {
       const contactId = (args.contactId as string) || null;
       if (contactId) {
-        // The id came from the model — verify it's in THIS workspace.
+        // The id came from the model, verify it's in THIS workspace.
         const c = await getAdminDb().doc(`contacts/${contactId}`).get();
         if (!c.exists || c.data()?.subAccountId !== ctx.subAccountId) {
           throw new CapabilityUserError(
@@ -3026,7 +3033,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     validate: (raw) => {
       let url = str(raw, "url");
       if (url && !/^https?:\/\//i.test(url) && /^[\w-]+(\.[\w-]+)+/.test(url)) {
-        // The user often says "like fitness.com" — accept the bare domain.
+        // The user often says "like fitness.com", accept the bare domain.
         url = `https://${url}`;
       }
       if (!url || !/^https?:\/\/.+\..+/i.test(url) || url.length > 300) {
@@ -3252,7 +3259,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     },
     validate: (rawIn) => {
       // Confirm round-trips the camelCase `args` this validate() itself
-      // returns (see the `return { ok: true, args: {...} }` below) — so this
+      // returns (see the `return { ok: true, args: {...} }` below), so this
       // function must accept both the LLM's original snake_case tool-call
       // args AND its own previously-normalized camelCase output. Alias the
       // camelCase keys back to their snake_case originals up front so every
@@ -3467,7 +3474,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const subAccountId = ctx.subAccountId!;
       const db = getAdminDb();
 
-      // Fill contact email + CTA from the workspace's real saved details —
+      // Fill contact email + CTA from the workspace's real saved details -
       // never from model guesses.
       const [subSnap, profileSnap] = await Promise.all([
         db.doc(`subAccounts/${subAccountId}`).get(),
@@ -3653,7 +3660,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         });
       } catch (err) {
         // Don't leave a blank draft occupying one of the 5 site slots when
-        // the build submit failed — the user will just retry from chat.
+        // the build submit failed, the user will just retry from chat.
         await db
           .doc(`subAccounts/${subAccountId}/website/${siteId}`)
           .delete()
@@ -3779,10 +3786,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           type: "string",
           enum: ["lead_magnet", "vsl", "challenge", "application", "tripwire", "webinar", "lead_gen", "booking"],
         },
-        // ── Strategy classification (Conversion Engine P0) — the reasoning you
+        // ── Strategy classification (Conversion Engine P0), the reasoning you
         //    do BEFORE writing copy, captured as data so it drives the funnel's
         //    depth + composition, not just the words. Fill these from the
-        //    business/offer/traffic, honestly (infer awareness/sophistication —
+        //    business/offer/traffic, honestly (infer awareness/sophistication -
         //    they're judgements, not facts).
         awareness: {
           type: "string",
@@ -4254,13 +4261,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // Confirm round-trips the camelCase `args` this validate() itself
       // returns (the chat route validates the LLM's raw snake_case tool
       // call; the confirm route then re-validates THAT already-normalized
-      // result) — so every renamed field must be read under both its
+      // result), so every renamed field must be read under both its
       // original snake_case key and its own camelCase output key. Same
       // pattern create_website's validate() uses, for the same reason.
       const rawObj = (rawIn ?? {}) as Record<string, unknown>;
       const rawAuthored: Record<string, unknown> = aliasCamelKeysDeep(deepStripDebris({ ...rawObj }));
 
-      // NUMERIC GROUNDING — see groundNumericCopy. The operator's own figure
+      // NUMERIC GROUNDING, see groundNumericCopy. The operator's own figure
       // sentences are attached by the chat route from what they typed; absent
       // means this payload did not come through a conversation (a direct
       // caller), and there is nothing to ground against.
@@ -4302,7 +4309,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       }
       // MISSING and TOO LONG are different failures and must say so. Both once
       // returned the same "a headline (max 80 characters) is required", which
-      // reads as "you didn't send one" — so a model that HAD sent one, just an
+      // reads as "you didn't send one", so a model that HAD sent one, just an
       // over-length one, rewrote at the same length and burned every repair
       // hop. Whole business categories that naturally produce longer headlines
       // (higher-ticket/consulting) could not build a page at all.
@@ -4378,7 +4385,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // REQUIRES an uploaded deliverable. Reproduced live: a physiotherapy
       // page offering a free 20-minute in-clinic assessment resolved here,
       // acquired lead-magnet semantics, and then could not be published at
-      // all because it had no file to attach — for an offer that was never a
+      // all because it had no file to attach, for an offer that was never a
       // file. `lead_gen` is generic interest capture and asserts nothing about
       // a deliverable, so an unrecognised value now degrades into a page that
       // still works instead of one that is blocked.
@@ -4394,7 +4401,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         priceCents = Math.round(n);
       }
 
-      // Cosmetic + optional — an invalid value (a named color, 3-digit
+      // Cosmetic + optional, an invalid value (a named color, 3-digit
       // shorthand, missing '#', etc.) degrades to "use the genre default"
       // rather than rejecting the whole funnel, matching how
       // create_website's enumOr() falls back instead of hard-failing on an
@@ -4441,7 +4448,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           return out || clean.slice(0, 420);
         });
 
-      // guarantee_body is required whenever guarantee_headline is set — a
+      // guarantee_body is required whenever guarantee_headline is set, a
       // headline with no real terms behind it is worse than no guarantee
       // section at all, so treat a missing body as "no guarantee given."
       const guaranteeHeadlineRaw = str(raw, "guarantee_headline").slice(0, 80);
@@ -4453,7 +4460,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
        * A BADGE IS A COMPLETE THOUGHT, OR IT IS NOT A BADGE.
        *
        * Two generations of this were wrong in the same direction. `slice(0,40)`
-       * shipped "Written recommendation, not a sales quot" — honest copy turned
+       * shipped "Written recommendation, not a sales quot", honest copy turned
        * into a visible typo on the most-read part of the page. Cutting back to
        * the last whole word fixed the typo and kept the real defect: Northstar's
        * fold then shipped "Application only, we take a limited", which is not a
@@ -4475,13 +4482,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       /** Accept, compress, or drop. Never returns a fragment.
        *
        *  Compression is delegated to the one display-text contract shared with
-       *  headings and captions — see lib/funnels/display-text.ts. This used to
+       *  headings and captions, see lib/funnels/display-text.ts. This used to
        *  carry its own clause-splitting and its own dangling-word list, which is
        *  how the same defect kept reappearing in a different component. */
       const acceptBadge = (b: string): string | null => {
         const t = b.trim().replace(/\s+/g, " ");
         if (!t) return null;
-        // CLAIM INTEGRITY FIRST, ON THE WHOLE LINE — a shortened claim must
+        // CLAIM INTEGRITY FIRST, ON THE WHOLE LINE, a shortened claim must
         // never be able to launder past the filter.
         if (isUnsupportedTrustClaim(t)) return null;
         const fitted = completeThoughtWithin(t, BADGE_MAX);
@@ -4496,12 +4503,12 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
 
       // TRUST CLAIMS ARE FILTERED, NOT TRUSTED. A generated page shipped
       // "Locally owned in Houston" from a business that had only ever stated
-      // it serves Houston — an ownership structure inferred from a service
+      // it serves Houston, an ownership structure inferred from a service
       // area. The tool description already bans inventing organizational
       // status and the claim shipped anyway, so the rule lives here, where a
       // prompt cannot talk its way around it. See claim-integrity.ts.
       // Filtering happens inside acceptBadge, before any shortening.
-      // DOMAIN IDENTITY — the only field allowed to anchor photography.
+      // DOMAIN IDENTITY, the only field allowed to anchor photography.
       // Kept as a PHRASE (not run through the photo-brief reducer) because a
       // service phrase like "roof inspection" is the unit that identifies a
       // trade; reducing it to loose tokens is what let "Houston" and
@@ -4511,7 +4518,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const trustBadges = acceptBadges(raw.trust_badges, 5);
       const heroTrustBadges = acceptBadges(raw.hero_trust_badges, 3);
 
-      // Sanitized only — the actual per-stage alternates check happens in
+      // Sanitized only, the actual per-stage alternates check happens in
       // buildFrameworkSections() at execute() time (an invalid/unknown
       // stage id or layout silently falls back to that stage's default),
       // so this just bounds size/type.
@@ -4543,7 +4550,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
 
       // Round-trip note: array-item fields hit the same camelCase-vs-snake_case
       // issue as top-level params (the confirm route re-validates THIS
-      // function's own camelCase output) — read each multi-word field under
+      // function's own camelCase output), read each multi-word field under
       // both spellings, same reasoning as the top-level camelToSnake block.
       const s1 = (s: Record<string, unknown>, snake: string, camel: string): string => {
         const v = s[snake] ?? s[camel];
@@ -4573,7 +4580,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             })),
         }));
 
-      // Value stack (priced sales genres) — real deliverables + honest values,
+      // Value stack (priced sales genres), real deliverables + honest values,
       // an anchor total, and the price reveal. Parsed defensively like
       // stage_content; empty/absent leaves the section blank (renders nothing).
       const vsRaw = raw.value_stack && typeof raw.value_stack === "object" ? (raw.value_stack as Record<string, unknown>) : null;
@@ -4607,7 +4614,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const heroLayoutRaw = str(raw, "hero_layout");
       const heroLayout = HERO_LAYOUTS.includes(heroLayoutRaw) ? heroLayoutRaw : "";
 
-      // Left "" (not defaulted here) when omitted/invalid — execute() is
+      // Left "" (not defaulted here) when omitted/invalid, execute() is
       // the one place that decides the effective default, since the RIGHT
       // default depends on whether an archetype resolved: an archetype's
       // OWN recommended CTA (e.g. local_service -> popup_calendar) must
@@ -4615,13 +4622,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // applies when no archetype was resolved at all. Defaulting to
       // "popup_form" here (as an earlier version did) would make every
       // omitted cta_style look like an EXPLICIT "popup_form" request by
-      // the time resolveDesignStrategy sees it — silently overriding every
+      // the time resolveDesignStrategy sees it, silently overriding every
       // archetype's own CTA recommendation, which is exactly backwards.
       const CTA_STYLES = ["inline", "popup_form", "popup_calendar", "dual", "sticky_desktop", "floating_mobile", "phone"];
       const ctaStyleRaw = str(raw, "cta_style");
       const ctaStyle = CTA_STYLES.includes(ctaStyleRaw) ? ctaStyleRaw : "";
 
-      // Phase 2 — Design Intelligence. Every value here is either a real
+      // Phase 2, Design Intelligence. Every value here is either a real
       // enum member (validated against the archetype catalog's own lists)
       // or ignored, same discipline as every other enum param on this tool.
       const visualArchetypeRaw = str(raw, "visual_archetype");
@@ -4658,7 +4665,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const heroMediaType = heroMediaTypeRaw === "video" ? "video" : "image";
       // FICTIONAL-NUMBER GUARD (10-funnel certification catch): the model
       // invented "+16025551234" for a phone-first page whose brief supplied
-      // no number. NANP 555 exchanges are fictional — treat as absent so the
+      // no number. NANP 555 exchanges are fictional, treat as absent so the
       // CTA falls back and the dead-CTA guard wires the capture form instead
       // of shipping a fake number on a live page.
       const ctaPhoneRaw = str(raw, "cta_phone_number").trim().slice(0, 20);
@@ -4685,7 +4692,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           theme,
           faqItems,
           includeCaptureForm: (raw as Record<string, unknown>)?.include_capture_form !== false,
-          // Strategy classification (Conversion Engine P0) — validated against
+          // Strategy classification (Conversion Engine P0), validated against
           // the conversion.ts enums; invalid/absent = null (falls back to full
           // sequence / include_capture_form behavior).
           awareness: (["unaware", "problem_aware", "solution_aware", "product_aware", "most_aware"] as readonly string[]).includes(str(raw, "awareness")) ? str(raw, "awareness") : null,
@@ -4702,7 +4709,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             const url = typeof o.url === "string" && /^https?:\/\//.test(o.url) ? o.url.slice(0, 500) : undefined;
             return score && count ? { score, count, ...(url ? { url } : {}) } : null;
           })(),
-          // Sales Argument Plan — validated + capped; too thin to be a real
+          // Sales Argument Plan, validated + capped; too thin to be a real
           // argument (no prospect, or a chain under 2 steps) = null (not stored).
           salesArgument: (() => {
             const saRaw = (raw as Record<string, unknown>).sales_argument;
@@ -4712,9 +4719,9 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             // SALVAGE A MISSHAPEN CHAIN RATHER THAN DISCARD THE ARGUMENT.
             //
             // This read `Array.isArray(...) ? ... : []`, so a chain delivered as
-            // ONE STRING — a single belief, or several separated by newlines or
+            // ONE STRING, a single belief, or several separated by newlines or
             // semicolons, which is a completely ordinary way for a model to
-            // answer "the ordered chain of beliefs" — produced an empty array.
+            // answer "the ordered chain of beliefs", produced an empty array.
             // The length check below then rejected the ENTIRE plan, and every
             // other field the model got right (prospect, currentBelief,
             // mechanism, corePromise, closeReason) was thrown away with it.
@@ -4763,7 +4770,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             const usable = plan.currentBelief || plan.whyOldWayFails || plan.mechanism || plan.corePromise || plan.beliefChain.length >= 2;
             return plan.prospect && usable ? plan : null;
           })(),
-          // Campaign Art Direction inputs — validated against the module's own
+          // Campaign Art Direction inputs, validated against the module's own
           // enum; invalid/absent = null (baseline profile, zero visual change).
           emotionalTransformation: (EMOTIONAL_TRANSFORMATIONS as readonly string[]).includes(str(raw, "emotional_transformation")) ? str(raw, "emotional_transformation") : null,
           campaignEnergy: (["calm", "balanced", "urgent"] as readonly string[]).includes(str(raw, "campaign_energy")) ? str(raw, "campaign_energy") : null,
@@ -4907,11 +4914,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         | "booking";
       const layoutChoices = (args.layoutChoices as Record<string, string>) ?? {};
       const designPack = (args.designPack as DesignPackId) || "classic";
-      // Phase 2 — Design Intelligence. When the model picked a
+      // Phase 2, Design Intelligence. When the model picked a
       // visual_archetype, resolve the FULL token set here (once) so both
       // creation (accent/theme) and the section-content pass below (hero
       // layout, CTA strategy, media placeholders) read from the same
-      // resolved strategy — never two independent decisions that could
+      // resolved strategy, never two independent decisions that could
       // disagree with each other.
       // THE ARCHETYPE IS DERIVED FROM THE BUSINESS, NOT ALLOWLISTED.
       //
@@ -4925,7 +4932,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // planner had differentiated the argument underneath.
       //
       // The category is the same one the evidence pipeline already infers, so
-      // no new signal and no new truth store is introduced — see
+      // no new signal and no new truth store is introduced, see
       // `archetypeForContext` in design-strategy.ts for the eligibility model.
       // It is resolved HERE (rather than at its old position further down)
       // because the archetype now depends on it; the later block reuses this
@@ -4941,7 +4948,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         authenticityCategory,
         modelChoice: modelArchetype ?? null,
       });
-      // Color variety (funnels were ALL orange — the call never passed a
+      // Color variety (funnels were ALL orange, the call never passed a
       // paletteId, so pickPalette always returned palettes[0]). Honor the
       // model's explicit palette_variant when valid; otherwise deterministically
       // rotate through the archetype's LIGHT palettes by a hash of the funnel
@@ -4963,8 +4970,8 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           : undefined);
       // GENUINE DEFECT FIX (regression classification, 2026-08-30):
       // resolveDesignStrategy accepts NINE overrides and create_funnel passed
-      // only two, so seven documented visual instructions — the ones the tool
-      // schema explicitly invites the model to use — were parsed, validated,
+      // only two, so seven documented visual instructions, the ones the tool
+      // schema explicitly invites the model to use, were parsed, validated,
       // and then silently dropped. A valid hero_layout could never reach the
       // page: line ~4537 reads `designStrategy.heroLayout ?? args.heroLayout`,
       // and since a strategy always exists the fallback was dead code.
@@ -4972,7 +4979,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // Passing them HERE rather than applying them downstream is deliberate:
       // the engine already validates each against the resolved archetype's own
       // approved options, so an invalid override stays ignored exactly as
-      // documented. The frozen engine's contract is unchanged — it is simply
+      // documented. The frozen engine's contract is unchanged, it is simply
       // being given the inputs it was always designed to receive.
       const designStrategy = resolveDesignStrategy(effectiveArchetype, {
         ...(variedPaletteId ? { paletteId: variedPaletteId } : {}),
@@ -4985,8 +4992,8 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         ...(args.galleryLayout ? { galleryLayout: args.galleryLayout as GalleryLayoutId } : {}),
         ctaStrategy: ((args.ctaStyle as string) || undefined) as CtaStrategyId | undefined,
       });
-      // Persuasion depth (Sales Argument Engine): multi-factor — commitment,
-      // coldness, belief-chain complexity, trust requirement, stakes — never
+      // Persuasion depth (Sales Argument Engine): multi-factor, commitment,
+      // coldness, belief-chain complexity, trust requirement, stakes, never
       // price alone. lean = high-intent straight-to-CTA; deep = the argument
       // architecture gains old-way/new-way + mechanism stages. Priced offers
       // are never leaned (asking for a card number earns the full page).
@@ -5008,7 +5015,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           : priceC !== null && rawDepth === "lean"
             ? "standard"
             : rawDepth;
-      // Decision complexity — the model's judgement wins (it knows
+      // Decision complexity, the model's judgement wins (it knows
       // stakeholders/implementation/procurement); the computed floor
       // guarantees a sane value from price/objective/archetype.
       const decisionComplexity: DecisionComplexity =
@@ -5021,7 +5028,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
 
       // OFFER SHAPE. The canonical profile's `offers[].kind` is free-form text
       // an upstream product writes, so it is read narrowly here purely as a
-      // TIE BREAKER — genre and price still decide. Read in its own guarded
+      // TIE BREAKER, genre and price still decide. Read in its own guarded
       // scope (the full profile resolve happens later for imagery) so a
       // profile outage can only cost the hint, never the funnel.
       const offerKindHints = await (async () => {
@@ -5055,7 +5062,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       }
 
       // stage_content entries are keyed by the RESOLVED section type (not an
-      // opaque stage id the model would have to invent correctly) — every
+      // opaque stage id the model would have to invent correctly), every
       // genre framework uses each section type at most once, so this is an
       // unambiguous match. An earlier stage-id-keyed design reliably failed
       // in live testing (2026-08-02): the model never had a way to know the
@@ -5083,14 +5090,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const ctaBannerSubtext = args.ctaBannerSubtext as string;
       // An archetype's own resolved hero layout/CTA strategy takes priority
       // over the raw params (which resolveDesignStrategy already folded in
-      // as overrides above) — falling back to the raw values, unchanged,
+      // as overrides above), falling back to the raw values, unchanged,
       // when no archetype was resolved (today's exact pre-Phase-2 behavior).
       // Genre-aware hero layout (visual port): webinar registration + generic
       // lead-gen/application convert better as a SPLIT hero (value prop + CTA on
       // the left, host/preview visual on the right) than a centered VSL. The
       // model's explicit hero_layout still wins; otherwise these genres default
       // to split and everything else uses the archetype's resolved layout.
-      // Sales-letter is the DEFAULT (centered, single-column, flowing — the
+      // Sales-letter is the DEFAULT (centered, single-column, flowing, the
       // Brunson look): only WEBINAR registration defaults to the split
       // (event/register layout). Everything else stays centered; the operator
       // can switch any funnel to split via the Page-layout toggle. A split
@@ -5100,7 +5107,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       //
       // `designStrategy.heroLayout` is the archetype's FIRST recommendation
       // whenever the model named none, and six of nine archetypes list
-      // `centered` first — which is how 106 of 109 measured funnels composed a
+      // `centered` first, which is how 106 of 109 measured funnels composed a
       // centered fold regardless of what they had to show. The archetype's own
       // approved list is still the only source of layouts (nothing new is
       // invented); this just chooses within it from the page's real inputs.
@@ -5126,7 +5133,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         })(),
       });
       // THE OVERRIDE CONTRACT IS UNCHANGED. An explicit hero_layout still wins,
-      // but only when it is one of THIS archetype's own approved layouts —
+      // but only when it is one of THIS archetype's own approved layouts -
       // the same boundary resolveDesignStrategy applies to every other
       // override. Without this check the context choice below would have been
       // bypassed by an invalid one, which is the opposite of the frozen rule.
@@ -5141,23 +5148,23 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           : (explicitHeroLayout ?? contextHeroLayout ?? designStrategy?.heroLayout);
       // designStrategy.ctaStrategy (when an archetype resolved) already
       // incorporated any explicit args.ctaStyle override during
-      // resolveDesignStrategy() above, and always returns a real value —
+      // resolveDesignStrategy() above, and always returns a real value -
       // so it wins outright. Only the NO-archetype legacy path falls back
       // to the standing "popup_form everywhere" default when ctaStyle
       // wasn't explicitly set.
       const rawCtaStyle = designStrategy?.ctaStrategy ?? ((args.ctaStyle as string) || "popup_form");
       // create_funnel can only ever make "popup_calendar"/"phone" fully
       // functional when the user already gave a real slug/number in this
-      // conversation (cta_booking_page_slug / cta_phone_number) — without
+      // conversation (cta_booking_page_slug / cta_phone_number), without
       // one, storing that style anyway would look configured in the
       // builder but silently do nothing until the operator fixes it.
       // Falling back to "popup_form" here (rather than asking the user for
       // the missing slug/number before building) is what lets the model
-      // omit cta_style entirely and never have to block on it — the
+      // omit cta_style entirely and never have to block on it, the
       // funnel is always fully working the moment it's created.
       // A real booking slug is ONLY ever supplied for calendar intent, so it
       // UPGRADES the CTA to popup_calendar even when the archetype default is
-      // popup_form — otherwise the deterministic direct_response override
+      // popup_form, otherwise the deterministic direct_response override
       // (which defaults to popup_form) would silently discard a booking link
       // the user actually gave. Mirror for a real phone number + a "phone"
       // choice. Then the reverse: a popup_calendar/phone style with no
@@ -5171,7 +5178,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             : rawCtaStyle;
       // Some genres (currently just lead_magnet, RC 1.1's one-fold length
       // pass) put isCapture on the hero stage itself rather than a
-      // separate offer/ticket_tiers stage — the hero IS the whole page.
+      // separate offer/ticket_tiers stage, the hero IS the whole page.
       const heroIsCaptureStage = FUNNEL_FRAMEWORKS[genre].some((s) => s.section === "hero" && s.isCapture);
       const ctaExtras =
         ctaStyle && ctaStyle !== "inline"
@@ -5187,10 +5194,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               ...(ctaStyle === "popup_calendar" && args.ctaBookingPageSlug ? { bookingPageSlug: args.ctaBookingPageSlug as string } : {}),
               // Popup-style intelligence: reinforce the offer with the
               // bullets Zeno already wrote instead of a bare form-in-a-box
-              // — free, since the copy already exists. Gated to
+              //, free, since the copy already exists. Gated to
               // medium/high-density archetypes only (saas_technology,
               // agency_creative, nonprofit_mission, coach_consultant,
-              // professional_enterprise) — low-density archetypes
+              // professional_enterprise), low-density archetypes
               // (luxury_premium, wellness, local_service) keep a plain
               // centered popup, matching their restrained/minimal
               // character; no archetype at all (legacy path) also stays
@@ -5202,7 +5209,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
                 : {}),
             }
           : undefined;
-      // Media strategy — an honest labeled placeholder when the archetype
+      // Media strategy, an honest labeled placeholder when the archetype
       // expects real media but none was supplied (never a fabricated
       // screenshot/photo).
       //
@@ -5226,7 +5233,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         phone_mockup: "Add a screenshot",
         video: "Add a video",
       };
-      // Shooting-brief purpose/size — fixed per media strategy (not
+      // Shooting-brief purpose/size, fixed per media strategy (not
       // model-authored; these don't vary business to business the way the
       // SUBJECT does). Only strategies with a real placeholder above need
       // an entry.
@@ -5264,7 +5271,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const heroMediaType = (args.heroMediaType as string) === "video" ? "video" : "image";
       const resolvedMediaStrategy = designStrategy?.mediaStrategy;
       // These three strategies mean "show MULTIPLE real examples," not one
-      // hero image — Zeno routes them to a dedicated photo_gallery section
+      // hero image, Zeno routes them to a dedicated photo_gallery section
       // instead (added below, after `nextSections` is built) so the hero
       // stays a clean headline with room for the operator's real logo
       // above it, and the operator can keep adding photos independently.
@@ -5273,7 +5280,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
        * A GALLERY IS A CONTENT TYPE, NOT MEDIA OVERFLOW.
        *
        * The media strategy alone used to decide this, and "team_photo" is a
-       * plausible strategy for almost any business with people in it — so a
+       * plausible strategy for almost any business with people in it, so a
        * school booking a demo call got a four-up photo grid under its hero,
        * for no better reason than that an archetype had said "team photos".
        *
@@ -5292,7 +5299,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         "local_service_trade",
         // Things you can hold, photographed from more than one angle.
         "physical_product",
-        // Events, community, the room full of people — a collection genuinely
+        // Events, community, the room full of people, a collection genuinely
         // carries what one frame cannot.
         "nonprofit",
       ]);
@@ -5304,7 +5311,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         !heroMediaUrl && resolvedMediaStrategy && !wantsGallerySection
           ? MEDIA_PLACEHOLDER_LABELS[resolvedMediaStrategy]
           : // A split hero needs a right-column visual to actually render as a
-            // split (otherwise it falls back to centered) — give it an honest,
+            // split (otherwise it falls back to centered), give it an honest,
             // replaceable placeholder (now a designed panel, not an empty box).
             !heroMediaUrl && heroLayout === "split" && !wantsGallerySection
             ? "Add your host photo or preview"
@@ -5324,7 +5331,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               // LAYOUT PRECEDENCE. The framework may already have made an
               // OFFER-AWARE composition decision (a lead magnet pairs the
               // asset with the capture via `split`). An archetype's generic
-              // default must not silently undo it — that is exactly what
+              // default must not silently undo it, that is exactly what
               // shipped: `heroLayout` resolves to designStrategy's archetype
               // default for every genre except webinar, so the composed
               // `split` was replaced by `centered` before persistence and the
@@ -5347,17 +5354,17 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
                 return effective ? { layout: effective as HeroConfig["layout"] } : {};
               })(),
               // One-fold genres (e.g. lead_magnet) carry the offer directly
-              // on the hero — same bullets/CTA every other genre puts on
+              // on the hero, same bullets/CTA every other genre puts on
               // its offer section, since there's no separate offer stage
               // to hold them.
               // Bullets only on one-fold heroes (they carry the whole offer).
               ...(heroIsCaptureStage ? { bullets } : {}),
-              // An above-the-fold CTA on EVERY funnel, across all industries — a
+              // An above-the-fold CTA on EVERY funnel, across all industries, a
               // visible primary button in the hero (Brunson-style), not one
               // buried on the offer section far below.
               ctaLabel: (args.ctaLabel as string) || "Get started",
               // Risk-reversal trust cluster under the above-the-fold CTA
-              // (Brunson pattern) — every genre, honest signals only.
+              // (Brunson pattern), every genre, honest signals only.
               ...((args.heroTrustBadges as string[])?.length
                 ? { trustBadges: args.heroTrustBadges as string[] }
                 : {}),
@@ -5438,7 +5445,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           };
         }
         // Deliberately excluded: proof_strip (its rating/logos variants need
-        // a real numeric score or real client logos — nothing here can fill
+        // a real numeric score or real client logos, nothing here can fill
         // those honestly) and countdown (a deadline the AI invents is
         // fabricated urgency, exactly what this tool's own instructions ban
         // elsewhere). Both stay at their neutral seed defaults.
@@ -5497,7 +5504,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           };
         }
         // Fallback: the model sometimes folds the benefits copy into `bullets`
-        // only — seed the benefits section from them rather than shipping an
+        // only, seed the benefits section from them rather than shipping an
         // empty section (which now renders nothing at all). Repetition of the
         // core promises down the page is classic direct response, not a bug.
         if (section.type === "benefits_grid" && (!content || content.items.length === 0) && bullets.length > 0) {
@@ -5539,7 +5546,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             },
           };
         }
-        // Testimonials are the one layout that requires real evidence —
+        // Testimonials are the one layout that requires real evidence -
         // the tool description tells the model to omit this stage_content
         // entry entirely (not just leave items empty) unless the user gave
         // real quotes, so an empty/missing entry here correctly leaves the
@@ -5555,7 +5562,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           };
         }
         // The challenge genre's seed uses ticket_tiers (not offer) for its
-        // registration mechanism, seeded EMPTY (tiers: []) — without this,
+        // registration mechanism, seeded EMPTY (tiers: []), without this,
         // a Zeno-built challenge funnel had no way to register at all
         // until the operator manually added a tier. Populate one default
         // tier from the same headline/bullets/CTA every other genre uses.
@@ -5588,13 +5595,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       //
       // `video` is a first-class section type with its own editor field, but
       // the only way one ever reached a page was the `vsl` genre framework
-      // seeding a Video stage — the stage-content pass above fills
+      // seeding a Video stage, the stage-content pass above fills
       // `section.type === "video"` and can only fill a section that already
       // exists. So an operator whose lead-gen or application page would be
       // carried by a two-minute explainer had nowhere to put it, and Zeno
       // supplying `video_url` on any other genre did nothing at all.
       //
-      // Composed only for a REAL url the model was given — never a placeholder
+      // Composed only for a REAL url the model was given, never a placeholder
       // frame, which is the same rule the composed photo beat follows.
       const strayVideo = stageContent.find(
         (c) => c.sectionType === "video" && /^https?:\/\//i.test((c.videoUrl ?? "").trim()),
@@ -5614,11 +5621,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         sectionsToSave = [...sectionsToSave.slice(0, at), videoSection, ...sectionsToSave.slice(at)];
       }
 
-      // "More than one photo" — when the archetype's media strategy is one
+      // "More than one photo", when the archetype's media strategy is one
       // of the multi-photo kinds (service_photo/team_photo/community_photo)
       // Zeno adds a real, independently-growable Photo Gallery section
       // right after the hero, with an honest placeholder (never fabricated
-      // photos) — see wantsGallerySection above for why this replaces the
+      // photos), see wantsGallerySection above for why this replaces the
       // hero's own single-image placeholder rather than stacking both.
       if (wantsGallerySection && resolvedMediaStrategy) {
         const galleryPlaceholderLabel = MEDIA_PLACEHOLDER_LABELS[resolvedMediaStrategy] ?? "Add photos of your work";
@@ -5646,21 +5653,21 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
 
       // Orchestration: for a lead-capture-style funnel (no price set), also
       // create a dedicated form, a confirmation-email template, and a
-      // workflow that sends it on submit — reusing the exact same services
+      // workflow that sends it on submit, reusing the exact same services
       // the manual Forms/Templates/Workflow pages call, so a Zeno-built
       // package is indistinguishable from an operator-built one. Skipped
-      // for a priced offer (tripwire/vsl/challenge with price_cents set) —
+      // for a priced offer (tripwire/vsl/challenge with price_cents set) -
       // that needs Stripe checkout wired up by the operator, not a lead form.
       const wantsPackage = (args.includeCaptureForm as boolean) !== false && args.priceCents === null;
       // DEAD-CTA GUARD (10-customer stress test, 2026-08-27): a published
       // page's primary CTA must ALWAYS have a working action. Two live
-      // failures shipped identical symptoms — a priced tripwire whose
+      // failures shipped identical symptoms, a priced tripwire whose
       // checkout wasn't wired yet, and a booking-oriented page where the
       // model set include_capture_form=false without a phone/booking/href
-      // target — leaving every CTA an inert button. General rule: when NO
+      // target, leaving every CTA an inert button. General rule: when NO
       // section carries a working alternative target (phone, booking slug,
       // external link, or configured checkout), the capture form is created
-      // regardless of include_capture_form/price — capturing the lead is
+      // regardless of include_capture_form/price, capturing the lead is
       // strictly better than a dead button while the operator wires the
       // real destination.
       const hasWorkingAltTarget = sectionsToSave.some((sec) => {
@@ -5692,7 +5699,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         sectionsToSave = sectionsToSave.map((s) => {
           if (s.type === "offer") return { ...s, config: { ...s.config, formId: createdFormId } };
           // Wire the capture form to the hero on EVERY capture funnel (not just
-          // one-fold), so its above-the-fold CTA opens the form popup — the CTA
+          // one-fold), so its above-the-fold CTA opens the form popup, the CTA
           // the visitor sees first actually works.
           if (s.type === "hero") {
             return { ...s, config: { ...s.config, formId: createdFormId } };
@@ -5743,13 +5750,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           throw err;
         }
 
-        // Full Growth System recipe — every node type here already has a
+        // Full Growth System recipe, every node type here already has a
         // real executor in lib/workflows/engine.ts's REGISTRY (the exact
         // same engine a manually-built workflow runs on, not a parallel
         // AI-only path): create the Opportunity, tag the contact, send the
         // confirmation, notify the operator, wait a day, then leave a
         // follow-up task. Mirrors what an operator builds by hand in the
-        // visual Workflow builder — a Zeno-built workflow is editable there
+        // visual Workflow builder, a Zeno-built workflow is editable there
         // exactly like any other.
         const displayName = (args.funnelName as string) || (args.headline as string);
         const tag = (args.tag as string) || `${displayName} requested`;
@@ -5762,7 +5769,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         });
         // AUTOMATION STRATEGY ENGINE (see lib/workflows/compose-strategy.ts):
         // the model's lifecycle plan + nurture sequence compose into a real
-        // state machine — goal-tag exit checks before every touch, human
+        // state machine, goal-tag exit checks before every touch, human
         // handoff task when the goal isn't reached. A model that supplied no
         // plan gets the synthesized floor (instant confirm + 1-day handoff,
         // still goal-tag-guarded). Same engine, same builder editability as
@@ -5799,7 +5806,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // Increment 1): the buyer's emotional transformation deterministically
       // assigns per-section layout variants + canvases, so structurally
       // different campaigns come out of the same section library. Baseline
-      // profile (no transformation supplied) = identity — zero change to
+      // profile (no transformation supplied) = identity, zero change to
       // funnels built without art-direction inputs.
       // GUARANTEED art direction: the model's explicit transformation (schema-
       // required) wins; when absent/invalid we deterministically infer it from
@@ -5821,20 +5828,20 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         archetype: effectiveArchetype,
       });
 
-      // Auto-imagery (Pexels, HONESTY-GUARDED — see lib/funnels/imagery.ts):
+      // Auto-imagery (Pexels, HONESTY-GUARDED, see lib/funnels/imagery.ts):
       // SUBJECT/ambient photography chosen by the campaign's imagery brief so
       // pages feel warm and specific before the operator adds real photos.
-      // Structurally limited to the hero + benefits rows — never testimonial/
+      // Structurally limited to the hero + benefits rows, never testimonial/
       // team/proof contexts. Runs BEFORE applyArtDirection so an urgent hero
       // with a real photo composes as the immersive full-bleed treatment
       // instead of dropping media. Best-effort: any failure changes nothing.
-      // DIVINEX SLICE 6 — canonical profile as generation INPUT. The frozen
+      // DIVINEX SLICE 6, canonical profile as generation INPUT. The frozen
       // engines are untouched: this only fills inputs the model didn't
       // supply (brand accent/axes, approved evidence assets, real logo).
       // No snapshot → profileInputs is null → certified behavior exactly.
       // Roles whose whole function IS the visual: without real media the
       // section cannot do its job, because the imagery IS the evidence.
-      // A hero is deliberately absent — a strong headline, offer and trust
+      // A hero is deliberately absent, a strong headline, offer and trust
       // row can carry it, which is exactly why necessity is not positional.
       const EVIDENCE_BEARING_ROLES = new Set(["gallery", "proof"]);
       let visualRequirements: VisualRequirement[] = [];
@@ -5854,7 +5861,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         if (!args.campaignHumanity && profileInputs.campaignHumanity) args.campaignHumanity = profileInputs.campaignHumanity;
         if (!args.visualDensity && profileInputs.visualDensity) args.visualDensity = profileInputs.visualDensity;
         if (!args.logoUrl && profileInputs.identity.logoUrl) args.logoUrl = profileInputs.identity.logoUrl;
-        // ── IMAGE DIRECTOR (P0.5) — the ONE authoritative visual decision.
+        // ── IMAGE DIRECTOR (P0.5), the ONE authoritative visual decision.
         //
         // The page-level plan is produced BEFORE placement and then fulfilled.
         // This replaces the older inline distribution, which decided each
@@ -5865,7 +5872,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         // A CLASSIFICATION IS NOT A PROVENANCE.
         //
         // This is where the fabricated "AS SEEN IN" strip came from. When the
-        // model correctly declined to claim third-party evidence (null — it had
+        // model correctly declined to claim third-party evidence (null, it had
         // been told never to invent one), this backfilled the field from any
         // approved asset the discovery classifier had labelled partner /
         // certification / evidence, and the strip then rendered under a press
@@ -5873,7 +5880,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         // seven publications that had featured them.
         //
         // The model was right and the server overrode it. Nothing replaces this
-        // — no filename, alt-text, placement or confidence heuristic, because
+        //, no filename, alt-text, placement or confidence heuristic, because
         // every one of those is a guess about a picture rather than a statement
         // by the business. Verified evidence now comes from the operator-entered
         // store alone; see lib/funnels/evidence-proof.ts.
@@ -5884,7 +5891,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           heroBrief: (mediaSubject || heroMediaBrief || "") || null,
           // NOT coupled to whether a gallery is wanted. An earlier version
           // passed `wantsGallerySection && resolvedMediaStrategy` here, which
-          // forced a text-led hero whenever a gallery was merely CONSIDERED —
+          // forced a text-led hero whenever a gallery was merely CONSIDERED -
           // pushing the strongest landscape photograph out of the hero and
           // leaving the page with no imagery at all. The hero is decided on
           // its own merits from the assets available; a text-led hero is a
@@ -5901,7 +5908,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
 
         // Hero is applied to the SECTION, not to args. The hero section is
         // composed much earlier in this function, so assigning args.* here
-        // would be read by nothing — the same ordering trap that made
+        // would be read by nothing, the same ordering trap that made
         // designPack unreachable. Evidence over assumption: the Director
         // returns a correct hero in isolation, and it still arrived blank on
         // the composed page until this moved to the section itself.
@@ -5921,8 +5928,8 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         // A requirement is something only the business can supply and is
         // actionable. A decision is a completed Director choice kept for
         // audit. Keeping them in one list with a `kind` field would mean
-        // every consumer — preview, Zeno, readiness, the "Stronger with N
-        // photos" counter — has to remember that some entries are not gaps,
+        // every consumer, preview, Zeno, readiness, the "Stronger with N
+        // photos" counter, has to remember that some entries are not gaps,
         // and eventually one forgets.
         const slotResolutions = [
           { sectionType: "hero", resolution: visualPlan.hero },
@@ -5944,7 +5951,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               // page's argument rests on.
               //
               // A requirement is "required" only when the section cannot
-              // fulfil its ROLE without real media — i.e. showing the work IS
+              // fulfil its ROLE without real media, i.e. showing the work IS
               // the argument. Everything else is publishable now and stronger
               // later. The Critic re-judges this against the finished page.
               necessity: EVIDENCE_BEARING_ROLES.has(r.role) ? "required" : "recommended",
@@ -5966,7 +5973,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             }
             // A request or a deliberate no-image hero must EXPLAIN itself.
             // Rendering an unexplained empty slot is the "unresolved state
-            // masquerading as a completed visual" failure — the operator
+            // masquerading as a completed visual" failure, the operator
             // cannot tell a decision from a bug.
             const brief =
               visualPlan.hero.kind === "authentic_photo_required" ? visualPlan.hero.brief : visualPlan.hero.reason;
@@ -6002,14 +6009,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       }
 
       // BUSINESS REALITY ENGINE (slice A): resolve the authenticity category
-      // once — it gates imagery-as-evidence below and drives the asset
+      // once, it gates imagery-as-evidence below and drives the asset
       // manifest in the reply. Model override wins; genre+archetype floor.
       // (authenticityCategory is resolved above, where the archetype derives from it.)
 
       // Whether a photograph could be honest evidence for this business at all.
       // Declared HERE rather than inside the imagery block below because two
       // different decisions turn on it: whether to place stock photography, and
-      // — since a page that cannot use photographs still needs a proof beat —
+      //, since a page that cannot use photographs still needs a proof beat -
       // whether to present the deliverable instead (see further down).
       //
       // Product-led categories (physical_product, enterprise_software) need the
@@ -6027,7 +6034,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       //
       // It asked what the BUSINESS does, searched the provider once per slot,
       // and filled the hero plus every benefit row with whatever came back. It
-      // was a second visual authority that could — and did — disagree with the
+      // was a second visual authority that could, and did, disagree with the
       // one that reads the page's argument: the operations fixture took a stock
       // photograph of a businessman on a video call for its fold, because the
       // query was a business-level subject and the photograph genuinely matched
@@ -6035,7 +6042,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // what the fold was supposed to ARGUE.
       //
       // Photography now enters through the visual story below, per BEAT, judged
-      // against that beat's concept — the same test a drawing has to pass, in a
+      // against that beat's concept, the same test a drawing has to pass, in a
       // different medium. One authority, one decision order. Customer-owned and
       // editor-chosen media are upstream of both and are never overridden.
 
@@ -6045,13 +6052,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // stock photography: a stock "product" for a product nobody has seen, or
       // a stock "coach" for a coach we cannot picture, is invented evidence.
       // But blocking the photo was the whole intervention, so those pages ended
-      // up with no proof beat of any kind — three of the five fixtures rendered
+      // up with no proof beat of any kind, three of the five fixtures rendered
       // with zero images and nothing in their place, which is not honesty, it
       // is an absence.
       //
       // The honest substitute is the thing that IS verifiable: what the buyer
       // actually receives. `deliverable_preview` frames the section's REAL
-      // items as a visibly-labelled example of the contents — presentation of
+      // items as a visibly-labelled example of the contents, presentation of
       // facts the page already asserts, never dressed as customer evidence.
       // So it applies to the same set that cannot use a photograph, not just
       // the two categories it started with.
@@ -6064,7 +6071,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       }
       // Sales Argument Engine: every section carries its persuasion JOB
       // (hook / belief_shift / promise / mechanism / proof / offer /
-      // risk_reversal / objections / close) — stored so the argument is
+      // risk_reversal / objections / close), stored so the argument is
       // auditable from data, never a discarded prompt.
       sectionsToSave = stampArgumentRoles(sectionsToSave);
       // ... and the plan is STRUCTURALLY CONSUMED: belief-chain steps are
@@ -6072,7 +6079,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // duplicate benefits are removed, and the close is seeded from
       // corePromise + closeReason when left generic. Never decorative.
       // FLOOR: a missing model plan is synthesized from the model's own copy
-      // (headline/bullets/CTA) so the argument — and servesBelief coverage —
+      // (headline/bullets/CTA) so the argument, and servesBelief coverage -
       // can never be absent. An explicit plan always wins.
       const effectivePlan =
         (args.salesArgument as
@@ -6096,7 +6103,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       //
       // Roles are gated on renderable content now (see stampArgumentRoles: an
       // invisible section may not carry a persuasion role). That gate runs
-      // above, before the plan has been consumed — and consuming the plan is
+      // above, before the plan has been consumed, and consuming the plan is
       // exactly what fills a blank problem/solution beat from currentBelief +
       // mechanism. A section that was empty at the first stamp and is real by
       // the time the page is composed must carry its role, or the belief shift
@@ -6110,7 +6117,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // ── THE VISUAL STORY ───────────────────────────────────────────────
       //
       // THE ONE AUTHORITY FOR THIS PAGE'S PLANNED MEDIA. Not an extra pass that
-      // adds drawings where photography failed — that was the split brain, and
+      // adds drawings where photography failed, that was the split brain, and
       // it is gone. Photography, constructed visuals and document
       // representations all enter here, through one decision order:
       //
@@ -6127,7 +6134,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // actually COMPOSE it, the source hierarchy's own truthfulness tests, a
       // redundancy check against what the page already renders, and the
       // page-level rule that no constructed shape repeats. Most beats do not
-      // survive all four, and that is the intended shape of the outcome — a
+      // survive all four, and that is the intended shape of the outcome, a
       // page with one or two visuals carrying real weight beats a page with
       // five that decorate.
       // PLAN AGAINST THE PAGE THAT WILL ACTUALLY EXIST.
@@ -6135,7 +6142,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // Empty sections are pruned later, before the Critic, for exactly this
       // reason: judging a composition the save is about to change is judging
       // the wrong page. The visual story needs the same guarantee and did not
-      // have it — the booking fixture planned a drawn sequence onto a `story`
+      // have it, the booking fixture planned a drawn sequence onto a `story`
       // section that was empty and about to be removed, so the beat was spent
       // and the visual never rendered. Pruning is pure and idempotent, so doing
       // it here costs nothing and the later prune still runs unchanged.
@@ -6143,7 +6150,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         const { pruneEmptySections } = await import("@/lib/funnels/section-completeness");
         sectionsToSave = pruneEmptySections(sectionsToSave).sections;
       } catch {
-        // Pruning is an optimisation for the planner here, not a contract —
+        // Pruning is an optimisation for the planner here, not a contract -
         // the authoritative prune still runs below.
       }
 
@@ -6166,11 +6173,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           closeReason: effectivePlan.closeReason ?? null,
         });
 
-        // The business facts a photo brief may be written from — the same
+        // The business facts a photo brief may be written from, the same
         // ladder the retired pass used, kept because it is the business's own
         // words. What changed is that it now only steers the PROVIDER; whether
         // a result is placed is judged against the beat's concept.
-        // DESCRIPTIVE FIELDS ONLY — see `coreSubject` in media-intent.ts.
+        // DESCRIPTIVE FIELDS ONLY, see `coreSubject` in media-intent.ts.
         // `headline` and `mechanism` were passed here and are deliberately gone:
         // persuasion language decides WHY a visual helps, never WHAT real-world
         // subject gets photographed. A headline that happens to contain
@@ -6189,7 +6196,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         // see the context-establishing branch in visual-source.ts. It is the
         // business's own description of its work, never the generator's.
         const contextSubject = (mediaSubject as string) || (args.mediaSubject as string) || heroMediaBrief || "";
-        // BUSINESS TRUTH, separate from persuasion copy — see media-intent.ts.
+        // BUSINESS TRUTH, separate from persuasion copy, see media-intent.ts.
         // Absent means the model could not name the trade, and the page
         // composes without stock photography rather than guessing at one.
         const serviceDomain = (args.serviceDomain as string) || "";
@@ -6207,7 +6214,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           // EVERY MEDIA-BEARING LOCATION, not just the two scalar ones.
           //
           // This set existed to stop one asset being used twice, and it read
-          // `mediaUrl` and `photoUrl` only — so the images the Image Director
+          // `mediaUrl` and `photoUrl` only, so the images the Image Director
           // had already put in the gallery were invisible to it. On RWAR that
           // let ONE file (a Hague-Convention map) take the hero, the first
           // gallery tile and the problem beat: three placements of one picture
@@ -6239,7 +6246,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         // A POOL SNAPSHOT TAKEN BEFORE THE LOOP CANNOT DEDUPE INSIDE IT.
         //
         // This was a single array, filtered against `placedUrls` once, here.
-        // The loop below then adds every placement to `placedUrls` — and hands
+        // The loop below then adds every placement to `placedUrls`, and hands
         // each beat the same unchanged array. So beat one took an asset, and
         // beat two was offered it again, and beat three after that. One image
         // took the hero fold, the problem beat and the benefits beat on an
@@ -6264,7 +6271,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
          * A stock photograph resolved from the search pool is a photograph by
          * construction, so it keeps `cover`. Anything first-party is judged on
          * its metadata, and anything we cannot identify at all renders at its
-         * own shape — "we could not tell" must never resolve to "slice it".
+         * own shape, "we could not tell" must never resolve to "slice it".
          */
         const fitForResolvedUrl = (url: string | undefined, photoPool: { url: string }[]): "cover" | "intrinsic" => {
           if (!url) return "intrinsic";
@@ -6303,7 +6310,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
 
           const composition = compositionForSection(host);
 
-          // WHAT THIS BEAT IS COMPETING WITH — the host section and its
+          // WHAT THIS BEAT IS COMPETING WITH, the host section and its
           // neighbours, as text and as the structural devices they already
           // draw. A drawing that restates either is declined.
           const window = sectionsToSave.slice(Math.max(0, hostIdx - 1), hostIdx + 2);
@@ -6346,7 +6353,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
 
           if (resolved.source === "text_led" || resolved.source === "document" || resolved.source === "composed_proof") {
             // Rungs 4 and 5 are satisfied by compositions this page already
-            // applies (the deliverable preview, the proof visual) — nothing to
+            // applies (the deliverable preview, the proof visual), nothing to
             // place here, and text-led is a decision rather than a gap.
             continue;
           }
@@ -6356,7 +6363,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             if (placedPhoto) placedStockPhotos.push(placedPhoto);
           }
           if (resolved.source === "constructed" && resolved.shape) shapesUsedOnPage.push(resolved.shape);
-          // One context-establishing photograph per page, hard — see the
+          // One context-establishing photograph per page, hard, see the
           // context branch in visual-source.ts.
           if (resolved.source === "contextual_photo" && resolved.reason.startsWith("concept is abstract")) {
             contextPhotoUsedOnPage = true;
@@ -6388,7 +6395,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
                       // Both halves of the unresolved state have to go. Clearing
                       // only the label left the BRIEF behind, so a hero that had
                       // just been filled still carried "a wide photograph of the
-                      // business at work" — the preview then asked the operator
+                      // business at work", the preview then asked the operator
                       // for a photo it was already showing them.
                       mediaPlaceholderLabel: "",
                       mediaPlaceholderBrief: "",
@@ -6414,7 +6421,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
                         side,
                         // RELEVANCE IS NOT COMPATIBILITY. This slot crops to
                         // fill, which reframes a photograph and mutilates a
-                        // diagram — a wide process graphic shipped here with
+                        // diagram, a wide process graphic shipped here with
                         // its words sliced through at both edges. Only an asset
                         // with positive evidence of being a photograph earns
                         // the crop; everything else, including anything we
@@ -6430,11 +6437,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         }
         if (trace.length > 0) console.log(`[visual-story] ${trace.join(" | ")}`);
       } catch {
-        // The visual story is best-effort like every other imagery decision —
+        // The visual story is best-effort like every other imagery decision -
         // a page without it is the certified page, never a failed build.
       }
 
-      // BUSINESS REALITY ENGINE (slice E) — visual semantics: composition
+      // BUSINESS REALITY ENGINE (slice E), visual semantics: composition
       // follows what the content IS, not just the emotional register.
       // Deliverable-led categories present "what's included" as a framed
       // example-preview document (the real contents, visibly an example);
@@ -6475,7 +6482,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // page's own CTA language (the seeded "Ready?" / "Get started" default
       // shipped on every fixture), moves a closing banner that landed above the
       // offer, clears headings that repeat an earlier one, and breaks a run of
-      // three sections sharing one layout shape. Writes no copy — see the
+      // three sections sharing one layout shape. Writes no copy, see the
       // module header.
       sectionsToSave = composePage(sectionsToSave, {
         primaryCtaLabel: (args.ctaLabel as string) || null,
@@ -6491,7 +6498,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         // Named for EVERY page, not only the ones that block photography.
         // It is allocated only when the finished page carries no real image,
         // which now includes a page whose candidate photographs were all
-        // rejected as irrelevant — so relevance rejection degrades into a
+        // rejected as irrelevant, so relevance rejection degrades into a
         // composed proof beat instead of into an empty page.
         proofVisual:
           authenticityCategory === "info_product" || authenticityCategory === "physical_product"
@@ -6500,7 +6507,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       });
 
 
-      // BUSINESS REALITY ENGINE (slice B) — the identity layer. Every page
+      // BUSINESS REALITY ENGINE (slice B), the identity layer. Every page
       // ends grounded in the real organization: business name (agent
       // profile > workspace name), contact email/phone (accountContact),
       // the funnel's logo. Resolved from VERIFIED workspace data only;
@@ -6532,7 +6539,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             ];
           }
         } catch {
-          // Identity is additive — a resolve failure never blocks the page.
+          // Identity is additive, a resolve failure never blocks the page.
         }
       }
 
@@ -6641,7 +6648,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
 
       // ABOVE-THE-FOLD REVIEW PROOF, FROM THE VERIFIED STORE ONLY.
       //
-      // This used to render `args.real_rating` — a rating the MODEL passed,
+      // This used to render `args.real_rating`, a rating the MODEL passed,
       // on the strength of "the user told me". That is a relayed claim, and a
       // star rating is the single most valuable and most fabricable thing a
       // page can say, so it now comes from the workspace's own structured
@@ -6666,7 +6673,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         }
       }
 
-      // VERIFIED EVIDENCE — read from the operator's own store, exactly like
+      // VERIFIED EVIDENCE, read from the operator's own store, exactly like
       // the rating strip above it.
       //
       // It used to be read from the tool args, guarded only by "the URL is a
@@ -6677,7 +6684,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // The model is deliberately not in this path. A logo relayed through chat
       // is the same class of claim as a rating relayed through chat, which
       // review-proof.ts already refuses for the same reason. No store entry, no
-      // strip — the page renders nothing rather than an endorsement nobody
+      // strip, the page renders nothing rather than an endorsement nobody
       // verified. The heading is derived from the stored category and is never
       // supplied alongside it.
       const logosConfig = evidenceStripConfig(
@@ -6696,7 +6703,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           sectionsToSave = [...sectionsToSave.slice(0, afterRating), strip, ...sectionsToSave.slice(afterRating)];
         }
       } else {
-        // NO VERIFIED EVIDENCE MEANS NO STRIP — including one a framework
+        // NO VERIFIED EVIDENCE MEANS NO STRIP, including one a framework
         // template scaffolded with an empty `logos` array. Leaving it in place
         // is how an empty band, or worse a band some later pass helpfully
         // fills, reaches a page. The rating variant is untouched: it has its
@@ -6734,7 +6741,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
 
       // MULTISTEP: when the model chains this funnel into an already-created
       // downstream step (magnet -> offer), verify the target actually exists
-      // in THIS sub-account before storing the link — a typo'd or foreign id
+      // in THIS sub-account before storing the link, a typo'd or foreign id
       // would render a dead next-offer card on the live thank-you page.
       let bridgeTarget: string | null = null;
       if (typeof args.bridgeNextFunnelId === "string" && args.bridgeNextFunnelId) {
@@ -6750,7 +6757,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         bridgeTarget = target.id;
       }
 
-      // ── LANDING PAGE CRITIC (P0.5) — judges the FINISHED composition ────
+      // ── LANDING PAGE CRITIC (P0.5), judges the FINISHED composition ────
       //
       // Runs here, at the end of composition, because that is the only point
       // where the artifact the customer will see actually exists. Everything
@@ -6763,7 +6770,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       //
       // A Critic OUTAGE MUST NOT PUBLISH AN UNREVIEWED PAGE. On failure the
       // verdict stays null, which computeReadiness() treats as "not reviewed
-      // yet" — deliberately not as a pass.
+      // yet", deliberately not as a pass.
       // ── SHELL SAFETY, applied BEFORE the Critic ─────────────────────────
       // A section may be minimal; a section may be omitted; a section may NOT
       // be empty-but-present. Pruning here (rather than only at the write
@@ -6802,7 +6809,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         const { critiqueComposition, MAX_CORRECTION_ROUNDS } = await import("@/lib/funnels/landing-page-critic");
         const { applyCriticCorrections } = await import("@/lib/funnels/critic-correction");
 
-        // The offer the page is making — so CTA continuity is judged against
+        // The offer the page is making, so CTA continuity is judged against
         // the real promise rather than in the abstract.
         const plan = args.salesArgument as { corePromise?: string; prospect?: string } | null;
         const bizName = typeof args.businessName === "string" ? args.businessName : "";
@@ -6836,7 +6843,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           subAccountId,
           funnelId,
           patch: {
-            // Store the visual plan + sales argument — composition AND
+            // Store the visual plan + sales argument, composition AND
             // persuasion must be explainable, never prompt-only metadata.
             artDirection: artProfile,
             persuasionDepth: funnelDepth,
@@ -6846,23 +6853,23 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             sections: sectionsToSave,
             // Generated content: the write boundary prunes any empty shell
             // that survived and fails closed rather than persisting a page
-            // that cannot convert. Redundant with the prune above by design —
+            // that cannot convert. Redundant with the prune above by design -
             // this is the backstop that holds for every generated write.
             enforceCompleteness: true,
-            // P0.5 — persisted as structured state so Zeno can see outstanding
+            // P0.5, persisted as structured state so Zeno can see outstanding
             // improvements, the preview can offer the right action against the
             // right slot, and "Stronger with 2 photos" is countable. An empty
             // array is meaningful: the Director found nothing outstanding.
             visualRequirements,
             visualDecisions,
             // The Critic's structured verdict on the finished page. Absent
-            // when the Critic was unreachable — which readiness reads as
+            // when the Critic was unreachable, which readiness reads as
             // "not reviewed", never as "passed".
             ...(criticVerdict ? { criticVerdict } : {}),
             ...(args.accentColor ? { accentColor: args.accentColor as string } : {}),
             ...(args.theme ? { theme: args.theme as "light" | "dark" } : {}),
             ...(args.eventStartAt ? { eventStartAt: args.eventStartAt as string } : {}),
-            // Per-funnel SEO derived from the page's own certified copy —
+            // Per-funnel SEO derived from the page's own certified copy -
             // deterministic, operator-editable in the builder afterward.
             seo: {
               title: `${(args.headline as string) || (args.funnelName as string) || "Untitled"}`.slice(0, 70),
@@ -6885,10 +6892,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         throw err;
       }
 
-      // Calibration Engine v1 — every AI-generated funnel gets the locked
+      // Calibration Engine v1, every AI-generated funnel gets the locked
       // spec's 12-criteria design review the moment its real content lands
       // (not right after createFunnelServerSide, which only has the seed
-      // sections — this runs after updateFunnelServerSide above wrote the
+      // sections, this runs after updateFunnelServerSide above wrote the
       // actual copy). Best-effort: a scoring failure (model hiccup, rate
       // limit) must never break funnel creation itself, so it's swallowed
       // here exactly like every other lifecycle side-effect in this
@@ -6898,13 +6905,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         const scoredFunnel = await getFunnel(subAccountId, funnelId);
         if (scoredFunnel) {
           await scoreFunnelDesign(scoredFunnel);
-          // Conversion Engine (M6b) — deterministic copy-quality + anti-
+          // Conversion Engine (M6b), deterministic copy-quality + anti-
           // fabrication review alongside the design score. No LLM cost; flags
           // generic filler / invented proof / vague CTAs for operator review
           // (persisted to funnelCopyReviews, mirroring the design score).
           // Best-effort, same swallow as the design score.
           copyReview = await reviewFunnelCopy(scoredFunnel);
-          // The AUTOMATION emails get the same scan — the e2e caught a
+          // The AUTOMATION emails get the same scan, the e2e caught a
           // fabricated named beneficiary ("Marcus") + a fictional "Impact
           // Report" artifact in generated nurture copy that the page-only
           // review never saw. Email bodies are folded in as pseudo-sections
@@ -6936,7 +6943,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           }
         }
       } catch {
-        // Swallowed — the operator can always trigger a manual re-score
+        // Swallowed, the operator can always trigger a manual re-score
         // from the funnel builder if this silently didn't run.
       }
 
@@ -6945,7 +6952,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const formLabel = hasTicketTiers ? "Registration Form" : "Capture Form";
 
       // Every line below maps 1:1 to something actually written to Firestore
-      // above — nothing here is aspirational or generic. When the offer is
+      // above, nothing here is aspirational or generic. When the offer is
       // priced (no capture form/workflow package), the checklist shrinks to
       // just what was really created rather than checking off steps that
       // didn't run.
@@ -6959,7 +6966,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             ? ` · thank-you page routes to funnel ${bridgeTarget}`
             : ", pass as bridge_next_funnel_id when creating an UPSTREAM step of a multistep journey"),
       ];
-      // Phase 2 — a concise, honest design rationale (never chain-of-thought,
+      // Phase 2, a concise, honest design rationale (never chain-of-thought,
       // never a score/grade) so the operator knows WHY this look was chosen
       // and can act on it (change the archetype/palette/CTA in the builder)
       // without having to guess what Zeno was thinking.
@@ -7001,7 +7008,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           ", No capture form (this is a priced offer, wire up Stripe checkout on the offer section, no lead-form opt-in needed).",
         );
       }
-      // Conversion Engine (M6b) — surface the copy review so the operator knows
+      // Conversion Engine (M6b), surface the copy review so the operator knows
       // to check before sharing. Only shown when something was actually flagged;
       // a clean pass stays quiet. Never a "score/grade" for its own sake.
       if (copyReview && copyReview.issues.length > 0) {
@@ -7017,7 +7024,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       }
 
       // BUSINESS REALITY ENGINE (slice D): tell the operator exactly which
-      // real assets would most transform this page's credibility — the
+      // real assets would most transform this page's credibility, the
       // system asks for evidence instead of faking it. Upload path: the
       // builder's Files & delivery card (images get a paste-ready URL).
       {
@@ -7042,12 +7049,12 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           (createdFormId ? " / Forms / Templates / Workflows." : "."),
       );
 
-      // ── CUSTOMER COMPLETION (U1) — composed from what was really built ──
+      // ── CUSTOMER COMPLETION (U1), composed from what was really built ──
       //
       // Built from the SAME facts as the receipt above, but expressed as
       // outcome / review / next action. Never mentions the funnel id, the
       // bridge parameter, the Director, the Critic, or why a visual
-      // archetype was chosen — those stay in `resultText` for the model.
+      // archetype was chosen, those stay in `resultText` for the model.
       const review: string[] = [];
       if (copyReview?.fabricationRisk) {
         review.push("Some copy may claim results or testimonials that haven't been verified. Check it before this goes live.");
@@ -7436,7 +7443,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     },
     summarize: (args) => {
       // The confirm card IS the review gate, so it must show what actually
-      // changes — a vague summary would make approval meaningless.
+      // changes, a vague summary would make approval meaningless.
       const fields = args.fields as Record<string, string>;
       const preview = Object.entries(fields)
         .map(([k, v]) => `${k}: \u201c${v.slice(0, 90)}${v.length > 90 ? "\u2026" : ""}\u201d`)
@@ -7453,7 +7460,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
 
       const fields = args.fields as Record<string, string>;
       // SPREAD, never rebuild: argumentRole, servesBelief and canvas travel
-      // with the section, and every config key not named here is untouched —
+      // with the section, and every config key not named here is untouched -
       // so a human edit Zeno wasn't asked about survives.
       const next = funnel.sections.map((s, i) =>
         i === idx ? { ...s, config: { ...(s.config as Record<string, unknown>), ...fields } } : s,
@@ -8615,7 +8622,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // synchronous call is cut short by ceilings below that. Zeno starts it,
       // then waits a BOUNDED amount of time so a quick asset still comes back
       // inside the conversation. The bound is well under the ceilings on the
-      // chat request itself — exceeding it must not turn a running job into a
+      // chat request itself, exceeding it must not turn a running job into a
       // reported failure, so the slow case hands off honestly instead.
       const started = await ascend.startAssetGeneration({
         flowSubAccountId: ctx.subAccountId!,
@@ -8650,7 +8657,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           const asset = poll.data.asset;
           return {
             // HONEST ABOUT WHERE THIS ENDS. The old line said "review and edit
-            // it in Create before you use it anywhere" — Create → Assets has no
+            // it in Create before you use it anywhere", Create → Assets has no
             // editor, and "use it anywhere" named a handoff that does not
             // exist: a written asset is read-only text you copy out. Saying so
             // is what keeps this surface truthful, and it points at the paths
@@ -8667,7 +8674,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       }
 
       // Still running, and still fine. Telling the customer it failed here
-      // would be false — the asset usually lands a minute or two later.
+      // would be false, the asset usually lands a minute or two later.
       return {
         resultText:
           `I've started writing your ${args.assetType as string}, the longer pieces take a couple of minutes.\n\n` +
@@ -8886,7 +8893,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             // confirm step re-validates stored args, so refusing to read back
             // what this function just produced would silently discard the
             // hours between proposing and confirming and quietly fall back to
-            // Mon-Fri 9-5 — the same round-trip class of bug that once
+            // Mon-Fri 9-5, the same round-trip class of bug that once
             // dropped 16 fields of a funnel plan.
             const alreadyInternal = typeof h.dayOfWeek === "number";
             const day = alreadyInternal ? (h.dayOfWeek as number) : DAYS.indexOf(str(h, "day").trim().toLowerCase());
@@ -8959,13 +8966,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
  *
  * The agency owner has implicit admin in every sub-account, so the Agency
  * Assistant may run selected workspace capabilities against a sub-account
- * the owner names — WITHOUT duplicating any business logic. The wrapper:
+ * the owner names, WITHOUT duplicating any business logic. The wrapper:
  *   1. adds required `subAccountId` + `subAccountName` parameters (resolved
- *      via list_sub_accounts — the model is told never to guess ids),
+ *      via list_sub_accounts, the model is told never to guess ids),
  *   2. re-anchors the model-supplied id to the caller's own agency before
  *      anything runs (a crafted/wrong id can never reach another tenant),
  *   3. delegates to the base capability's validate/summarize/execute with
- *      the context's subAccountId swapped to the verified target — so every
+ *      the context's subAccountId swapped to the verified target, so every
  *      guardrail inside the base capability (per-feature agency gates,
  *      contact re-anchoring, URL validation) runs unchanged against the
  *      target workspace.
@@ -9061,14 +9068,14 @@ const AGENCY_DELEGATED = [
   "create_webhook",
   "create_community",
   "invite_member",
-  // Website builder — the agency owner can research, build, and check sites
+  // Website builder, the agency owner can research, build, and check sites
   // for a named client workspace ("build Joe's Gym a website like X"). The
   // websiteEnabledByAgency gate still applies inside the service.
   "get_website_prefill",
   "research_website_reference",
   "create_website",
   "check_website_status",
-  // Funnel Builder — same delegation shape as the website builder above.
+  // Funnel Builder, same delegation shape as the website builder above.
   // funnelsEnabledByAgency still applies inside createFunnelServerSide's
   // caller (checked explicitly in create_funnel's execute()).
   "create_funnel",
@@ -9103,7 +9110,7 @@ export function roleSatisfies(
 /**
  * Capabilities available at a level to a caller with the given role, as
  * OpenAI/OpenRouter tool definitions. Filtering by role here means the model
- * is only ever offered tools the caller could actually run — so it guides a
+ * is only ever offered tools the caller could actually run, so it guides a
  * collaborator to ask an admin rather than proposing a doomed action.
  */
 /**
@@ -9117,7 +9124,7 @@ export function roleSatisfies(
  * The workspace segment is checked rather than ignored. A link belonging to
  * a different workspace must not quietly edit the caller's own page that
  * happens to share a slug, and the refusal says nothing about whether that
- * other page exists — it is derived entirely from the URL the caller typed
+ * other page exists, it is derived entirely from the URL the caller typed
  * and the workspace they are already in, so it discloses nothing.
  *
  * Any host is accepted: a deployment can be reached by several, and the
@@ -9154,7 +9161,7 @@ export function parseBookingPageRef(
  * Every model provider rejects a duplicate tool name outright:
  * `400 tools: Tool names must be unique`. That is not retryable, so it
  * throws, and the chat route's catch-all turns it into `Request failed
- * (502)`. The effect is total — not the duplicated capability degrading,
+ * (502)`. The effect is total, not the duplicated capability degrading,
  * but EVERY message at that level failing, including plain conversation
  * that was never going to call a tool.
  *
@@ -9208,7 +9215,7 @@ export interface CapabilityMenuItem {
 }
 
 /**
- * The capabilities offered at a level+role — name + human menu label, split
+ * The capabilities offered at a level+role, name + human menu label, split
  * by class so the prompt can explain that lookups run instantly while
  * actions need the user's confirmation, and so the assistant can answer
  * "what can you do?" with a polished, role-accurate list.

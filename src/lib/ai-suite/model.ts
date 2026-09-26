@@ -241,7 +241,7 @@ export async function runAiSuiteTurn({
      */
     if (res.status === 402) {
       console.error(
-        "[ai-suite/model] OPENROUTER CREDIT EXHAUSTED — the assistant is down for every workspace until this deployment's OpenRouter balance is topped up. openrouter.ai → Credits.",
+        "[ai-suite/model] OPENROUTER CREDIT EXHAUSTED: the assistant is down for every workspace until this deployment's OpenRouter balance is topped up. openrouter.ai → Credits.",
       );
       throw new Error(`OpenRouter credit exhausted: ${text.slice(0, 200)}`);
     }

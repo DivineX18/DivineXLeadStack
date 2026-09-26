@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
  *
  * This is the single place a write happens. It re-authenticates the caller,
  * re-checks the capability's required role, re-validates the args, and only
- * then runs the handler — none of which trusts the model or the client
+ * then runs the handler, none of which trusts the model or the client
  * beyond the whitelisted capability + validated args. Tenant scope
  * (subAccountId / agencyId) comes from the authenticated session, so a
  * crafted request can never exceed the caller's own permissions or reach
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     );
   }
 
-  // Readonly lookups execute inline in the chat route — they're not
+  // Readonly lookups execute inline in the chat route, they're not
   // confirmable actions, so this endpoint refuses them.
   const cap = getCapability(body.capability);
   if (!cap || cap.level !== level || cap.readonly) {
@@ -141,7 +141,7 @@ export async function POST(request: Request) {
     };
   }
 
-  // Re-validate the args server-side — the client's payload is never trusted.
+  // Re-validate the args server-side, the client's payload is never trusted.
   const validated = cap.validate(body.args);
   if (!validated.ok) {
     // validate() errors are written as instructions to the MODEL ("YOU are
@@ -157,50 +157,24 @@ export async function POST(request: Request) {
 
   const summary = cap.summarize(validated.args);
 
+  /**
+   * THE TRY COVERS THE MUTATION AND NOTHING AFTER IT.
+   *
+   * The audit write used to sit between the change committing and the
+   * response being sent, inside this try. A Firestore hiccup on that write
+   * therefore answered "The action failed to run. Please try again." for a
+   * change that had already been made, and the customer would retry it.
+   * For an edit that is usually harmless; for anything that creates, it
+   * makes a second one.
+   *
+   * Bookkeeping is not the outcome, so past the execute below the change is
+   * committed, the answer says so, and the audit and usage writes happen
+   * without being able to contradict it. A failure to record is logged,
+   * because an action that ran without an audit row is worth knowing about.
+   */
+  let result: Awaited<ReturnType<typeof cap.execute>>;
   try {
-    const result = await cap.execute(ctx, validated.args);
-    await recordAiSuiteAction({
-      level,
-      capability: cap.name,
-      args: validated.args,
-      summary,
-      status: "executed",
-      agencyId: ctx.agencyId,
-      subAccountId: ctx.subAccountId ?? null,
-      confirmedByUid: ctx.uid,
-      confirmedByEmail: ctx.email,
-      resultRef: result.ref ?? null,
-    });
-    void recordAiSuiteUsage({
-      level,
-      agencyId: ctx.agencyId,
-      subAccountId: ctx.subAccountId,
-      kind: "action",
-    });
-    // BUILD COMPLETION CONTRACT (Production Experience 2.0): return the
-    // pointer to what was actually built, not just prose about it. It was
-    // already recorded in the audit trail above but never sent to the
-    // client, so a successful funnel build rendered as a sentence with no
-    // way to open the thing that was created.
-    // U1 — THE CUSTOMER RESPONSE BOUNDARY.
-    //
-    // `resultText` is the model-facing receipt: it carries raw ids, internal
-    // parameter names (bridge_next_funnel_id), and design-selection
-    // rationale. Returning it here is how all of that reached the customer.
-    //
-    // When a capability supplies a `completion`, that is the ONE authoritative
-    // customer-facing message and the receipt is WITHHELD — not filtered,
-    // withheld, so a newly-added internal detail cannot leak by default.
-    // Capabilities without one are readonly lookups whose resultText is
-    // already customer-safe prose.
-    const { completion } = result;
-    return NextResponse.json({
-      ok: true,
-      ...(completion
-        ? { completion, resultText: renderCompletion(completion) }
-        : { resultText: result.resultText }),
-      resultRef: result.ref ?? null,
-    });
+    result = await cap.execute(ctx, validated.args);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "unknown error";
     console.error(`[ai-suite/confirm] ${cap.name} failed:`, msg);
@@ -226,4 +200,53 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+
+  void recordAiSuiteAction({
+    level,
+    capability: cap.name,
+    args: validated.args,
+    summary,
+    status: "executed",
+    agencyId: ctx.agencyId,
+    subAccountId: ctx.subAccountId ?? null,
+    confirmedByUid: ctx.uid,
+    confirmedByEmail: ctx.email,
+    resultRef: result.ref ?? null,
+  }).catch((e) =>
+    console.error(
+      `[ai-suite/confirm] ${cap.name} ran but its audit row could not be written:`,
+      e instanceof Error ? e.message : e,
+    ),
+  );
+  void recordAiSuiteUsage({
+    level,
+    agencyId: ctx.agencyId,
+    subAccountId: ctx.subAccountId,
+    kind: "action",
+  });
+
+  // BUILD COMPLETION CONTRACT (Production Experience 2.0): return the
+  // pointer to what was actually built, not just prose about it. It was
+  // already recorded in the audit trail above but never sent to the
+  // client, so a successful funnel build rendered as a sentence with no
+  // way to open the thing that was created.
+  // U1, THE CUSTOMER RESPONSE BOUNDARY.
+  //
+  // `resultText` is the model-facing receipt: it carries raw ids, internal
+  // parameter names (bridge_next_funnel_id), and design-selection
+  // rationale. Returning it here is how all of that reached the customer.
+  //
+  // When a capability supplies a `completion`, that is the ONE authoritative
+  // customer-facing message and the receipt is WITHHELD, not filtered,
+  // withheld, so a newly-added internal detail cannot leak by default.
+  // Capabilities without one are readonly lookups whose resultText is
+  // already customer-safe prose.
+  const { completion } = result;
+  return NextResponse.json({
+    ok: true,
+    ...(completion
+      ? { completion, resultText: renderCompletion(completion) }
+      : { resultText: result.resultText }),
+    resultRef: result.ref ?? null,
+  });
 }

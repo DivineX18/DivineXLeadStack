@@ -10,7 +10,7 @@ import {
 import { GLOBAL_TERRITORY_ID } from "@/types";
 
 /**
- * Server-side calendar-event create — fires `event.created` from the
+ * Server-side calendar-event create, fires `event.created` from the
  * dashboard calendar (it used to be a direct client Firestore write).
  * Event edits + deletes have no webhook event, so they stay client-side.
  * Booking-page events go through the booking lifecycle (booking.created),
@@ -238,7 +238,7 @@ export async function updateEventServerSide(opts: {
    * "Preserve what was not asked about" is right for independent fields and
    * wrong for these two: they are one interval. Preserving endAt literally
    * while startAt moved produced a 30-minute meeting that started at 18:00
-   * and ended at 16:30 — an event that ends before it begins, which no
+   * and ended at 16:30, an event that ends before it begins, which no
    * calendar can render and no validator downstream was catching.
    *
    * "Move it to 6pm" means the same meeting, later. So a start with no end

@@ -2,7 +2,7 @@
  * THE 502 THAT TOOK THE WHOLE ASSISTANT DOWN.
  *
  * A duplicate capability name shipped. Every model provider rejects that
- * outright — `400 tools: Tool names must be unique` — and a 400 is not
+ * outright, `400 tools: Tool names must be unique`, and a 400 is not
  * retryable, so it threw and the chat route's catch-all returned a 5xx. The
  * effect was total: every sub-account message failed, including plain
  * conversation that was never going to call a tool. Only one prompt was
@@ -172,6 +172,26 @@ console.log("\n-- an event is an interval, not two independent fields --");
 
   ck("the refusal reaches the customer as words",
     /ending before it starts/.test(caps));
+}
+
+console.log("\n-- a committed change is never reported as a failure --");
+{
+  const confirm = fs.readFileSync("src/app/api/ai-suite/confirm/route.ts", "utf8");
+  // The audit write used to sit between the commit and the response, inside
+  // the same try. A hiccup there told the customer it failed, and they would
+  // retry something that had already happened.
+  ck("the try wraps the mutation and nothing else",
+    /try \{\s*result = await cap\.execute\(ctx, validated\.args\);\s*\} catch/.test(confirm));
+  ck("the audit row is written after the commit, not before the answer",
+    /\} catch \(err\)[\s\S]*?void recordAiSuiteAction\(\{[\s\S]{0,300}status: "executed"/.test(confirm));
+  ck("and it cannot contradict the answer",
+    /status: "executed"[\s\S]{0,400}\}\)\.catch\(/.test(confirm));
+  ck("a missing audit row is still logged",
+    /ran but its audit row could not be written/.test(confirm));
+  ck("a refusal is still a 400 with the real words",
+    /err instanceof CapabilityUserError[\s\S]{0,120}status: 400/.test(confirm));
+  ck("an unexpected failure is still a 500",
+    /The action failed to run[\s\S]{0,80}status: 500/.test(confirm));
 }
 
 console.log(fails === 0 ? "\nALL PASS" : `\n${fails} FAILED`);
