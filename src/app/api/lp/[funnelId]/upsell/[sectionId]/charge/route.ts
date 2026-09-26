@@ -1,3 +1,4 @@
+import { evaluateUpsellEligibility } from "@/lib/funnels/upsell-eligibility";
 import "server-only";
 
 import { NextResponse } from "next/server";
@@ -94,6 +95,17 @@ export async function POST(
       : // End of the chain, the order-confirmation thank-you page
         // ("add the thank you after the checkout page").
         `/lp/${funnelId}/thanks?paid=1`;
+
+  // Money guard: never charge an order that isn't paid, and never charge the same
+  // upsell twice on one order (see lib/funnels/upsell-eligibility.ts).
+  const eligibility = evaluateUpsellEligibility(order, funnelId);
+  if (!eligibility.ok) {
+    if (eligibility.code === "already-accepted") {
+      // Idempotent for a double-click / resend: same answer as the first time, no second charge.
+      return NextResponse.json({ ok: true, nextUrl: nextUrlFor(config.acceptNextFunnelId) });
+    }
+    return NextResponse.json({ error: "This order isn't eligible for this offer." }, { status: 409 });
+  }
 
   try {
     // Idempotency key tied to (checkout session, upsell section) — a retry
