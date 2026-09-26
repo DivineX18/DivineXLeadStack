@@ -81,7 +81,13 @@ try {
   await mRef.set({ uid: "zeno-e2e-tenancy-uid", email: "zeno-e2e-tenancy@example.com", displayName: "ZENO E2E TEST - DELETE",
     role: "collaborator", status: "active", subAccountId: SA, createdAt: new Date(), updatedAt: new Date() });
   made.push(`subAccounts/${SA}/subAccountMembers/zeno-e2e-tenancy-uid`);
-  await probe("member", "update_member_role", { uid: "zeno-e2e-tenancy-uid", role: "admin" }, `subAccounts/${SA}/subAccountMembers/zeno-e2e-tenancy-uid`);
+  await probe("member", "update_member_role", { memberId: "zeno-e2e-tenancy-uid", role: "admin" }, `subAccounts/${SA}/subAccountMembers/zeno-e2e-tenancy-uid`);
+  // A member named by EMAIL from another workspace must also resolve to
+  // nothing: the resolver reads only the caller's own membership list.
+  await probe("member (by email)", "update_member_role", { memberId: "zeno-e2e-tenancy@example.com", role: "admin" },
+    `subAccounts/${SA}/subAccountMembers/zeno-e2e-tenancy-uid`);
+  await probe("member (by name)", "update_member_role", { memberId: "ZENO E2E TEST - DELETE", role: "admin" },
+    `subAccounts/${SA}/subAccountMembers/zeno-e2e-tenancy-uid`);
   const { createDealServerSide } = await import("../src/lib/server/deals-service");
   const { createGroupServerSide } = await import("../src/lib/server/community-service");
   const { createSubscription } = await import("../src/lib/firestore/webhook-subscriptions");

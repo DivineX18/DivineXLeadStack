@@ -709,6 +709,110 @@ export type MemberRoleResult =
   | { ok: true; uid: string; who: string; role: SubAccountMemberRole; previous: SubAccountMemberRole }
   | { ok: false; reason: "missing" | "self" | "unchanged" };
 
+/**
+ * RESOLVE A MEMBER THE WAY A PERSON NAMES ONE.
+ *
+ * The editor used to take a Firebase uid and nothing else. That uid exists
+ * in exactly one place a customer could get it from: the text a lookup hands
+ * back to the model inside a single request. It is not part of the
+ * conversation the browser replays on the next turn, so a turn later the
+ * model has only what it said out loud, a name and an email, and passing
+ * either produced "That person isn't a member of this workspace." about
+ * someone it had just listed.
+ *
+ * So the workspace's own membership list is the index. A uid still wins when
+ * it is given. Otherwise an email or a name is matched against active
+ * members, exactly first, then as a prefix or substring.
+ *
+ * TENANCY IS UNCHANGED, because only this workspace's members are ever read.
+ * A uid, email or name belonging to somewhere else simply matches nothing
+ * and returns "none", which the caller reports exactly as it reports a
+ * member who was never there.
+ *
+ * Two matches are never guessed between. Picking the wrong person is a
+ * permission change on the wrong account, so it asks instead.
+ */
+export type MemberLookup =
+  | { found: "one"; uid: string }
+  | { found: "many"; candidates: { uid: string; who: string; email: string | null }[] }
+  | { found: "none" };
+
+export async function resolveWorkspaceMember(
+  subAccountId: string,
+  needle: string,
+): Promise<MemberLookup> {
+  const db = getAdminDb();
+  // Coerced rather than trusted: a caller that passes the wrong thing gets
+  // "not a member", which is true, instead of an exception that reads as a
+  // fault in the workspace.
+  const wanted = typeof needle === "string" ? needle.trim() : "";
+  if (!wanted) return { found: "none" };
+
+  // A real uid is the unambiguous case and stays the fast path.
+  const direct = await db
+    .doc(`subAccounts/${subAccountId}/subAccountMembers/${wanted}`)
+    .get()
+    .catch(() => null);
+  if (direct?.exists && direct.data()?.status !== "removed") {
+    return { found: "one", uid: direct.id };
+  }
+
+  const snap = await db
+    .collection(`subAccounts/${subAccountId}/subAccountMembers`)
+    .limit(200)
+    .get();
+  const rows = snap.docs
+    .filter((d) => d.data().status !== "removed")
+    .map((d) => {
+      const x = d.data();
+      return {
+        uid: d.id,
+        who: String(x.displayName ?? x.email ?? d.id),
+        email: (x.email as string | undefined) ?? null,
+      };
+    });
+
+  return matchMembers(rows, wanted);
+}
+
+export interface MemberRow {
+  uid: string;
+  who: string;
+  email: string | null;
+}
+
+/**
+ * The matching rule on its own, so it can be tested without Firestore.
+ *
+ * Exact email, then exact name, then a looser contains. Each tier is tried
+ * on its own so a precise match is never made ambiguous by a loose one:
+ * "Sam" matching Sam exactly must not become a tie merely because Samantha
+ * also contains it.
+ *
+ * Two matches are never resolved by picking one. A role change on the wrong
+ * account is a permission change on the wrong person, and it is silent.
+ */
+export function matchMembers(rows: MemberRow[], needle: string): MemberLookup {
+  const lower = needle.trim().toLowerCase();
+  if (!lower) return { found: "none" };
+  const pick = (matches: MemberRow[]): MemberLookup | null => {
+    if (matches.length === 1) return { found: "one", uid: matches[0].uid };
+    if (matches.length > 1) return { found: "many", candidates: matches };
+    return null;
+  };
+  return (
+    pick(rows.filter((r) => (r.email ?? "").toLowerCase() === lower)) ??
+    pick(rows.filter((r) => r.who.toLowerCase() === lower)) ??
+    pick(
+      rows.filter(
+        (r) =>
+          r.who.toLowerCase().includes(lower) ||
+          (r.email ?? "").toLowerCase().includes(lower),
+      ),
+    ) ?? { found: "none" }
+  );
+}
+
 export async function updateSubAccountMemberRoleServerSide(opts: {
   subAccountId: string;
   targetUid: string;

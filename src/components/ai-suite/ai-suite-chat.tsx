@@ -197,14 +197,25 @@ function toApiHistory(messages: UiMessage[]): AiSuiteChatMessage[] {
       };
     }
     // proposal (always assistant)
+    //
+    // WHAT HAPPENED, NOT THAT SOMETHING HAPPENED.
+    //
+    // A failed action used to come back as "<summary> (this action failed)",
+    // dropping resultText, which is the only place the actual reason lives.
+    // A turn later the model knew an action had failed but not what or why,
+    // so it hedged: it told the customer to go and check whether a change it
+    // had already been told did not happen had gone through. The outcome is
+    // stated plainly here, and the reason travels with it.
     const status =
       m.status === "confirmed"
         ? m.resultText || m.summary
         : m.status === "cancelled"
-          ? `${m.summary} (cancelled by the user)`
+          ? `${m.summary} (cancelled by the user, so nothing changed)`
           : m.status === "failed"
-            ? `${m.summary} (this action failed)`
-            : `${m.summary} (awaiting the user's confirmation)`;
+            ? `${m.summary} DID NOT HAPPEN. Nothing was changed. Reason: ${
+                m.resultText || "the action could not be completed"
+              }`
+            : `${m.summary} (awaiting the user's confirmation, nothing has changed yet)`;
     return { role: "assistant", content: status };
   });
 }

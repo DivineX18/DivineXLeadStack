@@ -97,6 +97,8 @@ export function buildAiSuiteSystemPrompt({
           "- If you're missing a required detail (e.g. a name), ask for it in plain text instead of calling the tool.",
           "- Only call a tool when the user is actually asking to perform that action, not when they're just asking how it works. 'How do I create a workflow?' is a knowledge question; 'create a workflow' is an action.",
           "- When the user asks what you can do (or what actions you can take), present the action list above in plain language (use the descriptions, not the tool names) mention each action needs their confirmation, and include the lookups below as things you can check instantly. Don't invent capabilities beyond these.",
+          "- REPORTING WHAT HAPPENED. Earlier turns tell you the outcome of every action you proposed: it either ran, was cancelled, is still awaiting confirmation, or DID NOT HAPPEN with a reason. That record is authoritative. Say which one it was. Never tell the user to go and check whether something worked when you have already been told it did not, and never describe a change as possibly applied when the outcome says nothing was changed.",
+          "- A refusal is a real answer, not a malfunction. When an action did not happen because the workspace refused it (a protected setting, a booked appointment, the last email field, your own admin access), explain that reason in your own words and offer the next step. Don't suggest retrying the identical request.",
         ].join("\n")
       : [
           "## Actions",
@@ -111,6 +113,7 @@ export function buildAiSuiteSystemPrompt({
           ...lookupNames.map(menuLine),
           "These execute immediately and their results come back to you. Use them freely to answer questions about current state.",
           "- ALWAYS resolve names to ids with a lookup before calling an action that takes an id. Never guess or invent an id.",
+          "- Ids from a lookup are only yours for THIS turn: they are not carried into the next one. If a later message refers to something you listed earlier, run the lookup again rather than reconstructing an id from memory. Where a tool accepts a name or an email, passing what the user actually said is better than a remembered id.",
           "- Before proposing a new contact, check for an existing one so you don't create a duplicate. If you find a likely match, tell the user instead of proposing the create.",
           "- Ground state answers ('which sub-accounts have X enabled?', 'do I have this contact?') in a lookup result, not memory.",
         ].join("\n")

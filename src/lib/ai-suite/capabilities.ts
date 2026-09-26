@@ -10,6 +10,7 @@ import {
   listSubscriptions,
 } from "@/lib/firestore/webhook-subscriptions";
 import { sendDirectTestDelivery } from "@/lib/webhooks/direct-test";
+import { parseButtonLine } from "@/lib/email/body";
 import {
   detectAutomationUrl,
   n8nProductionUrl,
@@ -878,6 +879,19 @@ function verifiedBusinessFacts(
   };
 }
 
+
+/**
+ * The buttons in an email body, for the lookups that have to tell the model
+ * what is there before edit_email_cta can change one. Parsing is the
+ * renderer's own, so what is listed is exactly what would be drawn.
+ */
+function listBodyButtons(body: string): { label: string; href: string; style: string }[] {
+  if (!body) return [];
+  return body
+    .split("\n")
+    .map((line) => parseButtonLine(line))
+    .filter((b): b is NonNullable<typeof b> => b !== null);
+}
 
 export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
   // ═══ Agency level ════════════════════════════════════════════════════════
@@ -7727,16 +7741,204 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     },
   },
   {
+    /**
+     * A CTA IS EDITED AS A CTA, not by rewriting the email around it.
+     *
+     * Asked to add a button, the only tools available were "replace the whole
+     * body" for a saved template and "recompile the whole sequence" for a
+     * workflow. Both re-decide work the customer did: their sentences, their
+     * personalisation, and in a workflow the waits and goal gates of every
+     * other step, to change one line.
+     *
+     * So this changes the button and nothing else. The same pure edit runs
+     * for both targets, and each writes through the service that already
+     * owns its storage rather than one generic writer over two shapes.
+     */
+    name: "edit_email_cta",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Add, change or remove a button in an email, without rewriting it",
+    description:
+      "Add, change or remove a call-to-action BUTTON in an email that already exists, leaving every other word of it alone. Use this, not revise_email or apply_workflow_plan, whenever the request is about a button or a link to click ('add a Book a Call button to email 2', 'change the CTA to Schedule Your Consultation', 'remove the button'). " +
+      "Two kinds of email: a saved template (call list_email_templates first) or one email step inside an automation (call list_workflows first, which numbers the emails in order). " +
+      "Never invent the destination. Use the URL the user gave you; if they refer to a destination like their booking page without giving a link, look it up, and if there is more than one, ask which. " +
+      "To change a button, do NOT also add one.",
+    parameters: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["add", "change", "remove"], description: "What to do to the button." },
+        template_id: { type: "string", description: "For a saved template: its id from list_email_templates." },
+        workflow_id: { type: "string", description: "For an automation: its id from list_workflows." },
+        email_number: { type: "number", description: "For an automation: which email, as numbered by list_workflows (1 for the first)." },
+        label: { type: "string", description: "The words on the button. Required to add; send it to change the wording." },
+        url: { type: "string", description: "Where the button goes. Required to add; send it to change the destination. Must be a real http(s) or mailto link the user gave you." },
+        style: { type: "string", enum: ["primary", "secondary"], description: "primary is the filled brand button (the default), secondary is the outlined one." },
+        button_number: { type: "number", description: "Which button, when the email has more than one (1 for the first). Omit when there is only one." },
+      },
+      required: ["action"],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const action = strEither(raw, "action").trim().toLowerCase();
+      if (!["add", "change", "remove"].includes(action)) {
+        return { ok: false, error: "action must be add, change or remove." };
+      }
+      const templateId = strEither(raw, "template_id").trim();
+      const workflowId = strEither(raw, "workflow_id").trim();
+      const emailNumber = numEither(raw, "email_number");
+      if (!templateId && !workflowId) {
+        return { ok: false, error: "Say which email: template_id for a saved template, or workflow_id with email_number for one inside an automation." };
+      }
+      if (templateId && workflowId) {
+        return { ok: false, error: "Send either template_id or workflow_id, not both." };
+      }
+      if (workflowId && (!Number.isFinite(emailNumber) || emailNumber < 1)) {
+        return { ok: false, error: "email_number is required with workflow_id, and starts at 1. Call list_workflows to see the order." };
+      }
+      const label = strEither(raw, "label").trim();
+      const url = strEither(raw, "url").trim();
+      if (url && !/^(https?:\/\/|mailto:)/i.test(url)) {
+        return { ok: false, error: "The button's link must start with https://, http:// or mailto:. Ask the user for the real destination rather than guessing one." };
+      }
+      if (action === "add" && (!label || !url)) {
+        return { ok: false, error: "Adding a button needs both label and url. Ask the user for the destination if they did not give one." };
+      }
+      if (action === "change" && !label && !url) {
+        return { ok: false, error: "Changing a button needs a new label, a new url, or both." };
+      }
+      const style = strEither(raw, "style").trim().toLowerCase();
+      if (style && style !== "primary" && style !== "secondary") {
+        return { ok: false, error: "style must be primary or secondary." };
+      }
+      const buttonNumber = numEither(raw, "button_number");
+      return {
+        ok: true,
+        args: {
+          action,
+          ...(templateId ? { templateId } : {}),
+          ...(workflowId ? { workflowId, emailNumber } : {}),
+          ...(label ? { label } : {}),
+          ...(url ? { url } : {}),
+          ...(style ? { style } : {}),
+          ...(Number.isFinite(buttonNumber) && buttonNumber >= 1 ? { buttonNumber } : {}),
+        },
+      };
+    },
+    summarize: (args) => {
+      const where = args.templateId
+        ? "this saved email"
+        : `email ${args.emailNumber as number} of this automation`;
+      if (args.action === "add") return `Add a "${args.label as string}" button to ${where}.`;
+      if (args.action === "remove") return `Remove the button from ${where}.`;
+      const bits = [args.label ? `text to "${args.label as string}"` : null, args.url ? "its link" : null]
+        .filter(Boolean)
+        .join(" and ");
+      return `Change the button's ${bits} in ${where}.`;
+    },
+    execute: async (ctx, args) => {
+      const { addButton, updateButton, removeButton, findButtons } = await import("@/lib/email/cta");
+
+      // The same edit either way. Only the read and the write differ.
+      const applyTo = (body: string) => {
+        const style = args.style as "primary" | "secondary" | undefined;
+        if (args.action === "add") {
+          return addButton(body, { label: args.label as string, href: args.url as string, ...(style ? { style } : {}) });
+        }
+        if (args.action === "remove") {
+          return removeButton(body, args.buttonNumber as number | undefined);
+        }
+        return updateButton(body, {
+          ...(args.buttonNumber !== undefined ? { position: args.buttonNumber as number } : {}),
+          ...(args.label ? { label: args.label as string } : {}),
+          ...(args.url ? { href: args.url as string } : {}),
+          ...(style ? { style } : {}),
+        });
+      };
+
+      type CtaFailure = Extract<ReturnType<typeof addButton>, { ok: false }>;
+      const explain = (r: CtaFailure): never => {
+        if (r.reason === "no_buttons") {
+          throw new CapabilityUserError("That email doesn't have a button yet. Tell me what it should say and where it should go, and I'll add one.");
+        }
+        if (r.reason === "duplicate") {
+          throw new CapabilityUserError("That button is already in this email, so I've left it as it is.");
+        }
+        if (r.reason === "ambiguous") {
+          const list = (r.buttons ?? []).map((b, i) => `${i + 1}. "${b.label}" to ${b.href}`).join("; ");
+          throw new CapabilityUserError(`This email has more than one button: ${list}. Which one did you mean?`);
+        }
+        const count = (r.buttons ?? []).length;
+        throw new CapabilityUserError(`There is no button ${args.buttonNumber as number} in that email; it has ${count}.`);
+      };
+
+      if (args.templateId) {
+        const { listMessageTemplatesServerSide, updateMessageTemplateServerSide } = await import(
+          "@/lib/server/message-templates-service"
+        );
+        // Scoped to this workspace, so a template id from anywhere else is
+        // simply not in the list and reads as gone.
+        const all = await listMessageTemplatesServerSide(ctx.subAccountId!);
+        const tpl = all.find((t) => t.id === args.templateId);
+        if (!tpl) throw new CapabilityUserError("That email template no longer exists.");
+        const res = applyTo(String(tpl.body ?? ""));
+        if (!res.ok) return explain(res);
+        const updated = await updateMessageTemplateServerSide({
+          subAccountId: ctx.subAccountId!,
+          templateId: args.templateId as string,
+          body: res.body,
+        });
+        return {
+          resultText:
+            `Updated the button in "${updated.name}". The subject, the wording and the unsubscribe link are unchanged.\n\n` +
+            `• The email now has ${findButtons(res.body).length} button(s).`,
+          ref: { kind: "message_template", id: args.templateId as string },
+        };
+      }
+
+      const { patchWorkflowEmailBodyServerSide } = await import("@/lib/server/workflows-service");
+      let failure: CtaFailure | null = null;
+      const out = await patchWorkflowEmailBodyServerSide({
+        subAccountId: ctx.subAccountId!,
+        workflowId: args.workflowId as string,
+        emailIndex: args.emailNumber as number,
+        edit: (body) => {
+          const res = applyTo(body);
+          if (res.ok) return { ok: true, body: res.body };
+          failure = res;
+          return { ok: false, reason: res.reason };
+        },
+      });
+      if (!out.ok) {
+        if (failure) explain(failure);
+        if (out.reason === "missing") throw new CapabilityUserError("That automation no longer exists.");
+        throw new CapabilityUserError(
+          `That automation doesn't have an email ${args.emailNumber as number}; it has ${out.emailCount ?? 0}.`,
+        );
+      }
+      return {
+        resultText:
+          `Updated the button in email ${args.emailNumber as number} ("${out.subject}") of "${out.workflowName}". ` +
+          `Every other step, its timing and the rest of this email are unchanged.\n\n` +
+          `• This automation is still ${describeWorkflowStatus(out.status)}. Editing it did not change that.`,
+        ref: { kind: "workflow", id: args.workflowId as string },
+      };
+    },
+  },
+  {
     name: "update_member_role",
     level: "sub-account",
     requiredRole: "subAccountAdmin",
     menuLabel: "Change a member's role in this workspace",
     description:
-      "Change an existing member's role between admin (manages the workspace and its members) and collaborator (works with the data, no workspace settings). Call list_members first to get the person's id. This does not remove anyone and does not invite anyone.",
+      "Change an existing member's role between admin (manages the workspace and its members) and collaborator (works with the data, no workspace settings). Identify the person however the user did: their name, their email address, or their id from list_members all work. This does not remove anyone and does not invite anyone.",
     parameters: {
       type: "object",
       properties: {
-        member_id: { type: "string", description: "The member to change (the id from list_members)." },
+        member_id: {
+          type: "string",
+          description:
+            "Who to change: their name, their email address, or their id from list_members. Never ask the user for an internal id.",
+        },
         role: { type: "string", enum: ["admin", "collaborator"], description: "The role to give them." },
       },
       required: ["member_id", "role"],
@@ -7745,7 +7947,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     validate: (raw) => {
       const memberId = strEither(raw, "member_id").trim();
       const role = strEither(raw, "role").trim().toLowerCase();
-      if (!memberId) return { ok: false, error: "member_id is required. Call list_members to get it." };
+      if (!memberId) return { ok: false, error: "member_id is required: the person's name, email or id." };
       if (role !== "admin" && role !== "collaborator") {
         return { ok: false, error: "role must be either admin or collaborator." };
       }
@@ -7753,10 +7955,27 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     },
     summarize: (args) => `Make this member ${args.role === "admin" ? "an admin" : "a collaborator"}.`,
     execute: async (ctx, args) => {
-      const { updateSubAccountMemberRoleServerSide } = await import("@/lib/server/members-service");
+      const { updateSubAccountMemberRoleServerSide, resolveWorkspaceMember } = await import(
+        "@/lib/server/members-service"
+      );
+      // A name or an email is how a person refers to a colleague, and after
+      // one conversational turn it is all the model still has: the uid a
+      // lookup printed is not part of the history the browser replays.
+      const who = await resolveWorkspaceMember(ctx.subAccountId!, args.memberId as string);
+      if (who.found === "many") {
+        const options = who.candidates
+          .map((c) => `${c.who}${c.email ? ` (${c.email})` : ""}`)
+          .join(", ");
+        throw new CapabilityUserError(
+          `More than one member matches that: ${options}. Which one did you mean?`,
+        );
+      }
+      if (who.found === "none") {
+        throw new CapabilityUserError("That person isn't a member of this workspace.");
+      }
       const res = await updateSubAccountMemberRoleServerSide({
         subAccountId: ctx.subAccountId!,
-        targetUid: args.memberId as string,
+        targetUid: who.uid,
         role: args.role as "admin" | "collaborator",
         actingUid: ctx.uid,
       });
@@ -8363,6 +8582,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           lines.push(`    email ${i + 1}: "${cfg.subject ?? "(no subject)"}"`);
           const body = (cfg.body ?? "").trim();
           if (body) lines.push(`      body: ${body.slice(0, 600)}${body.length > 600 ? " […]" : ""}`);
+          // The buttons are called out separately: a CTA edit is aimed by
+          // number, and reading them out of a truncated body is guesswork.
+          const btns = listBodyButtons(body);
+          if (btns.length > 0) {
+            lines.push(
+              `      buttons: ${btns.map((b, bi) => `${bi + 1}. "${b.label}" to ${b.href}${b.style === "secondary" ? " (outlined)" : ""}`).join("; ")}`,
+            );
+          }
         });
         if (notes.length > 0) lines.push(`    (+ ${notes.length} internal notification step${notes.length === 1 ? "" : "s"})`);
         return lines.join("\n");
@@ -8393,6 +8620,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           `- "${t.name}" (id: ${t.id}, ${t.type})`,
           t.subject ? `    subject: ${t.subject}` : null,
           body ? `    body: ${body.slice(0, 600)}${body.length > 600 ? " […]" : ""}` : null,
+          // Named separately so a CTA edit can be aimed by number rather
+          // than inferred from a body that may have been truncated above.
+          (() => {
+            const btns = listBodyButtons(body);
+            return btns.length > 0
+              ? `    buttons: ${btns.map((b, i) => `${i + 1}. "${b.label}" to ${b.href}${b.style === "secondary" ? " (outlined)" : ""}`).join("; ")}`
+              : null;
+          })(),
         ]
           .filter(Boolean)
           .join("\n");

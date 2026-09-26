@@ -409,6 +409,67 @@ export async function updateWorkflowServerSide(opts: {
   return true;
 }
 
+/**
+ * PATCH ONE EMAIL STEP'S BODY. Nothing else in the workflow is read back out
+ * and written again.
+ *
+ * The only way to change an email inside a workflow used to be
+ * apply_workflow_plan, which recompiles the entire node graph from a plan.
+ * That is right when the sequence is being designed and wrong when one
+ * button is being changed: the waits, the goal gates, the branching and
+ * every other message all get rebuilt to edit a line. Here the stored nodes
+ * object is the base, exactly one node's `body` is replaced, and the rest of
+ * the document is untouched, including status, so a draft cannot be
+ * published by editing it.
+ *
+ * `emailIndex` is 1-based over the send_email nodes in the order the lookup
+ * presents them, because "email 2" is how the customer refers to one.
+ */
+export async function patchWorkflowEmailBodyServerSide(opts: {
+  subAccountId: string;
+  workflowId: string;
+  emailIndex: number;
+  /** Given the current body, return the new one, or a reason it cannot. */
+  edit: (body: string) => { ok: true; body: string } | { ok: false; reason: string };
+}): Promise<
+  | { ok: true; workflowName: string; subject: string; status: WorkflowStatus; before: string; after: string }
+  | { ok: false; reason: "missing" | "no_email" | "edit"; detail?: string; emailCount?: number }
+> {
+  const db = getAdminDb();
+  const ref = db.doc(`workflows/${opts.workflowId}`);
+  const snap = await ref.get();
+  // The workspace check is the tenancy boundary: a workflow belonging to
+  // somewhere else is reported exactly as one that does not exist.
+  if (!snap.exists || snap.data()!.subAccountId !== opts.subAccountId) {
+    return { ok: false, reason: "missing" };
+  }
+  const wf = snap.data() as Omit<WorkflowDoc, "id">;
+  const nodes = { ...(wf.nodes ?? {}) };
+  const emailIds = Object.keys(nodes).filter((id) => nodes[id]?.type === "send_email");
+  const targetId = emailIds[opts.emailIndex - 1];
+  if (!targetId) return { ok: false, reason: "no_email", emailCount: emailIds.length };
+
+  const node = nodes[targetId];
+  const config = (node.config ?? {}) as { subject?: string; body?: string };
+  const before = String(config.body ?? "");
+  const result = opts.edit(before);
+  if (!result.ok) return { ok: false, reason: "edit", detail: result.reason };
+
+  // Only this node, and within it only the body. Timing, branches and every
+  // other key on the config are carried through as they were.
+  nodes[targetId] = { ...node, config: { ...config, body: result.body } };
+  await ref.update({ nodes, updatedAt: FieldValue.serverTimestamp() });
+
+  return {
+    ok: true,
+    workflowName: String(wf.name ?? "Untitled workflow"),
+    subject: String(config.subject ?? ""),
+    status: wf.status,
+    before,
+    after: result.body,
+  };
+}
+
 export interface RunView {
   id: string;
   contactId: string;
