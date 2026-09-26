@@ -230,6 +230,21 @@ export async function runAiSuiteTurn({
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
+    /**
+     * OUT OF CREDIT IS NOT AN OUTAGE, AND IT IS NOT RETRYABLE.
+     *
+     * A 402 is the deployment's OpenRouter balance running out. It is not in
+     * the retry list above (correctly: retrying cannot buy credit), so it
+     * throws, and the route reports "couldn't reach the model" — which sends
+     * whoever investigates looking for a provider incident when the fix is a
+     * top-up. It is called by its name here so the server log says what to do.
+     */
+    if (res.status === 402) {
+      console.error(
+        "[ai-suite/model] OPENROUTER CREDIT EXHAUSTED — the assistant is down for every workspace until this deployment's OpenRouter balance is topped up. openrouter.ai → Credits.",
+      );
+      throw new Error(`OpenRouter credit exhausted: ${text.slice(0, 200)}`);
+    }
     throw new Error(
       `OpenRouter ${res.status}: ${text.slice(0, 300) || res.statusText}`,
     );

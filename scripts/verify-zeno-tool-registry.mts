@@ -70,6 +70,11 @@ console.log("\n-- a capability fault is not an outage --");
   ck("both validate sites in the loop go through it",
     (route.match(/safeValidate\(cap,/g) ?? []).length === 2);
   ck("a CapabilityUserError reaches the customer as words", /err instanceof CapabilityUserError[\s\S]{0,200}type: "message"/.test(route));
+  const model = fs.readFileSync("src/lib/ai-suite/model.ts", "utf8");
+  ck("running out of credit is named, not reported as a provider outage",
+    /res\.status === 402[\s\S]{0,400}OPENROUTER CREDIT EXHAUSTED/.test(model));
+  ck("and it is still not retried, because retrying cannot buy credit",
+    /status === 429 \|\| \(status !== undefined && status >= 500\)/.test(model));
 }
 
 console.log("\n-- a public link is a usable identifier --");
