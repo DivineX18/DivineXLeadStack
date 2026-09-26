@@ -87,6 +87,10 @@ services:
         sync: false
       - key: AUTOMATIONS_TOKEN_SECRET
         sync: false
+      # Shared with the divinex.io website service (same value): verifies the signed visitor IP
+      # on hosted-form submissions (src/lib/forms/client-ip.ts).
+      - key: FLOW_FORM_PROXY_SECRET
+        sync: false
       - key: OPENROUTER_API_KEY
         sync: false
       # Stock photography for generated landing pages (lib/funnels/imagery.ts).

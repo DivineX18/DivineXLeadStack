@@ -14,7 +14,7 @@ import { isIP } from "node:net";
  *   1. A visitor IP attested by a trusted proxy. divinex.io's server forwards
  *      contact-form submissions to Flow server-to-server, so Flow only sees the
  *      website's own address; to keep per-visitor limits working the proxy
- *      signs the visitor IP with a shared secret (FORMS_PROXY_SECRET). A valid
+ *      signs the visitor IP with a shared secret (FLOW_FORM_PROXY_SECRET). A valid
  *      signature is unforgeable without the secret and is only honoured for a
  *      few minutes.
  *   2. CF-Connecting-IP. Every production request arrives through Cloudflare,
@@ -37,11 +37,13 @@ export function signClientIp(secret: string, ip: string, tsSeconds: number): str
   return createHmac("sha256", secret).update(`${LABEL}|${ip}|${tsSeconds}`).digest("base64url");
 }
 
-export function resolveFormClientIp(
+export type FormClientIpSource = "attested" | "edge" | "dev-forwarded" | "unknown";
+
+export function resolveFormClientIpWithSource(
   headers: Headers,
   opts: { secret?: string | null; nowMs?: number; nodeEnv?: string } = {},
-): string {
-  const secret = (opts.secret ?? process.env.FORMS_PROXY_SECRET ?? "").trim();
+): { ip: string; source: FormClientIpSource } {
+  const secret = (opts.secret ?? process.env.FLOW_FORM_PROXY_SECRET ?? "").trim();
   const now = Math.floor((opts.nowMs ?? Date.now()) / 1000);
 
   if (secret.length >= 16) {
@@ -51,16 +53,23 @@ export function resolveFormClientIp(
     if (ip && sig && isIP(ip) && Number.isFinite(ts) && Math.abs(now - ts) <= MAX_SKEW_SECONDS) {
       const expected = Buffer.from(signClientIp(secret, ip, ts));
       const given = Buffer.from(sig);
-      if (given.length === expected.length && timingSafeEqual(given, expected)) return ip;
+      if (given.length === expected.length && timingSafeEqual(given, expected)) return { ip, source: "attested" };
     }
   }
 
   const cf = headers.get("cf-connecting-ip")?.trim();
-  if (cf && isIP(cf)) return cf;
+  if (cf && isIP(cf)) return { ip: cf, source: "edge" };
 
   if ((opts.nodeEnv ?? process.env.NODE_ENV) !== "production") {
     const first = headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-    if (first && isIP(first)) return first;
+    if (first && isIP(first)) return { ip: first, source: "dev-forwarded" };
   }
-  return "unknown";
+  return { ip: "unknown", source: "unknown" };
+}
+
+export function resolveFormClientIp(
+  headers: Headers,
+  opts: { secret?: string | null; nowMs?: number; nodeEnv?: string } = {},
+): string {
+  return resolveFormClientIpWithSource(headers, opts).ip;
 }

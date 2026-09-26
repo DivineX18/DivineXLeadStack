@@ -1,4 +1,4 @@
-import { resolveFormClientIp } from "@/lib/forms/client-ip";
+import { resolveFormClientIp, resolveFormClientIpWithSource } from "@/lib/forms/client-ip";
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
@@ -117,7 +117,11 @@ export async function POST(
   ctx: { params: Promise<{ id: string }> },
 ) {
   try {
-    return await handleSubmit(request, ctx);
+    const res = await handleSubmit(request, ctx);
+    // Diagnostic only: WHICH identity source rate limiting used (attested | edge | unknown).
+    // Contains no IP and no secret; lets the website verify the signed handshake end to end.
+    res.headers.set("x-form-client-ip-source", resolveFormClientIpWithSource(request.headers).source);
+    return res;
   } catch (err) {
     // Last-resort guard so unhandled exceptions still come back with CORS
     // headers — otherwise the browser blocks the response and the script

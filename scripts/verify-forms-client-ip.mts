@@ -5,7 +5,7 @@
 
 import { readFileSync } from "node:fs";
 
-const { resolveFormClientIp, signClientIp, ATTEST_HEADERS } = await import("../src/lib/forms/client-ip");
+const { resolveFormClientIp, resolveFormClientIpWithSource, signClientIp, ATTEST_HEADERS } = await import("../src/lib/forms/client-ip");
 const { checkFormSubmitRateLimit } = await import("../src/lib/forms/rate-limit");
 
 let failures = 0;
@@ -54,6 +54,22 @@ check("attested non-IP value rejected", resolveFormClientIp(h({ "cf-connecting-i
     if (checkFormSubmitRateLimit(ip).ok) okVisitors++;
   }
   check("legit proxy: 10 different attested visitors behind one proxy IP all pass", okVisitors === 10);
+}
+
+
+// Diagnostic source reporting (contains no IP and no secret).
+check("source: attested identity reports 'attested'", resolveFormClientIpWithSource(h({ "cf-connecting-ip": "18.0.0.1", ...att("198.51.100.9") }), { ...prod, secret: SECRET }).source === "attested");
+check("source: plain edge request reports 'edge'", resolveFormClientIpWithSource(h({ "cf-connecting-ip": "18.0.0.1" }), { ...prod, secret: SECRET }).source === "edge");
+check("source: tampered signature falls back to 'edge' (fails safe)", resolveFormClientIpWithSource(h({ "cf-connecting-ip": "18.0.0.1", ...att("198.51.100.9"), [ATTEST_HEADERS.ip]: "198.51.100.10" }), { ...prod, secret: SECRET }).source === "edge");
+check("source: no usable IP reports 'unknown'", resolveFormClientIpWithSource(h({}), { ...prod, secret: SECRET }).source === "unknown");
+{
+  const prev = process.env.FLOW_FORM_PROXY_SECRET; process.env.FLOW_FORM_PROXY_SECRET = SECRET;
+  check("env: reads the agreed FLOW_FORM_PROXY_SECRET variable", resolveFormClientIpWithSource(h({ "cf-connecting-ip": "18.0.0.1", ...att("198.51.100.9") }), prod).source === "attested");
+  if (prev === undefined) delete process.env.FLOW_FORM_PROXY_SECRET; else process.env.FLOW_FORM_PROXY_SECRET = prev;
+}
+{
+  const routeSrc = readFileSync("src/app/api/forms/[id]/submit/route.ts", "utf8");
+  check("route: exposes only the source label, never the secret", /x-form-client-ip-source/.test(routeSrc) && !/FLOW_FORM_PROXY_SECRET/.test(routeSrc));
 }
 
 const route = readFileSync("src/app/api/forms/[id]/submit/route.ts", "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
