@@ -101,5 +101,76 @@ console.log("\n-- apply_workflow_plan tells the model to look before it overwrit
     /EVERY message you are keeping/.test(JSON.stringify(c.parameters)));
 }
 
+console.log("\n-- the CRM nouns: find before you can change --");
+{
+  for (const n of ["find_deals", "find_tasks", "find_events"]) {
+    const c = cap(n);
+    ck(`${n} exists and is read-only`, c?.readonly === true);
+    ck(`${n} is open to any member`, c?.requiredRole === "subAccountMember");
+  }
+  for (const n of ["update_task", "update_event"]) {
+    const c = cap(n);
+    ck(`${n} is a confirm-gated admin write`, c?.readonly !== true && c?.requiredRole === "subAccountAdmin");
+  }
+}
+
+console.log("\n-- update_task --");
+{
+  const c = cap("update_task")!;
+  ck("a missing id is refused", c.validate({}).ok === false);
+  ck("changing nothing is refused", c.validate({ task_id: "t1" }).ok === false);
+  ck("a bad due date is refused", c.validate({ task_id: "t1", due_date: "next tuesday" }).ok === false);
+  const ok = c.validate({ task_id: "t1", title: "Call back", due_date: "2026-03-04" });
+  ck("a real edit validates", ok.ok === true);
+  if (ok.ok) ck("and re-validates, so confirm can re-check it", c.validate(ok.args).ok === true);
+  const cleared = c.validate({ task_id: "t1", notes: "" });
+  ck("an empty notes string is a real change, not nothing", cleared.ok === true);
+}
+
+console.log("\n-- update_event --");
+{
+  const c = cap("update_event")!;
+  ck("a missing id is refused", c.validate({}).ok === false);
+  ck("changing nothing is refused", c.validate({ event_id: "e1" }).ok === false);
+  ck("an unparseable time is refused", c.validate({ event_id: "e1", start_at: "tomorrow-ish" }).ok === false);
+  ck("an end before the start is refused",
+    c.validate({ event_id: "e1", start_at: "2026-03-04T14:00:00Z", end_at: "2026-03-04T13:00:00Z" }).ok === false);
+  const ok = c.validate({ event_id: "e1", start_at: "2026-03-04T14:00:00Z", end_at: "2026-03-04T15:00:00Z" });
+  ck("a real move validates", ok.ok === true);
+  if (ok.ok) ck("and re-validates", c.validate(ok.args).ok === true);
+}
+
+console.log("\n-- the guards on the new writes --");
+{
+  const tasks = fs.readFileSync("src/lib/server/tasks-service.ts", "utf8");
+  const events = fs.readFileSync("src/lib/server/events-service.ts", "utf8");
+  ck("updateTask REQUIRES the workspace guard, it is not optional",
+    /updateTaskServerSide\(opts: \{[\s\S]{0,200}expectedSubAccountId: string;/.test(tasks));
+  ck("updateEvent requires it too",
+    /updateEventServerSide\(opts: \{[\s\S]{0,200}expectedSubAccountId: string;/.test(events));
+  ck("a foreign task id returns null, same as a missing one",
+    /existing\.subAccountId !== opts\.expectedSubAccountId\) return null/.test(tasks));
+  ck("a foreign event id too",
+    /existing\.subAccountId !== opts\.expectedSubAccountId\) return null/.test(events));
+  // Booking events carry confirmation emails, ICS sequencing and reminders.
+  ck("an event that came from a booking is refused",
+    /bookingPageId \|\| existing\.source === "booking"/.test(events));
+  ck("and the refusal explains where to reschedule it instead",
+    /Reschedule it from the booking itself/.test(caps));
+  ck("both lookups are scoped by workspace",
+    (tasks.match(/where\("subAccountId", "==", subAccountId\)/g) ?? []).length >= 1 &&
+      (events.match(/where\("subAccountId", "==", subAccountId\)/g) ?? []).length >= 1);
+}
+
+console.log("\n-- new webhook types are declared, not smuggled --");
+{
+  const catalog = fs.readFileSync("src/types/webhooks.ts", "utf8");
+  const samples = fs.readFileSync("src/lib/webhooks/sample-payloads.ts", "utf8");
+  for (const t of ["task.updated", "event.updated"]) {
+    ck(`${t} is in the public catalog`, catalog.includes(`"${t}"`));
+    ck(`${t} has a sample payload subscribers can read`, samples.includes(`"${t}"`));
+  }
+}
+
 console.log(fails === 0 ? "\nALL PASS" : `\n${fails} FAILED`);
 process.exit(fails ? 1 : 0);

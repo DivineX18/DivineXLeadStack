@@ -171,3 +171,73 @@ export async function setTaskCompletedServerSide(opts: {
 
   return { id: fresh.id, task };
 }
+
+/** This workspace's tasks, soonest due first, open ones before done ones. */
+export async function listTasksServerSide(
+  subAccountId: string,
+  opts: { includeCompleted?: boolean; limit?: number } = {},
+): Promise<{ id: string; title: string; notes: string | null; dueAt: Date | null; completed: boolean; contactId: string | null }[]> {
+  const snap = await getAdminDb()
+    .collection("tasks")
+    .where("subAccountId", "==", subAccountId)
+    .get();
+  return snap.docs
+    .map((d) => {
+      const x = d.data();
+      return {
+        id: d.id,
+        title: String(x.title ?? ""),
+        notes: (x.notes as string) ?? null,
+        dueAt: x.dueAt?.toDate?.() ?? null,
+        completed: !!x.completed,
+        contactId: (x.contactId as string) ?? null,
+      };
+    })
+    .filter((t) => (opts.includeCompleted ? true : !t.completed))
+    .sort((a, b) => {
+      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+      return (a.dueAt?.getTime() ?? Infinity) - (b.dueAt?.getTime() ?? Infinity);
+    })
+    .slice(0, opts.limit ?? 50);
+}
+
+/**
+ * Change a task's title, notes or due date.
+ *
+ * `expectedSubAccountId` is REQUIRED rather than optional, unlike the
+ * completed-flag writer next door. That one predates the AI Suite and keeps
+ * its optional guard for older callers; there are no older callers here, and
+ * every id this function will ever see comes from a model, so the guard is
+ * not something a caller gets to forget. A foreign id returns null exactly as
+ * a missing one does.
+ */
+export async function updateTaskServerSide(opts: {
+  taskId: string;
+  expectedSubAccountId: string;
+  title?: string;
+  notes?: string | null;
+  dueAt?: Date | null;
+}): Promise<{ id: string; title: string } | null> {
+  const db = getAdminDb();
+  const ref = db.doc(`tasks/${opts.taskId}`);
+  const snap = await ref.get();
+  if (!snap.exists) return null;
+  const existing = snap.data()!;
+  if (existing.subAccountId !== opts.expectedSubAccountId) return null;
+
+  const patch: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
+  if (opts.title !== undefined) patch.title = opts.title;
+  if (opts.notes !== undefined) patch.notes = opts.notes;
+  if (opts.dueAt !== undefined) patch.dueAt = opts.dueAt;
+  await ref.set(patch, { merge: true });
+
+  const title = String(patch.title ?? existing.title ?? "");
+  void emitWebhookEvent({
+    subAccountId: opts.expectedSubAccountId,
+    agencyId: String(existing.agencyId ?? ""),
+    mode: (existing.mode as Mode) ?? "live",
+    type: "task.updated",
+    payload: { task: { id: opts.taskId, title } },
+  });
+  return { id: opts.taskId, title };
+}

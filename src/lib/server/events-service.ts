@@ -122,3 +122,77 @@ export async function createEventServerSide(
 
   return { id: ref.id, event };
 }
+
+/** This workspace's calendar events, soonest first. */
+export async function listEventsServerSide(
+  subAccountId: string,
+  opts: { limit?: number } = {},
+): Promise<{ id: string; title: string; startAt: Date | null; endAt: Date | null; location: string | null; contactId: string | null; status: string }[]> {
+  const snap = await getAdminDb()
+    .collection("events")
+    .where("subAccountId", "==", subAccountId)
+    .get();
+  return snap.docs
+    .map((d) => {
+      const x = d.data();
+      return {
+        id: d.id,
+        title: String(x.title ?? ""),
+        startAt: x.startAt?.toDate?.() ?? (x.startAt instanceof Date ? x.startAt : null),
+        endAt: x.endAt?.toDate?.() ?? (x.endAt instanceof Date ? x.endAt : null),
+        location: (x.location as string) ?? null,
+        contactId: (x.contactId as string) ?? null,
+        status: String(x.status ?? "scheduled"),
+      };
+    })
+    .sort((a, b) => (a.startAt?.getTime() ?? 0) - (b.startAt?.getTime() ?? 0))
+    .slice(0, opts.limit ?? 50);
+}
+
+/**
+ * Move or rename a calendar event.
+ *
+ * `expectedSubAccountId` is required, not optional: every id this will see
+ * comes from a model, and a foreign id returns null exactly as a missing one
+ * does, so guessing an id cannot confirm it exists.
+ *
+ * Deliberately refuses an event that came from a BOOKING. Those carry their
+ * own lifecycle, reschedule and cancellation emails, ICS sequencing and
+ * reminder jobs; moving the row underneath that would leave the attendee
+ * holding a confirmation for a time nobody will be there.
+ */
+export async function updateEventServerSide(opts: {
+  eventId: string;
+  expectedSubAccountId: string;
+  title?: string;
+  startAt?: Date;
+  endAt?: Date;
+  location?: string | null;
+  notes?: string | null;
+}): Promise<{ id: string; title: string } | { refused: "booking" } | null> {
+  const db = getAdminDb();
+  const ref = db.doc(`events/${opts.eventId}`);
+  const snap = await ref.get();
+  if (!snap.exists) return null;
+  const existing = snap.data()!;
+  if (existing.subAccountId !== opts.expectedSubAccountId) return null;
+  if (existing.bookingPageId || existing.source === "booking") return { refused: "booking" };
+
+  const patch: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
+  if (opts.title !== undefined) patch.title = opts.title;
+  if (opts.startAt !== undefined) patch.startAt = opts.startAt;
+  if (opts.endAt !== undefined) patch.endAt = opts.endAt;
+  if (opts.location !== undefined) patch.location = opts.location;
+  if (opts.notes !== undefined) patch.notes = opts.notes;
+  await ref.set(patch, { merge: true });
+
+  const title = String(patch.title ?? existing.title ?? "");
+  void emitWebhookEvent({
+    subAccountId: opts.expectedSubAccountId,
+    agencyId: String(existing.agencyId ?? ""),
+    mode: (existing.mode as Mode) ?? "live",
+    type: "event.updated",
+    payload: { event: { id: opts.eventId, title } },
+  });
+  return { id: opts.eventId, title };
+}

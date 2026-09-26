@@ -436,3 +436,35 @@ export async function emitDealCreatedById(opts: {
     console.warn("[deals-service] emitDealCreatedById failed", err);
   }
 }
+
+/**
+ * This workspace's deals, most recently updated first.
+ *
+ * Scoped by subAccountId, which is the tenancy key on the doc. An equality
+ * filter on one field needs no composite index, and the ordering is done in
+ * memory for the same reason.
+ */
+export async function listDealsServerSide(
+  subAccountId: string,
+  opts: { limit?: number } = {},
+): Promise<{ id: string; title: string; stageId: string; value: number; currency: string; contactId: string | null; updatedAt: Date | null }[]> {
+  const snap = await getAdminDb()
+    .collection("deals")
+    .where("subAccountId", "==", subAccountId)
+    .get();
+  return snap.docs
+    .map((d) => {
+      const x = d.data();
+      return {
+        id: d.id,
+        title: String(x.title ?? ""),
+        stageId: String(x.stageId ?? ""),
+        value: Number(x.value ?? 0),
+        currency: String(x.currency ?? "usd"),
+        contactId: (x.contactId as string) ?? null,
+        updatedAt: x.updatedAt?.toDate?.() ?? null,
+      };
+    })
+    .sort((a, b) => (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0))
+    .slice(0, opts.limit ?? 50);
+}

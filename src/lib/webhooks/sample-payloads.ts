@@ -144,6 +144,21 @@ export const SAMPLE_PAYLOADS: Record<WebhookEventType, () => unknown> = {
       updated_at: new Date().toISOString(),
     },
   }),
+  "task.updated": () => ({
+    task: {
+      id: sampleId("task"),
+      object: "task",
+      livemode: true,
+      title: "Test task, renamed",
+      notes: "Sample notes",
+      due_at: new Date(Date.now() + 172800000).toISOString(),
+      completed: false,
+      completed_at: null,
+      contact_id: sampleId("contact"),
+      created_at: new Date(Date.now() - 3600000).toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+  }),
   "task.completed": () => ({
     task: {
       id: sampleId("task"),
@@ -163,6 +178,21 @@ export const SAMPLE_PAYLOADS: Record<WebhookEventType, () => unknown> = {
       object: "event",
       livemode: true,
       title: "Test calendar event",
+      start_at: new Date(Date.now() + 3600000).toISOString(),
+      end_at: new Date(Date.now() + 7200000).toISOString(),
+      contact_id: sampleId("contact"),
+      status: "scheduled",
+      source: "manual",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+  }),
+  "event.updated": () => ({
+    event: {
+      id: sampleId("event"),
+      object: "event",
+      livemode: true,
+      title: "Test calendar event, rescheduled",
       start_at: new Date(Date.now() + 3600000).toISOString(),
       end_at: new Date(Date.now() + 7200000).toISOString(),
       contact_id: sampleId("contact"),

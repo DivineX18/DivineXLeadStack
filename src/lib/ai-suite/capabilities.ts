@@ -7463,6 +7463,199 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     },
   },
   {
+    name: "find_deals",
+    level: "sub-account",
+    requiredRole: "subAccountMember",
+    readonly: true,
+    menuLabel: "Look up this workspace's deals and their pipeline stage",
+    description:
+      "List this sub-account's deals with their id, title, stage and value. Use it before update_deal or move_deal_stage, and whenever the user refers to a deal that already exists ('the Acme deal', 'that proposal'). You cannot change a deal without its id, and this is where the id comes from.",
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+    validate: () => ({ ok: true, args: {} }),
+    summarize: () => "Look up the deals in this workspace.",
+    execute: async (ctx) => {
+      const { listDealsServerSide } = await import("@/lib/server/deals-service");
+      const deals = await listDealsServerSide(ctx.subAccountId!);
+      if (deals.length === 0) return { resultText: "No deals in this workspace yet." };
+      const lines = deals.map(
+        (d) =>
+          `- "${d.title}" (id: ${d.id}) - ${d.stageId || "no stage"}, ${d.currency.toUpperCase()} ${(d.value / 100).toFixed(2)}`,
+      );
+      return { resultText: `Deals in this workspace:\n${lines.join("\n")}` };
+    },
+  },
+  {
+    name: "find_tasks",
+    level: "sub-account",
+    requiredRole: "subAccountMember",
+    readonly: true,
+    menuLabel: "Look up this workspace's open tasks",
+    description:
+      "List this sub-account's tasks with their id, title, due date and whether they are done. Open tasks come first, soonest due first. Use it before update_task or complete_task, and whenever the user refers to a task that already exists.",
+    parameters: {
+      type: "object",
+      properties: {
+        include_completed: { type: "boolean", description: "Include tasks already marked done. Defaults to false." },
+      },
+      additionalProperties: false,
+    },
+    validate: (raw) => ({
+      ok: true,
+      args: {
+        includeCompleted:
+          (raw as Record<string, unknown>)?.include_completed === true ||
+          (raw as Record<string, unknown>)?.includeCompleted === true,
+      },
+    }),
+    summarize: () => "Look up the tasks in this workspace.",
+    execute: async (ctx, args) => {
+      const { listTasksServerSide } = await import("@/lib/server/tasks-service");
+      const tasks = await listTasksServerSide(ctx.subAccountId!, {
+        includeCompleted: args.includeCompleted as boolean,
+      });
+      if (tasks.length === 0) return { resultText: "No open tasks in this workspace." };
+      const lines = tasks.map((t) => {
+        const due = t.dueAt ? t.dueAt.toISOString().slice(0, 10) : "no due date";
+        return `- "${t.title}" (id: ${t.id}) - ${due}${t.completed ? ", done" : ""}`;
+      });
+      return { resultText: `Tasks in this workspace:\n${lines.join("\n")}` };
+    },
+  },
+  {
+    name: "find_events",
+    level: "sub-account",
+    requiredRole: "subAccountMember",
+    readonly: true,
+    menuLabel: "Look up this workspace's calendar events",
+    description:
+      "List this sub-account's calendar events with their id, title and start time, soonest first. Use it before update_event, and whenever the user refers to a meeting or appointment that already exists.",
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+    validate: () => ({ ok: true, args: {} }),
+    summarize: () => "Look up the calendar events in this workspace.",
+    execute: async (ctx) => {
+      const { listEventsServerSide } = await import("@/lib/server/events-service");
+      const events = await listEventsServerSide(ctx.subAccountId!);
+      if (events.length === 0) return { resultText: "No calendar events in this workspace yet." };
+      const lines = events.map((e) => {
+        const when = e.startAt ? e.startAt.toISOString().replace("T", " ").slice(0, 16) : "no start time";
+        return `- "${e.title}" (id: ${e.id}) - ${when}${e.location ? `, ${e.location}` : ""}`;
+      });
+      return { resultText: `Calendar events in this workspace:\n${lines.join("\n")}` };
+    },
+  },
+  {
+    name: "update_task",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Change a task's title, notes or due date",
+    description:
+      "Change an existing task's title, notes or due date. Call find_tasks first to get the id. To mark one done use complete_task instead.",
+    parameters: {
+      type: "object",
+      properties: {
+        task_id: { type: "string", description: "The task to change (from find_tasks)." },
+        title: { type: "string", description: "Optional new title." },
+        notes: { type: "string", description: "Optional new notes. Send an empty string to clear them." },
+        due_date: { type: "string", description: "Optional new due date as YYYY-MM-DD." },
+      },
+      required: ["task_id"],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const taskId = strEither(raw, "task_id").trim();
+      if (!taskId) return { ok: false, error: "task_id is required. Call find_tasks to get it." };
+      const title = strEither(raw, "title").trim();
+      const r = raw as Record<string, unknown>;
+      const rawNotes = r?.notes ?? r?.notesText;
+      const notes = typeof rawNotes === "string" ? rawNotes.trim() : null;
+      const due = strEither(raw, "due_date").trim();
+      if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) {
+        return { ok: false, error: "due_date must be YYYY-MM-DD." };
+      }
+      if (!title && notes === null && !due) {
+        return { ok: false, error: "Nothing to change. Send at least one of title, notes or due_date." };
+      }
+      return { ok: true, args: { taskId, title: title || null, notes, dueDate: due || null } };
+    },
+    summarize: (args) => `Update the task${args.title ? ` to "${args.title as string}"` : ""}.`,
+    execute: async (ctx, args) => {
+      const { updateTaskServerSide } = await import("@/lib/server/tasks-service");
+      const due = args.dueDate as string | null;
+      const res = await updateTaskServerSide({
+        taskId: args.taskId as string,
+        expectedSubAccountId: ctx.subAccountId!,
+        ...(args.title ? { title: args.title as string } : {}),
+        ...(args.notes !== null ? { notes: (args.notes as string) || null } : {}),
+        ...(due ? { dueAt: new Date(`${due}T12:00:00.000Z`) } : {}),
+      });
+      if (!res) throw new CapabilityUserError("That task no longer exists.");
+      return { resultText: `Updated the task "${res.title}".`, ref: { kind: "task", id: res.id } };
+    },
+  },
+  {
+    name: "update_event",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Move or rename a calendar event",
+    description:
+      "Change an existing calendar event's title, time or location. Call find_events first to get the id. Events created from a public booking page cannot be changed here, because the attendee holds a confirmation for the original time.",
+    parameters: {
+      type: "object",
+      properties: {
+        event_id: { type: "string", description: "The event to change (from find_events)." },
+        title: { type: "string", description: "Optional new title." },
+        start_at: { type: "string", description: "Optional new start, ISO 8601 (2026-03-04T14:00:00Z)." },
+        end_at: { type: "string", description: "Optional new end, ISO 8601." },
+        location: { type: "string", description: "Optional new location." },
+      },
+      required: ["event_id"],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const eventId = strEither(raw, "event_id").trim();
+      if (!eventId) return { ok: false, error: "event_id is required. Call find_events to get it." };
+      const title = strEither(raw, "title").trim();
+      const location = strEither(raw, "location").trim();
+      const parse = (key: string): { ok: boolean; value: string | null } => {
+        const v = strEither(raw, key).trim();
+        if (!v) return { ok: true, value: null };
+        return Number.isNaN(Date.parse(v)) ? { ok: false, value: null } : { ok: true, value: v };
+      };
+      const start = parse("start_at");
+      const end = parse("end_at");
+      if (!start.ok || !end.ok) return { ok: false, error: "start_at and end_at must be ISO 8601 timestamps." };
+      if (start.value && end.value && Date.parse(end.value) <= Date.parse(start.value)) {
+        return { ok: false, error: "end_at must be after start_at." };
+      }
+      if (!title && !location && !start.value && !end.value) {
+        return { ok: false, error: "Nothing to change. Send at least one of title, start_at, end_at or location." };
+      }
+      return {
+        ok: true,
+        args: { eventId, title: title || null, location: location || null, startAt: start.value, endAt: end.value },
+      };
+    },
+    summarize: (args) => `Update the calendar event${args.title ? ` to "${args.title as string}"` : ""}.`,
+    execute: async (ctx, args) => {
+      const { updateEventServerSide } = await import("@/lib/server/events-service");
+      const res = await updateEventServerSide({
+        eventId: args.eventId as string,
+        expectedSubAccountId: ctx.subAccountId!,
+        ...(args.title ? { title: args.title as string } : {}),
+        ...(args.location ? { location: args.location as string } : {}),
+        ...(args.startAt ? { startAt: new Date(args.startAt as string) } : {}),
+        ...(args.endAt ? { endAt: new Date(args.endAt as string) } : {}),
+      });
+      if (!res) throw new CapabilityUserError("That calendar event no longer exists.");
+      if ("refused" in res) {
+        throw new CapabilityUserError(
+          "That event came from a booking page, so the attendee already holds a confirmation for the original time. Reschedule it from the booking itself so they are told.",
+        );
+      }
+      return { resultText: `Updated the event "${res.title}".`, ref: { kind: "event", id: res.id } };
+    },
+  },
+  {
     /**
      * WHAT IS IN THE WORKFLOW, not just that one exists.
      *
