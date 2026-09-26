@@ -47,3 +47,23 @@ export async function updateWorkflowServerSide(opts: {
   });
   return true;
 }
+
+/**
+ * The stored workflow the live-edit guard reads. A test sets this to decide
+ * what apply_workflow_plan finds when it re-checks the status.
+ */
+export let STORED: { id: string; name: string; status: string } | null = null;
+export function setStored(w: { id: string; name: string; status: string } | null): void {
+  STORED = w;
+}
+
+export async function getWorkflow(
+  _subAccountId: string,
+  workflowId: string,
+): Promise<{ id: string; name: string; status: string } | null> {
+  return STORED && STORED.id === workflowId ? STORED : null;
+}
+
+export async function listWorkflows(): Promise<unknown[]> {
+  return STORED ? [STORED] : [];
+}

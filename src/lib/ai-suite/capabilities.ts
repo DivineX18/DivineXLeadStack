@@ -819,6 +819,25 @@ function dropFictionalPhone(raw: string | null | undefined): string {
  * missing one stays missing. Headlines, benefits, service descriptions and
  * every other piece of COPY are still entirely the model's job.
  */
+/**
+ * A WORKFLOW THAT IS SENDING IS NOT A DRAFT.
+ *
+ * apply_workflow_plan replaces the whole sequence. Doing that to an ACTIVE
+ * workflow changes what is going out to people who are part-way through it,
+ * which is a different act from editing a draft and should not happen
+ * because a sentence was ambiguous. "active" is the only state that is
+ * actually sending; paused and draft are not.
+ */
+function workflowIsSending(status: string | undefined): boolean {
+  return status === "active";
+}
+
+function describeWorkflowStatus(status: string | undefined): string {
+  if (status === "active") return "ACTIVE, currently sending to people";
+  if (status === "paused") return "paused, not sending";
+  return "draft, not sending";
+}
+
 function verifiedBusinessFacts(
   sub: Record<string, unknown>,
   accountContact: { name?: string | null; email?: string | null; phone?: string | null },
@@ -7069,7 +7088,8 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       properties: {
         campaign_name: { type: "string", description: "Short name for this campaign's follow-up (used as the workflow name)." },
         form_id: { type: "string", description: "The capture form that triggers this sequence (from create_funnel's result or check_funnel_status). Omit only if the workflow should be wired up later." },
-        workflow_id: { type: "string", description: "EDIT MODE: the existing draft workflow to overwrite with this desired state. Omit to create a new draft." },
+        workflow_id: { type: "string", description: "EDIT MODE: the existing workflow to overwrite with this desired state. Omit to create a new draft. Call list_workflows first and send back EVERY message you are keeping, because this replaces the whole sequence." },
+        change_live_workflow: { type: "boolean", description: "Set true ONLY when the user has been told the workflow is currently sending and has said to change it anyway. Editing an active workflow changes what people part-way through it receive next." },
         goal_tag: { type: "string", description: "Tag whose presence EXITS the sequence. Prefer the canonical auto-applied states: booked, purchased, replied, accepted, won." },
         goal_state: { type: "string", description: "Plain-language state that ends the journey ('booked the consultation')." },
         handoff_days: { type: "number", description: "Days from signup until a human-handoff task is created." },
@@ -7191,6 +7211,9 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           campaignName,
           formId: strEither(raw, "form_id").trim() || null,
           workflowId: strEither(raw, "workflow_id").trim() || null,
+          changeLiveWorkflow:
+            (raw as Record<string, unknown>)?.change_live_workflow === true ||
+            (raw as Record<string, unknown>)?.changeLiveWorkflow === true,
           goalTag,
           goalState,
           handoffDays: Number.isFinite(numEither(raw, "handoff_days")) ? Math.max(0, Math.min(30, numEither(raw, "handoff_days"))) : 3,
@@ -7236,6 +7259,20 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         brandProfileVersion: null,
       };
       plan.summary = renderPlanSummary(plan as never);
+      // The status is read here rather than trusted from the proposal: the
+      // workflow can have been published between the proposal and the
+      // confirm, and this is the last point before it is overwritten.
+      const editing = (args.workflowId as string) || "";
+      if (editing && !args.changeLiveWorkflow) {
+        const { getWorkflow } = await import("@/lib/server/workflows-service");
+        const existing = await getWorkflow(ctx.subAccountId!, editing);
+        if (existing && workflowIsSending(existing.status)) {
+          throw new CapabilityUserError(
+            `"${existing.name}" is live and sending right now. Rewriting it changes what people part-way through the sequence receive next. Tell the customer that and ask them to confirm, then call this again with change_live_workflow: true.`,
+          );
+        }
+      }
+
       const result = await applyWorkflowPlan({
         subAccountId: ctx.subAccountId!,
         agencyId: ctx.agencyId!,
@@ -7423,6 +7460,154 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           `\u2022 The page is still ${funnel.status === "published" ? "published, the change is live" : "a draft"}.`,
         ref: { kind: "funnel", id: funnel.id },
       };
+    },
+  },
+  {
+    /**
+     * WHAT IS IN THE WORKFLOW, not just that one exists.
+     *
+     * apply_workflow_plan OVERWRITES the whole desired state. So a lookup
+     * that returned names and ids would be worse than none: asked to shorten
+     * email 2, the model would send back a one-message plan and silently
+     * delete emails 1 and 3. The current messages come back with it, which is
+     * what makes a partial edit possible at all.
+     */
+    name: "list_workflows",
+    level: "sub-account",
+    requiredRole: "subAccountMember",
+    readonly: true,
+    menuLabel: "Look up this workspace's automations and the emails inside them",
+    description:
+      "List this sub-account's workflows with their id, status (draft or live) and the emails each one currently sends, in order. Use it before editing an automation, whenever the user refers to an existing sequence ('my welcome emails', 'the follow-up series'), or when they ask what automations exist. ALWAYS call this before apply_workflow_plan with a workflow_id: that capability replaces the entire sequence, so you must send back every message you want to keep, and this is where you learn what those are.",
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+    validate: () => ({ ok: true, args: {} }),
+    summarize: () => "Look up the workflows in this workspace.",
+    execute: async (ctx) => {
+      const { listWorkflows } = await import("@/lib/server/workflows-service");
+      const flows = await listWorkflows(ctx.subAccountId!);
+      if (flows.length === 0) {
+        return { resultText: "No workflows exist in this workspace yet. Ask me to build one." };
+      }
+      const blocks = flows.map((w) => {
+        const nodes = Object.values(w.nodes ?? {});
+        const emails = nodes.filter((n) => n.type === "send_email");
+        const notes = nodes.filter((n) => n.type === "notify");
+        const lines = [
+          `- "${w.name}" (id: ${w.id}) - ${describeWorkflowStatus(w.status)}`,
+        ];
+        emails.forEach((n, i) => {
+          const cfg = n.config as { subject?: string; body?: string };
+          lines.push(`    email ${i + 1}: "${cfg.subject ?? "(no subject)"}"`);
+          const body = (cfg.body ?? "").trim();
+          if (body) lines.push(`      body: ${body.slice(0, 600)}${body.length > 600 ? " […]" : ""}`);
+        });
+        if (notes.length > 0) lines.push(`    (+ ${notes.length} internal notification step${notes.length === 1 ? "" : "s"})`);
+        return lines.join("\n");
+      });
+      return { resultText: `Workflows in this workspace:\n${blocks.join("\n")}` };
+    },
+  },
+  {
+    name: "list_email_templates",
+    level: "sub-account",
+    requiredRole: "subAccountMember",
+    readonly: true,
+    menuLabel: "Look up this workspace's saved email and SMS templates",
+    description:
+      "List this sub-account's saved message templates with their id, name, subject and current body. Use it before revise_email, and whenever the user refers to an email they already have ('my welcome email', 'that re-engagement one').",
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+    validate: () => ({ ok: true, args: {} }),
+    summarize: () => "Look up the saved templates in this workspace.",
+    execute: async (ctx) => {
+      const { listMessageTemplatesServerSide } = await import("@/lib/server/message-templates-service");
+      const templates = await listMessageTemplatesServerSide(ctx.subAccountId!);
+      if (templates.length === 0) {
+        return { resultText: "No saved templates in this workspace yet. Ask me to write one." };
+      }
+      const lines = templates.map((t) => {
+        const body = (t.body ?? "").trim();
+        return [
+          `- "${t.name}" (id: ${t.id}, ${t.type})`,
+          t.subject ? `    subject: ${t.subject}` : null,
+          body ? `    body: ${body.slice(0, 600)}${body.length > 600 ? " […]" : ""}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n");
+      });
+      return { resultText: `Templates in this workspace:\n${lines.join("\n")}` };
+    },
+  },
+  {
+    /**
+     * Editing a template, in the same shape as revise_funnel_copy: work from
+     * the real current draft, change what was asked for, leave the rest.
+     */
+    name: "revise_email",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Rewrite a saved email template",
+    description:
+      "REWRITE a saved message template. Use when the user asks to change an email they already have ('make the welcome email shorter', 'soften the follow-up', 'fix the subject line'). Call list_email_templates FIRST and work from the body it gives you, never from the template's name or from a fresh draft. Send the COMPLETE new body, not just the changed sentence: it replaces the stored one. Every email body must still contain {{unsubscribeLink}}, which is a legal requirement, not a style choice.",
+    parameters: {
+      type: "object",
+      properties: {
+        template_id: { type: "string", description: "The template to rewrite (from list_email_templates)." },
+        name: { type: "string", description: "Optional new name. Omit to keep the current one." },
+        subject: { type: "string", description: "Optional new subject. Omit to keep the current one." },
+        body: { type: "string", description: "The complete new body. Omit to keep the current one." },
+      },
+      required: ["template_id"],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const templateId = strEither(raw, "template_id").trim();
+      if (!templateId) return { ok: false, error: "template_id is required. Call list_email_templates to find it." };
+      const name = strEither(raw, "name").trim();
+      const subject = strEither(raw, "subject").trim();
+      const body = fixLiteralNewlines(strEither(raw, "body")).trim();
+      if (!name && !subject && !body) {
+        return { ok: false, error: "Nothing to change. Send at least one of name, subject or body." };
+      }
+      return {
+        ok: true,
+        args: {
+          templateId,
+          name: name || null,
+          subject: subject || null,
+          body: body ? stripToolSyntaxDebris(body) : null,
+        },
+      };
+    },
+    summarize: (args) => {
+      const parts = [args.body ? "the body" : null, args.subject ? "the subject" : null, args.name ? "the name" : null]
+        .filter(Boolean)
+        .join(", ");
+      return `Rewrite ${parts || "this template"} on the saved email template.`;
+    },
+    execute: async (ctx, args) => {
+      const { updateMessageTemplateServerSide, MessageTemplateValidationError: TemplateErr } = await import(
+        "@/lib/server/message-templates-service"
+      );
+      try {
+        const updated = await updateMessageTemplateServerSide({
+          subAccountId: ctx.subAccountId!,
+          templateId: args.templateId as string,
+          ...(args.name ? { name: args.name as string } : {}),
+          ...(args.subject ? { subject: args.subject as string } : {}),
+          ...(args.body ? { body: args.body as string } : {}),
+        });
+        return {
+          resultText:
+            `Updated “${updated.name}”.\n\n` +
+            (args.subject ? `• Subject: ${args.subject as string}\n` : "") +
+            `• It's still a saved template. Nothing has been sent to anyone.\n` +
+            `• Any workflow already using it will send the new version from now on.`,
+          ref: { kind: "message_template", id: updated.id },
+        };
+      } catch (err) {
+        if (err instanceof TemplateErr) throw new CapabilityUserError(err.message);
+        throw err;
+      }
     },
   },
   {

@@ -26,7 +26,7 @@ import { AI_SUITE_CAPABILITIES } from "../src/lib/ai-suite/capabilities";
 import { validateCampaignPlan, type CampaignPlan } from "../src/lib/divinex/campaign";
 import { followUpName } from "../src/lib/divinex/apply-workflow-plan";
 import { isGoalGate, goalGateTag, parseTree, type BuilderStep } from "../src/lib/workflows/builder-tree";
-import { RECORDED, resetRecorded } from "./stub-workflows-service";
+import { RECORDED, resetRecorded, setStored } from "./stub-workflows-service";
 
 let fails = 0;
 const ck = (n: string, ok: boolean, d = "") => {
@@ -252,7 +252,51 @@ console.log("\n-- 7. the canvas stops dividing itself --");
   ck("a real fork still splits", /s\.type === "if_else" && !isGoalGate\(s\)/.test(ui));
 }
 
-console.log("\n-- 8. the workflow name does not repeat itself --");
+console.log("\n-- 8. rewriting a workflow that is SENDING --");
+{
+  const ctx = { uid: "u", email: "o@example.com", displayName: "O", agencyId: "ag", subAccountId: "sa_test" };
+  const editArgs = { ...second.args, workflowId: "wf_live" };
+
+  // Active is the only state that is actually delivering to people.
+  setStored({ id: "wf_live", name: "Welcome series", status: "active" });
+  let refused = "";
+  try {
+    await cap.execute(ctx as never, editArgs);
+  } catch (err) {
+    refused = err instanceof Error ? err.message : String(err);
+  }
+  ck("a live workflow is not silently overwritten", refused !== "");
+  ck("and the refusal says why, and what to do", /live and sending/i.test(refused) && /confirm/i.test(refused), refused.slice(0, 70));
+
+  // Told to go ahead, it goes ahead.
+  resetRecorded();
+  let threw = "";
+  try {
+    await cap.execute(ctx as never, { ...editArgs, changeLiveWorkflow: true });
+  } catch (err) {
+    threw = err instanceof Error ? err.message : String(err);
+  }
+  ck("an explicit acknowledgement lets it through", threw === "", threw.slice(0, 70));
+  ck("and it edited the existing workflow rather than making a new one",
+    RECORDED.some((r) => r.kind === "update" && r.workflowId === "wf_live") &&
+      !RECORDED.some((r) => r.kind === "create"));
+
+  // A draft is the ordinary case and must not need the acknowledgement.
+  for (const status of ["draft", "paused"]) {
+    setStored({ id: "wf_live", name: "Welcome series", status });
+    resetRecorded();
+    let e = "";
+    try {
+      await cap.execute(ctx as never, editArgs);
+    } catch (err) {
+      e = err instanceof Error ? err.message : String(err);
+    }
+    ck(`a ${status} workflow edits without ceremony`, e === "", e.slice(0, 60));
+  }
+  setStored(null);
+}
+
+console.log("\n-- 9. the workflow name does not repeat itself --");
 ck("a plain name gets the suffix", followUpName("Spring intake") === "Spring intake: Follow-up");
 ck("a name already ending in follow-up does not get a second one",
   followUpName("Spring intake follow-up") === "Spring intake follow-up",
