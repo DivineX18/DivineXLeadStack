@@ -8047,6 +8047,353 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     },
   },
   {
+    name: "list_forms",
+    level: "sub-account",
+    requiredRole: "subAccountMember",
+    readonly: true,
+    menuLabel: "Look up this workspace's forms and their questions",
+    description:
+      "List this sub-account's forms with their id, name and every question on them, including each question's id. Use it before update_form: you need the field ids to change or remove a question, and you need to see the existing questions so you do not duplicate one.",
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+    validate: () => ({ ok: true, args: {} }),
+    summarize: () => "Look up the forms in this workspace.",
+    execute: async (ctx) => {
+      const { listFormsServerSide } = await import("@/lib/server/forms-service");
+      const forms = await listFormsServerSide(ctx.subAccountId!);
+      if (forms.length === 0) return { resultText: "No forms in this workspace yet." };
+      const blocks = forms.map((f) => {
+        const lines = [`- "${f.name}" (id: ${f.id}) - ${f.submissionCount} submission${f.submissionCount === 1 ? "" : "s"}${f.enabled ? "" : ", disabled"}`];
+        for (const q of f.fields) {
+          lines.push(
+            `    ${q.label} (field id: ${q.id}, ${q.type}${q.required ? ", required" : ""}${q.mapsTo ? `, saves to ${q.mapsTo}` : ""})`,
+          );
+        }
+        return lines.join("\n");
+      });
+      return { resultText: `Forms in this workspace:\n${blocks.join("\n")}` };
+    },
+  },
+  {
+    /**
+     * One question at a time. A form is an ordered list, which is the shape
+     * where a generated replacement is most destructive: asked to add a
+     * question, a model that returns "the fields" returns the one it was
+     * thinking about and the rest are gone, along with the mappings that
+     * turn submissions into contacts.
+     */
+    name: "update_form",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Rename a form, or add, change or remove one question",
+    description:
+      "Change an EXISTING form: rename it, add a question, change a question, or remove one. Call list_forms first to get the form id and the field ids. Do ONE of these per call. You never send the whole question list: the form's existing questions are kept and only the one you name is affected.",
+    parameters: {
+      type: "object",
+      properties: {
+        form_id: { type: "string", description: "The form to change (from list_forms)." },
+        rename: { type: "string", description: "New name for the form." },
+        add_question: {
+          type: "object",
+          description: "Add ONE question to the end of the form.",
+          properties: {
+            label: { type: "string", description: "The question as the visitor reads it." },
+            type: {
+              type: "string",
+              // The real FormFieldType list, minus sms_consent: that field
+              // carries a stored compliance disclosure and is created in the
+              // builder where the required wording is supplied.
+              enum: ["text", "email", "phone", "company", "textarea", "select"],
+              description: "The input type.",
+            },
+            required: { type: "boolean" },
+            placeholder: { type: "string" },
+            options: { type: "array", items: { type: "string" }, description: "Choices, for a select." },
+            saves_to: { type: "string", enum: ["name", "email", "phone", "company", "notes"], description: "Which contact field the answer fills, if any." },
+          },
+          required: ["label", "type"],
+          additionalProperties: false,
+        },
+        update_question: {
+          type: "object",
+          description: "Change ONE existing question.",
+          properties: {
+            field_id: { type: "string", description: "The question's field id (from list_forms)." },
+            label: { type: "string" },
+            required: { type: "boolean" },
+            placeholder: { type: "string" },
+            options: { type: "array", items: { type: "string" } },
+          },
+          required: ["field_id"],
+          additionalProperties: false,
+        },
+        remove_question_id: { type: "string", description: "The field id of ONE question to remove." },
+      },
+      required: ["form_id"],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const r = raw as Record<string, unknown>;
+      const formId = strEither(raw, "form_id").trim();
+      if (!formId) return { ok: false, error: "form_id is required. Call list_forms to get it." };
+      const rename = strEither(raw, "rename").trim();
+      const add = (r.add_question ?? r.addQuestion) as Record<string, unknown> | undefined;
+      const upd = (r.update_question ?? r.updateQuestion) as Record<string, unknown> | undefined;
+      const removeId = strEither(raw, "remove_question_id").trim();
+
+      const ops = [rename ? 1 : 0, add ? 1 : 0, upd ? 1 : 0, removeId ? 1 : 0].reduce((a, b) => a + b, 0);
+      if (ops === 0) return { ok: false, error: "Nothing to change. Rename the form, or add, change or remove one question." };
+      if (ops > 1) return { ok: false, error: "Do one change per call so the customer can see what each one does." };
+
+      if (add) {
+        const label = typeof add.label === "string" ? add.label.trim() : "";
+        const type = typeof add.type === "string" ? add.type : "";
+        if (!label) return { ok: false, error: "add_question needs a label." };
+        if (!["text", "email", "phone", "company", "textarea", "select"].includes(type)) {
+          return { ok: false, error: "add_question type must be text, email, phone, company, textarea or select." };
+        }
+        const options = Array.isArray(add.options) ? add.options.filter((o): o is string => typeof o === "string") : [];
+        if (type === "select" && options.length === 0) {
+          return { ok: false, error: "A select question needs at least one option." };
+        }
+        return {
+          ok: true,
+          args: {
+            formId,
+            addQuestion: {
+              label,
+              type,
+              required: add.required === true,
+              placeholder: typeof add.placeholder === "string" ? add.placeholder.trim() : "",
+              options,
+              savesTo: typeof (add.saves_to ?? add.savesTo) === "string" ? (add.saves_to ?? add.savesTo) : null,
+            },
+          },
+        };
+      }
+
+      if (upd) {
+        const fieldId = typeof (upd.field_id ?? upd.fieldId) === "string" ? String(upd.field_id ?? upd.fieldId).trim() : "";
+        if (!fieldId) return { ok: false, error: "update_question needs the field_id from list_forms." };
+        const patch: Record<string, unknown> = { fieldId };
+        if (typeof upd.label === "string") patch.label = upd.label.trim();
+        if (typeof upd.placeholder === "string") patch.placeholder = upd.placeholder.trim();
+        if (typeof upd.required === "boolean") patch.required = upd.required;
+        if (Array.isArray(upd.options)) patch.options = upd.options.filter((o): o is string => typeof o === "string");
+        if (Object.keys(patch).length === 1) return { ok: false, error: "update_question needs something to change." };
+        return { ok: true, args: { formId, updateQuestion: patch } };
+      }
+
+      if (removeId) return { ok: true, args: { formId, removeQuestionId: removeId } };
+      return { ok: true, args: { formId, rename } };
+    },
+    summarize: (args) => {
+      if (args.rename) return `Rename this form to "${args.rename as string}".`;
+      if (args.addQuestion) return `Add the question "${(args.addQuestion as { label: string }).label}" to this form.`;
+      if (args.updateQuestion) return "Change one question on this form.";
+      return "Remove one question from this form.";
+    },
+    execute: async (ctx, args) => {
+      const { patchFormServerSide } = await import("@/lib/server/forms-service");
+      const add = args.addQuestion as { label: string; type: string; required: boolean; placeholder: string; options: string[]; savesTo: string | null } | undefined;
+      const upd = args.updateQuestion as Record<string, unknown> | undefined;
+      const res = await patchFormServerSide({
+        subAccountId: ctx.subAccountId!,
+        formId: args.formId as string,
+        ...(args.rename ? { rename: args.rename as string } : {}),
+        ...(add
+          ? {
+              addField: {
+                label: add.label,
+                type: add.type as never,
+                required: add.required,
+                placeholder: add.placeholder,
+                options: add.options,
+                mapsTo: (add.savesTo ?? null) as never,
+              },
+            }
+          : {}),
+        ...(upd ? { updateField: upd as never } : {}),
+        ...(args.removeQuestionId ? { removeFieldId: args.removeQuestionId as string } : {}),
+      });
+      if (res.ok) {
+        return { resultText: `Updated "${res.name}": ${res.summary}.`, ref: { kind: "form", id: res.formId } };
+      }
+      if (res.reason === "last_email") {
+        throw new CapabilityUserError(
+          "That's the only question that captures an email address. Removing it means every lead this form collects would be unreachable, so add another email question first if you really want it gone.",
+        );
+      }
+      if (res.reason === "consent") {
+        throw new CapabilityUserError(
+          "That's the SMS consent question. Its wording is the stored proof of consent and has to carry specific legal elements, so it's edited in the form builder, not here.",
+        );
+      }
+      if (res.reason === "duplicate") throw new CapabilityUserError("This form already asks that question.");
+      if (res.reason === "no_field") throw new CapabilityUserError("That question isn't on this form. Call list_forms again for the current field ids.");
+      if (res.reason === "missing") throw new CapabilityUserError("That form no longer exists.");
+      throw new CapabilityUserError(res.error ?? "That change isn't valid.");
+    },
+  },
+  {
+    name: "list_booking_pages",
+    level: "sub-account",
+    requiredRole: "subAccountMember",
+    readonly: true,
+    menuLabel: "Look up this workspace's booking pages",
+    description:
+      "List this sub-account's booking pages with their id, name, status, meeting length and weekly availability. Use it before update_booking_page.",
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+    validate: () => ({ ok: true, args: {} }),
+    summarize: () => "Look up the booking pages in this workspace.",
+    execute: async (ctx) => {
+      const { listBookingPages } = await import("@/lib/server/booking-pages-service");
+      const pages = await listBookingPages(ctx.subAccountId!);
+      if (pages.length === 0) return { resultText: "No booking pages in this workspace yet." };
+      const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+      const blocks = pages.map((b) => {
+        const hours = (b.workingHours ?? [])
+          .map((w) => `    ${DAYS[w.dayOfWeek]}: ${hhmm(w.startMinute)} to ${hhmm(w.endMinute)}`)
+          .join("\n");
+        return (
+          `- "${b.name}" (id: ${b.slug}) - ${b.status}, ${b.durationMinutes} minutes, ${b.timezone}` +
+          (hours ? `\n${hours}` : "\n    no availability set")
+        );
+      });
+      return { resultText: `Booking pages in this workspace:\n${blocks.join("\n")}` };
+    },
+  },
+  {
+    name: "update_booking_page",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Change a booking page's length, notice, or one day's hours",
+    description:
+      "Change an EXISTING booking page: its name, description, meeting length, buffer, how far ahead people can book, minimum notice, daily cap, status, or ONE day's availability. Call list_booking_pages first for the id and current hours. Changing one day's hours leaves the other days exactly as they are. The page's web address cannot be changed here, because links already shared would stop working, and payment settings are not changed here either.",
+    parameters: {
+      type: "object",
+      properties: {
+        booking_page_id: { type: "string", description: "The booking page to change (from list_booking_pages)." },
+        name: { type: "string" },
+        description: { type: "string" },
+        duration_minutes: { type: "number", description: "How long each meeting is." },
+        buffer_minutes: { type: "number", description: "Gap between back-to-back meetings." },
+        visible_days: { type: "number", description: "How many days ahead people can book." },
+        min_notice_hours: { type: "number", description: "Minimum notice before a slot can be booked." },
+        max_per_day: { type: "number", description: "Cap on bookings per day. Send 0 for no cap." },
+        status: { type: "string", enum: ["draft", "published"] },
+        day: {
+          type: "string",
+          enum: ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
+          description: "The ONE day whose hours you are setting. Requires start_time and end_time.",
+        },
+        start_time: { type: "string", description: "That day's start, as HH:MM (24 hour)." },
+        end_time: { type: "string", description: "That day's end, as HH:MM (24 hour)." },
+      },
+      required: ["booking_page_id"],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const bookingPageId = strEither(raw, "booking_page_id").trim();
+      if (!bookingPageId) return { ok: false, error: "booking_page_id is required. Call list_booking_pages to get it." };
+      const r = raw as Record<string, unknown>;
+      const args: Record<string, unknown> = { bookingPageId };
+      const name = strEither(raw, "name").trim();
+      const description = strEither(raw, "description").trim();
+      if (name) args.name = name;
+      if (description) args.description = description;
+      for (const [key, out] of [
+        ["duration_minutes", "durationMinutes"],
+        ["buffer_minutes", "bufferMinutes"],
+        ["visible_days", "visibleDays"],
+        ["min_notice_hours", "minNoticeHours"],
+        ["max_per_day", "maxPerDay"],
+      ] as const) {
+        // An explicit null means "no cap", and it is the shape this function
+        // itself produces. The confirm route re-validates its own output, so
+        // dropping it here would turn a saved change into "nothing to change".
+        if (out === "maxPerDay" && (r.max_per_day === null || r.maxPerDay === null)) {
+          args.maxPerDay = null;
+          continue;
+        }
+        const v = numEither(raw, key);
+        if (Number.isFinite(v)) {
+          if (v < 0) return { ok: false, error: `${key} cannot be negative.` };
+          args[out] = out === "maxPerDay" && v === 0 ? null : v;
+        }
+      }
+      const status = strEither(raw, "status").trim().toLowerCase();
+      if (status) {
+        if (status !== "draft" && status !== "published") return { ok: false, error: "status must be draft or published." };
+        args.status = status;
+      }
+      const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+      // Re-validating this function's own output: the day window has already
+      // been resolved to minutes, so re-check the bounds rather than looking
+      // for the HH:MM fields that are no longer there.
+      const prior = r.workingHour as { dayOfWeek?: unknown; startMinute?: unknown; endMinute?: unknown } | undefined;
+      if (prior && typeof prior === "object") {
+        const d = Number(prior.dayOfWeek);
+        const s0 = Number(prior.startMinute);
+        const e0 = Number(prior.endMinute);
+        if (!Number.isInteger(d) || d < 0 || d > 6) return { ok: false, error: "day must be a weekday." };
+        if (!Number.isInteger(s0) || !Number.isInteger(e0) || s0 < 0 || e0 > 1440 || e0 <= s0) {
+          return { ok: false, error: "That day's hours are not a valid window." };
+        }
+        args.workingHour = { dayOfWeek: d, startMinute: s0, endMinute: e0 };
+      }
+      const day = strEither(raw, "day").trim().toLowerCase();
+      const start = strEither(raw, "start_time").trim();
+      const end = strEither(raw, "end_time").trim();
+      if (day || start || end) {
+        if (!day || !start || !end) return { ok: false, error: "To change a day's hours send day, start_time and end_time together." };
+        const idx = DAYS.indexOf(day);
+        if (idx === -1) return { ok: false, error: "day must be a weekday name." };
+        const toMin = (t: string): number | null => {
+          const m = t.match(/^(\d{1,2}):(\d{2})$/);
+          if (!m) return null;
+          const h = Number(m[1]);
+          const mm = Number(m[2]);
+          if (h > 23 || mm > 59) return null;
+          return h * 60 + mm;
+        };
+        const s0 = toMin(start);
+        const e0 = toMin(end);
+        if (s0 === null || e0 === null) return { ok: false, error: "start_time and end_time must be HH:MM, 24 hour." };
+        if (e0 <= s0) return { ok: false, error: "end_time must be after start_time." };
+        args.workingHour = { dayOfWeek: idx, startMinute: s0, endMinute: e0 };
+      }
+      if (Object.keys(args).length === 1) {
+        return { ok: false, error: "Nothing to change. Send at least one setting, or a day with its hours." };
+      }
+      return { ok: true, args };
+    },
+    summarize: (args) => {
+      const bits = Object.keys(args).filter((k) => k !== "bookingPageId");
+      return `Change ${bits.join(", ")} on this booking page.`;
+    },
+    execute: async (ctx, args) => {
+      const { patchBookingPageServerSide } = await import("@/lib/server/booking-pages-service");
+      const { bookingPageId, ...patch } = args as Record<string, unknown>;
+      const res = await patchBookingPageServerSide({
+        subAccountId: ctx.subAccountId!,
+        slug: bookingPageId as string,
+        patch: patch as never,
+      });
+      if (res.ok) {
+        return {
+          resultText:
+            `Updated "${res.name}": ${res.changed.join(", ")}.\n\n` +
+            "• Anyone already booked keeps their existing time. This changes what new visitors can pick.",
+          ref: { kind: "booking_page", id: res.slug },
+        };
+      }
+      if (res.reason === "missing") throw new CapabilityUserError("That booking page no longer exists.");
+      if (res.reason === "nothing") throw new CapabilityUserError("Nothing to change there.");
+      throw new CapabilityUserError(res.error ?? "That change isn't valid.");
+    },
+  },
+  {
     /**
      * WHAT IS IN THE WORKFLOW, not just that one exists.
      *

@@ -25,6 +25,8 @@ const ck = (n: string, ok: boolean, d = "") => {
 const cap = (name: string) => AI_SUITE_CAPABILITIES.find((c) => c.name === name);
 const caps = fs.readFileSync("src/lib/ai-suite/capabilities.ts", "utf8");
 const svc = fs.readFileSync("src/lib/server/message-templates-service.ts", "utf8");
+const forms = fs.readFileSync("src/lib/server/forms-service.ts", "utf8");
+const booking = fs.readFileSync("src/lib/server/booking-pages-service.ts", "utf8");
 
 console.log("-- it can find what it is being asked to edit --");
 for (const n of ["list_workflows", "list_email_templates"]) {
@@ -296,6 +298,115 @@ console.log("\n-- communities --");
     ck(`${forbidden} is not editable by the model`, !props.includes(forbidden));
   }
   ck("renaming warns that the public link changes", /public link changed/.test(caps));
+}
+
+console.log("\n-- forms: one question at a time, never a replacement list --");
+{
+  const c = cap("update_form")!;
+  ck("it needs admin and is confirm-gated", c.readonly !== true && c.requiredRole === "subAccountAdmin");
+  ck("a missing id is refused", c.validate({}).ok === false);
+  ck("changing nothing is refused", c.validate({ form_id: "f1" }).ok === false);
+
+  // The whole point: no parameter accepts the field list, so a model cannot
+  // return "the fields" and erase the ones it forgot to mention.
+  const props = Object.keys((c.parameters as { properties: Record<string, unknown> }).properties);
+  ck("no parameter takes the whole question list",
+    !props.some((k) => k === "fields" || k === "questions" || k === "field_list"));
+
+  ck("two operations at once are refused",
+    c.validate({ form_id: "f1", rename: "X", remove_question_id: "q1" }).ok === false);
+
+  ck("an invented field type is refused",
+    c.validate({ form_id: "f1", add_question: { label: "Budget", type: "slider" } }).ok === false);
+  ck("a field type the product does not have is refused",
+    c.validate({ form_id: "f1", add_question: { label: "Agree", type: "checkbox" } }).ok === false);
+  ck("the model cannot mint an sms_consent field",
+    c.validate({ form_id: "f1", add_question: { label: "Texts ok?", type: "sms_consent" } }).ok === false);
+  ck("a select with no options is refused",
+    c.validate({ form_id: "f1", add_question: { label: "Service", type: "select" } }).ok === false);
+
+  const ok = c.validate({ form_id: "f1", add_question: { label: "Company", type: "company", required: true } });
+  ck("a real question validates", ok.ok === true);
+  if (ok.ok) ck("and re-validates", c.validate(ok.args).ok === true);
+
+  const upd = c.validate({ form_id: "f1", update_question: { field_id: "q1", label: "Your budget" } });
+  ck("changing one question validates", upd.ok === true);
+  if (upd.ok) ck("and re-validates", c.validate(upd.args).ok === true);
+  ck("naming a question with nothing to change is refused",
+    c.validate({ form_id: "f1", update_question: { field_id: "q1" } }).ok === false);
+
+  // The service-side refusals the capability has to surface honestly.
+  ck("the service refuses removing the last email question",
+    /mapsTo === "email" && fields\.filter\(\(f\) => f\.mapsTo === "email"\)\.length === 1/.test(forms));
+  ck("the service refuses editing consent wording",
+    /target\.type === "sms_consent"\) return \{ ok: false, reason: "consent" \}/.test(forms));
+  ck("the service refuses emptying a form", /remaining\.length === 0/.test(forms));
+  ck("a foreign form id behaves like a missing one",
+    /form\.subAccountId !== opts\.subAccountId\) return \{ ok: false, reason: "missing" \}/.test(forms));
+  ck("the stored list is the base, never the payload",
+    /const fields: FormField\[\] = \[\.\.\.\(\(form\.fields \?\? \[\]\) as FormField\[\]\)\]/.test(forms));
+
+  ck("the unreachable-leads refusal is explained", /every lead this form collects would be unreachable/.test(caps));
+  ck("the consent refusal is explained", /stored proof of consent/.test(caps));
+}
+
+console.log("\n-- booking pages: one day, not the week --");
+{
+  const c = cap("update_booking_page")!;
+  ck("it needs admin", c.requiredRole === "subAccountAdmin");
+  ck("a missing id is refused", c.validate({}).ok === false);
+  ck("changing nothing is refused", c.validate({ booking_page_id: "b1" }).ok === false);
+
+  const props = Object.keys((c.parameters as { properties: Record<string, unknown> }).properties);
+  ck("the web address is not editable", !props.includes("slug") && !props.includes("url"));
+  ck("payment is not editable", !props.some((k) => k.includes("pay") || k.includes("price")));
+  ck("hosts are not editable", !props.includes("hosts"));
+
+  ck("a partial day window is refused",
+    c.validate({ booking_page_id: "b1", day: "saturday", start_time: "09:00" }).ok === false);
+  ck("a malformed time is refused",
+    c.validate({ booking_page_id: "b1", day: "saturday", start_time: "9am", end_time: "5pm" }).ok === false);
+  ck("an impossible hour is refused",
+    c.validate({ booking_page_id: "b1", day: "saturday", start_time: "26:00", end_time: "27:00" }).ok === false);
+  ck("an end before the start is refused",
+    c.validate({ booking_page_id: "b1", day: "saturday", start_time: "17:00", end_time: "09:00" }).ok === false);
+  ck("a negative duration is refused",
+    c.validate({ booking_page_id: "b1", duration_minutes: -30 }).ok === false);
+  ck("an invented status is refused",
+    c.validate({ booking_page_id: "b1", status: "live" }).ok === false);
+
+  const day = c.validate({ booking_page_id: "b1", day: "saturday", start_time: "09:00", end_time: "13:00" });
+  ck("one day's hours validate", day.ok === true);
+  if (day.ok) {
+    ck("and re-validate", c.validate(day.args).ok === true);
+    const wh = (day.args as { workingHour: { dayOfWeek: number; startMinute: number; endMinute: number } }).workingHour;
+    ck("saturday is day 6", wh.dayOfWeek === 6);
+    ck("09:00 is 540 minutes", wh.startMinute === 540);
+    ck("13:00 is 780 minutes", wh.endMinute === 780);
+  }
+
+  const cap0 = c.validate({ booking_page_id: "b1", max_per_day: 0 });
+  ck("a daily cap of zero means no cap, not zero bookings",
+    cap0.ok === true && (cap0.args as { maxPerDay: unknown }).maxPerDay === null);
+  // The confirm route re-validates the stored args, so "no cap" has to
+  // survive a second pass or the saved change becomes "nothing to change".
+  if (cap0.ok) ck("and no-cap survives re-validation", c.validate(cap0.args).ok === true);
+
+  // THE structural guarantee: the other days survive.
+  ck("the service replaces one day and keeps the rest",
+    /filter\(\(w\) => w\.dayOfWeek !== day\)/.test(booking));
+  ck("the merged page is validated by the editor's own validator",
+    /validateBookingPageFormData\(next\)/.test(booking));
+  // Anchored to the ref.update call, not the merge object: hosts appear in
+  // both, and a first pass at this assertion still passed with the write-time
+  // preservation deleted, which is the one that actually protects them.
+  ck("hosts survive the write, in the write itself",
+    /ref\.update\(\{[\s\S]{0,400}?hosts: current\.hosts,/.test(booking));
+  ck("territory survives the write",
+    /ref\.update\(\{[\s\S]{0,400}?territoryId:/.test(booking));
+  ck("a foreign slug resolves to a document that is not there",
+    /subAccounts\/\$\{opts\.subAccountId\}\/bookingPages\/\$\{opts\.slug\}/.test(booking));
+  ck("existing bookings are not silently re-timed", /already booked keeps their existing time/.test(caps));
 }
 
 console.log(fails === 0 ? "\nALL PASS" : `\n${fails} FAILED`);
