@@ -412,3 +412,24 @@ export async function setMembershipStatusServerSide(opts: {
     await groupRef.update({ memberCount: FieldValue.increment(1) });
   }
 }
+
+/** This workspace's community groups, with the id an edit needs. */
+export async function listGroupsServerSide(
+  subAccountId: string,
+): Promise<{ id: string; name: string; tagline: string | null; joinPolicy: string; status: string; access: string }[]> {
+  const snap = await getAdminDb()
+    .collection(`subAccounts/${subAccountId}/communityGroups`)
+    .limit(50)
+    .get();
+  return snap.docs.map((d) => {
+    const x = d.data();
+    return {
+      id: d.id,
+      name: String(x.name ?? "Untitled group"),
+      tagline: (x.tagline as string) ?? null,
+      joinPolicy: String(x.joinPolicy ?? "open"),
+      status: String(x.status ?? "draft"),
+      access: String(x.access ?? "free"),
+    };
+  });
+}

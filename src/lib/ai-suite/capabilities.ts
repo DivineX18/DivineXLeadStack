@@ -7842,6 +7842,211 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     },
   },
   {
+    name: "list_webhooks",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    readonly: true,
+    menuLabel: "Look up this workspace's webhook subscriptions",
+    description:
+      "List this sub-account's webhook subscriptions with their id, destination URL, subscribed events and status. Use it before update_webhook, and when the user asks what is connected or why an integration stopped receiving events.",
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+    validate: () => ({ ok: true, args: {} }),
+    summarize: () => "Look up this workspace's webhooks.",
+    execute: async (ctx) => {
+      const { listSubscriptions } = await import("@/lib/firestore/webhook-subscriptions");
+      const subs = await listSubscriptions(ctx.subAccountId!);
+      if (subs.length === 0) return { resultText: "No webhook subscriptions in this workspace." };
+      const lines = subs.map((w) => {
+        const events = w.events.length === 0 ? "every event" : w.events.join(", ");
+        const paused = w.status !== "active" ? `, ${w.status}${w.pausedReason ? ` (${w.pausedReason})` : ""}` : "";
+        return `- ${w.url} (id: ${w.id}, ${w.mode})${paused}\n    events: ${events}`;
+      });
+      return { resultText: `Webhooks in this workspace:\n${lines.join("\n")}` };
+    },
+  },
+  {
+    /**
+     * Patch, never replace. `events` is the one field where a partial
+     * payload is genuinely destructive: sending two event types when the
+     * subscription had six silently unsubscribes the other four, and the
+     * integration goes quiet without erroring. So the events list is only
+     * touched when it is explicitly sent, and the description says what
+     * sending it means.
+     */
+    name: "update_webhook",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Change a webhook's URL, events or status",
+    description:
+      "Change an existing webhook subscription: its destination URL, the events it receives, or whether it is active or paused. Call list_webhooks first to get the id and see what it currently receives. IMPORTANT: `events` REPLACES the whole subscribed list, so send every event type the integration should keep receiving, not just the new one. Omit `events` entirely to leave the subscription unchanged.",
+    parameters: {
+      type: "object",
+      properties: {
+        webhook_id: { type: "string", description: "The subscription to change (from list_webhooks)." },
+        url: { type: "string", description: "Optional new https destination URL." },
+        events: {
+          type: "array",
+          items: { type: "string" },
+          description: "Optional COMPLETE replacement list of event types. Include everything it should keep receiving.",
+        },
+        status: { type: "string", enum: ["active", "paused"], description: "Optional: pause or resume delivery." },
+      },
+      required: ["webhook_id"],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const webhookId = strEither(raw, "webhook_id").trim();
+      if (!webhookId) return { ok: false, error: "webhook_id is required. Call list_webhooks to get it." };
+      const url = strEither(raw, "url").trim();
+      if (url && !/^https:\/\/\S+$/i.test(url)) {
+        return { ok: false, error: "url must be an https:// address." };
+      }
+      const rawEvents = arrEither(raw, "events");
+      const events = rawEvents
+        .filter((e): e is string => typeof e === "string")
+        .map((e) => e.trim())
+        .filter(Boolean);
+      const unknown = events.filter((e) => !(WEBHOOK_EVENT_TYPES as readonly string[]).includes(e));
+      if (unknown.length > 0) {
+        return { ok: false, error: `Not real event types: ${unknown.join(", ")}. Use the documented ones only.` };
+      }
+      const status = strEither(raw, "status").trim().toLowerCase();
+      if (status && status !== "active" && status !== "paused") {
+        return { ok: false, error: "status must be active or paused." };
+      }
+      if (!url && events.length === 0 && !status) {
+        return { ok: false, error: "Nothing to change. Send at least one of url, events or status." };
+      }
+      return { ok: true, args: { webhookId, url: url || null, events: events.length > 0 ? events : null, status: status || null } };
+    },
+    summarize: (args) => {
+      const bits = [
+        args.url ? "the destination URL" : null,
+        args.events ? `the events (to exactly ${(args.events as string[]).length})` : null,
+        args.status ? `status to ${args.status as string}` : null,
+      ].filter(Boolean);
+      return `Change ${bits.join(", ")} on this webhook.`;
+    },
+    execute: async (ctx, args) => {
+      const { getSubscription, updateSubscription } = await import("@/lib/firestore/webhook-subscriptions");
+      // Webhooks are part of the public-API surface, so they share its kill
+      // switch, exactly as create_webhook does.
+      const subSnap = await getAdminDb().doc(`subAccounts/${ctx.subAccountId!}`).get();
+      if (subSnap.data()?.apiAccessEnabledByAgency !== true) {
+        throw new CapabilityUserError(
+          "API access (which includes webhooks) is disabled for this workspace. Your agency owner can enable it from the agency's sub-account Manage dialog.",
+        );
+      }
+      const existing = await getSubscription(ctx.subAccountId!, args.webhookId as string);
+      if (!existing) throw new CapabilityUserError("That webhook no longer exists.");
+
+      await updateSubscription(ctx.subAccountId!, args.webhookId as string, {
+        ...(args.url ? { url: args.url as string } : {}),
+        ...(args.events ? { events: args.events as never } : {}),
+        ...(args.status ? { status: args.status as "active" | "paused" } : {}),
+      });
+      const dropped = args.events
+        ? existing.events.filter((e) => !(args.events as string[]).includes(e))
+        : [];
+      return {
+        resultText:
+          `Updated the webhook to ${args.url ?? existing.url}.\n\n` +
+          (args.events ? `• It now receives exactly: ${(args.events as string[]).join(", ")}\n` : "") +
+          (dropped.length > 0 ? `• It will NO LONGER receive: ${dropped.join(", ")}\n` : "") +
+          (args.status ? `• Delivery is ${args.status as string}.\n` : ""),
+        ref: { kind: "webhook", id: args.webhookId as string },
+      };
+    },
+  },
+  {
+    name: "list_communities",
+    level: "sub-account",
+    requiredRole: "subAccountMember",
+    readonly: true,
+    menuLabel: "Look up this workspace's community groups",
+    description:
+      "List this sub-account's community groups with their id, name, tagline, join policy and status. Use it before update_community, and whenever the user refers to a group that already exists.",
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+    validate: () => ({ ok: true, args: {} }),
+    summarize: () => "Look up the community groups in this workspace.",
+    execute: async (ctx) => {
+      const { listGroupsServerSide } = await import("@/lib/server/community-service");
+      const groups = await listGroupsServerSide(ctx.subAccountId!);
+      if (groups.length === 0) return { resultText: "No community groups in this workspace yet." };
+      const lines = groups.map(
+        (g) =>
+          `- "${g.name}" (id: ${g.id}) - ${g.status}, ${g.access}, joining is ${g.joinPolicy}` +
+          (g.tagline ? `\n    tagline: ${g.tagline}` : ""),
+      );
+      return { resultText: `Community groups in this workspace:\n${lines.join("\n")}` };
+    },
+  },
+  {
+    name: "update_community",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Change a community group's name, tagline, description or join policy",
+    description:
+      "Change an existing community group's name, tagline, description or join policy. Call list_communities first to get the id. Pricing and access level are NOT changed here: money and who can get in are decisions the operator makes in the product.",
+    parameters: {
+      type: "object",
+      properties: {
+        community_id: { type: "string", description: "The group to change (from list_communities)." },
+        name: { type: "string", description: "Optional new name. Changing it also updates the group's public link." },
+        tagline: { type: "string", description: "Optional new one-line tagline." },
+        about: { type: "string", description: "Optional new description." },
+        join_policy: { type: "string", enum: ["open", "approval"], description: "Optional: anyone can join, or requests need approving." },
+      },
+      required: ["community_id"],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const communityId = strEither(raw, "community_id").trim();
+      if (!communityId) return { ok: false, error: "community_id is required. Call list_communities to get it." };
+      const name = strEither(raw, "name").trim();
+      const tagline = strEither(raw, "tagline").trim();
+      const about = fixLiteralNewlines(strEither(raw, "about")).trim();
+      const joinPolicy = strEither(raw, "join_policy").trim().toLowerCase();
+      if (joinPolicy && joinPolicy !== "open" && joinPolicy !== "approval") {
+        return { ok: false, error: "join_policy must be open or approval." };
+      }
+      if (!name && !tagline && !about && !joinPolicy) {
+        return { ok: false, error: "Nothing to change. Send at least one of name, tagline, about or join_policy." };
+      }
+      return {
+        ok: true,
+        args: {
+          communityId,
+          name: name || null,
+          tagline: tagline || null,
+          about: about ? stripToolSyntaxDebris(about) : null,
+          joinPolicy: joinPolicy || null,
+        },
+      };
+    },
+    summarize: (args) => `Update this community group${args.name ? ` to "${args.name as string}"` : ""}.`,
+    execute: async (ctx, args) => {
+      const { updateGroupServerSide } = await import("@/lib/server/community-service");
+      const res = await updateGroupServerSide({
+        subAccountId: ctx.subAccountId!,
+        groupId: args.communityId as string,
+        patch: {
+          ...(args.name ? { name: args.name as string } : {}),
+          ...(args.tagline ? { tagline: args.tagline as string } : {}),
+          ...(args.about ? { about: args.about as string } : {}),
+          ...(args.joinPolicy ? { joinPolicy: args.joinPolicy as "open" | "approval" } : {}),
+        },
+      });
+      if (!res) throw new CapabilityUserError("That community group no longer exists.");
+      return {
+        resultText:
+          `Updated "${res.name}".` +
+          (args.name ? "\n\n• The name changed, so its public link changed too. Any link you shared before will need updating." : ""),
+        ref: { kind: "community", id: res.id },
+      };
+    },
+  },
+  {
     /**
      * WHAT IS IN THE WORKFLOW, not just that one exists.
      *

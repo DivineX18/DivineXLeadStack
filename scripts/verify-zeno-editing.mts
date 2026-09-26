@@ -252,5 +252,51 @@ console.log("\n-- the lookups expose the ids their edits need --");
   ck("members report an id", /\(id: \$\{d\.id\}\), role:/.test(caps));
 }
 
+console.log("\n-- webhooks: the events list is the destructive field --");
+{
+  const c = cap("update_webhook")!;
+  ck("it needs admin and is confirm-gated", c.readonly !== true && c.requiredRole === "subAccountAdmin");
+  ck("a missing id is refused", c.validate({}).ok === false);
+  ck("changing nothing is refused", c.validate({ webhook_id: "w1" }).ok === false);
+  ck("a non-https URL is refused", c.validate({ webhook_id: "w1", url: "http://x.test" }).ok === false);
+  // An invented event type would silently never fire.
+  ck("an event type that does not exist is refused",
+    c.validate({ webhook_id: "w1", events: ["contact.exploded"] }).ok === false);
+  const ok = c.validate({ webhook_id: "w1", events: ["contact.created", "deal.won"] });
+  ck("real event types validate", ok.ok === true);
+  if (ok.ok) ck("and re-validate", c.validate(ok.args).ok === true);
+  ck("omitting events leaves them alone", (() => {
+    const r = c.validate({ webhook_id: "w1", status: "paused" });
+    return r.ok === true && r.args.events === null;
+  })());
+  // Sending a short list silently unsubscribes the rest, so it has to say so.
+  ck("the description warns that events REPLACES the list", /REPLACES the whole subscribed list/.test(c.description));
+  ck("the result names what will stop arriving", /NO LONGER receive/.test(caps));
+  ck("it reuses the existing update service, not new mutation logic",
+    /updateSubscription\(ctx\.subAccountId!/.test(caps));
+  ck("it keeps the API kill switch create_webhook has",
+    /apiAccessEnabledByAgency !== true[\s\S]{0,400}That webhook no longer exists/.test(caps));
+}
+
+console.log("\n-- communities --");
+{
+  const c = cap("update_community")!;
+  ck("it needs admin", c.requiredRole === "subAccountAdmin");
+  ck("a missing id is refused", c.validate({}).ok === false);
+  ck("changing nothing is refused", c.validate({ community_id: "g1" }).ok === false);
+  ck("an invented join policy is refused",
+    c.validate({ community_id: "g1", join_policy: "whenever" }).ok === false);
+  const ok = c.validate({ community_id: "g1", tagline: "For founders" });
+  ck("a real change validates", ok.ok === true);
+  if (ok.ok) ck("and re-validates", c.validate(ok.args).ok === true);
+  ck("it reuses the existing group patch service", /updateGroupServerSide\(\{/.test(caps));
+  // Money and access are operator decisions, not model ones.
+  const props = Object.keys((c.parameters as { properties: Record<string, unknown> }).properties);
+  for (const forbidden of ["price_cents", "access", "currency", "status"]) {
+    ck(`${forbidden} is not editable by the model`, !props.includes(forbidden));
+  }
+  ck("renaming warns that the public link changes", /public link changed/.test(caps));
+}
+
 console.log(fails === 0 ? "\nALL PASS" : `\n${fails} FAILED`);
 process.exit(fails ? 1 : 0);
