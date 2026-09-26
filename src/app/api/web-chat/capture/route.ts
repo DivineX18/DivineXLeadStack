@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { getChannelConfig } from "@/lib/comms/ai/agent";
-import { checkAndCount } from "@/lib/comms/web-chat/rate-limit";
+import { guardWebChatRequest } from "@/lib/comms/web-chat/guard";
 import {
   appendMessage,
   isValidSessionId,
@@ -11,7 +11,6 @@ import {
 import { reconcileContactFromCapture } from "@/lib/comms/web-chat/capture";
 import { createFollowUpActions } from "@/lib/comms/web-chat/follow-up";
 import { emitWebhookEvent } from "@/lib/api/webhooks/dispatch";
-import { ipFromRequest } from "@/lib/contacts/location";
 import type { SubAccountDoc } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -28,8 +27,9 @@ export const dynamic = "force-dynamic";
  *   - Skip: stamp captureSkipped=true on the session so the bot stops
  *     asking. No Contact created.
  *
- * Like /message: no origin gate (iframe is on LeadStack's domain), so
- * gated by channel-enabled + rate limits + sessionId validity.
+ * Like /message: gated by the signed embed token, Origin sanity and the
+ * persistent limits (see guard.ts). Closed entirely when the channel has
+ * lead capture turned off.
  */
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -63,6 +63,7 @@ export async function POST(request: Request) {
     email?: string;
     phone?: string;
     pageUrl?: string;
+    token?: string;
   };
   try {
     body = (await request.json()) as typeof body;
@@ -92,20 +93,23 @@ export async function POST(request: Request) {
       { status: 403, headers },
     );
   }
-
-  // Rate-limit shares the same buckets as /message — a malicious actor
-  // can't pivot from one endpoint to the other to bypass caps.
-  const ip = ipFromRequest(request) ?? "unknown";
-  const rl = checkAndCount(ip, sessionId);
-  if (!rl.ok) {
+  if (config.webChat?.leadCapture === false) {
     return NextResponse.json(
-      { error: "Too many requests" },
-      {
-        status: 429,
-        headers: { ...headers, "Retry-After": String(rl.retryAfterSec) },
-      },
+      { error: "Contact capture is not available in this chat." },
+      { status: 403, headers },
     );
   }
+
+  // Shares the same limits as /message — no pivoting between endpoints.
+  const blocked = await guardWebChatRequest({
+    request,
+    subAccountId,
+    sessionId,
+    token: body.token,
+    config,
+    headers,
+  });
+  if (blocked) return blocked;
 
   const db = getAdminDb();
   const sessionRef = db.doc(
@@ -331,13 +335,9 @@ export async function POST(request: Request) {
   });
 
   return NextResponse.json(
-    {
-      ok: true,
-      reply,
-      contactId,
-      taskId: followUp.taskId,
-      emailSent: followUp.emailSent,
-    },
+    // Deliberately NOT echoing contactId / taskId: the caller is an anonymous
+    // visitor and an id for an existing CRM record is not theirs to see.
+    { ok: true, reply },
     { status: 200, headers },
   );
 }

@@ -112,9 +112,12 @@
       // logging — not for auth (parent origin is gated at /config).
       var parentUrl = "";
       try { parentUrl = window.location.href; } catch (e) {}
-      var qs = parentUrl ? "?p=" + encodeURIComponent(parentUrl) : "";
-      iframe.src = BASE + "/embed/chat/" + encodeURIComponent(saId) + qs;
-      iframe.title = "Chat with us";
+      var qs = parentUrl ? "?p=" + encodeURIComponent(parentUrl) : "?";
+      // Signed token from /config (only issued to allow-listed sites); the chat
+      // API refuses requests without it.
+      if (config.token) qs += (qs === "?" ? "" : "&") + "t=" + encodeURIComponent(config.token);
+      iframe.src = BASE + "/embed/chat/" + encodeURIComponent(saId) + (qs === "?" ? "" : qs);
+      iframe.title = config.title || "Chat with us";
       iframe.allow = "clipboard-write";
       iframe.style.cssText =
         "position:fixed;" +
@@ -144,6 +147,9 @@
       });
     }
     isOpen = true;
+    try {
+      window.dispatchEvent(new CustomEvent("leadstack-webchat", { detail: { type: "event", name: "open" } }));
+    } catch (e) {}
     bubble.setAttribute("aria-label", "Close chat");
     bubble.innerHTML = "&#10005;"; // ×
   }
@@ -168,6 +174,13 @@
       var data = event.data;
       if (!data || data.source !== "leadstack-webchat") return;
       if (data.type === "close") collapseIframe();
+      // Lets the host page forward chat events to its own analytics:
+      //   window.addEventListener("leadstack-webchat", function (e) { ... e.detail })
+      if (data.type === "event") {
+        try {
+          window.dispatchEvent(new CustomEvent("leadstack-webchat", { detail: data }));
+        } catch (e) {}
+      }
     });
   }
 })();

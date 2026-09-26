@@ -210,6 +210,39 @@ export interface WebChatChannelConfig {
   accentColor: string;
   /** Where the floating bubble sits on the host page. */
   position: "right" | "left";
+
+  // ---- Public-site hardening fields (all optional; absent = legacy behaviour) ----
+
+  /** Chat panel header. Absent = "Chat with us". */
+  title?: string;
+  /** Small line under the header title. Absent = "We typically reply instantly". */
+  subtitle?: string;
+  /** Reply at all hours, ignoring the shared profile's business hours. */
+  alwaysOn?: boolean;
+  /** Replaces the shared profile persona for THIS channel only, so editing the
+   *  website bot never changes SMS / WhatsApp / voice. */
+  systemPromptOverride?: string;
+  /** https URL (on one of allowedDomains) of a plain-text knowledge file the bot
+   *  treats as its factual reference. Fetched server-side and cached. Replaces the
+   *  profile's homepage snapshot for this channel. */
+  knowledgeUrl?: string;
+  /** Whitelisted links the bot may offer via [[cta id="..."]]. The model only ever
+   *  names an id; the URL always comes from this list. */
+  ctas?: WebChatCta[];
+  /** When false the bot never asks for or stores contact details and the capture
+   *  endpoint is closed. Absent = true (legacy). */
+  leadCapture?: boolean;
+  /** Hard ceilings per UTC day. Absent = safe defaults (see usage-limits.ts). */
+  dailyTokenBudget?: number;
+  dailyMessageBudget?: number;
+}
+
+/** A link the public chat is allowed to offer. */
+export interface WebChatCta {
+  id: string;
+  label: string;
+  /** Absolute https URL, or a site-relative path resolved against the embedding origin. */
+  url: string;
 }
 
 /** WhatsApp-channel-only settings. Lives at

@@ -30,6 +30,11 @@ interface ChatWindowProps {
   subAccountId: string;
   welcomeMessage: string;
   accentColor: string;
+  /** Header title / subtitle (configurable per channel). */
+  title?: string;
+  subtitle?: string;
+  /** Signed token from the embed page (server-derived); sent with every API call. */
+  embedToken?: string | null;
   /** Tells the parent loader to remove/hide the iframe on close. */
   embedded: boolean;
 }
@@ -45,6 +50,8 @@ type LocalMessage = {
   /** When present on an assistant message, render an inline capture form
    *  below the bubble with these fields. Cleared once submitted/skipped. */
   formFields?: CaptureFieldId[];
+  /** Whitelisted links offered with this reply (server resolves them). */
+  ctas?: { label: string; url: string }[];
 };
 
 function sessionStorageKey(saId: string): string {
@@ -73,6 +80,24 @@ function ensureSessionId(saId: string): string {
   return existing;
 }
 
+/** Only http(s) links from the server are rendered as buttons. */
+function safeCtas(input: unknown): { label: string; url: string }[] | undefined {
+  if (!Array.isArray(input)) return undefined;
+  const out: { label: string; url: string }[] = [];
+  for (const c of input.slice(0, 2)) {
+    if (!c || typeof c !== "object") continue;
+    const { label, url } = c as { label?: unknown; url?: unknown };
+    if (typeof label !== "string" || typeof url !== "string") continue;
+    try {
+      const u = new URL(url);
+      if (u.protocol === "https:" || u.protocol === "http:") out.push({ label: label.slice(0, 60), url: u.toString() });
+    } catch {
+      /* skip */
+    }
+  }
+  return out.length ? out : undefined;
+}
+
 function postToParent(message: Record<string, unknown>): void {
   if (typeof window === "undefined") return;
   if (window.parent === window) return;
@@ -81,6 +106,8 @@ function postToParent(message: Record<string, unknown>): void {
 
 export function ChatWindow(props: ChatWindowProps) {
   const { subAccountId, welcomeMessage, accentColor, embedded } = props;
+  const title = props.title || "Chat with us";
+  const subtitle = props.subtitle ?? "We typically reply instantly";
 
   const [sessionId, setSessionId] = useState<string>("");
   const [messages, setMessages] = useState<LocalMessage[]>([]);
@@ -88,6 +115,9 @@ export function ChatWindow(props: ChatWindowProps) {
   const [sending, setSending] = useState(false);
   const [errored, setErrored] = useState(false);
   const [parentPageUrl, setParentPageUrl] = useState<string | null>(null);
+  // Signed embed token, minted server-side for allow-listed embeds only;
+  // required by /message and /capture.
+  const embedToken = props.embedToken ?? null;
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   // Boot: read or create the session id, capture the parent-page URL
@@ -135,6 +165,7 @@ export function ChatWindow(props: ChatWindowProps) {
           body: JSON.stringify({
             sa: subAccountId,
             sessionId,
+            token: embedToken,
             message: trimmed,
             // Parent page URL (where the snippet is installed). Falls
             // back to document.referrer when the loader didn't pass ?p=.
@@ -151,10 +182,12 @@ export function ChatWindow(props: ChatWindowProps) {
           reply?: string;
           error?: string;
           formFields?: CaptureFieldId[] | null;
+          ctas?: { label: string; url: string }[];
         };
         if (!res.ok || !data.reply) {
           throw new Error(data.error ?? "no reply");
         }
+        postToParent({ type: "event", name: "message_received" });
         const replyText = data.reply;
         const formFields = data.formFields ?? null;
         setMessages((prev) => [
@@ -164,16 +197,22 @@ export function ChatWindow(props: ChatWindowProps) {
             role: "assistant",
             text: replyText,
             formFields: formFields && formFields.length > 0 ? formFields : undefined,
+            ctas: safeCtas(data.ctas),
           },
         ]);
-      } catch {
+      } catch (err) {
         setErrored(true);
+        const known =
+          err instanceof Error && /expired|refresh|unavailable|limit|Too many/i.test(err.message)
+            ? err.message
+            : null;
         setMessages((prev) => [
           ...prev,
           {
             id: `e-${Date.now()}`,
             role: "assistant",
             text:
+              known ??
               "I had trouble reaching the server. Try again in a moment, or refresh the page.",
           },
         ]);
@@ -181,7 +220,7 @@ export function ChatWindow(props: ChatWindowProps) {
         setSending(false);
       }
     },
-    [subAccountId, sessionId, sending, parentPageUrl],
+    [subAccountId, sessionId, sending, parentPageUrl, embedToken],
   );
 
   function handleSubmit(e: FormEvent) {
@@ -211,6 +250,7 @@ export function ChatWindow(props: ChatWindowProps) {
           body: JSON.stringify({
             sa: subAccountId,
             sessionId,
+            token: embedToken,
             pageUrl:
               parentPageUrl ||
               (typeof window !== "undefined" ? window.location.href : null),
@@ -245,7 +285,7 @@ export function ChatWindow(props: ChatWindowProps) {
         ]);
       }
     },
-    [subAccountId, sessionId, parentPageUrl],
+    [subAccountId, sessionId, parentPageUrl, embedToken],
   );
 
   function handleClose() {
@@ -346,10 +386,10 @@ export function ChatWindow(props: ChatWindowProps) {
             💬
           </span>
           <div>
-            <div style={{ fontWeight: 600, fontSize: 15 }}>Chat with us</div>
-            <div style={{ fontSize: 11, opacity: 0.85 }}>
-              We typically reply instantly
-            </div>
+            <div style={{ fontWeight: 600, fontSize: 15 }}>{title}</div>
+            {subtitle ? (
+              <div style={{ fontSize: 11, opacity: 0.85 }}>{subtitle}</div>
+            ) : null}
           </div>
         </div>
         {embedded && (
@@ -390,6 +430,30 @@ export function ChatWindow(props: ChatWindowProps) {
             <div className={`lswc-row lswc-row-${m.role}`}>
               <div className={`lswc-bubble lswc-bubble-${m.role}`}>{m.text}</div>
             </div>
+            {m.role === "assistant" && m.ctas && m.ctas.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                {m.ctas.map((c) => (
+                  <a
+                    key={c.url}
+                    href={c.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => postToParent({ type: "event", name: "cta_click", label: c.label, url: c.url })}
+                    style={{
+                      background: accentColor,
+                      color: "white",
+                      textDecoration: "none",
+                      borderRadius: 999,
+                      padding: "8px 14px",
+                      fontSize: 13,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {c.label}
+                  </a>
+                ))}
+              </div>
+            )}
             {m.role === "assistant" && m.formFields && (
               <InlineCaptureForm
                 fields={m.formFields}

@@ -1,3 +1,4 @@
+import { sanitiseCtas } from "@/lib/comms/web-chat/cta";
 import { NextResponse } from "next/server";
 import { requireSubAccountAdmin } from "@/lib/auth/require-tenancy";
 import { getAdminDb } from "@/lib/firebase/admin";
@@ -203,6 +204,31 @@ function sanitiseWebChatBlock(raw: unknown): Partial<WebChatChannelConfig> {
     (r.position === "right" || r.position === "left")
   ) {
     out.position = r.position;
+  }
+  if ("title" in r && typeof r.title === "string") out.title = r.title.trim().slice(0, 40);
+  if ("subtitle" in r && typeof r.subtitle === "string") out.subtitle = r.subtitle.trim().slice(0, 80);
+  if ("alwaysOn" in r && typeof r.alwaysOn === "boolean") out.alwaysOn = r.alwaysOn;
+  if ("leadCapture" in r && typeof r.leadCapture === "boolean") out.leadCapture = r.leadCapture;
+  if ("systemPromptOverride" in r && typeof r.systemPromptOverride === "string") {
+    out.systemPromptOverride = r.systemPromptOverride.slice(0, 8000);
+  }
+  if ("knowledgeUrl" in r && typeof r.knowledgeUrl === "string") {
+    const v = r.knowledgeUrl.trim();
+    if (v === "") out.knowledgeUrl = "";
+    else {
+      try {
+        const u = new URL(v);
+        if (u.protocol === "https:" && !u.username && !u.password) out.knowledgeUrl = u.toString().slice(0, 300);
+      } catch {
+        /* ignore an unparseable URL */
+      }
+    }
+  }
+  if ("ctas" in r) out.ctas = sanitiseCtas(r.ctas);
+  for (const key of ["dailyTokenBudget", "dailyMessageBudget"] as const) {
+    if (key in r && typeof r[key] === "number" && Number.isFinite(r[key])) {
+      out[key] = Math.max(0, Math.min(50_000_000, Math.floor(r[key] as number)));
+    }
   }
 
   return out;

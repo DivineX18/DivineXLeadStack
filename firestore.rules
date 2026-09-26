@@ -405,6 +405,13 @@ service cloud.firestore {
         }
       }
 
+      // Public web-chat rate-limit + daily budget counters. Written and read
+      // only by the /api/web-chat/* routes through the Admin SDK. No client
+      // access at all (they hold hashed IPs and usage numbers).
+      match /webChatLimits/{limitId} {
+        allow read, write: if false;
+      }
+
       // Voice agent end-of-call summary docs. Created by the Vapi
       // /api/webhooks/vapi/* routes via the Admin SDK (Bearer-token
       // gated). Sub-account members can READ so a future operator

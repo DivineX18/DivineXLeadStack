@@ -50,6 +50,16 @@ export function WebChatChannelSection() {
   const [accentColor, setAccentColor] = useState("#7c3aed");
   const [position, setPosition] = useState<"right" | "left">("right");
   const [allowedDomainsText, setAllowedDomainsText] = useState("");
+  // Public-site options (all optional; blank/false = legacy behaviour).
+  const [title, setTitle] = useState("");
+  const [subtitle, setSubtitle] = useState("");
+  const [alwaysOn, setAlwaysOn] = useState(false);
+  const [leadCapture, setLeadCapture] = useState(true);
+  const [knowledgeUrl, setKnowledgeUrl] = useState("");
+  const [promptOverride, setPromptOverride] = useState("");
+  const [ctasText, setCtasText] = useState("");
+  const [dailyTokens, setDailyTokens] = useState("");
+  const [dailyMessages, setDailyMessages] = useState("");
 
   const [contextCount, setContextCount] = useState(10);
   const [modelOverride, setModelOverride] = useState("");
@@ -98,6 +108,15 @@ export function WebChatChannelSection() {
           setAccentColor(wc.accentColor);
           setPosition(wc.position);
           setAllowedDomainsText(wc.allowedDomains.join("\n"));
+          setTitle(wc.title ?? "");
+          setSubtitle(wc.subtitle ?? "");
+          setAlwaysOn(!!wc.alwaysOn);
+          setLeadCapture(wc.leadCapture !== false);
+          setKnowledgeUrl(wc.knowledgeUrl ?? "");
+          setPromptOverride(wc.systemPromptOverride ?? "");
+          setCtasText((wc.ctas ?? []).map((c) => `${c.id} | ${c.label} | ${c.url}`).join("\n"));
+          setDailyTokens(wc.dailyTokenBudget ? String(wc.dailyTokenBudget) : "");
+          setDailyMessages(wc.dailyMessageBudget ? String(wc.dailyMessageBudget) : "");
         }
       }
     } catch (err) {
@@ -163,6 +182,19 @@ export function WebChatChannelSection() {
           accentColor,
           position,
           allowedDomains,
+          title,
+          subtitle,
+          alwaysOn,
+          leadCapture,
+          knowledgeUrl: knowledgeUrl.trim(),
+          systemPromptOverride: promptOverride,
+          ctas: ctasText
+            .split("\n")
+            .map((line) => line.split("|").map((x) => x.trim()))
+            .filter((parts) => parts.length >= 3)
+            .map(([id, label, ...rest]) => ({ id, label, url: rest.join("|") })),
+          dailyTokenBudget: Number(dailyTokens) > 0 ? Number(dailyTokens) : 0,
+          dailyMessageBudget: Number(dailyMessages) > 0 ? Number(dailyMessages) : 0,
         },
       };
 
@@ -339,6 +371,63 @@ export function WebChatChannelSection() {
               the widget. Leave empty during testing to allow{" "}
               <code>localhost</code> + {CUSTOM_BRAND.primaryDomain}.
             </p>
+          </div>
+
+          <div className="space-y-4 rounded-lg border p-4">
+            <div>
+              <p className="text-sm font-medium">Public website options</p>
+              <p className="mt-1 text-[12px] text-muted-foreground">
+                For a chat on your own public site. Leave blank to keep the
+                standard behaviour. This chat never has access to CRM
+                contacts, notes or deals.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="wc-title">Header title</Label>
+                <Input id="wc-title" value={title} maxLength={40} onChange={(e) => setTitle(e.target.value)} placeholder="Chat with us" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="wc-subtitle">Header subtitle</Label>
+                <Input id="wc-subtitle" value={subtitle} maxLength={80} onChange={(e) => setSubtitle(e.target.value)} placeholder="We typically reply instantly" />
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Checkbox id="wc-always" checked={alwaysOn} onCheckedChange={(v) => setAlwaysOn(!!v)} />
+              <Label htmlFor="wc-always" className="text-sm">Reply 24/7 (ignore business hours)</Label>
+            </div>
+            <div className="flex items-start gap-3">
+              <Checkbox id="wc-capture" checked={leadCapture} onCheckedChange={(v) => setLeadCapture(!!v)} />
+              <Label htmlFor="wc-capture" className="text-sm">Ask visitors for contact details (lead capture)</Label>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="wc-knowledge">Knowledge file URL</Label>
+              <Input id="wc-knowledge" value={knowledgeUrl} onChange={(e) => setKnowledgeUrl(e.target.value)} placeholder="https://your-site.com/zeno-knowledge.txt" className="font-mono text-xs" />
+              <p className="text-[11px] text-muted-foreground">
+                https URL on one of the allowed domains. The chat answers only from this file.
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="wc-prompt">Chat-only instructions (optional)</Label>
+              <Textarea id="wc-prompt" value={promptOverride} onChange={(e) => setPromptOverride(e.target.value)} rows={6} maxLength={8000} placeholder="Replaces the shared persona for this chat only, so SMS, WhatsApp and voice are unaffected." className="text-xs" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="wc-ctas">Links the chat may offer</Label>
+              <Textarea id="wc-ctas" value={ctasText} onChange={(e) => setCtasText(e.target.value)} rows={5} placeholder={"growth-assessment | Get your free Growth Assessment | https://divinex.io/ascend/"} className="font-mono text-xs" />
+              <p className="text-[11px] text-muted-foreground">
+                One per line: <code>id | button label | https://url</code>. The chat can only offer links from this list.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="wc-tok">Daily token budget</Label>
+                <Input id="wc-tok" type="number" min={0} value={dailyTokens} onChange={(e) => setDailyTokens(e.target.value)} placeholder="300000 (default)" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="wc-msg">Daily message budget</Label>
+                <Input id="wc-msg" type="number" min={0} value={dailyMessages} onChange={(e) => setDailyMessages(e.target.value)} placeholder="600 (default)" />
+              </div>
+            </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

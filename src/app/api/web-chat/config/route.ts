@@ -1,3 +1,4 @@
+import { mintEmbedToken } from "@/lib/comms/web-chat/embed-token";
 import { NextResponse } from "next/server";
 import { getChannelConfig } from "@/lib/comms/ai/agent";
 import { checkOriginAllowed } from "@/lib/comms/web-chat/origin";
@@ -63,6 +64,14 @@ export async function GET(request: Request) {
     );
   }
 
+  // The signed token is what /message and /capture require. Minted only here,
+  // where the Origin header honestly names the embedding site.
+  const token = mintEmbedToken(subAccountId, originCheck.hostname ?? "unknown");
+  if (!token) {
+    console.error("[web-chat/config] AUTOMATIONS_TOKEN_SECRET missing/short: chat disabled (fail closed)");
+    return NextResponse.json({ enabled: false, reason: "unavailable" }, { status: 200, headers });
+  }
+
   // Backward-safe: if any of the web-chat fields are missing on the doc
   // (older docs created before defaults shipped), fall back to defaults.
   return NextResponse.json(
@@ -73,6 +82,9 @@ export async function GET(request: Request) {
       accentColor:
         config.webChat.accentColor || DEFAULT_WEB_CHAT_CONFIG.accentColor,
       position: config.webChat.position || DEFAULT_WEB_CHAT_CONFIG.position,
+      title: config.webChat.title || "Chat with us",
+      subtitle: config.webChat.subtitle ?? "We typically reply instantly",
+      token,
     },
     { status: 200, headers },
   );

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { getChannelConfig } from "@/lib/comms/ai/agent";
-import { checkAndCount } from "@/lib/comms/web-chat/rate-limit";
+import { guardWebChatRequest } from "@/lib/comms/web-chat/guard";
+import { trustedClientIp } from "@/lib/comms/web-chat/client-ip";
 import { isValidSessionId } from "@/lib/comms/web-chat/session";
 import { respondToWebChat } from "@/lib/comms/web-chat/respond";
-import { ipFromRequest } from "@/lib/contacts/location";
 import type { SubAccountDoc } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -12,17 +12,11 @@ export const dynamic = "force-dynamic";
 /**
  * Public POST endpoint the widget hits on every visitor message.
  *
- * NB: this endpoint deliberately does NOT origin-check against the
- * channel's allowedDomains. The iframe that calls this lives on
- * LeadStack's own domain — so the Origin header always equals our own
- * host, not the client's site. The domain allowlist is enforced at
- * /api/web-chat/config instead: widget.js calls /config from the
- * parent-page context (where the Origin header DOES reflect the client
- * site), so a competitor can't load the widget on an unauthorized
- * domain. /message is gated by saId existing, the channel being
- * enabled, per-IP + per-session rate limits, and per-channel token
- * budgets. A motivated attacker who knows a saId could call /message
- * directly, but rate limits + token caps make abuse uneconomical.
+ * Access control (all enforced before any model call): a signed embed token
+ * minted by /config only for allow-listed origins, an Origin sanity check, and
+ * persistent per-IP / per-session / daily message + token ceilings. See
+ * guard.ts, embed-token.ts and usage-limits.ts. Knowing the (public)
+ * sub-account id is not enough to reach the bot.
  *
  * Failures return CORS headers so the widget doesn't choke on a console
  * CORS error — the visitor sees a generic fallback instead.
@@ -57,6 +51,7 @@ export async function POST(request: Request) {
     message?: string;
     pageUrl?: string;
     referrer?: string;
+    token?: string;
   };
   try {
     body = (await request.json()) as typeof body;
@@ -90,8 +85,6 @@ export async function POST(request: Request) {
     );
   }
 
-  // Channel-enabled check. Origin allowlist is enforced at /config
-  // (see file-level comment) — not here.
   const config = await getChannelConfig(subAccountId, "web-chat");
   if (!config || !config.enabled || !config.webChat) {
     return NextResponse.json(
@@ -100,23 +93,17 @@ export async function POST(request: Request) {
     );
   }
 
-  // Rate limit (after auth — don't waste IP budget on rejected requests).
-  const ip = ipFromRequest(request) ?? "unknown";
-  const rl = checkAndCount(ip, sessionId);
-  if (!rl.ok) {
-    return NextResponse.json(
-      {
-        error:
-          rl.reason === "session-quota"
-            ? "Session message limit reached"
-            : "Too many requests. Try again in a bit",
-      },
-      {
-        status: 429,
-        headers: { ...headers, "Retry-After": String(rl.retryAfterSec) },
-      },
-    );
-  }
+  const blocked = await guardWebChatRequest({
+    request,
+    subAccountId,
+    sessionId,
+    token: body.token,
+    config,
+    headers,
+  });
+  if (blocked) return blocked;
+
+  const ip = trustedClientIp(request.headers);
 
   // Need agencyId for tenancy stamps on the session/messages.
   const saSnap = await getAdminDb().doc(`subAccounts/${subAccountId}`).get();
@@ -150,11 +137,14 @@ export async function POST(request: Request) {
     const formFields =
       outcome.kind === "replied" ? outcome.formFields : null;
 
+    const ctas = outcome.kind === "replied" ? outcome.ctas : [];
+
     return NextResponse.json(
       {
         reply: visibleReply,
         kind: outcome.kind,
         formFields,
+        ctas,
       },
       { status: 200, headers },
     );
