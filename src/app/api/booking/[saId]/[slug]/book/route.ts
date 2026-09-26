@@ -1,3 +1,10 @@
+import { trustedClientIp } from "@/lib/comms/web-chat/client-ip";
+import {
+  consumeLimits,
+  createFirestoreLimitStore,
+  hashForKey,
+  hourAndDayBuckets,
+} from "@/lib/comms/web-chat/usage-limits";
 import "server-only";
 
 import { NextResponse } from "next/server";
@@ -71,12 +78,19 @@ import type { SubAccountDoc } from "@/types/tenancy";
  *    v1 caveat as the quote triggers).
  */
 
-// ── Soft rate limits (per IP + per sub-account, in-memory LRU) ──
-const IP_HOURLY_CAP = 10;
-const SUB_HOURLY_CAP = 100;
+// ── Abuse limits ──
+// Layer 1 (cheap, in-memory): a flood guard per TRUSTED client IP, applied before any
+// Firestore work. Layer 2 (persistent, all-or-nothing, applied only AFTER the request has
+// passed validation and the page is confirmed published): per client, per recipient email
+// and tenant-wide. Junk that fails validation can no longer consume the tenant-wide
+// counter, an attacker cannot mail-bomb one address, and the client IP comes from
+// Cloudflare's header instead of a forgeable X-Forwarded-For.
+const IP_FLOOD_HOURLY_CAP = 30;
+const IP_BOOKINGS_PER_HOUR = 10;
+const EMAIL_BOOKINGS_PER_DAY = 3;
+const TENANT_BOOKINGS_PER_HOUR = 100;
 const WINDOW_MS = 60 * 60_000;
 const ipHits = new Map<string, number[]>();
-const subHits = new Map<string, number[]>();
 
 function pushAndCheck(
   bucket: Map<string, number[]>,
@@ -99,12 +113,6 @@ function pushAndCheck(
   return false;
 }
 
-function getClientIp(request: Request): string {
-  const fwd = request.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0].trim();
-  return request.headers.get("x-real-ip") ?? "unknown";
-}
-
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface SubmittedSlot {
@@ -125,16 +133,10 @@ export async function POST(
   ctx: { params: Promise<{ saId: string; slug: string }> },
 ) {
   const { saId, slug } = await ctx.params;
-  const ip = getClientIp(request);
-  if (pushAndCheck(ipHits, ip, IP_HOURLY_CAP)) {
+  const ip = trustedClientIp(request.headers);
+  if (pushAndCheck(ipHits, ip, IP_FLOOD_HOURLY_CAP)) {
     return NextResponse.json(
       { error: "Too many booking attempts. Try again later." },
-      { status: 429 },
-    );
-  }
-  if (pushAndCheck(subHits, saId, SUB_HOURLY_CAP)) {
-    return NextResponse.json(
-      { error: "Booking page is busy. Try again later." },
       { status: 429 },
     );
   }
@@ -225,6 +227,40 @@ export async function POST(
       }
     }
     if (value) extras[f.id] = value;
+  }
+
+  // Persistent, all-or-nothing caps. Reached only by a syntactically valid request for a
+  // published page, so refused/junk requests never spend the tenant-wide allowance.
+  {
+    const t = hourAndDayBuckets();
+    try {
+      const limited = await consumeLimits(
+        createFirestoreLimitStore(saId, "publicLimits"),
+        [
+          { key: `book_ip_${hashForKey(ip)}_${t.hour}`, limit: IP_BOOKINGS_PER_HOUR, retryAfterSec: t.secondsToNextHour },
+          { key: `book_email_${hashForKey(email)}_${t.day}`, limit: EMAIL_BOOKINGS_PER_DAY, retryAfterSec: t.secondsToNextDay },
+          { key: `book_tenant_${t.hour}`, limit: TENANT_BOOKINGS_PER_HOUR, retryAfterSec: t.secondsToNextHour },
+        ],
+      );
+      if (!limited.ok) {
+        const perEmail = limited.key.startsWith("book_email_");
+        return NextResponse.json(
+          {
+            error: perEmail
+              ? "This email address has reached today's booking limit. Try again tomorrow."
+              : "Too many booking attempts. Try again later.",
+          },
+          { status: 429, headers: { "Retry-After": String(limited.retryAfterSec) } },
+        );
+      }
+    } catch (err) {
+      // Fail closed: if the limits can't be checked, don't create contacts or send email.
+      console.error(`[booking/book] limit check failed sa=${saId}:`, err);
+      return NextResponse.json(
+        { error: "Booking is temporarily unavailable. Please try again shortly." },
+        { status: 503 },
+      );
+    }
   }
 
   const subSnap = await db.doc(`subAccounts/${saId}`).get();

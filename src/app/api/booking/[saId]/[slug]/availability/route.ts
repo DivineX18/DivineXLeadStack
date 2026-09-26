@@ -1,3 +1,5 @@
+import { trustedClientIp } from "@/lib/comms/web-chat/client-ip";
+import { clampAvailabilityWindow } from "@/lib/booking/window";
 import "server-only";
 
 import { NextResponse } from "next/server";
@@ -50,21 +52,13 @@ function isRateLimited(ip: string): boolean {
   return false;
 }
 
-function getClientIp(request: Request): string {
-  // x-forwarded-for is the standard proxy header. Fall back to a
-  // sentinel so unconfigured envs still rate-limit (per-instance).
-  const fwd = request.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0].trim();
-  return request.headers.get("x-real-ip") ?? "unknown";
-}
-
 export async function GET(
   request: Request,
   ctx: { params: Promise<{ saId: string; slug: string }> },
 ) {
   const { saId, slug } = await ctx.params;
 
-  if (isRateLimited(getClientIp(request))) {
+  if (isRateLimited(trustedClientIp(request.headers))) {
     return NextResponse.json(
       { error: "Too many requests. Try again in a minute." },
       { status: 429 },
@@ -114,15 +108,20 @@ export async function GET(
   // index from Slice 1. We pull a generous window (the page's
   // visibleDays + a small buffer) so the conflict check sees events
   // that started before `fromInstant` and bleed in.
-  const horizonEnd =
-    toInstant ?? new Date(now.getTime() + page.visibleDays * 24 * 60 * 60_000);
+  // Bound the range: unclamped `from`/`to` let one anonymous call read a tenant's whole
+  // event history and force an unbounded availability computation (lib/booking/window.ts).
+  const window = clampAvailabilityWindow({
+    now,
+    from: fromInstant,
+    to: toInstant,
+    visibleDays: page.visibleDays,
+  });
+  const horizonEnd = window.to;
   // Look back by the longest possible single event (cap at 8 hours —
   // longer than any normal booking) so we catch events that started
   // before `now` but haven't ended yet.
   const lookbackMs = 8 * 60 * 60_000;
-  const queryFrom = new Date(
-    (fromInstant ?? now).getTime() - lookbackMs,
-  );
+  const queryFrom = new Date(window.from.getTime() - lookbackMs);
 
   // Busy events tagged with their assigned host — the host tag is only used
   // in team mode; single mode ignores it.
@@ -179,16 +178,16 @@ export async function GET(
       ? computeUnionAvailability({
           page,
           now,
-          fromInstant,
-          toInstant,
+          fromInstant: window.from,
+          toInstant: window.to,
           busy,
           hostUids: hosts.map((h) => h.uid),
         })
       : computeAvailability({
           page,
           now,
-          fromInstant,
-          toInstant,
+          fromInstant: window.from,
+          toInstant: window.to,
           // Single mode treats every occupying event as a shared conflict.
           busy: busy.map((b) => ({ startAt: b.startAt, endAt: b.endAt })),
         });

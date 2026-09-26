@@ -115,8 +115,11 @@ export function buckets(nowMs: number) {
   };
 }
 
-export function createFirestoreLimitStore(subAccountId: string): LimitStore {
-  const col = () => getAdminDb().collection(`subAccounts/${subAccountId}/webChatLimits`);
+export function createFirestoreLimitStore(
+  subAccountId: string,
+  collection: string = "webChatLimits",
+): LimitStore {
+  const col = () => getAdminDb().collection(`subAccounts/${subAccountId}/${collection}`);
   return {
     async transact(keys, decide) {
       const db = getAdminDb();
@@ -200,4 +203,44 @@ export async function recordTokenUsage(input: {
     result: undefined,
     increments: { [dayKey]: { tokens: Math.floor(input.tokens) } },
   }));
+}
+
+/**
+ * Generic all-or-nothing limiter for other PUBLIC endpoints (e.g. booking). Every
+ * check is read and evaluated first; only if ALL pass are all counters incremented,
+ * so a request rejected by one cap never consumes another (a single abusive client
+ * cannot drain a shared tenant-wide counter with requests that were refused anyway).
+ * Keys embed their own time bucket.
+ */
+export interface LimitCheck {
+  key: string;
+  limit: number;
+  retryAfterSec: number;
+}
+
+export type ConsumeResult = { ok: true } | { ok: false; key: string; retryAfterSec: number };
+
+export async function consumeLimits(store: LimitStore, checks: LimitCheck[]): Promise<ConsumeResult> {
+  return store.transact<ConsumeResult>(
+    checks.map((c) => c.key),
+    (cur) => {
+      for (const c of checks) {
+        if ((cur[c.key]?.count ?? 0) >= c.limit) {
+          return { result: { ok: false, key: c.key, retryAfterSec: Math.max(1, c.retryAfterSec) } };
+        }
+      }
+      const increments: Record<string, Partial<Counter>> = {};
+      for (const c of checks) increments[c.key] = { count: 1 };
+      return { result: { ok: true }, increments };
+    },
+  );
+}
+
+export function hashForKey(value: string): string {
+  return hash(value.trim().toLowerCase());
+}
+
+export function hourAndDayBuckets(nowMs: number = Date.now()) {
+  const b = buckets(nowMs);
+  return { hour: b.hour, day: b.day, secondsToNextHour: b.secondsToNextHour, secondsToNextDay: b.secondsToNextDay };
 }

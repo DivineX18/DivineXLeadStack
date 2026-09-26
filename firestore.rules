@@ -412,6 +412,11 @@ service cloud.firestore {
         allow read, write: if false;
       }
 
+      // Public booking rate-limit counters (Admin SDK only; hashed IPs and emails).
+      match /publicLimits/{limitId} {
+        allow read, write: if false;
+      }
+
       // Voice agent end-of-call summary docs. Created by the Vapi
       // /api/webhooks/vapi/* routes via the Admin SDK (Bearer-token
       // gated). Sub-account members can READ so a future operator
