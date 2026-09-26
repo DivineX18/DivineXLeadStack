@@ -72,6 +72,49 @@ function sanitizeMessages(input: unknown): AiSuiteChatMessage[] | null {
 
 type RoleCtx = { agencyRoleIsOwner: boolean; subAccountRole?: string };
 
+/**
+ * ONLY A GENUINE MODEL-REACH FAILURE IS A 5xx.
+ *
+ * The turn loop below does three things inside one try: it calls the model,
+ * it validates capability arguments, and it executes lookups. Every one of
+ * them used to land on the same catch, which returned 502 "couldn't reach
+ * the model". So a capability whose validate() threw was reported to the
+ * customer as an outage, and to us as a model problem, pointing every
+ * investigation at the wrong system.
+ *
+ * Tagging the model call means the catch can tell the two apart: the model
+ * being unreachable is infrastructure and keeps its 502, and anything else
+ * is our bug, which is logged loudly and answered conversationally instead
+ * of destroying the conversation.
+ */
+class ModelUnreachableError extends Error {
+  constructor(readonly cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.name = "ModelUnreachableError";
+  }
+}
+
+/**
+ * validate() is pure argument checking and must not throw. When one does, it
+ * is a programming error in that capability, not a failure of the turn: the
+ * model gets told the arguments were rejected and carries on, exactly as it
+ * would for an ordinary rejection.
+ */
+function safeValidate(
+  cap: { name: string; validate: (a: Record<string, unknown>) => { ok: true; args: Record<string, unknown> } | { ok: false; error: string } },
+  args: Record<string, unknown>,
+): { ok: true; args: Record<string, unknown> } | { ok: false; error: string } {
+  try {
+    return cap.validate(args);
+  } catch (err) {
+    console.error(
+      `[ai-suite/chat] ${cap.name}.validate threw, which it must never do:`,
+      err instanceof Error ? err.stack ?? err.message : err,
+    );
+    return { ok: false, error: "those arguments couldn't be read" };
+  }
+}
+
 export async function POST(request: Request) {
   let body: AiSuiteChatRequest;
   try {
@@ -423,7 +466,11 @@ export async function POST(request: Request) {
   let writeRepairs = 0;
   try {
     for (let hop = 0; ; hop++) {
-      turn = await runAiSuiteTurn({ messages: llmMessages, tools });
+      try {
+        turn = await runAiSuiteTurn({ messages: llmMessages, tools });
+      } catch (err) {
+        throw new ModelUnreachableError(err);
+      }
       const call = turn.toolCall;
 
       // A TRUNCATED TOOL CALL IS NOT BAD ARGUMENTS.
@@ -460,7 +507,7 @@ export async function POST(request: Request) {
         roleSatisfies(cap.requiredRole, roleCtx) &&
         writeRepairs < MAX_WRITE_REPAIR_HOPS
       ) {
-        const attempt = cap.validate(withOperatorFigures(call.args));
+        const attempt = safeValidate(cap, withOperatorFigures(call.args));
         if (attempt.ok) break; // good args, fall through to the proposal path
         writeRepairs++;
         console.warn(`[ai-suite/chat] ${cap.name} args rejected (repair ${writeRepairs}): ${attempt.error}`);
@@ -489,7 +536,7 @@ export async function POST(request: Request) {
       ) {
         break; // not a lookup, fall through to the proposal path below
       }
-      const validated = cap.validate(call.args);
+      const validated = safeValidate(cap, call.args);
       let lookupResult: string;
       if (!validated.ok) {
         lookupResult = `Invalid arguments: ${validated.error}.`;
@@ -542,12 +589,29 @@ export async function POST(request: Request) {
       );
     }
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "unknown error";
-    console.error("[ai-suite/chat] model call failed:", msg);
-    return NextResponse.json(
-      { error: "The assistant couldn't reach the model. Please try again." },
-      { status: 502 },
+    if (err instanceof ModelUnreachableError) {
+      console.error("[ai-suite/chat] model call failed:", err.message);
+      return NextResponse.json(
+        { error: "The assistant couldn't reach the model. Please try again." },
+        { status: 502 },
+      );
+    }
+    // Our own fault, not the model's. It is logged in full so it is fixed,
+    // and answered in the conversation so the customer is not staring at an
+    // error code for something they could simply be told.
+    console.error(
+      "[ai-suite/chat] turn failed:",
+      err instanceof Error ? err.stack ?? err.message : err,
     );
+    if (err instanceof CapabilityUserError) {
+      const response: AiSuiteChatResponse = { type: "message", text: err.message };
+      return NextResponse.json(response);
+    }
+    const response: AiSuiteChatResponse = {
+      type: "message",
+      text: "Something went wrong on my side working that out, and it wasn't anything you did. Try asking again, and if it keeps happening tell me what you were trying to change.",
+    };
+    return NextResponse.json(response);
   }
 
   // Count this turn toward daily usage (best-effort; never blocks the reply).

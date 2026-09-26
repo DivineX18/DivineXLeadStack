@@ -161,6 +161,55 @@ export async function listEventsServerSide(
  * reminder jobs; moving the row underneath that would leave the attendee
  * holding a confirmation for a time nobody will be there.
  */
+/** Firestore hands back a Timestamp, a Date, or nothing. */
+function toDateOrNull(v: unknown): Date | null {
+  if (!v) return null;
+  if (v instanceof Date) return v;
+  const t = v as { toDate?: () => Date };
+  return typeof t.toDate === "function" ? t.toDate() : null;
+}
+
+/**
+ * MOVING AN EVENT MOVES BOTH ENDS.
+ *
+ * "Preserve everything the caller did not ask to change" is right for
+ * independent fields and wrong for these two, because they are one interval.
+ * Preserving endAt literally while startAt moved produced a 30-minute meeting
+ * that started at 18:00 and ended at 16:30 - an event that ends before it
+ * begins, which no calendar can render and nothing downstream was catching.
+ * It was found by reading the stored document after a live edit, not by any
+ * test, because every field had been "preserved" exactly as asked.
+ *
+ * "Move it to 6pm" means the same meeting, later, so a new start with no new
+ * end carries the existing duration with it. An explicit end is honoured as
+ * given, and an interval that runs backwards is refused rather than stored.
+ *
+ * Exported and pure so the rule can be tested without Firestore.
+ */
+export function resolveEventInterval(input: {
+  currentStart: Date | null;
+  currentEnd: Date | null;
+  nextStart?: Date;
+  nextEnd?: Date;
+}): { startAt?: Date; endAt?: Date } | { refused: "interval" } {
+  const { currentStart, currentEnd, nextStart, nextEnd } = input;
+  let endAt = nextEnd;
+  if (endAt === undefined) {
+    endAt =
+      nextStart && currentStart && currentEnd
+        ? new Date(nextStart.getTime() + (currentEnd.getTime() - currentStart.getTime()))
+        : (currentEnd ?? undefined);
+  }
+  const startAt = nextStart ?? currentStart;
+  if (startAt && endAt && endAt.getTime() <= startAt.getTime()) {
+    return { refused: "interval" };
+  }
+  return {
+    ...(nextStart !== undefined ? { startAt: nextStart } : {}),
+    ...(endAt !== undefined ? { endAt } : {}),
+  };
+}
+
 export async function updateEventServerSide(opts: {
   eventId: string;
   expectedSubAccountId: string;
@@ -169,7 +218,7 @@ export async function updateEventServerSide(opts: {
   endAt?: Date;
   location?: string | null;
   notes?: string | null;
-}): Promise<{ id: string; title: string } | { refused: "booking" } | null> {
+}): Promise<{ id: string; title: string } | { refused: "booking" | "interval" } | null> {
   const db = getAdminDb();
   const ref = db.doc(`events/${opts.eventId}`);
   const snap = await ref.get();
@@ -180,10 +229,34 @@ export async function updateEventServerSide(opts: {
 
   const patch: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
   if (opts.title !== undefined) patch.title = opts.title;
-  if (opts.startAt !== undefined) patch.startAt = opts.startAt;
-  if (opts.endAt !== undefined) patch.endAt = opts.endAt;
   if (opts.location !== undefined) patch.location = opts.location;
   if (opts.notes !== undefined) patch.notes = opts.notes;
+
+  /**
+   * MOVING AN EVENT MOVES BOTH ENDS.
+   *
+   * "Preserve what was not asked about" is right for independent fields and
+   * wrong for these two: they are one interval. Preserving endAt literally
+   * while startAt moved produced a 30-minute meeting that started at 18:00
+   * and ended at 16:30 — an event that ends before it begins, which no
+   * calendar can render and no validator downstream was catching.
+   *
+   * "Move it to 6pm" means the same meeting, later. So a start with no end
+   * carries the existing duration with it. An explicit end is still honoured
+   * exactly as given, and an interval that runs backwards is refused rather
+   * than stored.
+   */
+  if (opts.startAt !== undefined || opts.endAt !== undefined) {
+    const moved = resolveEventInterval({
+      currentStart: toDateOrNull(existing.startAt),
+      currentEnd: toDateOrNull(existing.endAt),
+      nextStart: opts.startAt,
+      nextEnd: opts.endAt,
+    });
+    if ("refused" in moved) return { refused: "interval" };
+    if (moved.startAt !== undefined) patch.startAt = moved.startAt;
+    if (moved.endAt !== undefined) patch.endAt = moved.endAt;
+  }
   await ref.set(patch, { merge: true });
 
   const title = String(patch.title ?? existing.title ?? "");

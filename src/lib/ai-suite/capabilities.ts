@@ -1799,7 +1799,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           d.lastDeliveryStatus != null
             ? `last delivery HTTP ${d.lastDeliveryStatus}`
             : "no deliveries yet";
-        return `- ${d.url}, ${d.mode}, ${d.status}${
+        return `- ${d.url}, id: ${d.id}, ${d.mode}, ${d.status}${
           d.pausedReason ? ` (${d.pausedReason})` : ""
         }. Events: ${events}. ${last}.${
           d.description ? ` Label: ${d.description}.` : ""
@@ -2721,11 +2721,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         const startAt = toDate(data.startAt);
         const contactId =
           typeof data.contactId === "string" ? data.contactId : null;
-        return `- ${data.title ?? "(untitled)"}, ${
+        // The id is printed because update_event needs it and this is the
+        // only place the model can learn it. A lookup that cannot be chained
+        // into the matching editor is half a feature.
+        return `- ${data.title ?? "(untitled)"}, id: ${doc.id}, ${
           startAt ? fmtInTz(startAt, tz) : "(no time)"
         }${data.location ? `, at ${data.location}` : ""}${
           contactId ? `, contact: ${names.get(contactId) ?? contactId}` : ""
-        }`;
+        }${data.bookingPageId ? ", booked through a booking page" : ""}`;
       });
       const more =
         rows.length > shown.length
@@ -7468,87 +7471,6 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     },
   },
   {
-    name: "find_deals",
-    level: "sub-account",
-    requiredRole: "subAccountMember",
-    readonly: true,
-    menuLabel: "Look up this workspace's deals and their pipeline stage",
-    description:
-      "List this sub-account's deals with their id, title, stage and value. Use it before update_deal or move_deal_stage, and whenever the user refers to a deal that already exists ('the Acme deal', 'that proposal'). You cannot change a deal without its id, and this is where the id comes from.",
-    parameters: { type: "object", properties: {}, additionalProperties: false },
-    validate: () => ({ ok: true, args: {} }),
-    summarize: () => "Look up the deals in this workspace.",
-    execute: async (ctx) => {
-      const { listDealsServerSide } = await import("@/lib/server/deals-service");
-      const deals = await listDealsServerSide(ctx.subAccountId!);
-      if (deals.length === 0) return { resultText: "No deals in this workspace yet." };
-      const lines = deals.map(
-        (d) =>
-          `- "${d.title}" (id: ${d.id}) - ${d.stageId || "no stage"}, ${d.currency.toUpperCase()} ${(d.value / 100).toFixed(2)}`,
-      );
-      return { resultText: `Deals in this workspace:\n${lines.join("\n")}` };
-    },
-  },
-  {
-    name: "find_tasks",
-    level: "sub-account",
-    requiredRole: "subAccountMember",
-    readonly: true,
-    menuLabel: "Look up this workspace's open tasks",
-    description:
-      "List this sub-account's tasks with their id, title, due date and whether they are done. Open tasks come first, soonest due first. Use it before update_task or complete_task, and whenever the user refers to a task that already exists.",
-    parameters: {
-      type: "object",
-      properties: {
-        include_completed: { type: "boolean", description: "Include tasks already marked done. Defaults to false." },
-      },
-      additionalProperties: false,
-    },
-    validate: (raw) => ({
-      ok: true,
-      args: {
-        includeCompleted:
-          (raw as Record<string, unknown>)?.include_completed === true ||
-          (raw as Record<string, unknown>)?.includeCompleted === true,
-      },
-    }),
-    summarize: () => "Look up the tasks in this workspace.",
-    execute: async (ctx, args) => {
-      const { listTasksServerSide } = await import("@/lib/server/tasks-service");
-      const tasks = await listTasksServerSide(ctx.subAccountId!, {
-        includeCompleted: args.includeCompleted as boolean,
-      });
-      if (tasks.length === 0) return { resultText: "No open tasks in this workspace." };
-      const lines = tasks.map((t) => {
-        const due = t.dueAt ? t.dueAt.toISOString().slice(0, 10) : "no due date";
-        return `- "${t.title}" (id: ${t.id}) - ${due}${t.completed ? ", done" : ""}`;
-      });
-      return { resultText: `Tasks in this workspace:\n${lines.join("\n")}` };
-    },
-  },
-  {
-    name: "find_events",
-    level: "sub-account",
-    requiredRole: "subAccountMember",
-    readonly: true,
-    menuLabel: "Look up this workspace's calendar events",
-    description:
-      "List this sub-account's calendar events with their id, title and start time, soonest first. Use it before update_event, and whenever the user refers to a meeting or appointment that already exists.",
-    parameters: { type: "object", properties: {}, additionalProperties: false },
-    validate: () => ({ ok: true, args: {} }),
-    summarize: () => "Look up the calendar events in this workspace.",
-    execute: async (ctx) => {
-      const { listEventsServerSide } = await import("@/lib/server/events-service");
-      const events = await listEventsServerSide(ctx.subAccountId!);
-      if (events.length === 0) return { resultText: "No calendar events in this workspace yet." };
-      const lines = events.map((e) => {
-        const when = e.startAt ? e.startAt.toISOString().replace("T", " ").slice(0, 16) : "no start time";
-        return `- "${e.title}" (id: ${e.id}) - ${when}${e.location ? `, ${e.location}` : ""}`;
-      });
-      return { resultText: `Calendar events in this workspace:\n${lines.join("\n")}` };
-    },
-  },
-  {
     name: "update_task",
     level: "sub-account",
     requiredRole: "subAccountAdmin",
@@ -7653,6 +7575,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       });
       if (!res) throw new CapabilityUserError("That calendar event no longer exists.");
       if ("refused" in res) {
+        if (res.refused === "interval") {
+          throw new CapabilityUserError(
+            "That would leave the event ending before it starts. Tell me both the new start and the new end, or just the new start and I'll keep the same length.",
+          );
+        }
         throw new CapabilityUserError(
           "That event came from a booking page, so the attendee already holds a confirmation for the original time. Reschedule it from the booking itself so they are told.",
         );
@@ -7839,29 +7766,6 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         resultText: `${res.who} is now ${res.role === "admin" ? "an admin" : "a collaborator"} (was ${res.previous}).`,
         ref: { kind: "member", id: res.uid },
       };
-    },
-  },
-  {
-    name: "list_webhooks",
-    level: "sub-account",
-    requiredRole: "subAccountAdmin",
-    readonly: true,
-    menuLabel: "Look up this workspace's webhook subscriptions",
-    description:
-      "List this sub-account's webhook subscriptions with their id, destination URL, subscribed events and status. Use it before update_webhook, and when the user asks what is connected or why an integration stopped receiving events.",
-    parameters: { type: "object", properties: {}, additionalProperties: false },
-    validate: () => ({ ok: true, args: {} }),
-    summarize: () => "Look up this workspace's webhooks.",
-    execute: async (ctx) => {
-      const { listSubscriptions } = await import("@/lib/firestore/webhook-subscriptions");
-      const subs = await listSubscriptions(ctx.subAccountId!);
-      if (subs.length === 0) return { resultText: "No webhook subscriptions in this workspace." };
-      const lines = subs.map((w) => {
-        const events = w.events.length === 0 ? "every event" : w.events.join(", ");
-        const paused = w.status !== "active" ? `, ${w.status}${w.pausedReason ? ` (${w.pausedReason})` : ""}` : "";
-        return `- ${w.url} (id: ${w.id}, ${w.mode})${paused}\n    events: ${events}`;
-      });
-      return { resultText: `Webhooks in this workspace:\n${lines.join("\n")}` };
     },
   },
   {
@@ -8251,12 +8155,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       if (pages.length === 0) return { resultText: "No booking pages in this workspace yet." };
       const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
       const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+      const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
       const blocks = pages.map((b) => {
         const hours = (b.workingHours ?? [])
           .map((w) => `    ${DAYS[w.dayOfWeek]}: ${hhmm(w.startMinute)} to ${hhmm(w.endMinute)}`)
           .join("\n");
         return (
           `- "${b.name}" (id: ${b.slug}) - ${b.status}, ${b.durationMinutes} minutes, ${b.timezone}` +
+          `\n    link: ${base}/b/${ctx.subAccountId}/${b.slug}` +
           (hours ? `\n${hours}` : "\n    no availability set")
         );
       });
@@ -8273,7 +8179,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     parameters: {
       type: "object",
       properties: {
-        booking_page_id: { type: "string", description: "The booking page to change (from list_booking_pages)." },
+        booking_page_id: {
+          type: "string",
+          description:
+            "Which booking page to change: its id from list_booking_pages, or its public link (…/b/<workspace>/<page>) if the user pasted one. Never ask the user to find an internal id.",
+        },
         name: { type: "string" },
         description: { type: "string" },
         duration_minutes: { type: "number", description: "How long each meeting is." },
@@ -8294,10 +8204,16 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       additionalProperties: false,
     },
     validate: (raw) => {
-      const bookingPageId = strEither(raw, "booking_page_id").trim();
-      if (!bookingPageId) return { ok: false, error: "booking_page_id is required. Call list_booking_pages to get it." };
+      const supplied = strEither(raw, "booking_page_id").trim();
+      if (!supplied) return { ok: false, error: "booking_page_id is required. Call list_booking_pages to get it, or paste the page's public link." };
+      // A customer-facing link is a normal way to name the page.
+      const ref = parseBookingPageRef(supplied);
+      if (!ref.ok) return { ok: false, error: ref.error };
+      const bookingPageId = ref.slug;
+      const linkWorkspaceId = ref.workspaceId;
       const r = raw as Record<string, unknown>;
       const args: Record<string, unknown> = { bookingPageId };
+      if (linkWorkspaceId) args.linkWorkspaceId = linkWorkspaceId;
       const name = strEither(raw, "name").trim();
       const description = strEither(raw, "description").trim();
       if (name) args.name = name;
@@ -8363,18 +8279,27 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         if (e0 <= s0) return { ok: false, error: "end_time must be after start_time." };
         args.workingHour = { dayOfWeek: idx, startMinute: s0, endMinute: e0 };
       }
-      if (Object.keys(args).length === 1) {
+      // linkWorkspaceId is carried context, not a change the caller asked for.
+      if (Object.keys(args).filter((k) => k !== "bookingPageId" && k !== "linkWorkspaceId").length === 0) {
         return { ok: false, error: "Nothing to change. Send at least one setting, or a day with its hours." };
       }
       return { ok: true, args };
     },
     summarize: (args) => {
-      const bits = Object.keys(args).filter((k) => k !== "bookingPageId");
+      const bits = Object.keys(args).filter((k) => k !== "bookingPageId" && k !== "linkWorkspaceId");
       return `Change ${bits.join(", ")} on this booking page.`;
     },
     execute: async (ctx, args) => {
       const { patchBookingPageServerSide } = await import("@/lib/server/booking-pages-service");
-      const { bookingPageId, ...patch } = args as Record<string, unknown>;
+      const { bookingPageId, linkWorkspaceId, ...patch } = args as Record<string, unknown>;
+      // A link from another workspace must not edit the same-named page here.
+      // Saying so reveals nothing: it compares the URL the caller typed with
+      // the workspace they are already in.
+      if (typeof linkWorkspaceId === "string" && linkWorkspaceId !== ctx.subAccountId) {
+        throw new CapabilityUserError(
+          "That booking link belongs to a different workspace, so I can't change it from here. Switch to that workspace and ask me again.",
+        );
+      }
       const res = await patchBookingPageServerSide({
         subAccountId: ctx.subAccountId!,
         slug: bookingPageId as string,
@@ -9181,6 +9106,86 @@ export function roleSatisfies(
  * is only ever offered tools the caller could actually run — so it guides a
  * collaborator to ask an admin rather than proposing a doomed action.
  */
+/**
+ * A CUSTOMER-FACING LINK IS A NATURAL IDENTIFIER.
+ *
+ * People refer to a booking page by the link they hand out, not by a
+ * Firestore id they have never seen. "Open Saturdays on
+ * https://…/b/<workspace>/<slug>" is the normal way to ask, and it failed
+ * because nothing turned that URL back into the slug the editor needed.
+ *
+ * The workspace segment is checked rather than ignored. A link belonging to
+ * a different workspace must not quietly edit the caller's own page that
+ * happens to share a slug, and the refusal says nothing about whether that
+ * other page exists — it is derived entirely from the URL the caller typed
+ * and the workspace they are already in, so it discloses nothing.
+ *
+ * Any host is accepted: a deployment can be reached by several, and the
+ * customer may paste a link from a custom domain.
+ */
+export function parseBookingPageRef(
+  raw: string,
+): { ok: true; slug: string; workspaceId: string | null } | { ok: false; error: string } {
+  const value = raw.trim();
+  if (!value) return { ok: false, error: "empty" };
+  if (!/^https?:\/\//i.test(value) && !value.includes("/")) {
+    return { ok: true, slug: value, workspaceId: null }; // already a slug
+  }
+  let path: string;
+  try {
+    path = /^https?:\/\//i.test(value) ? new URL(value).pathname : value;
+  } catch {
+    return { ok: false, error: "That doesn't look like a booking page link." };
+  }
+  const parts = path.split("/").filter(Boolean);
+  const at = parts.indexOf("b");
+  if (at === -1 || parts.length < at + 3) {
+    return { ok: false, error: "That link isn't a booking page link. A booking page link looks like /b/<workspace>/<page>." };
+  }
+  const [workspaceId, slug] = [parts[at + 1], parts[at + 2]];
+  // The workspace is carried, not judged: validate() is pure and has no
+  // caller. execute() compares it against the authenticated workspace.
+  return { ok: true, slug: decodeURIComponent(slug), workspaceId };
+}
+
+/**
+ * THE REGISTRY MUST NOT CONTAIN TWO CAPABILITIES WITH THE SAME NAME.
+ *
+ * Every model provider rejects a duplicate tool name outright:
+ * `400 tools: Tool names must be unique`. That is not retryable, so it
+ * throws, and the chat route's catch-all turns it into `Request failed
+ * (502)`. The effect is total — not the duplicated capability degrading,
+ * but EVERY message at that level failing, including plain conversation
+ * that was never going to call a tool.
+ *
+ * It shipped because adding a lookup that already existed is invisible to
+ * every ordinary check: TypeScript is happy with two objects in an array,
+ * `getCapability` returns the first and works, and a `Set` of names, which
+ * is how the coverage matrix was built, cannot represent a duplicate at all.
+ * Nothing failed until a real request reached a provider.
+ *
+ * So it is asserted once, here, at the boundary every request crosses, and
+ * it throws on import rather than per-request: a name collision is a
+ * programming error that must stop the build and the boot, not produce a
+ * degraded assistant in production.
+ */
+function assertUniqueCapabilityNames(): void {
+  const seen = new Set<string>();
+  const dupes: string[] = [];
+  for (const c of AI_SUITE_CAPABILITIES) {
+    if (seen.has(c.name)) dupes.push(c.name);
+    seen.add(c.name);
+  }
+  if (dupes.length > 0) {
+    throw new Error(
+      `AI Suite capability names must be unique. Duplicated: ${[...new Set(dupes)].join(", ")}. ` +
+        `Every model provider rejects duplicate tool names with a 400, which takes the whole assistant down. ` +
+        `Extend the existing capability instead of adding a second one with the same name.`,
+    );
+  }
+}
+assertUniqueCapabilityNames();
+
 export function toolsForLevel(
   level: AiSuiteLevel,
   role: { agencyRoleIsOwner: boolean; subAccountRole?: string },
