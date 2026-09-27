@@ -11,6 +11,7 @@ import {
 } from "@/lib/firestore/webhook-subscriptions";
 import { sendDirectTestDelivery } from "@/lib/webhooks/direct-test";
 import { parseButtonLine } from "@/lib/email/body";
+import type { MutationDescriptor } from "@/lib/ai-suite/execution-result";
 import {
   detectAutomationUrl,
   n8nProductionUrl,
@@ -267,8 +268,20 @@ export interface ExecuteResult {
   /** The single authoritative customer-facing completion. When present, the
    *  confirm route returns THIS and withholds `resultText`. */
   completion?: CustomerCompletion;
-  /** Optional pointer to the created resource, for the audit trail. */
+  /** Optional pointer to the created resource, for the audit trail.
+   *  Superseded by `mutation`: when that is present this is derived from it,
+   *  so a migrated capability keeps every existing caller working without
+   *  being edited twice, and the two cannot name different records. */
   ref?: { kind: string; id: string };
+  /**
+   * WHAT THIS ACTION CHANGED, structurally.
+   *
+   * Deliberately carries no status. A capability describes what it did;
+   * whether it happened is decided by whether execute() returned, and the
+   * receipt that says so is minted in the confirm route. See
+   * lib/ai-suite/execution-result.ts.
+   */
+  mutation?: MutationDescriptor;
   /**
    * Lookup-only: a same-origin destination the chat UI renders as an
    * "Open …" button (the chat route short-circuits with `resultText` as the
@@ -7537,7 +7550,22 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         ...(due ? { dueAt: new Date(`${due}T12:00:00.000Z`) } : {}),
       });
       if (!res) throw new CapabilityUserError("That task no longer exists.");
-      return { resultText: `Updated the task "${res.title}".`, ref: { kind: "task", id: res.id } };
+      return {
+        resultText: `Updated the task "${res.title}".`,
+        ref: { kind: "task", id: res.id },
+        mutation: {
+          resourceType: "task",
+          resourceId: res.id,
+          operation: "updated",
+          changedFields: [
+            ...(args.title ? ["title"] : []),
+            ...(args.dueAt !== undefined ? ["dueAt"] : []),
+            ...(args.notes ? ["notes"] : []),
+          ],
+          summary: `Updated the task "${res.title}".`,
+          href: `/sa/${ctx.subAccountId}/tasks`,
+        },
+      };
     },
   },
   {
@@ -7605,7 +7633,22 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           "That event came from a booking page, so the attendee already holds a confirmation for the original time. Reschedule it from the booking itself so they are told.",
         );
       }
-      return { resultText: `Updated the event "${res.title}".`, ref: { kind: "event", id: res.id } };
+      return {
+        resultText: `Updated the event "${res.title}".`,
+        ref: { kind: "event", id: res.id },
+        mutation: {
+          resourceType: "event",
+          resourceId: res.id,
+          operation: "updated",
+          changedFields: [
+            ...(args.title ? ["title"] : []),
+            ...(args.startAt || args.endAt ? ["startAt", "endAt"] : []),
+            ...(args.location ? ["location"] : []),
+          ],
+          summary: `Updated the calendar event "${res.title}".`,
+          href: `/sa/${ctx.subAccountId}/calendar`,
+        },
+      };
     },
   },
   {
@@ -7679,6 +7722,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             ? "• The live site still shows the old wording. Ask me to rebuild it when you're ready to publish."
             : "• It's still a draft. Ask me to build it when you're ready."),
         ref: { kind: "website", id: res.siteId },
+        mutation: {
+          resourceType: "website",
+          resourceId: res.siteId,
+          operation: "updated",
+          changedFields: res.changed,
+          summary: `Updated the copy on "${res.name}". The live site is unchanged until it is built again.`,
+          href: `/sa/${ctx.subAccountId}/website`,
+        },
       };
     },
   },
@@ -7892,6 +7943,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             `Updated the button in "${updated.name}". The subject, the wording and the unsubscribe link are unchanged.\n\n` +
             `• The email now has ${findButtons(res.body).length} button(s).`,
           ref: { kind: "message_template", id: args.templateId as string },
+          mutation: {
+            resourceType: "message_template",
+            resourceId: args.templateId as string,
+            operation: "updated",
+            changedFields: ["body"],
+            summary: `Updated the button in "${updated.name}".`,
+          },
         };
       }
 
@@ -7921,6 +7979,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           `Every other step, its timing and the rest of this email are unchanged.\n\n` +
           `• This automation is still ${describeWorkflowStatus(out.status)}. Editing it did not change that.`,
         ref: { kind: "workflow", id: args.workflowId as string },
+        mutation: {
+          resourceType: "workflow",
+          resourceId: args.workflowId as string,
+          operation: "updated",
+          changedFields: ["nodes"],
+          summary: `Updated the button in email ${args.emailNumber as number} of "${out.workflowName}".`,
+          href: `/sa/${ctx.subAccountId}/workflows/${args.workflowId as string}`,
+        },
       };
     },
   },
@@ -7991,6 +8057,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       return {
         resultText: `${res.who} is now ${res.role === "admin" ? "an admin" : "a collaborator"} (was ${res.previous}).`,
         ref: { kind: "member", id: res.uid },
+        mutation: {
+          resourceType: "member",
+          resourceId: res.uid,
+          operation: "updated",
+          changedFields: ["role"],
+          summary: `${res.who} is now ${res.role === "admin" ? "an admin" : "a collaborator"}.`,
+          href: `/sa/${ctx.subAccountId}/dashboard/settings`,
+        },
       };
     },
   },
@@ -8085,6 +8159,18 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           (dropped.length > 0 ? `• It will NO LONGER receive: ${dropped.join(", ")}\n` : "") +
           (args.status ? `• Delivery is ${args.status as string}.\n` : ""),
         ref: { kind: "webhook", id: args.webhookId as string },
+        mutation: {
+          resourceType: "webhook",
+          resourceId: args.webhookId as string,
+          operation: "updated",
+          changedFields: [
+            ...(args.url ? ["url"] : []),
+            ...(args.events ? ["events"] : []),
+            ...(args.status ? ["status"] : []),
+          ],
+          summary: "Updated the webhook subscription.",
+          href: `/sa/${ctx.subAccountId}/dashboard/settings`,
+        },
       };
     },
   },
@@ -8173,6 +8259,19 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           `Updated "${res.name}".` +
           (args.name ? "\n\n• The name changed, so its public link changed too. Any link you shared before will need updating." : ""),
         ref: { kind: "community", id: res.id },
+        mutation: {
+          resourceType: "community",
+          resourceId: res.id,
+          operation: "updated",
+          changedFields: [
+            ...(args.name ? ["name"] : []),
+            ...(args.tagline ? ["tagline"] : []),
+            ...(args.about ? ["about"] : []),
+            ...(args.joinPolicy ? ["joinPolicy"] : []),
+          ],
+          summary: `Updated the community "${res.name}".`,
+          href: `/sa/${ctx.subAccountId}/community`,
+        },
       };
     },
   },
@@ -8346,7 +8445,18 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         ...(args.removeQuestionId ? { removeFieldId: args.removeQuestionId as string } : {}),
       });
       if (res.ok) {
-        return { resultText: `Updated "${res.name}": ${res.summary}.`, ref: { kind: "form", id: res.formId } };
+        return {
+          resultText: `Updated "${res.name}": ${res.summary}.`,
+          ref: { kind: "form", id: res.formId },
+          mutation: {
+            resourceType: "form",
+            resourceId: res.formId,
+            operation: "updated",
+            changedFields: args.rename ? ["name"] : ["fields"],
+            summary: `Updated the form "${res.name}".`,
+            href: `/sa/${ctx.subAccountId}/forms/${res.formId}`,
+          },
+        };
       }
       if (res.reason === "last_email") {
         throw new CapabilityUserError(
@@ -8537,6 +8647,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             `Updated "${res.name}": ${res.changed.join(", ")}.\n\n` +
             "• Anyone already booked keeps their existing time. This changes what new visitors can pick.",
           ref: { kind: "booking_page", id: res.slug },
+          mutation: {
+            resourceType: "booking_page",
+            resourceId: res.slug,
+            operation: "updated",
+            changedFields: res.changed,
+            summary: `Updated the booking page "${res.name}".`,
+            href: `/sa/${ctx.subAccountId}/booking/${res.slug}`,
+          },
         };
       }
       if (res.reason === "missing") throw new CapabilityUserError("That booking page no longer exists.");

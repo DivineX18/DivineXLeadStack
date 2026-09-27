@@ -22,6 +22,7 @@ import {
   CONVERSION_FRAMEWORKS,
   renderFrameworksAsCards,
 } from "@/lib/conversion/framework-library";
+import { assertNoMutationOnLookup } from "@/lib/ai-suite/execution-result";
 import {
   CapabilityUserError,
   capabilityNamesForLevel,
@@ -543,6 +544,12 @@ export async function POST(request: Request) {
       } else {
         try {
           const execResult = await cap.execute(actionCtx, validated.args);
+          // A lookup runs here with no confirmation. A mutation descriptor
+          // on one would put an unconfirmed "this changed" into the refresh
+          // path and the audit trail, so it is a programming error, caught
+          // by the inner catch below and reported as a failed lookup rather
+          // than acted on.
+          assertNoMutationOnLookup(cap.name, cap.readonly, execResult.mutation);
           // A lookup that resolved a navigation target short-circuits: show
           // the user the message + button directly (no final model turn).
           if (execResult.navigate) {

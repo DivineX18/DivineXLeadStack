@@ -414,6 +414,11 @@ export function AiSuiteChat({
           subAccountId,
           capability: msg.capability,
           args: msg.args,
+          // The server runs one confirmation once. This tab already guards
+          // against a second click, but a retry after a dropped response or
+          // a second tab does not reach that guard, and for anything that
+          // creates or sends, running twice is not recoverable.
+          proposalId: msg.id,
         }),
       });
       const data = (await res.json().catch(() => null)) as {

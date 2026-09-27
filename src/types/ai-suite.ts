@@ -1,3 +1,4 @@
+import type { ExecutionReceipt } from "@/lib/ai-suite/execution-result";
 /**
  * AI Suite — an in-app assistant that answers "how do I use X" questions
  * about the CRM (knowledge mode). Available at two levels:
@@ -106,10 +107,24 @@ export interface AiSuiteConfirmRequest {
   subAccountId?: string;
   capability: string;
   args: Record<string, unknown>;
+  /**
+   * The proposal this confirms. Lets the server run it exactly once: a
+   * retry, a second tab or a replay is handed the first answer rather than
+   * performing the action again. Optional so an older client still works,
+   * which means it confirms without that protection.
+   */
+  proposalId?: string;
 }
 
 /** Successful execution response. */
 export interface AiSuiteConfirmResponse {
   ok: true;
+  /**
+   * The structured description of what changed, minted server-side once
+   * execution committed. Absent for a capability not yet migrated to the
+   * contract, which consumers read as "nothing known changed" rather than
+   * guessing from prose.
+   */
+  receipt?: ExecutionReceipt;
   resultText: string;
 }

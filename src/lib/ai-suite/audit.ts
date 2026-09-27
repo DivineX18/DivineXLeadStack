@@ -1,4 +1,5 @@
 import "server-only";
+import type { MutationDescriptor } from "@/lib/ai-suite/execution-result";
 
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
@@ -21,10 +22,16 @@ export async function recordAiSuiteAction(entry: {
   confirmedByUid: string;
   confirmedByEmail: string;
   resultRef?: { kind: string; id: string } | null;
+  /**
+   * The same structural description the caller reports to everyone else.
+   * Stored so the audit row and the answer the customer was given cannot
+   * drift: both are built from one value by one function.
+   */
+  mutation?: MutationDescriptor | null;
   error?: string | null;
-}): Promise<void> {
+}): Promise<string | null> {
   try {
-    await getAdminDb()
+    const written = await getAdminDb()
       .collection("aiSuiteActions")
       .add({
         level: entry.level,
@@ -37,12 +44,18 @@ export async function recordAiSuiteAction(entry: {
         confirmedByUid: entry.confirmedByUid,
         confirmedByEmail: entry.confirmedByEmail,
         resultRef: entry.resultRef ?? null,
+        mutation: entry.mutation ?? null,
         error: entry.error ?? null,
         createdAt: FieldValue.serverTimestamp(),
       });
+    // The id is returned so a receipt can point at the row describing the
+    // same event. Null when the row could not be written, which the receipt
+    // states honestly rather than inventing an id for.
+    return written.id;
   } catch (err) {
     // Never let an audit-write failure surface to the user after the action
-    // itself succeeded — log and move on.
+    // itself succeeded: log and move on.
     console.warn("[ai-suite/audit] failed to record action:", err);
+    return null;
   }
 }

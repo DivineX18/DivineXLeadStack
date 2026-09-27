@@ -1,5 +1,9 @@
 import "server-only";
 
+import { mintReceipt, normalizeMutation, refFromMutation } from "@/lib/ai-suite/execution-result";
+import {
+  claimExecution, claimScope, hashArgs, isUsableProposalId, releaseExecution, settleExecution,
+} from "@/lib/ai-suite/execution-claim";
 import { NextResponse } from "next/server";
 import { requireAgencyOwnerAny, requireSubAccountMember } from "@/lib/auth/require-tenancy";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
@@ -172,6 +176,41 @@ export async function POST(request: Request) {
    * without being able to contradict it. A failure to record is logged,
    * because an action that ran without an audit row is worth knowing about.
    */
+  /**
+   * ONE CONFIRMATION, ONE EXECUTION.
+   *
+   * Claimed before the action runs, so a retry after a dropped response, a
+   * second tab, or a replayed request is handed the first answer instead of
+   * doing the thing twice. A proposal without a usable id still runs: the
+   * id comes from the model's tool call and an older client may not send
+   * one, and refusing would break confirmation for them. That is stated
+   * rather than silently degraded.
+   */
+  const scope = claimScope(ctx);
+  const argsHash = hashArgs(validated.args);
+  const proposalId = isUsableProposalId(body.proposalId) ? body.proposalId : null;
+  if (proposalId) {
+    const claim = await claimExecution({ scope, proposalId, uid: ctx.uid, capability: cap.name, argsHash });
+    if (claim.outcome === "replayed") {
+      // Already done. Returning the original answer is the truthful response
+      // to "this already happened", and it cannot happen a second time.
+      return NextResponse.json(claim.response);
+    }
+    if (claim.outcome === "in_flight") {
+      return NextResponse.json(
+        { error: "That's already running. Give it a moment rather than sending it again." },
+        { status: 409 },
+      );
+    }
+    if (claim.outcome === "mismatch") {
+      console.warn(`[ai-suite/confirm] proposal ${proposalId} reused with a different ${claim.reason}`);
+      return NextResponse.json(
+        { error: "That confirmation doesn't match the action it was for. Ask me again and confirm the new one." },
+        { status: 409 },
+      );
+    }
+  }
+
   let result: Awaited<ReturnType<typeof cap.execute>>;
   try {
     result = await cap.execute(ctx, validated.args);
@@ -190,6 +229,10 @@ export async function POST(request: Request) {
       confirmedByEmail: ctx.email,
       error: msg.slice(0, 500),
     });
+    // The product lets a customer retry a failed action, so the claim is
+    // released rather than held: holding it would turn one transient
+    // failure into a permanently unrepeatable request.
+    if (proposalId) await releaseExecution({ scope, proposalId });
     // User-facing failures (gate off, record not in this tenant, …) are
     // surfaced verbatim; anything unexpected stays generic.
     if (err instanceof CapabilityUserError) {
@@ -201,7 +244,20 @@ export async function POST(request: Request) {
     );
   }
 
-  void recordAiSuiteAction({
+  /**
+   * PAST THIS LINE THE CHANGE HAS COMMITTED, and that fact is what mints
+   * the receipt. The capability described WHAT it did; it has no way to
+   * assert that it happened, because MutationDescriptor has no status
+   * field. Only reaching this statement does that.
+   *
+   * The audit row and the receipt are built from the same normalized
+   * descriptor by the same call, so the record of the event and the answer
+   * given to the customer cannot describe different things.
+   */
+  const mutation = normalizeMutation(result.mutation);
+  const resultRef = result.ref ?? (mutation ? refFromMutation(mutation) : null);
+
+  const auditId = await recordAiSuiteAction({
     level,
     capability: cap.name,
     args: validated.args,
@@ -211,13 +267,19 @@ export async function POST(request: Request) {
     subAccountId: ctx.subAccountId ?? null,
     confirmedByUid: ctx.uid,
     confirmedByEmail: ctx.email,
-    resultRef: result.ref ?? null,
-  }).catch((e) =>
+    resultRef,
+    mutation,
+  }).catch((e) => {
     console.error(
       `[ai-suite/confirm] ${cap.name} ran but its audit row could not be written:`,
       e instanceof Error ? e.message : e,
-    ),
-  );
+    );
+    return null;
+  });
+
+  const receipt = mutation
+    ? mintReceipt({ capability: cap.name, mutation, auditId })
+    : null;
   void recordAiSuiteUsage({
     level,
     agencyId: ctx.agencyId,
@@ -242,11 +304,21 @@ export async function POST(request: Request) {
   // Capabilities without one are readonly lookups whose resultText is
   // already customer-safe prose.
   const { completion } = result;
-  return NextResponse.json({
+  const responseBody = {
     ok: true,
     ...(completion
       ? { completion, resultText: renderCompletion(completion) }
       : { resultText: result.resultText }),
-    resultRef: result.ref ?? null,
-  });
+    // Unchanged for every existing caller.
+    resultRef,
+    // Additive: the structured result downstream consumers read instead of
+    // parsing prose. Absent on a capability that has not been migrated yet,
+    // which those consumers treat as "nothing known changed" rather than
+    // guessing.
+    ...(receipt ? { receipt } : {}),
+  };
+  // Stored so a replay is served this, byte for byte, rather than running
+  // the action again to produce something that looks like it.
+  if (proposalId) await settleExecution({ scope, proposalId, response: responseBody });
+  return NextResponse.json(responseBody);
 }

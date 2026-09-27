@@ -183,9 +183,16 @@ console.log("\n-- a committed change is never reported as a failure --");
   ck("the try wraps the mutation and nothing else",
     /try \{\s*result = await cap\.execute\(ctx, validated\.args\);\s*\} catch/.test(confirm));
   ck("the audit row is written after the commit, not before the answer",
-    /\} catch \(err\)[\s\S]*?void recordAiSuiteAction\(\{[\s\S]{0,300}status: "executed"/.test(confirm));
-  ck("and it cannot contradict the answer",
+    confirm.indexOf("result = await cap.execute") < confirm.indexOf('status: "executed"'));
+  // W1 made this call awaited rather than fire-and-forget, because the
+  // receipt carries the audit row's id. The invariant is unchanged and is
+  // what is asserted: the call is .catch-guarded, so a failed audit write
+  // can never reject into the response path and contradict an action that
+  // already committed.
+  ck("and it cannot contradict the answer: the audit call is catch-guarded",
     /status: "executed"[\s\S]{0,400}\}\)\.catch\(/.test(confirm));
+  ck("a failed audit resolves to null rather than throwing",
+    /\}\)\.catch\(\(e\) => \{[\s\S]{0,300}return null;/.test(confirm));
   ck("a missing audit row is still logged",
     /ran but its audit row could not be written/.test(confirm));
   ck("a refusal is still a 400 with the real words",
