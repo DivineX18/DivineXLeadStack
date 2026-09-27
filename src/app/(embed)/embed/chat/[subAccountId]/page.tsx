@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { checkOriginAllowed } from "@/lib/comms/web-chat/origin";
 import { mintEmbedToken, verifyEmbedToken } from "@/lib/comms/web-chat/embed-token";
-import { getChannelConfig } from "@/lib/comms/ai/agent";
+import { getAgentProfile, getChannelConfig } from "@/lib/comms/ai/agent";
 import { ChatWindow } from "@/components/web-chat/chat-window";
 import { DEFAULT_WEB_CHAT_CONFIG } from "@/types/ai";
 
@@ -31,7 +31,10 @@ export default async function EmbedChatPage({
 }) {
   const { subAccountId } = await params;
   const sp = await searchParams;
-  const config = await getChannelConfig(subAccountId, "web-chat");
+  const [config, profile] = await Promise.all([
+    getChannelConfig(subAccountId, "web-chat"),
+    getAgentProfile(subAccountId),
+  ]);
   if (!config || !config.enabled || !config.webChat) {
     notFound();
   }
@@ -66,6 +69,7 @@ export default async function EmbedChatPage({
       accentColor={accentColor}
       title={config.webChat.title || "Chat with us"}
       subtitle={config.webChat.subtitle ?? "We typically reply instantly"}
+      businessName={profile?.businessName?.trim() || null}
       embedToken={embedToken}
       embedded
     />

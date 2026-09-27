@@ -235,6 +235,13 @@ export interface WebChatChannelConfig {
   /** Hard ceilings per UTC day. Absent = safe defaults (see usage-limits.ts). */
   dailyTokenBudget?: number;
   dailyMessageBudget?: number;
+  /** Opt-in, CONSENT-BASED lead capture. Independent of `leadCapture` (which stays
+   *  false for the public site — no automatic/keyword-triggered collection). When
+   *  true, Zeno may offer "Would you like the {business} team to follow up with
+   *  you?" ONLY on genuine, explicit contact intent (see the persona rules in
+   *  comms/ai/prompt.ts) — never on pricing, refunds, or general interest — and
+   *  only proceeds to collect a name/email after the visitor clicks "Yes". */
+  consentLeadCapture?: boolean;
 }
 
 /** A link the public chat is allowed to offer. */

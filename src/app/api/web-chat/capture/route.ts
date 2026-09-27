@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
-import { getChannelConfig } from "@/lib/comms/ai/agent";
+import { getAgentProfile, getChannelConfig } from "@/lib/comms/ai/agent";
 import { guardWebChatRequest } from "@/lib/comms/web-chat/guard";
 import {
   appendMessage,
+  claimCaptureSubmission,
   isValidSessionId,
   markCaptureSkipped,
 } from "@/lib/comms/web-chat/session";
@@ -43,6 +44,14 @@ function corsHeaders(origin: string | null): Record<string, string> {
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
   };
+}
+
+/** Shared, non-time-promising acknowledgement (see the two call sites above). */
+async function buildAckText(subAccountId: string): Promise<string> {
+  const profile = await getAgentProfile(subAccountId);
+  const business = profile?.businessName?.trim();
+  const who = business ? `${business} team` : "team";
+  return `Thanks — I've passed this along to the ${who}.`;
 }
 
 export async function OPTIONS(request: Request) {
@@ -93,7 +102,11 @@ export async function POST(request: Request) {
       { status: 403, headers },
     );
   }
-  if (config.webChat?.leadCapture === false) {
+  // The legacy automatic/marker-triggered path (leadCapture) and the newer opt-in,
+  // consent-based path (consentLeadCapture) are the two ways this endpoint may be
+  // reached. At least one must be on, or this endpoint is fully closed.
+  const consentEnabled = config.webChat?.consentLeadCapture === true;
+  if (config.webChat?.leadCapture === false && !consentEnabled) {
     return NextResponse.json(
       { error: "Contact capture is not available in this chat." },
       { status: 403, headers },
@@ -145,6 +158,14 @@ export async function POST(request: Request) {
       { ok: true, reply: skipReply },
       { status: 200, headers },
     );
+  }
+
+  // ----- Idempotency: never create a second Contact/Task/email for one submission -----
+  // A retry-after-success (session already linked to a contact) or a genuine
+  // concurrent double-click both short-circuit here, before any write happens.
+  const claim = await claimCaptureSubmission({ subAccountId, sessionId });
+  if (claim === "already-linked" || claim === "in-flight") {
+    return NextResponse.json({ ok: true, reply: await buildAckText(subAccountId) }, { status: 200, headers });
   }
 
   // ----- Submit branch — validate fields -----
@@ -320,10 +341,11 @@ export async function POST(request: Request) {
     });
   }
 
-  // Templated thank-you so the next reply doesn't need an LLM round-trip.
-  const who = name ? name : "you";
-  const reach = email ?? phone ?? "the details you provided";
-  const reply = `Thanks ${who}! Someone from the team will reach out via ${reach} shortly.`;
+  // Templated thank-you so the next reply doesn't need an LLM round-trip. No response
+  // time is implied — only a verified, published estimate could say one, and we don't
+  // have one for this channel. Identical wording is used for the idempotent
+  // short-circuit above, so a retry looks seamless to the visitor.
+  const reply = await buildAckText(subAccountId);
   await appendMessage({
     subAccountId,
     agencyId: session.agencyId,

@@ -209,6 +209,7 @@ function sanitiseWebChatBlock(raw: unknown): Partial<WebChatChannelConfig> {
   if ("subtitle" in r && typeof r.subtitle === "string") out.subtitle = r.subtitle.trim().slice(0, 80);
   if ("alwaysOn" in r && typeof r.alwaysOn === "boolean") out.alwaysOn = r.alwaysOn;
   if ("leadCapture" in r && typeof r.leadCapture === "boolean") out.leadCapture = r.leadCapture;
+  if ("consentLeadCapture" in r && typeof r.consentLeadCapture === "boolean") out.consentLeadCapture = r.consentLeadCapture;
   if ("systemPromptOverride" in r && typeof r.systemPromptOverride === "string") {
     out.systemPromptOverride = r.systemPromptOverride.slice(0, 8000);
   }

@@ -28,12 +28,32 @@ import { GLOBAL_TERRITORY_ID } from "@/types";
 
 const MARKER_RE = /\[\[capture\s+([^\]]+)\]\]/i;
 const FORM_MARKER_RE = /\[\[form\s+([^\]]+)\]\]/i;
+/** No attributes today; kept case-insensitive/whitespace-tolerant like the others. */
+const CONSENT_MARKER_RE = /\[\[\s*consent\s*\]\]/i;
 const FIELD_RE = /(name|email|phone)="([^"]+)"/gi;
 const FORM_FIELDS_RE = /fields="([^"]+)"/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^\+?[0-9][\d\s\-().]{5,}$/;
 
 export type CaptureFieldId = "name" | "email" | "phone";
+
+export interface ParsedConsentOffer {
+  /** Visitor-visible reply with the [[consent]] marker stripped. */
+  cleanText: string;
+  offered: boolean;
+}
+
+/**
+ * Parse the [[consent]] marker the bot emits when (per its persona rules) it has
+ * detected genuine, explicit contact intent. The marker carries no free-text from
+ * the model — the exact consent question and its two buttons are fixed, client-
+ * rendered UI (see chat-window.tsx), never something the model phrases itself.
+ */
+export function parseConsentMarker(rawText: string): ParsedConsentOffer {
+  const offered = CONSENT_MARKER_RE.test(rawText);
+  const cleanText = rawText.replace(CONSENT_MARKER_RE, "").replace(/\n{3,}/g, "\n\n").trim();
+  return { cleanText, offered };
+}
 
 export interface ParsedFormRequest {
   /** Visitor-visible reply with the [[form …]] marker stripped. */

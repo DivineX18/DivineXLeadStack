@@ -20,6 +20,7 @@ import {
 } from "@/lib/comms/web-chat/session";
 import {
   parseCaptureMarker,
+  parseConsentMarker,
   parseFormMarker,
   reconcileContactFromCapture,
   type CaptureFieldId,
@@ -72,6 +73,9 @@ export type WebChatOutcome =
       formFields: CaptureFieldId[] | null;
       /** Whitelisted links the reply offers, resolved from the channel's CTA list. */
       ctas: ResolvedCta[];
+      /** True when this reply offers opt-in follow-up (renders the fixed
+       *  "Would you like the {business} team to follow up?" Yes/No UI). */
+      consent: boolean;
     }
   | { kind: "escalated"; keyword: string; fallbackReply: string }
   | { kind: "skipped"; reason: WebChatSkipReason; fallbackReply: string };
@@ -240,6 +244,8 @@ export async function respondToWebChat(
 
   const knowledge = await loadKnowledge(web?.knowledgeUrl, web?.allowedDomains ?? []);
   const leadCapture = web?.leadCapture !== false;
+  // Mutually exclusive with the legacy marker system above — never offer both.
+  const consentCapture = leadCapture ? false : web?.consentLeadCapture === true;
   const ctaList = web?.ctas ?? [];
   const pagePath = sanitisePagePath(input.pageUrl, web?.allowedDomains ?? []);
 
@@ -259,6 +265,7 @@ export async function respondToWebChat(
     personaOverride,
     kbOverride: knowledge,
     leadCapture,
+    consentCapture,
     extraBlocks: [pageBlock, ctaBlock],
   });
 
@@ -300,16 +307,19 @@ export async function respondToWebChat(
   const afterForm = parseFormMarker(completion.text);
   const afterCapture = parseCaptureMarker(afterForm.cleanText);
   const afterCta = parseCtaMarkers(afterCapture.cleanText, ctaList);
-  const cleanText = afterCta.cleanText;
+  const afterConsent = parseConsentMarker(afterCta.cleanText);
+  const cleanText = afterConsent.cleanText;
   // When lead capture is off, markers are stripped but never acted on.
   const capture = leadCapture ? afterCapture.capture : null;
 
-  // Suppress the form request if it was already shown this session, or
-  // the visitor has already been linked to a contact. Belt-and-braces
-  // since the prompt also tells the bot not to repeat — but bots drift.
-  const formAlreadyHandled =
+  // Suppress a repeat offer if the session already has one shown/handled this
+  // session (this session-state flag is shared with the legacy form marker on
+  // purpose: whichever mechanism a channel uses, don't ask twice). Belt-and-
+  // braces since the prompt also tells the bot not to repeat — but bots drift.
+  const captureAlreadyHandled =
     !!session.contactId || !!session.capturePromptShownAt;
-  const formFields = formAlreadyHandled || !leadCapture ? null : afterForm.fields;
+  const formFields = captureAlreadyHandled || !leadCapture ? null : afterForm.fields;
+  const consent = captureAlreadyHandled || !consentCapture ? false : afterConsent.offered;
 
   let contactId = session.contactId;
 
@@ -335,7 +345,7 @@ export async function respondToWebChat(
 
   // If we're going to render an inline form, stamp the session so the
   // next turn won't ask again even if the bot tries.
-  if (formFields) {
+  if (formFields || consent) {
     void markCapturePromptShown({
       subAccountId: input.subAccountId,
       sessionId: input.sessionId,
@@ -362,6 +372,7 @@ export async function respondToWebChat(
     contactId: contactId ?? null,
     formFields,
     ctas: afterCta.ctas,
+    consent,
   });
 }
 
