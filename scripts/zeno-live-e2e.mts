@@ -140,7 +140,18 @@ export async function ask(
     try {
       const r = await cap.execute(ctx as never, reval.args);
       trace.push(`EXECUTED ${cap.name}`);
-      return { kind: "executed" as const, capability: cap.name, args: reval.args, summary, resultText: r.resultText, trace };
+      // The structural description travels too: the confirm route mints its
+      // receipt from exactly this, so a case that checks what a screen would
+      // be told has to see the same value.
+      return {
+        kind: "executed" as const,
+        capability: cap.name,
+        args: reval.args,
+        summary,
+        resultText: r.resultText,
+        mutation: r.mutation,
+        trace,
+      };
     } catch (e) {
       const isUser = e instanceof CapabilityUserError;
       trace.push(`${isUser ? "REFUSED" : "THREW"} ${cap.name}: ${e instanceof Error ? e.message : e}`);

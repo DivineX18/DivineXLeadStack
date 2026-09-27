@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -62,11 +62,16 @@ import {
 import { TestDialog } from "./test-dialog";
 import { useWorkspaceHref } from "@/lib/shell/use-workspace-href";
 import type {
+  WorkflowNode,
   WorkflowNodeType,
   WorkflowStatus,
   WorkflowTrigger,
   WorkflowTriggerType,
 } from "@/types/workflows";
+import {
+  onResourceChange,
+  type ResourceChange,
+} from "@/lib/ai-suite/resource-changes";
 
 const TRIGGER_TYPES: WorkflowTriggerType[] = [
   "form.submitted",
@@ -179,6 +184,71 @@ export function WorkflowBuilder({
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
 
+  /**
+   * THIS EDITOR HOLDS THE WHOLE GRAPH AND SAVES IT WHOLESALE.
+   *
+   * Every other surface reflects a change as it lands, because they read
+   * Firestore through a subscription. This one fetched once and keeps the
+   * steps in local state, so a change Zeno makes is not only invisible
+   * here: the next Save sends this stale copy and silently undoes it.
+   *
+   * Two things must both be true, and they pull against each other. The
+   * customer's unsaved work must never be thrown away because Zeno touched
+   * the same record, and Zeno's committed change must never be overwritten
+   * by a stale editor. So nothing is decided automatically while there is
+   * unsaved work: the change is announced and the customer chooses. With a
+   * clean editor there is nothing to lose, so it reloads from storage,
+   * which is the only thing that knows what is actually saved.
+   */
+  const [dirty, setDirty] = useState(false);
+  const [externalChange, setExternalChange] = useState<ResourceChange | null>(null);
+  const [reloading, setReloading] = useState(false);
+
+  const reloadFromStorage = useCallback(async () => {
+    setReloading(true);
+    try {
+      const res = await fetch(`/api/sub-accounts/${saId}/workflows/${initial.id}`);
+      if (!res.ok) throw new Error();
+      const data = (await res.json()) as {
+        workflow?: { name?: string; status?: WorkflowStatus; trigger?: WorkflowTrigger; nodes?: Record<string, WorkflowNode>; startNodeId?: string };
+      };
+      const wf = data.workflow;
+      if (!wf?.nodes) throw new Error();
+      // Authoritative state replaces local state wholesale, which is only
+      // ever reached when there was nothing local worth keeping.
+      setName(wf.name ?? initial.name);
+      setStatus(wf.status ?? initial.status);
+      if (wf.trigger) setTrigger(wf.trigger);
+      setSteps(parseTree(wf.nodes, wf.startNodeId ?? initial.startNodeId));
+      setExternalChange(null);
+      setDirty(false);
+    } catch {
+      // Leaving the banner up is the honest outcome: the customer still
+      // knows the record changed, and nothing of theirs was discarded.
+      toast.error("Couldn't load the latest version. Your changes are still here.");
+    } finally {
+      setReloading(false);
+    }
+  }, [saId, initial.id, initial.name, initial.status, initial.startNodeId]);
+
+  useEffect(() => {
+    return onResourceChange({ resourceType: "workflow", resourceId: initial.id }, (change) => {
+      // A clean editor has nothing to lose, so it simply catches up.
+      if (!dirtyRef.current) {
+        void reloadFromStorage();
+        return;
+      }
+      setExternalChange(change);
+    });
+  }, [initial.id, reloadFromStorage]);
+
+  // Read inside a listener registered once, so it sees the current value
+  // rather than the one captured when the subscription was made.
+  const dirtyRef = useRef(false);
+  useEffect(() => {
+    dirtyRef.current = dirty;
+  }, [dirty]);
+
   /** Recursively replace a step's config by id. */
   function saveConfig(id: string, config: Record<string, unknown>) {
     const walk = (list: BuilderStep[]): BuilderStep[] =>
@@ -194,6 +264,7 @@ export function WorkflowBuilder({
         return s;
       });
     setSteps((cur) => walk(cur));
+    setDirty(true);
   }
 
   async function persist(nextStatus?: WorkflowStatus) {
@@ -221,6 +292,8 @@ export function WorkflowBuilder({
       );
       if (!res.ok) throw new Error();
       setStatus(effective);
+      setDirty(false);
+      setExternalChange(null);
       toast.success("Workflow saved");
       router.refresh();
     } catch (err) { toast.error(describeError(err, "Couldn't save workflow"), { duration: 12_000 });
@@ -232,6 +305,29 @@ export function WorkflowBuilder({
   return (
     <ReadinessContext.Provider value={readiness}>
       <div className="mx-auto max-w-2xl space-y-4 pb-24">
+        {/*
+          Shown only when Zeno changed this workflow WHILE there is unsaved
+          work here. Nothing is decided for the customer: saving would undo
+          Zeno's change, loading would drop theirs, so both are offered and
+          neither happens on its own.
+        */}
+        {externalChange ? (
+          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+            <p className="font-medium">Zeno changed this workflow while you were editing.</p>
+            <p className="text-muted-foreground mt-1">
+              You have unsaved changes here. Saving now would undo Zeno&apos;s change; loading it
+              would discard yours. Nothing has been decided for you.
+            </p>
+            <div className="mt-2 flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => void reloadFromStorage()} disabled={reloading}>
+                {reloading ? "Loading…" : "Load Zeno's version (discards your unsaved edits)"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setExternalChange(null)}>
+                Keep editing mine
+              </Button>
+            </div>
+          </div>
+        ) : null}
         <div className="flex items-center justify-between gap-3">
           <Link
             href={href("/workflows")}

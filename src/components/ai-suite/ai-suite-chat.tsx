@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { publishCommittedChange } from "@/lib/ai-suite/resource-changes";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -436,6 +437,7 @@ export function AiSuiteChat({
         ok?: boolean;
         resultText?: string;
         resultRef?: { kind: string; id: string } | null;
+        receipt?: unknown;
         error?: string;
       } | null;
       if (!res.ok || !data?.ok) {
@@ -446,6 +448,12 @@ export function AiSuiteChat({
         resultText: data.resultText,
         resultRef: data.resultRef ?? null,
       });
+      // The server minted this only after the change committed. A screen
+      // holding a local copy of that record needs to know, or its next save
+      // will send the stale copy and quietly undo what just happened. A
+      // replay returns the same receipt, which reconciles a screen without
+      // executing anything again.
+      publishCommittedChange(data.receipt);
     } catch (err) {
       const m = err instanceof Error ? err.message : "The action failed.";
       updateProposal(id, { status: "failed", resultText: m });
