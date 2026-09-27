@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
-import { FieldValue } from "firebase-admin/firestore";
-import { getAdminDb } from "@/lib/firebase/admin";
-import { emailIsConfigured, sendEmail, tenantFrom } from "@/lib/comms/resend";
+import { emailIsConfigured } from "@/lib/comms/resend";
 import { requireContactAccessible, requireUid } from "@/lib/comms/route-auth";
-import { recordSend } from "@/lib/comms/usage";
-import type { SubAccountDoc } from "@/types";
+import { sendContactEmailServerSide } from "@/lib/server/contact-email-service";
 
 type Body = { contactId?: string; subject?: string; body?: string };
 
@@ -40,57 +37,35 @@ export async function POST(request: Request) {
   const contact = await requireContactAccessible(auth.uid, contactId);
   if (contact instanceof NextResponse) return contact;
 
-  if (!contact.email) {
-    return NextResponse.json(
-      { error: "This contact has no email address." },
-      { status: 400 },
-    );
+  // The logic moved to a service so Zeno can call exactly what this route
+  // calls. One sender resolution, one activity shape, one usage counter,
+  // and one definition of what "sent" means.
+  const sent = await sendContactEmailServerSide({
+    subAccountId: contact.subAccountId,
+    contactId,
+    subject,
+    body,
+    actorUid: auth.uid,
+    actorEmail: auth.email,
+  });
+
+  if (!sent.ok) {
+    if (sent.reason === "no_address") {
+      return NextResponse.json({ error: "This contact has no email address." }, { status: 400 });
+    }
+    if (sent.reason === "no_contact") {
+      return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+    }
+    if (sent.reason === "invalid") {
+      return NextResponse.json({ error: sent.detail }, { status: 400 });
+    }
+    if (sent.reason === "not_configured") {
+      return NextResponse.json({ error: "Email is not configured on this deployment." }, { status: 503 });
+    }
+    return NextResponse.json({ error: sent.detail }, { status: 502 });
   }
 
-  // Reply-To: prefer the sub-account's nominated reply address (single
-  // source of truth — every reply for this client lands consistently in
-  // one inbox regardless of which teammate triggered the send). Falls
-  // back to the teammate's email if the sub-account hasn't set one yet,
-  // which preserves the old behavior for unconfigured deployments.
-  const subAccountSnap = await getAdminDb()
-    .doc(`subAccounts/${contact.subAccountId}`)
-    .get();
-  const subAccount = subAccountSnap.data() as SubAccountDoc | undefined;
-  const replyTo = subAccount?.replyToEmail ?? auth.email ?? undefined;
-
-  let messageId: string;
-  try {
-    const result = await sendEmail({
-      to: contact.email,
-      subject,
-      text: body,
-      replyTo,
-      from: tenantFrom(subAccount),
-    });
-    messageId = result.id;
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Failed to send email";
-    return NextResponse.json({ error: message }, { status: 502 });
-  }
-
-  try {
-    await getAdminDb()
-      .collection("contacts")
-      .doc(contactId)
-      .collection("activities")
-      .add({
-        type: "email_sent",
-        content: `Email: ${subject}`,
-        createdBy: auth.uid,
-        meta: { messageId, subject },
-        createdAt: FieldValue.serverTimestamp(),
-      });
-  } catch (err) {
-    console.warn("[email/send] activity write failed", err);
-  }
-
-  await recordSend(auth.uid, "email");
-
-  return NextResponse.json({ ok: true, id: messageId });
+  // Bookkeeping may have failed, but the message has gone. Saying anything
+  // other than success here would invite a second send.
+  return NextResponse.json({ ok: true, id: sent.providerMessageId });
 }

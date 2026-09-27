@@ -51,6 +51,8 @@ export async function ask(
     autoConfirm?: boolean;
     /** What the customer has on screen, exactly as the browser sends it. */
     pageContext?: { route?: string; resourceRef?: { kind: string; id: string; childId?: string } };
+    /** Everything said so far, so a conversation continues rather than restarting. */
+    priorMessages?: { role: string; content: string | null; tool_calls?: unknown; tool_call_id?: string }[];
   } = {},
 ) {
   // A real conversation is more than one message. Zeno sometimes describes a
@@ -91,6 +93,7 @@ export async function ask(
 
   const messages: { role: string; content: string | null; tool_calls?: unknown; tool_call_id?: string }[] = [
     { role: "system", content: system },
+    ...(opts.priorMessages ?? []),
     { role: "user", content: userTurns.shift()! },
   ];
   const tools = toolsForLevel("sub-account", roleCtx as never);
@@ -105,11 +108,11 @@ export async function ask(
         messages.push({ role: "assistant", content: turn.text }, { role: "user", content: userTurns.shift()! });
         continue;
       }
-      return { kind: "text" as const, text: turn.text ?? "", trace };
+      return { kind: "text" as const, text: turn.text ?? "", trace, messages: [...messages.slice(1), { role: "assistant", content: turn.text }] };
     }
 
     const cap = AI_SUITE_CAPABILITIES.find((c) => c.name === call.name);
-    if (!cap) return { kind: "error" as const, text: `unknown tool ${call.name}`, trace };
+    if (!cap) return { kind: "error" as const, text: `unknown tool ${call.name}`, trace, messages: messages.slice(1) };
 
     if (cap.readonly) {
       const v = cap.validate(call.args);
@@ -130,13 +133,13 @@ export async function ask(
     // until the human confirms, which is the /confirm route re-validating the
     // stored args and executing.
     const v = cap.validate(call.args);
-    if (!v.ok) { trace.push(`WRITE ${cap.name} args rejected: ${v.error}`); return { kind: "rejected" as const, text: v.error, capability: cap.name, trace }; }
+    if (!v.ok) { trace.push(`WRITE ${cap.name} args rejected: ${v.error}`); return { kind: "rejected" as const, text: v.error, capability: cap.name, trace, messages: messages.slice(1) }; }
     const summary = cap.summarize(v.args);
     trace.push(`PROPOSAL ${cap.name} :: ${summary}`);
-    if (!opts.autoConfirm) return { kind: "proposal" as const, capability: cap.name, args: v.args, summary, trace };
+    if (!opts.autoConfirm) return { kind: "proposal" as const, capability: cap.name, args: v.args, summary, trace, messages: messages.slice(1) };
 
     const reval = cap.validate(v.args); // the confirm route never trusts the stored payload
-    if (!reval.ok) { trace.push(`CONFIRM re-validate FAILED: ${reval.error}`); return { kind: "error" as const, text: `re-validate failed: ${reval.error}`, trace }; }
+    if (!reval.ok) { trace.push(`CONFIRM re-validate FAILED: ${reval.error}`); return { kind: "error" as const, text: `re-validate failed: ${reval.error}`, trace, messages: messages.slice(1) }; }
     try {
       const r = await cap.execute(ctx as never, reval.args);
       trace.push(`EXECUTED ${cap.name}`);
@@ -151,14 +154,38 @@ export async function ask(
         resultText: r.resultText,
         mutation: r.mutation,
         trace,
+        // The transcript, plus what Zeno just did, so the next turn knows.
+        messages: [...messages.slice(1), { role: "assistant", content: `[done] ${r.resultText}` }],
       };
     } catch (e) {
       const isUser = e instanceof CapabilityUserError;
       trace.push(`${isUser ? "REFUSED" : "THREW"} ${cap.name}: ${e instanceof Error ? e.message : e}`);
-      return { kind: isUser ? ("refused" as const) : ("error" as const), capability: cap.name, text: e instanceof Error ? e.message : String(e), trace };
+      return { kind: isUser ? ("refused" as const) : ("error" as const), capability: cap.name, text: e instanceof Error ? e.message : String(e), trace, messages: [...messages.slice(1), { role: "assistant", content: `[refused] ${e instanceof Error ? e.message : String(e)}` }] };
     }
   }
-  return { kind: "error" as const, text: "hop limit", trace };
+  return { kind: "error" as const, text: "hop limit", trace, messages: messages.slice(1) };
+}
+
+/**
+ * A CONTINUING conversation: each step keeps the messages the last one
+ * produced, which is how a person actually talks to Zeno. Separate ask()
+ * calls are separate conversations, and a draft written in one is not
+ * remembered in the next, which is realistic but tests something else.
+ */
+export function conversation(opts: { pageContext?: { route?: string; resourceRef?: { kind: string; id: string; childId?: string } } } = {}) {
+  let prior: { role: string; content: string | null; tool_calls?: unknown; tool_call_id?: string }[] = [];
+  return {
+    async say(text: string | string[], o: { autoConfirm?: boolean } = {}) {
+      const r = await ask(text, {
+        ...o,
+        priorMessages: prior,
+        ...(opts.pageContext ? { pageContext: opts.pageContext } : {}),
+      });
+      // The real transcript, not a reconstruction of it.
+      if ("messages" in r && Array.isArray(r.messages)) prior = r.messages as typeof prior;
+      return r;
+    },
+  };
 }
 
 export function show(label: string, r: Awaited<ReturnType<typeof ask>>) {

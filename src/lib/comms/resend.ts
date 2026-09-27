@@ -129,6 +129,7 @@ export async function sendEmail({
   html,
   replyTo,
   from,
+  idempotencyKey,
 }: {
   to: string;
   subject: string;
@@ -144,6 +145,17 @@ export async function sendEmail({
    * EMAIL_FROM shared sender.
    */
   from?: string;
+  /**
+   * Passed to Resend, which deduplicates on it: the same key returns the
+   * SAME message id rather than sending twice. Verified against the live
+   * account rather than assumed.
+   *
+   * This is defence in depth, not the primary guard. A confirmed action is
+   * already claimed once server-side before it runs; this catches the case
+   * where something re-enters the send itself, which no amount of
+   * browser-side care can prevent.
+   */
+  idempotencyKey?: string;
 }): Promise<{ id: string }> {
   const resolvedFrom = from ?? process.env.EMAIL_FROM;
   if (!resolvedFrom) {
@@ -152,14 +164,17 @@ export async function sendEmail({
     );
   }
   const client = getResend();
-  const result = await client.emails.send({
-    from: resolvedFrom,
-    to,
-    subject,
-    text,
-    ...(html ? { html } : {}),
-    replyTo,
-  });
+  const result = await client.emails.send(
+    {
+      from: resolvedFrom,
+      to,
+      subject,
+      text,
+      ...(html ? { html } : {}),
+      replyTo,
+    },
+    idempotencyKey ? { idempotencyKey } : undefined,
+  );
   if (result.error) {
     throw new Error(result.error.message || "Resend send failed");
   }

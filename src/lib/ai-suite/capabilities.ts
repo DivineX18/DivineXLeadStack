@@ -7991,6 +7991,262 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     },
   },
   {
+    name: "list_email_drafts",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    readonly: true,
+    menuLabel: "Look up email drafts waiting to be sent",
+    description:
+      "List the email drafts in this workspace, newest first, with who each one is for and what it says. Call this whenever the user refers to an email you wrote earlier ('send it', 'make that shorter', 'what did you write to Sarah?'): the draft id is not carried between messages, so this is where you get it. Never tell someone there is nothing to send without checking here first.",
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+    validate: () => ({ ok: true, args: {} }),
+    summarize: () => "Look up the email drafts in this workspace.",
+    execute: async (ctx) => {
+      const { listEmailDraftsServerSide } = await import("@/lib/server/email-drafts-service");
+      const drafts = await listEmailDraftsServerSide(ctx.subAccountId!);
+      const unsent = drafts.filter((d) => !d.sent);
+      if (drafts.length === 0) return { resultText: "No email drafts in this workspace." };
+      const render = (d: (typeof drafts)[number]) =>
+        `- to ${d.contactName} (draft_id: ${d.id})${d.sent ? " [ALREADY SENT]" : ""}\n    subject: ${d.subject}\n    body: ${d.body.slice(0, 800)}${d.body.length > 800 ? " […]" : ""}`;
+      return {
+        resultText:
+          `Email drafts (${unsent.length} unsent of ${drafts.length}):\n` +
+          drafts.map(render).join("\n"),
+      };
+    },
+  },
+  {
+    name: "draft_contact_email",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Write a draft email to a contact, ready to review before sending",
+    description:
+      "Write an email to ONE contact and save it as a draft. NOTHING IS SENT. Use this when the user asks you to draft, write or prepare an email to someone, so they can read it and change it before deciding. " +
+      "Identify the person however the user did: their name or their email address both work. Write the actual email: a real subject and a real body in their brand's voice, using what you know about the contact and the business. " +
+      "To put a button in it, put the link on its own line as [button: Book a call](https://…). " +
+      "When they are happy with it, send_contact_email sends THIS draft. Never claim you have sent anything here.",
+    parameters: {
+      type: "object",
+      properties: {
+        contact: { type: "string", description: "Who it is for: their name or their email address. Never ask for an internal id." },
+        subject: { type: "string", description: "The subject line." },
+        body: { type: "string", description: "The whole email. Plain text; a link on its own line as [button: Label](url) becomes a button." },
+      },
+      required: ["contact", "subject", "body"],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const contact = strEither(raw, "contact").trim();
+      const subject = strEither(raw, "subject").trim();
+      const body = fixLiteralNewlines(strEither(raw, "body")).trim();
+      if (!contact) return { ok: false, error: "Say who the email is for: their name or email address." };
+      if (!subject) return { ok: false, error: "The email needs a subject line." };
+      if (!body) return { ok: false, error: "Write the email body." };
+      if (body.length > 20_000) return { ok: false, error: "That email is too long." };
+      return { ok: true, args: { contact, subject: subject.slice(0, 300), body: stripToolSyntaxDebris(body) } };
+    },
+    summarize: (args) =>
+      `Save a draft email to ${args.contact as string}, subject "${args.subject as string}". Nothing is sent.`,
+    execute: async (ctx, args) => {
+      const { resolveWorkspaceContact } = await import("@/lib/server/contact-lookup-service");
+      const who = await resolveWorkspaceContact(ctx.subAccountId!, args.contact as string);
+      if (who.found === "many") {
+        throw new CapabilityUserError(
+          `More than one contact matches that: ${who.candidates.map((c: { name: string; email: string | null }) => `${c.name}${c.email ? ` (${c.email})` : ""}`).join(", ")}. Which one did you mean?`,
+        );
+      }
+      if (who.found === "none") throw new CapabilityUserError("I can't find that contact in this workspace.");
+
+      const { createEmailDraftServerSide } = await import("@/lib/server/email-drafts-service");
+      const res = await createEmailDraftServerSide({
+        subAccountId: ctx.subAccountId!,
+        contactId: who.contactId,
+        subject: args.subject as string,
+        body: args.body as string,
+        createdByUid: ctx.uid,
+      });
+      if (!res.ok) throw new CapabilityUserError("I can't find that contact in this workspace.");
+      return {
+        resultText:
+          `Draft saved for ${who.name} (draft_id="${res.id}"). NOT SENT.\n\n` +
+          `Subject: ${args.subject as string}\n\n${args.body as string}`,
+        mutation: {
+          resourceType: "email_send",
+          resourceId: res.id,
+          operation: "created",
+          summary: `Draft email to ${who.name}, not sent.`,
+        },
+      };
+    },
+  },
+  {
+    /**
+     * THE ONE CAPABILITY HERE THAT LEAVES THE BUILDING.
+     *
+     * Everything else Zeno does can be looked at afterwards and changed. An
+     * email cannot be recalled, so this is the narrowest thing that works:
+     * one message, one contact, chosen by a person who saw the recipient
+     * and the words before they agreed.
+     */
+    name: "send_contact_email",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Send an email to one contact",
+    description:
+      "SEND an email to ONE contact. This actually delivers it and cannot be undone, so it always needs the user's confirmation. " +
+      "Three ways to say what to send: draft_id for a draft you saved with draft_contact_email (use this when they say 'send it' after you drafted something), template_id for a saved template, or subject and body written here. " +
+      "This sends to ONE person. It is not for bulk email, newsletters or campaigns: if the user asks to email several people or 'everyone', say that you can only send one at a time here and ask which person they mean.",
+    parameters: {
+      type: "object",
+      properties: {
+        contact: { type: "string", description: "Who receives it: their name or email address. Required unless draft_id is given, which already names them." },
+        draft_id: { type: "string", description: "A draft saved by draft_contact_email. Use this for 'send it'." },
+        template_id: { type: "string", description: "A saved template from list_email_templates." },
+        subject: { type: "string", description: "Subject, when not using a draft or template." },
+        body: { type: "string", description: "Body, when not using a draft or template." },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const draftId = strEither(raw, "draft_id").trim();
+      const templateId = strEither(raw, "template_id").trim();
+      const contact = strEither(raw, "contact").trim();
+      const subject = strEither(raw, "subject").trim();
+      const body = fixLiteralNewlines(strEither(raw, "body")).trim();
+
+      const sources = [draftId ? 1 : 0, templateId ? 1 : 0, subject || body ? 1 : 0].reduce((a, b) => a + b, 0);
+      if (sources === 0) {
+        return { ok: false, error: "Say what to send: a draft_id, a template_id, or a subject and body." };
+      }
+      if (sources > 1) {
+        return { ok: false, error: "Send one thing: a draft, a template, or a subject and body, not a combination." };
+      }
+      if (draftId) return { ok: true, args: { draftId, ...(contact ? { contact } : {}) } };
+      if (!contact) return { ok: false, error: "Say who it is for: their name or email address." };
+      if (templateId) return { ok: true, args: { templateId, contact } };
+      if (!subject) return { ok: false, error: "The email needs a subject line." };
+      if (!body) return { ok: false, error: "The email needs a body." };
+      if (body.length > 20_000) return { ok: false, error: "That email is too long." };
+      return { ok: true, args: { contact, subject: subject.slice(0, 300), body: stripToolSyntaxDebris(body) } };
+    },
+    summarize: (args) => {
+      // The confirmation is the last thing between a person and a message
+      // they cannot recall, so it says who and what, not "execute action".
+      const who = (args.contact as string) ?? "the contact on the draft";
+      if (args.draftId) return `Send the saved draft to ${who}. This delivers it and cannot be undone.`;
+      if (args.templateId) return `Send the saved template to ${who}. This delivers it and cannot be undone.`;
+      return `Send "${args.subject as string}" to ${who}. This delivers it and cannot be undone.`;
+    },
+    execute: async (ctx, args) => {
+      const { sendContactEmailServerSide } = await import("@/lib/server/contact-email-service");
+      const { getEmailDraftServerSide, markEmailDraftSentServerSide } = await import("@/lib/server/email-drafts-service");
+      const { resolveWorkspaceContact } = await import("@/lib/server/contact-lookup-service");
+
+      let contactId = "";
+      let subject = "";
+      let body = "";
+      let draftId: string | null = null;
+
+      if (args.draftId) {
+        const draft = await getEmailDraftServerSide(ctx.subAccountId!, args.draftId as string);
+        // A draft id from another workspace is simply not at this path.
+        if (!draft) throw new CapabilityUserError("I can't find that draft any more. Ask me to write it again.");
+        if (draft.sentAt) throw new CapabilityUserError("That draft has already been sent, so I haven't sent it again.");
+        draftId = draft.id;
+        contactId = draft.contactId;
+        subject = draft.subject;
+        body = draft.body;
+      } else {
+        const who = await resolveWorkspaceContact(ctx.subAccountId!, args.contact as string);
+        if (who.found === "many") {
+          throw new CapabilityUserError(
+            `More than one contact matches that: ${who.candidates.map((c: { name: string; email: string | null }) => `${c.name}${c.email ? ` (${c.email})` : ""}`).join(", ")}. Which one did you mean? I haven't sent anything.`,
+          );
+        }
+        if (who.found === "none") throw new CapabilityUserError("I can't find that contact in this workspace, so I haven't sent anything.");
+        contactId = who.contactId;
+
+        if (args.templateId) {
+          const { listMessageTemplatesServerSide } = await import("@/lib/server/message-templates-service");
+          const all = await listMessageTemplatesServerSide(ctx.subAccountId!);
+          const tpl = all.find((t) => t.id === args.templateId);
+          if (!tpl) throw new CapabilityUserError("I can't find that template, so I haven't sent anything.");
+          if (tpl.type !== "email") throw new CapabilityUserError("That template isn't an email, so I haven't sent anything.");
+          const { resolveMergeTags } = await import("@/lib/automations/merge-tags");
+          const contactSnap = await getAdminDb().doc(`contacts/${contactId}`).get();
+          const subj = String(tpl.subject ?? "").trim();
+          if (!subj) throw new CapabilityUserError("That template has no subject line, so I haven't sent anything.");
+          const merged = (text: string) =>
+            resolveMergeTags(text, { contact: { id: contactId, ...(contactSnap.data() ?? {}) } } as never);
+          subject = merged(subj);
+          body = merged(String(tpl.body ?? ""));
+        } else {
+          subject = args.subject as string;
+          body = args.body as string;
+        }
+      }
+
+      /**
+       * The provider key is derived from what is being sent, so a second
+       * entry into this function with the same message returns the same
+       * provider id instead of a second email. The confirmation claim
+       * already prevents the ordinary double-confirm; this covers the rest.
+       */
+      const { createHash } = await import("node:crypto");
+      const idempotencyKey =
+        "zeno-" +
+        createHash("sha256")
+          .update(`${ctx.subAccountId}:${contactId}:${draftId ?? ""}:${subject}:${body}`)
+          .digest("hex")
+          .slice(0, 48);
+
+      const sent = await sendContactEmailServerSide({
+        subAccountId: ctx.subAccountId!,
+        contactId,
+        subject,
+        body,
+        actorUid: ctx.uid,
+        actorEmail: ctx.email,
+        idempotencyKey,
+        ...(process.env.ZENO_DEV_EMAIL_SINK ? { overrideRecipient: process.env.ZENO_DEV_EMAIL_SINK } : {}),
+      });
+
+      if (!sent.ok) {
+        // Nothing left, so every one of these is a truthful failure and the
+        // confirmation claim is released for a genuine retry.
+        if (sent.reason === "not_configured") throw new CapabilityUserError("Email isn't set up on this deployment, so I haven't sent anything.");
+        if (sent.reason === "no_contact") throw new CapabilityUserError("I can't find that contact in this workspace, so I haven't sent anything.");
+        if (sent.reason === "no_address") throw new CapabilityUserError("That contact has no email address, so there was nowhere to send it.");
+        if (sent.reason === "invalid") throw new CapabilityUserError(`${sent.detail} Nothing was sent.`);
+        throw new CapabilityUserError(`The email provider wouldn't accept it: ${sent.detail} Nothing was sent.`);
+      }
+
+      if (draftId) {
+        await markEmailDraftSentServerSide({ subAccountId: ctx.subAccountId!, draftId, providerMessageId: sent.providerMessageId });
+      }
+
+      // "Sent", never "received": acceptance is what is known.
+      const note = sent.postAcceptanceProblems.length > 0
+        ? "\n\n• The email went out. One piece of bookkeeping did not save, so it may not appear in their history yet."
+        : "";
+      return {
+        resultText:
+          `Sent to ${sent.contactName} <${sent.to}>. Provider accepted it as ${sent.providerMessageId}.${note}`,
+        mutation: {
+          resourceType: "email_send",
+          resourceId: sent.providerMessageId,
+          operation: "sent",
+          // Field names only. The subject is the message, not a field, and
+          // the body never travels in metadata.
+          changedFields: ["email_sent"],
+          summary: `Email sent to ${sent.contactName}: "${sent.subject}".`,
+          href: `/sa/${ctx.subAccountId}/contacts/${sent.contactId}`,
+        },
+      };
+    },
+  },
+  {
     name: "update_member_role",
     level: "sub-account",
     requiredRole: "subAccountAdmin",
