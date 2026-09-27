@@ -36,6 +36,13 @@ interface AiSuiteChatProps {
    *  reasons about the customer's ACTUAL draft rather than regenerating from a
    *  title. Re-resolved and ownership-checked server-side — never trusted. */
   artifactRef?: { kind: "funnel"; id: string; sectionId?: string | null };
+  /**
+   * What this component knows is open, when the route cannot say it: the
+   * selected email inside an automation, the deal whose dialog is showing.
+   * Only a kind and an id travel; the server re-reads the record and proves
+   * it belongs to this workspace before Zeno is told anything about it.
+   */
+  resourceRef?: { kind: string; id: string; childId?: string | null };
   /** Pre-fills the input when another surface hands work over (a
    *  recommendation's "Fix with Zeno", say). SEEDS ONLY — never auto-sends,
    *  so the customer reads and chooses. Re-seeding with the same text is a
@@ -231,6 +238,7 @@ export function AiSuiteChat({
   subAccountId,
   onActiveChange,
   artifactRef,
+  resourceRef,
   seedPrompt,
 }: AiSuiteChatProps) {
   const [messages, setMessages] = useState<UiMessage[]>([]);
@@ -340,6 +348,9 @@ export function AiSuiteChat({
             route: typeof window !== "undefined" ? window.location.pathname : undefined,
             ...(artifactRef
               ? { artifactRef: { kind: artifactRef.kind, id: artifactRef.id, ...(artifactRef.sectionId ? { sectionId: artifactRef.sectionId } : {}) } }
+              : {}),
+            ...(resourceRef
+              ? { resourceRef: { kind: resourceRef.kind, id: resourceRef.id, ...(resourceRef.childId ? { childId: resourceRef.childId } : {}) } }
               : {}),
           },
         }),

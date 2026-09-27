@@ -8622,8 +8622,35 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       return { ok: true, args };
     },
     summarize: (args) => {
-      const bits = Object.keys(args).filter((k) => k !== "bookingPageId" && k !== "linkWorkspaceId");
-      return `Change ${bits.join(", ")} on this booking page.`;
+      /**
+       * The confirmation is the last thing between a person and a change,
+       * so it says what will happen in their words. It used to list the
+       * internal parameter names ("Change workingHour, durationMinutes"),
+       * which names the code rather than the effect and tells someone
+       * nothing about what they are approving.
+       */
+      const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const hhmm = (m: number) => {
+        const h = Math.floor(m / 60);
+        const suffix = h < 12 ? "am" : "pm";
+        const h12 = h % 12 === 0 ? 12 : h % 12;
+        return m % 60 === 0 ? `${h12}${suffix}` : `${h12}:${String(m % 60).padStart(2, "0")}${suffix}`;
+      };
+      const parts: string[] = [];
+      const wh = args.workingHour as { dayOfWeek: number; startMinute: number; endMinute: number } | undefined;
+      if (wh) parts.push(`open ${DAYS[wh.dayOfWeek]}s from ${hhmm(wh.startMinute)} to ${hhmm(wh.endMinute)}`);
+      if (args.durationMinutes) parts.push(`make meetings ${args.durationMinutes as number} minutes`);
+      if (args.bufferMinutes !== undefined) parts.push(`leave ${args.bufferMinutes as number} minutes between meetings`);
+      if (args.minNoticeHours !== undefined) parts.push(`require ${args.minNoticeHours as number} hours' notice`);
+      if (args.visibleDays !== undefined) parts.push(`let people book ${args.visibleDays as number} days ahead`);
+      if (args.maxPerDay !== undefined) parts.push(args.maxPerDay === null ? "remove the daily cap" : `cap it at ${args.maxPerDay as number} a day`);
+      if (args.status) parts.push(args.status === "published" ? "publish it" : "make it a draft");
+      if (args.name) parts.push(`rename it to "${args.name as string}"`);
+      if (args.description) parts.push("change its description");
+      const what = parts.length > 0 ? parts.join(", ") : "change its settings";
+      // The page is named by its own address, which is what the customer
+      // sees in the link they hand out, rather than an internal id.
+      return `On the "${args.bookingPageId as string}" booking page: ${what}.`;
     },
     execute: async (ctx, args) => {
       const { patchBookingPageServerSide } = await import("@/lib/server/booking-pages-service");

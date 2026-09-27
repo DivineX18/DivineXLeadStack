@@ -70,7 +70,14 @@ export interface AiSuiteChatRequest {
    */
   pageContext?: {
     route?: string;
-    artifactRef?: { kind: string; id: string };
+    artifactRef?: { kind: string; id: string; sectionId?: string };
+    /**
+     * The resource a component knows is open, when the route cannot say it:
+     * a selected workflow email, an open deal dialog. Still only an id and a
+     * kind, still re-resolved and proven against the authenticated
+     * workspace server-side. It is a resolution hint, never authorization.
+     */
+    resourceRef?: { kind: string; id: string; childId?: string };
   };
 }
 

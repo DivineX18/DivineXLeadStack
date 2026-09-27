@@ -47,17 +47,42 @@ const roleCtx = { agencyRoleIsOwner: false, subAccountRole: "admin" };
 /** One conversational turn-loop: exactly the chat route's shape. */
 export async function ask(
   userText: string | string[],
-  opts: { autoConfirm?: boolean } = {},
+  opts: {
+    autoConfirm?: boolean;
+    /** What the customer has on screen, exactly as the browser sends it. */
+    pageContext?: { route?: string; resourceRef?: { kind: string; id: string; childId?: string } };
+  } = {},
 ) {
   // A real conversation is more than one message. Zeno sometimes describes a
   // change and asks before calling the tool, which is a normal turn, not a
   // failure, so a case can supply the follow-up the customer would type.
   const userTurns = Array.isArray(userText) ? [...userText] : [userText];
   const { actions, lookups } = capabilityNamesForLevel("sub-account", roleCtx as never);
+  // The page-context card, resolved exactly as the chat route resolves it.
+  const contextCards: { id: string; levels: string[]; title: string; location: string; keywords: string[]; body: string }[] = [];
+  if (opts.pageContext) {
+    const { resolveCurrentResource, renderResourceContextLines } = await import(
+      "../src/lib/ai-suite/context-resources"
+    );
+    const resource = await resolveCurrentResource(SA, {
+      route: opts.pageContext.route,
+      resourceRef: opts.pageContext.resourceRef,
+    });
+    if (resource) {
+      contextCards.push({
+        id: "zeno-current-resource",
+        levels: ["sub-account"],
+        title: "What the customer has open right now",
+        location: "The screen they are on",
+        keywords: ["this", "current", "open", "on screen"],
+        body: renderResourceContextLines(resource).join("\n"),
+      });
+    }
+  }
   const system = buildAiSuiteSystemPrompt({
     level: "sub-account",
     brandName: "DivineX",
-    cards: [],
+    cards: contextCards,
     actionNames: actions,
     lookupNames: lookups,
     todayIso: new Date().toISOString().slice(0, 10),

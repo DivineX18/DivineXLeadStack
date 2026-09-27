@@ -105,8 +105,16 @@ console.log("\n-- a public link is a usable identifier --");
   ck("a URL validates end to end", v.ok === true);
   if (v.ok) {
     ck("and re-validates (the confirm route re-checks its own output)", c.validate(v.args).ok === true);
+    // W2 rewrote this summary to describe the change in the customer's
+    // words rather than list parameter names, so the assertion tests the
+    // invariant, not the old wording: the change is stated, and the
+    // workspace carried along from the link is not presented as one.
+    const summary = c.summarize(v.args);
+    ck("the confirmation states the change in plain words",
+      /45 minutes/.test(summary) && !/durationMinutes/.test(summary), summary);
     ck("the carried workspace is not mistaken for a requested change",
-      c.summarize(v.args).includes("durationMinutes") && !c.summarize(v.args).includes("linkWorkspaceId"));
+      !/linkWorkspaceId/i.test(summary) && !/WS1/.test(summary), summary);
+    ck("and it names which booking page", /intro/.test(summary), summary);
   }
   ck("a URL with no other change is still refused",
     c.validate({ booking_page_id: "https://crm.divinex.io/b/WS1/intro" }).ok === false);

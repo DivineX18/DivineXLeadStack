@@ -434,6 +434,30 @@ export async function POST(request: Request) {
         : null;
       const card = renderPageContextCard(surface, artifact);
       if (card) cards.push(card);
+
+      // Every other resource with an editor. The funnel resolver above keeps
+      // its richer card; this covers booking pages, forms, automations and
+      // the rest, resolved from the route or from a component's explicit
+      // ref, and proven against this workspace exactly the same way.
+      if (!artifact) {
+        const { resolveCurrentResource, renderResourceContextLines } = await import(
+          "@/lib/ai-suite/context-resources"
+        );
+        const resource = await resolveCurrentResource(actionCtx.subAccountId!, {
+          route: pc?.route,
+          resourceRef: pc?.resourceRef ?? pc?.artifactRef,
+        });
+        if (resource) {
+          cards.push({
+            id: "zeno-current-resource",
+            levels: ["sub-account"],
+            title: "What the customer has open right now",
+            location: "The screen they are on",
+            keywords: ["this", "current", "open", "on screen"],
+            body: renderResourceContextLines(resource).join("\n"),
+          });
+        }
+      }
     } catch {
       // Swallowed, Zeno works without page context, exactly as before.
     }
