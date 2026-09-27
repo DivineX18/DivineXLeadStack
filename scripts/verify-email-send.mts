@@ -238,6 +238,12 @@ try {
     ck("every pre-send refusal states that nothing was sent",
       (caps.match(/haven't sent anything|Nothing was sent|I haven't sent it again/g) ?? []).length >= 6);
   }
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   for (const p of made) await db.doc(p).delete().catch(() => {});
   const strays = (await db.collection("contacts").where("subAccountId", "==", SA).get())

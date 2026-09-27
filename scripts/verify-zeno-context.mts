@@ -112,6 +112,12 @@ try {
   check("F10. an unknown artifact kind is never trusted",
     (await resolveArtifact(A, { kind: "subAccount", id: B })) === null);
   check("F11. a non-object ref is rejected", (await resolveArtifact(A, "funnel:" + foreignId)) === null);
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   for (const c of cleanup.reverse()) await c();
   console.log("\n(probe funnels deleted)");

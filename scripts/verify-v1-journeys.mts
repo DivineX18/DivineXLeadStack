@@ -264,6 +264,12 @@ try {
   const reviseCap = getCapability("revise_funnel_copy");
   check("CREATE: the page's copy can be revised in place, not regenerated", !!reviseCap);
   check("APPROVE: a revision is a confirm-gated action, never silent", reviseCap?.readonly !== true);
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   for (const t of trash) {
     if (t.path.startsWith("funnelStats/")) {

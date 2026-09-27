@@ -187,6 +187,12 @@ try {
   check("the primary button is a real tap target", (btn?.height ?? 0) >= 44, `${btn?.height}px`);
   check("the button fits the screen", (btn?.width ?? 0) <= 390 && (btn?.width ?? 0) > 200, `${btn?.width}px`);
   await mobile.close();
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   await browser.close();
   await cleanup();

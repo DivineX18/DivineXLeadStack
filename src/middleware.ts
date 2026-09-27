@@ -3,6 +3,10 @@ import type { NextRequest } from "next/server";
 import { authMiddleware } from "next-firebase-auth-edge/lib/next/middleware";
 
 const PUBLIC_PATHS = [
+  // Telegram cannot present a session cookie. The credential is its own
+  // secret-token header, checked inside the route before the body is read,
+  // so this is public to the middleware and authenticated by the handler.
+  "/api/webhooks/telegram",
   "/",
   // Step 1 of the two-step trial. Public by necessity: it runs before any
   // account exists, and creates none — it records a lead and forwards to the

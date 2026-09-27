@@ -203,6 +203,12 @@ try {
   }
   check("I. live responses contain no Firestore-style document id",
     !/\b[A-Za-z0-9_-]{20}\b/.test(all), (all.match(/\b[A-Za-z0-9_-]{20}\b/) ?? [""])[0]);
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   if (prior) await ref.set(prior, { merge: false }); else await ref.delete();
   console.log("\n(probe profile snapshot restored)");

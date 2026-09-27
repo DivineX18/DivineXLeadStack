@@ -194,6 +194,12 @@ try {
     const runs = await db.collection("workflowRuns").where("subAccountId", "==", SA).get();
     check("no workflow run was started", runs.size === 0, `${runs.size} run(s)`);
   }
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   // Leave nothing behind.
   for (const [coll, id] of [

@@ -18,8 +18,20 @@ import { AI_SUITE_CAPABILITIES } from "../src/lib/ai-suite/capabilities";
 
 let fails = 0;
 const ck = (n: string, ok: boolean, d = "") => { console.log(`${ok ? "PASS" : "FAIL"}  ${n}${d ? ` - ${d}` : ""}`); if (!ok) fails++; };
-const confirm = fs.readFileSync("src/app/api/ai-suite/confirm/route.ts", "utf8");
-const chat = fs.readFileSync("src/app/api/ai-suite/chat/route.ts", "utf8");
+// W6 moved the execution boundary out of the route and into the
+// confirm-executor so Telegram runs the same code. The invariants are
+// unchanged; the file holding them is not. Both are read, so nothing
+// passes merely because the thing it guards moved somewhere unchecked.
+const confirm =
+  fs.readFileSync("src/app/api/ai-suite/confirm/route.ts", "utf8") +
+  fs.readFileSync("src/lib/ai-suite/confirm-executor.ts", "utf8");
+// W6 moved the turn loop out of the route and into the orchestrator so
+// Telegram runs the same code. The invariants below are unchanged; the
+// file that holds them is not. Read BOTH, so an assertion cannot pass
+// merely because the thing it guards was moved somewhere unchecked.
+const chat =
+  fs.readFileSync("src/app/api/ai-suite/chat/route.ts", "utf8") +
+  fs.readFileSync("src/lib/ai-suite/orchestrator.ts", "utf8");
 const caps = fs.readFileSync("src/lib/ai-suite/capabilities.ts", "utf8");
 const audit = fs.readFileSync("src/lib/ai-suite/audit.ts", "utf8");
 const contract = fs.readFileSync("src/lib/ai-suite/execution-result.ts", "utf8");
@@ -50,10 +62,13 @@ console.log("-- a capability cannot declare success --");
     // no path through it continues on to the mint. Counting returns against
     // branches was the wrong check, because the claim release is an `if`
     // that correctly has no return.
-    const tail = body.trimEnd().split("\n").slice(-6).join("\n");
+    // The invariant: the catch ENDS in an unconditional return, so no path
+    // through it continues to the mint. Asserted on the statement itself
+    // rather than its punctuation, which changed when the execution moved
+    // out of the route and stopped returning HTTP responses.
+    const tail = body.trimEnd().split("\n").filter((l) => l.trim()).slice(-1)[0] ?? "";
     ck("the failure path ends in an unconditional return, so nothing reaches the mint",
-      /\n    \);\s*$/.test(tail) && /return NextResponse\.json\(/.test(tail),
-      tail.split("\n").slice(-3).join(" | "));
+      /^\s*return\b/.test(tail) && !/^\s*(if|\})/.test(tail), tail.trim());
     ck("and the mint is outside that catch entirely", confirm.indexOf("mintReceipt(") > close);
     ck("a failed action records status failed, not executed", /status: "failed"/.test(body));
   }

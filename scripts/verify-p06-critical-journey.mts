@@ -141,6 +141,12 @@ try {
   }
   check("K. plan text omits Firestore-style ids",
     !/\b[A-Za-z0-9_-]{20}\b/.test(JSON.stringify(plan.map((p) => ({ ...p, artifactId: "", nextAction: { ...p.nextAction, href: "" } })))));
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   for (const c of cleanup.reverse()) await c();
   console.log("\n(probe artifacts deleted)");

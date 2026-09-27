@@ -401,6 +401,12 @@ try {
     const types = sections.map((s) => s.type);
     check("6e. value_stack renders right before the offer", types.indexOf("value_stack") === types.indexOf("offer") - 1);
   }
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   for (const id of createdFunnelIds) await db.doc(`funnels/${id}`).delete().catch(() => {});
   await db.doc(`subAccounts/${SUB_ID}`).delete().catch(() => {});

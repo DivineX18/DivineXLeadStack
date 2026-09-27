@@ -117,6 +117,12 @@ try {
   made.push(gPath);
   await probe("community", "update_community", { groupId: g.id, tagline: "hijacked" }, gPath);
 
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   for (const p of made) await db.doc(p).delete().catch(()=>{});
   console.log(`\ncleaned up ${made.length} temporary records`);

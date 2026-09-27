@@ -261,12 +261,20 @@ try {
       // contract suite owns that invariant; it is asserted here too because
       // deleting it would silently disable every reaction while this suite
       // still passed.
-      const confirmRoute = readFileSync("src/app/api/ai-suite/confirm/route.ts", "utf8");
+      const confirmRoute =
+        readFileSync("src/app/api/ai-suite/confirm/route.ts", "utf8") +
+        readFileSync("src/lib/ai-suite/confirm-executor.ts", "utf8");
       ck("the confirm response carries the receipt, or nothing here can fire",
         /\.\.\.\(receipt \? \{ receipt \} : \{\}\)/.test(confirmRoute));
       ck("and the client reads it from there", /publishCommittedChange\(data\.receipt\)/.test(chat));
     }
   }
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   for (const p of made) await db.doc(p).delete().catch(() => {});
   console.log(`\ncleaned up ${made.length} dev records`);

@@ -211,6 +211,12 @@ try {
   for (const t of tasksSnap.docs) await t.ref.delete().catch(() => {});
   await runRef.delete().catch(() => {});
   await db.doc(`contacts/${contactId}`).delete().catch(() => {});
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   if (createdIds.funnelId) await db.doc(`funnels/${createdIds.funnelId}`).delete().catch(() => {});
   if (createdIds.formId) await db.doc(`forms/${createdIds.formId}`).delete().catch(() => {});

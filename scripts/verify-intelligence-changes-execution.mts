@@ -158,6 +158,12 @@ try {
   // Reasoning material, not recitation.
   check("the diagnosed arm does not read scores or field names aloud",
     !/\b61\b|scoreLabel|primaryConstraint|growth_scans/i.test(withIntel));
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   if (prior) await profileRef.set(prior); else await profileRef.delete();
   console.log("\n(probe profile restored)");

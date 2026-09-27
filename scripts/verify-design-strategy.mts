@@ -281,6 +281,12 @@ try {
     const data = (await db.doc(`funnels/${result.ref!.id}`).get()).data()!;
     check("5n2. A luxury-picked funnel now KEEPS its distinct premium archetype (reconciled §20: a VSL look would hurt luxury/nonprofit/professional)", data.designStrategy?.visualArchetype === "luxury_premium", String(data.designStrategy?.visualArchetype));
   }
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   for (const id of createdFunnelIds) await db.doc(`funnels/${id}`).delete().catch(() => {});
   await db.doc(`subAccounts/${SUB_ID}`).delete().catch(() => {});

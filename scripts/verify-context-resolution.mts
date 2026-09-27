@@ -169,7 +169,13 @@ try {
 
   console.log("\n-- it feeds the existing execution path, not a new one --");
   {
-    const route = readFileSync("src/app/api/ai-suite/chat/route.ts", "utf8");
+    // W6 moved the turn loop out of the route and into the orchestrator so
+    // Telegram runs the same code. The invariants below are unchanged; the
+    // file that holds them is not. Read BOTH, so an assertion cannot pass
+    // merely because the thing it guards was moved somewhere unchecked.
+    const route =
+      readFileSync("src/app/api/ai-suite/chat/route.ts", "utf8") +
+      readFileSync("src/lib/ai-suite/orchestrator.ts", "utf8");
     ck("context only ever adds a knowledge card", /cards\.push\(\{\s*\n\s*id: "zeno-current-resource"/.test(route));
     ck("it does not execute anything itself",
       !/resolveCurrentResource[\s\S]{0,600}cap\.execute/.test(route));
@@ -180,6 +186,12 @@ try {
     ck("every loader proves ownership or returns null",
       (ctx.match(/return null;/g) ?? []).length >= 12);
   }
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   for (const p of made) await db.doc(p).delete().catch(() => {});
   const strayForms = (await db.collection("forms").where("subAccountId", "==", SA).get())

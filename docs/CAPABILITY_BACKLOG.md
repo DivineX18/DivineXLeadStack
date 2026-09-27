@@ -40,3 +40,31 @@ people. Needs a disposable Facebook Page. See the W5 report.
 Nothing in this codebase reads Graph insights. Publishing is supported;
 performance ingestion does not exist, and Zeno says so rather than
 guessing. A later improvement, not a gap in W5.
+
+## Telegram: awaiting configuration, not code
+
+The gateway is built and tested below the transport. The wire needs
+three values, set directly in the environment, never pasted into chat:
+
+  TELEGRAM_BOT_TOKEN      BotFather -> /newbot (or /token for an existing
+                          bot). The bot's API token.
+  TELEGRAM_BOT_USERNAME   The bot's @name without the @. Used only to
+                          build the t.me deep link.
+  TELEGRAM_WEBHOOK_SECRET openssl rand -base64 32. Registered with
+                          setWebhook as secret_token and returned by
+                          Telegram on every delivery.
+
+Then register the webhook once, from a machine with the token:
+
+  curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" \
+    -d "url=<APP_URL>/api/webhooks/telegram" \
+    -d "secret_token=<WEBHOOK_SECRET>"
+
+The app URL must be publicly reachable, so a dev shell needs a tunnel.
+
+## Suites must fail when they abort
+
+A throw that escaped to a suite's finally printed the result from a
+counter that was never incremented, so a run that crashed reported ALL
+PASS. Two mutations escaped this way before it was noticed. Every suite
+with a top-level try/finally now counts an abort as a failure.

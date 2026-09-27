@@ -176,6 +176,12 @@ try {
     check("the capture path produces a real lead", contacts.size === 1, `contacts=${contacts.size}`);
     await ctx.close();
   }
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   await browser.close();
   for (const path of trash) {

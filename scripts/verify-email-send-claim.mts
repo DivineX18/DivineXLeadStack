@@ -62,6 +62,12 @@ try {
 
   const acts = (await db.collection(`contacts/${cRef.id}/activities`).get()).docs.filter((a)=>a.data().type==="email_sent");
   ck("the contact's history shows exactly one email", acts.length === 1, `rows=${acts.length}`);
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   await db.recursiveDelete(cRef).catch(async () => { await cRef.delete().catch(()=>{}); });
   await db.doc(`aiSuiteExecutions/${SCOPE}__${PID}`).delete().catch(()=>{});

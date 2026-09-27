@@ -110,11 +110,17 @@ try {
 
   console.log("\n-- the route wires it around the commit boundary --");
   {
-    const route = readFileSync("src/app/api/ai-suite/confirm/route.ts", "utf8");
+    const route =
+      readFileSync("src/app/api/ai-suite/confirm/route.ts", "utf8") +
+      readFileSync("src/lib/ai-suite/confirm-executor.ts", "utf8");
     ck("the claim is taken BEFORE execute",
       route.indexOf("claimExecution(") < route.indexOf("result = await cap.execute"));
+    // A replay must return the stored answer without reaching execute.
+    // The shape changed when this moved out of the route; the rule did not.
     ck("a replay returns without executing",
-      /claim\.outcome === "replayed"[\s\S]{0,200}return NextResponse\.json\(claim\.response\)/.test(route));
+      /claim\.outcome === "replayed"[\s\S]{0,240}return \{ __replay: true, body: claim\.response \}/.test(route));
+    ck("and it returns before execute is ever called",
+      route.indexOf('claim.outcome === "replayed"') < route.indexOf("await cap.execute("));
     ck("an in-flight duplicate is refused with 409", /in_flight"[\s\S]{0,200}status: 409/.test(route));
     ck("a mismatched replay is refused with 409", /mismatch"[\s\S]{0,300}status: 409/.test(route));
     ck("a failure releases the claim so a retry works",
@@ -126,6 +132,12 @@ try {
     ck("the browser sends the proposal id it already has",
       /proposalId: msg\.id/.test(readFileSync("src/components/ai-suite/ai-suite-chat.tsx", "utf8")));
   }
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   for (const p of made) await db.doc(p).delete().catch(() => {});
   const left = await db.collection("aiSuiteExecutions").get();

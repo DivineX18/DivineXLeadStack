@@ -105,6 +105,12 @@ try {
     await updateFunnelServerSide({ subAccountId: FIXTURE_SA, funnelId: probeId, patch: { sections: gutted, enforceCompleteness: true } });
   } catch (e) { closedErr = e instanceof FunnelValidationError ? e.message : `WRONG ERROR: ${String(e)}`; }
   check("write boundary FAILS CLOSED when nothing viable remains", closedErr.includes("can't be saved as a working funnel"), closedErr.slice(0, 140));
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   await deleteFunnelServerSide(FIXTURE_SA, probeId);
 }

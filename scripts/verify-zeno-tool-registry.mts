@@ -24,7 +24,13 @@ const ck = (n: string, ok: boolean, d = "") => {
   console.log(`${ok ? "PASS" : "FAIL"}  ${n}${d ? ` - ${d}` : ""}`);
   if (!ok) fails++;
 };
-const route = fs.readFileSync("src/app/api/ai-suite/chat/route.ts", "utf8");
+// W6 moved the turn loop out of the route and into the orchestrator so
+// Telegram runs the same code. The invariants below are unchanged; the
+// file that holds them is not. Read BOTH, so an assertion cannot pass
+// merely because the thing it guards was moved somewhere unchecked.
+const route =
+  fs.readFileSync("src/app/api/ai-suite/chat/route.ts", "utf8") +
+  fs.readFileSync("src/lib/ai-suite/orchestrator.ts", "utf8");
 const caps = fs.readFileSync("src/lib/ai-suite/capabilities.ts", "utf8");
 
 console.log("-- the registry itself --");
@@ -184,7 +190,9 @@ console.log("\n-- an event is an interval, not two independent fields --");
 
 console.log("\n-- a committed change is never reported as a failure --");
 {
-  const confirm = fs.readFileSync("src/app/api/ai-suite/confirm/route.ts", "utf8");
+  const confirm =
+    fs.readFileSync("src/app/api/ai-suite/confirm/route.ts", "utf8") +
+    fs.readFileSync("src/lib/ai-suite/confirm-executor.ts", "utf8");
   // The audit write used to sit between the commit and the response, inside
   // the same try. A hiccup there told the customer it failed, and they would
   // retry something that had already happened.

@@ -103,6 +103,12 @@ try {
   const sequences = [...seen.values()].map((v) => v.join(">"));
   check("different templates produce genuinely different page structures",
     new Set(sequences).size === sequences.length, `${new Set(sequences).size} distinct of ${sequences.length}`);
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   await Promise.all(built.map((id) => db.doc(`funnels/${id}`).delete().catch(() => {})));
 }

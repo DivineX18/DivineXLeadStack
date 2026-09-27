@@ -235,6 +235,12 @@ try {
     check(`${name}: no sideways scroll`, !(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2)));
     await page.close();
   }
+} catch (err) {
+  // An aborted run is a failed run. Without this a throw escapes to the
+  // finally, which prints a result from a counter that was never
+  // incremented, and a run that blew up reports ALL PASS.
+  fails++;
+  console.log(`FAIL  the suite threw before finishing - ${err instanceof Error ? err.message : String(err)}`);
 } finally {
   await browser.close();
 }
