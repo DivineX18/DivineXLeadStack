@@ -7991,6 +7991,266 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     },
   },
   {
+    name: "list_social_posts",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    readonly: true,
+    menuLabel: "Look up social posts: drafts, scheduled and already published",
+    description:
+      "List this workspace's social posts, newest first, with what each one says and what state it is in. Call this whenever the user refers to a post from an earlier message ('make the second one shorter', 'schedule them for Friday', 'publish that one'): post ids are not carried between messages, so this is where you get them. Also tells you which Page is connected.",
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+    validate: () => ({ ok: true, args: {} }),
+    summarize: () => "Look up the social posts in this workspace.",
+    execute: async (ctx) => {
+      const { listSocialPostsServerSide, resolvePublishTarget } = await import("@/lib/server/social-posts-service");
+      const [posts, target] = await Promise.all([
+        listSocialPostsServerSide(ctx.subAccountId!),
+        resolvePublishTarget(ctx.subAccountId!),
+      ]);
+      const where = target.ok
+        ? `Connected Page: ${target.pageName}${target.instagramUsername ? ` (Instagram @${target.instagramUsername})` : " (no Instagram linked)"}.`
+        : target.reason === "gate_off"
+          ? "The Social Planner is switched off for this workspace, so nothing can be scheduled or published."
+          : "No Facebook Page with posting permission is connected, so nothing can be scheduled or published yet.";
+      if (posts.length === 0) return { resultText: `No social posts yet. ${where}` };
+      const lines = posts.map((x, i) => {
+        const state =
+          x.status === "published"
+            ? `PUBLISHED${x.results.filter((r) => r.status === "published").length ? ` to ${x.results.filter((r) => r.status === "published").map((r) => r.platform).join(", ")}` : ""}`
+            : x.status === "scheduled"
+              ? `SCHEDULED for ${x.scheduledAt}`
+              : x.status === "failed"
+                ? `FAILED: ${x.results.map((r) => r.error).filter(Boolean).join("; ") || "unknown"}`
+                : x.status.toUpperCase();
+        return `${i + 1}. [${state}] (post_id: ${x.id})${x.targets.length ? ` targets: ${x.targets.join(", ")}` : " no platform chosen yet"}${x.imageUrl ? " with an image" : ""}\n    ${x.caption.slice(0, 600)}${x.caption.length > 600 ? " […]" : ""}`;
+      });
+      return { resultText: `Social posts (${posts.length}). ${where}\n${lines.join("\n")}` };
+    },
+  },
+  {
+    name: "create_social_post",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Write a social post draft",
+    description:
+      "Write ONE social post and save it as a draft. NOTHING IS PUBLISHED and nothing is scheduled. Use this when the user asks for a post, or several: call it once per post so each one is separately editable afterwards. " +
+      "Write the real caption in the business's voice. Ground it in what you actually know about this workspace: never invent testimonials, customer numbers, revenue, discounts, deadlines, awards, certifications or results to make it more persuasive. You may invent the argument, never the evidence. " +
+      "An image is an optional public https link the user gave you: never invent one. Instagram cannot post without an image. " +
+      "Choosing platforms here is optional; scheduling or publishing is a separate, confirmed step.",
+    parameters: {
+      type: "object",
+      properties: {
+        caption: { type: "string", description: "The post itself, as it should read." },
+        image_url: { type: "string", description: "Optional public https image link the user supplied. Never invent one." },
+        platforms: {
+          type: "array",
+          items: { type: "string", enum: ["facebook", "instagram"] },
+          description: "Optional. Where it is intended to go. Instagram requires an image.",
+        },
+      },
+      required: ["caption"],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const caption = fixLiteralNewlines(strEither(raw, "caption")).trim();
+      if (!caption) return { ok: false, error: "Write the post's caption." };
+      if (caption.length > 5000) return { ok: false, error: "That post is too long." };
+      const imageUrl = strEither(raw, "image_url").trim();
+      if (imageUrl && !/^https:\/\//i.test(imageUrl)) {
+        return { ok: false, error: "An image has to be a public https link the user gave you. Ask for one rather than inventing it." };
+      }
+      const r = raw as Record<string, unknown>;
+      const platforms = Array.isArray(r.platforms)
+        ? r.platforms.filter((x): x is string => x === "facebook" || x === "instagram")
+        : [];
+      if (platforms.includes("instagram") && !imageUrl) {
+        return { ok: false, error: "Instagram needs an image. Ask the user for an image link, or post to Facebook only." };
+      }
+      return {
+        ok: true,
+        args: { caption: stripToolSyntaxDebris(caption), ...(imageUrl ? { imageUrl } : {}), ...(platforms.length ? { platforms } : {}) },
+      };
+    },
+    summarize: (args) => {
+      const first = (args.caption as string).split("\n")[0].slice(0, 70);
+      return `Save a social post draft: "${first}${(args.caption as string).length > 70 ? "…" : ""}". Nothing is published.`;
+    },
+    execute: async (ctx, args) => {
+      const { createSocialDraftServerSide } = await import("@/lib/server/social-posts-service");
+      const res = await createSocialDraftServerSide({
+        subAccountId: ctx.subAccountId!,
+        createdByUid: ctx.uid,
+        caption: args.caption as string,
+        imageUrl: (args.imageUrl as string) ?? null,
+        targets: (args.platforms as ("facebook" | "instagram")[]) ?? [],
+      });
+      if (!res.ok) {
+        if (res.reason === "gate_off") {
+          throw new CapabilityUserError("The Social Planner is switched off for this workspace. Your agency owner can turn it on.");
+        }
+        if (res.reason === "invalid") throw new CapabilityUserError(res.detail);
+        throw new CapabilityUserError("I couldn't save that draft.");
+      }
+      return {
+        resultText: `Draft saved (post_id="${res.id}"). NOT PUBLISHED, NOT SCHEDULED.\n\n${args.caption as string}`,
+        mutation: {
+          resourceType: "social_post",
+          resourceId: res.id,
+          operation: "created",
+          summary: "Social post draft saved. Nothing published.",
+          href: `/sa/${ctx.subAccountId}/social`,
+        },
+      };
+    },
+  },
+  {
+    name: "update_social_post",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Change a social post draft's wording, image or platforms",
+    description:
+      "Change ONE existing social post draft. Call list_social_posts first to get its post_id: ids are not carried between messages, so when the user says 'the second one' you look it up rather than remembering it. " +
+      "Send only what changes. A post that has already gone out cannot be edited here, because nothing can change what a platform has already shown people.",
+    parameters: {
+      type: "object",
+      properties: {
+        post_id: { type: "string", description: "Which post, from list_social_posts." },
+        caption: { type: "string", description: "The new caption, in full." },
+        image_url: { type: "string", description: "A public https image link, or an empty string to remove the image." },
+        platforms: { type: "array", items: { type: "string", enum: ["facebook", "instagram"] }, description: "Replaces where it is intended to go." },
+      },
+      required: ["post_id"],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const postId = strEither(raw, "post_id").trim();
+      if (!postId) return { ok: false, error: "post_id is required. Call list_social_posts to get it." };
+      const r = raw as Record<string, unknown>;
+      const args: Record<string, unknown> = { postId };
+      if (typeof (r.caption ?? r.Caption) === "string") {
+        const caption = fixLiteralNewlines(strEither(raw, "caption")).trim();
+        if (!caption) return { ok: false, error: "A post needs a caption. To remove the words entirely, delete the post instead." };
+        if (caption.length > 5000) return { ok: false, error: "That post is too long." };
+        args.caption = stripToolSyntaxDebris(caption);
+      }
+      if (typeof r.image_url === "string" || typeof r.imageUrl === "string") {
+        const imageUrl = strEither(raw, "image_url").trim();
+        if (imageUrl && !/^https:\/\//i.test(imageUrl)) {
+          return { ok: false, error: "An image has to be a public https link the user gave you." };
+        }
+        args.imageUrl = imageUrl || null;
+      }
+      if (Array.isArray(r.platforms)) {
+        args.platforms = r.platforms.filter((x): x is string => x === "facebook" || x === "instagram");
+      }
+      if (Object.keys(args).length === 1) return { ok: false, error: "Nothing to change." };
+      return { ok: true, args };
+    },
+    summarize: (args) => {
+      const bits = [args.caption ? "its wording" : null, args.imageUrl !== undefined ? "its image" : null, args.platforms ? "where it posts" : null]
+        .filter(Boolean)
+        .join(", ");
+      return `Change ${bits || "this social post draft"}. Nothing is published.`;
+    },
+    execute: async (ctx, args) => {
+      const { patchSocialPostServerSide } = await import("@/lib/server/social-posts-service");
+      const res = await patchSocialPostServerSide({
+        subAccountId: ctx.subAccountId!,
+        postId: args.postId as string,
+        ...(args.caption !== undefined ? { caption: args.caption as string } : {}),
+        ...(args.imageUrl !== undefined ? { imageUrl: args.imageUrl as string | null } : {}),
+        ...(args.platforms !== undefined ? { targets: args.platforms as ("facebook" | "instagram")[] } : {}),
+      });
+      if (!res.ok) {
+        if (res.reason === "missing") throw new CapabilityUserError("I can't find that post in this workspace.");
+        if (res.reason === "already_gone") throw new CapabilityUserError(res.detail);
+        if (res.reason === "invalid") throw new CapabilityUserError(res.detail);
+        throw new CapabilityUserError("I couldn't change that post.");
+      }
+      return {
+        resultText: `Updated the draft (${res.changed.join(", ")}). Still not published.\n\n${res.caption}`,
+        mutation: {
+          resourceType: "social_post",
+          resourceId: res.id,
+          operation: "updated",
+          changedFields: res.changed,
+          summary: "Social post draft updated. Nothing published.",
+          href: `/sa/${ctx.subAccountId}/social`,
+        },
+      };
+    },
+  },
+  {
+    /**
+     * THE CONSEQUENTIAL ONE. Handing a post to the scheduler means it will
+     * appear publicly without anyone looking again, so the confirmation
+     * names the Page, the platforms and the time.
+     */
+    name: "schedule_social_post",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Schedule a social post to publish at a set time",
+    description:
+      "Schedule ONE existing draft to publish automatically at a given time. This is consequential: once the time arrives it goes out publicly with nobody looking at it again. Call list_social_posts first for the post_id and to see which Page is connected. " +
+      "Give the time as a full ISO timestamp. It must be in the future. Scheduling is not publishing: say scheduled, never published or live.",
+    parameters: {
+      type: "object",
+      properties: {
+        post_id: { type: "string", description: "Which draft, from list_social_posts." },
+        publish_at: { type: "string", description: "When, as a full ISO timestamp, for example 2026-10-02T14:00:00Z. Must be in the future." },
+        platforms: { type: "array", items: { type: "string", enum: ["facebook", "instagram"] }, description: "Where to post. Defaults to whatever the draft already names. Instagram needs an image." },
+      },
+      required: ["post_id", "publish_at"],
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      const postId = strEither(raw, "post_id").trim();
+      if (!postId) return { ok: false, error: "post_id is required. Call list_social_posts to get it." };
+      const when = strEither(raw, "publish_at").trim();
+      if (!when) return { ok: false, error: "Say when it should go out, as an ISO timestamp." };
+      const at = new Date(when);
+      if (Number.isNaN(at.getTime())) return { ok: false, error: "That isn't a date and time I can read. Use an ISO timestamp." };
+      if (at.getTime() < Date.now() - 60_000) return { ok: false, error: "That time has already passed. Pick a future time." };
+      const r = raw as Record<string, unknown>;
+      const platforms = Array.isArray(r.platforms)
+        ? r.platforms.filter((x): x is string => x === "facebook" || x === "instagram")
+        : [];
+      return { ok: true, args: { postId, publishAt: at.toISOString(), ...(platforms.length ? { platforms } : {}) } };
+    },
+    summarize: (args) =>
+      `Schedule this post to publish publicly at ${args.publishAt as string}${args.platforms ? ` on ${(args.platforms as string[]).join(" and ")}` : ""}. It goes out automatically at that time.`,
+    execute: async (ctx, args) => {
+      const { scheduleSocialPostServerSide } = await import("@/lib/server/social-posts-service");
+      const res = await scheduleSocialPostServerSide({
+        subAccountId: ctx.subAccountId!,
+        postId: args.postId as string,
+        when: new Date(args.publishAt as string),
+        ...(args.platforms ? { targets: args.platforms as ("facebook" | "instagram")[] } : {}),
+      });
+      if (!res.ok) {
+        if (res.reason === "missing") throw new CapabilityUserError("I can't find that post in this workspace, so I haven't scheduled anything.");
+        if (res.reason === "already_gone") throw new CapabilityUserError(`${res.detail} I haven't scheduled it again.`);
+        if (res.reason === "gate_off") throw new CapabilityUserError("The Social Planner is switched off for this workspace, so I haven't scheduled anything.");
+        if (res.reason === "not_connected") throw new CapabilityUserError("No Facebook Page with posting permission is connected, so there is nowhere to post. Nothing was scheduled.");
+        if (res.reason === "no_instagram") throw new CapabilityUserError("No Instagram business account is linked to the connected Page. Nothing was scheduled.");
+        if (res.reason === "no_qstash") throw new CapabilityUserError("Scheduling isn't available on this deployment. Nothing was scheduled.");
+        throw new CapabilityUserError(`${res.detail} Nothing was scheduled.`);
+      }
+      return {
+        resultText:
+          `Scheduled for ${res.scheduledAt} on ${res.targets.join(", ")} via ${res.pageName}. It is SCHEDULED, not published: it goes out at that time.`,
+        mutation: {
+          resourceType: "social_post",
+          resourceId: res.id,
+          operation: "scheduled",
+          changedFields: ["status", "scheduledAt"],
+          summary: `Post scheduled for ${res.scheduledAt}. Not published yet.`,
+          href: `/sa/${ctx.subAccountId}/social`,
+        },
+      };
+    },
+  },
+  {
     name: "list_email_drafts",
     level: "sub-account",
     requiredRole: "subAccountAdmin",

@@ -143,6 +143,17 @@ export async function ask(
     try {
       const r = await cap.execute(ctx as never, reval.args);
       trace.push(`EXECUTED ${cap.name}`);
+      // A person does not stop talking after one confirmation. When more
+      // turns are queued, the conversation continues with the result in
+      // hand, which is what "create three posts" actually needs.
+      if (userTurns.length > 0) {
+        messages.push(
+          { role: "assistant", content: turn.text, tool_calls: [{ id: call.id, type: "function", function: { name: call.name, arguments: JSON.stringify(call.args) } }] },
+          { role: "tool", tool_call_id: call.id, content: r.resultText } as never,
+          { role: "user", content: userTurns.shift()! },
+        );
+        continue;
+      }
       // The structural description travels too: the confirm route mints its
       // receipt from exactly this, so a case that checks what a screen would
       // be told has to see the same value.

@@ -229,6 +229,12 @@ try {
     const caps = readFileSync("src/lib/ai-suite/capabilities.ts", "utf8");
     ck("bulk sending is refused in the tool's own description",
       /not for bulk email, newsletters or campaigns/.test(caps));
+    const prompt = readFileSync("src/lib/ai-suite/prompt.ts", "utf8");
+    // The capability says "accepted"; the model was observed upgrading that
+    // to "delivered" in its own prose a turn later. A customer who believes
+    // a message arrived will not chase it.
+    ck("the model is told sent is not delivered", /SENT IS NOT DELIVERED/.test(prompt));
+    ck("and which words are forbidden", /Never say delivered, received/.test(prompt));
     ck("every pre-send refusal states that nothing was sent",
       (caps.match(/haven't sent anything|Nothing was sent|I haven't sent it again/g) ?? []).length >= 6);
   }
