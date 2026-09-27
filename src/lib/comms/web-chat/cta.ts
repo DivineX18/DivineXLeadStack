@@ -83,3 +83,25 @@ export function sanitisePagePath(
   const path = u.pathname.slice(0, 120);
   return /^[a-zA-Z0-9/_\-.]*$/.test(path) && path.startsWith("/") ? path : null;
 }
+
+import type { WebChatQuickStart } from "@/types/ai";
+
+/** Validates configured quick-start chips: kebab ids, a real label, a bounded (possibly
+ *  empty) prompt. An empty prompt is valid and means "focus the input, send nothing". */
+export function sanitiseQuickStarts(raw: unknown): WebChatQuickStart[] {
+  if (!Array.isArray(raw)) return [];
+  const out: WebChatQuickStart[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const r = item as Record<string, unknown>;
+    const id = typeof r.id === "string" ? r.id.trim().toLowerCase() : "";
+    const label = typeof r.label === "string" ? r.label.trim().slice(0, 40) : "";
+    const prompt = typeof r.prompt === "string" ? r.prompt.trim().slice(0, 300) : "";
+    if (!/^[a-z0-9_-]{1,40}$/.test(id) || !label || seen.has(id)) continue;
+    seen.add(id);
+    out.push({ id, label, prompt });
+    if (out.length >= 8) break;
+  }
+  return out;
+}

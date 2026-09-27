@@ -66,6 +66,7 @@ export default async function EmbedChatPage({
       accentColor={accentColor}
       title={config.webChat.title || "Chat with us"}
       subtitle={config.webChat.subtitle ?? "We typically reply instantly"}
+      quickStarts={config.webChat.quickStarts ?? []}
       embedToken={embedToken}
       embedded
     />

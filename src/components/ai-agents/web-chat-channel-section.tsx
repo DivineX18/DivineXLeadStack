@@ -60,6 +60,7 @@ export function WebChatChannelSection() {
   const [ctasText, setCtasText] = useState("");
   const [dailyTokens, setDailyTokens] = useState("");
   const [dailyMessages, setDailyMessages] = useState("");
+  const [quickStartsText, setQuickStartsText] = useState("");
 
   const [contextCount, setContextCount] = useState(10);
   const [modelOverride, setModelOverride] = useState("");
@@ -117,6 +118,7 @@ export function WebChatChannelSection() {
           setCtasText((wc.ctas ?? []).map((c) => `${c.id} | ${c.label} | ${c.url}`).join("\n"));
           setDailyTokens(wc.dailyTokenBudget ? String(wc.dailyTokenBudget) : "");
           setDailyMessages(wc.dailyMessageBudget ? String(wc.dailyMessageBudget) : "");
+          setQuickStartsText((wc.quickStarts ?? []).map((q) => `${q.id} | ${q.label} | ${q.prompt}`).join("\n"));
         }
       }
     } catch (err) {
@@ -195,6 +197,11 @@ export function WebChatChannelSection() {
             .map(([id, label, ...rest]) => ({ id, label, url: rest.join("|") })),
           dailyTokenBudget: Number(dailyTokens) > 0 ? Number(dailyTokens) : 0,
           dailyMessageBudget: Number(dailyMessages) > 0 ? Number(dailyMessages) : 0,
+          quickStarts: quickStartsText
+            .split("\n")
+            .map((line) => line.split("|").map((x) => x.trim()))
+            .filter((parts) => parts.length >= 2 && parts[0])
+            .map(([id, label, ...rest]) => ({ id, label, prompt: rest.join("|").trim() })),
         },
       };
 
@@ -418,6 +425,24 @@ export function WebChatChannelSection() {
                 One per line: <code>id | button label | https://url</code>. The chat can only offer links from this list.
               </p>
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="wc-quickstarts">Opening quick-start options</Label>
+              <Textarea
+                id="wc-quickstarts"
+                value={quickStartsText}
+                onChange={(e) => setQuickStartsText(e.target.value)}
+                rows={6}
+                placeholder={"grow-business | Grow My Business | I want to grow my business. Where should I start?\nask-anything | Ask Zeno Anything | "}
+                className="font-mono text-xs"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                One per line: <code>id | chip label | prompt to send</code>. Leave the prompt blank
+                (e.g. &ldquo;ask-anything | Ask Zeno Anything | &rdquo;) for a chip that just focuses
+                the message box instead of sending anything. Shown before the visitor&apos;s first
+                message; collapses once they start chatting. Leave empty for no quick-start row.
+              </p>
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="wc-tok">Daily token budget</Label>

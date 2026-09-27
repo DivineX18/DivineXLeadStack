@@ -1,4 +1,4 @@
-import { sanitiseCtas } from "@/lib/comms/web-chat/cta";
+import { sanitiseCtas, sanitiseQuickStarts } from "@/lib/comms/web-chat/cta";
 import { NextResponse } from "next/server";
 import { requireSubAccountAdmin } from "@/lib/auth/require-tenancy";
 import { getAdminDb } from "@/lib/firebase/admin";
@@ -225,6 +225,7 @@ function sanitiseWebChatBlock(raw: unknown): Partial<WebChatChannelConfig> {
     }
   }
   if ("ctas" in r) out.ctas = sanitiseCtas(r.ctas);
+  if ("quickStarts" in r) out.quickStarts = sanitiseQuickStarts(r.quickStarts);
   for (const key of ["dailyTokenBudget", "dailyMessageBudget"] as const) {
     if (key in r && typeof r[key] === "number" && Number.isFinite(r[key])) {
       out[key] = Math.max(0, Math.min(50_000_000, Math.floor(r[key] as number)));

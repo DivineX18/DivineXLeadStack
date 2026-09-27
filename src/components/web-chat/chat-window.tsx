@@ -33,6 +33,8 @@ interface ChatWindowProps {
   /** Header title / subtitle (configurable per channel). */
   title?: string;
   subtitle?: string;
+  /** Opening-state suggestion chips (configurable per channel; empty = no row). */
+  quickStarts?: { id: string; label: string; prompt: string }[];
   /** Signed token from the embed page (server-derived); sent with every API call. */
   embedToken?: string | null;
   /** Tells the parent loader to remove/hide the iframe on close. */
@@ -108,6 +110,7 @@ export function ChatWindow(props: ChatWindowProps) {
   const { subAccountId, welcomeMessage, accentColor, embedded } = props;
   const title = props.title || "Chat with us";
   const subtitle = props.subtitle ?? "We typically reply instantly";
+  const quickStarts = props.quickStarts ?? [];
 
   const [sessionId, setSessionId] = useState<string>("");
   const [messages, setMessages] = useState<LocalMessage[]>([]);
@@ -119,6 +122,10 @@ export function ChatWindow(props: ChatWindowProps) {
   // required by /message and /capture.
   const embedToken = props.embedToken ?? null;
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // Shown once, before the visitor's first message; hidden once they start chatting.
+  // "Show options" (rendered near the composer) brings it back without touching history.
+  const [showQuickStarts, setShowQuickStarts] = useState(quickStarts.length > 0);
 
   // Boot: read or create the session id, capture the parent-page URL
   // from the widget loader's ?p= query param, seed the welcome message.
@@ -147,6 +154,7 @@ export function ChatWindow(props: ChatWindowProps) {
     async (text: string) => {
       const trimmed = text.trim();
       if (!trimmed || sending || !sessionId) return;
+      setShowQuickStarts(false);
 
       const userMsg: LocalMessage = {
         id: `u-${Date.now()}`,
@@ -226,6 +234,16 @@ export function ChatWindow(props: ChatWindowProps) {
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     void sendMessage(input);
+  }
+
+  function handleQuickStart(qs: { prompt: string }) {
+    setShowQuickStarts(false);
+    if (qs.prompt.trim()) {
+      void sendMessage(qs.prompt);
+    } else {
+      // "Ask anything"-style chip: just focus the input, no model call.
+      inputRef.current?.focus();
+    }
   }
 
   const handleCaptureFormDone = useCallback(
@@ -464,6 +482,34 @@ export function ChatWindow(props: ChatWindowProps) {
             )}
           </div>
         ))}
+        {showQuickStarts && quickStarts.length > 0 && (
+          <div
+            role="group"
+            aria-label="Quick-start options"
+            style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}
+          >
+            {quickStarts.map((qs) => (
+              <button
+                key={qs.id}
+                type="button"
+                onClick={() => handleQuickStart(qs)}
+                style={{
+                  background: "white",
+                  color: accentColor,
+                  border: `1px solid ${accentColor}`,
+                  borderRadius: 999,
+                  padding: "7px 12px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  lineHeight: 1.2,
+                }}
+              >
+                {qs.label}
+              </button>
+            ))}
+          </div>
+        )}
         {sending && (
           <div className="lswc-row lswc-row-assistant">
             <div
@@ -478,6 +524,26 @@ export function ChatWindow(props: ChatWindowProps) {
         )}
       </div>
 
+      {quickStarts.length > 0 && !showQuickStarts && (
+        <div style={{ padding: "4px 12px 0", flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => setShowQuickStarts(true)}
+            aria-label="Show quick-start options"
+            style={{
+              background: "transparent",
+              border: 0,
+              color: "#64748b",
+              fontSize: 11,
+              cursor: "pointer",
+              padding: "2px 0",
+            }}
+          >
+            ↺ Options
+          </button>
+        </div>
+      )}
+
       {/* Composer */}
       <form
         onSubmit={handleSubmit}
@@ -491,6 +557,7 @@ export function ChatWindow(props: ChatWindowProps) {
         }}
       >
         <input
+          ref={inputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}

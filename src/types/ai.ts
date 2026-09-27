@@ -235,6 +235,20 @@ export interface WebChatChannelConfig {
   /** Hard ceilings per UTC day. Absent = safe defaults (see usage-limits.ts). */
   dailyTokenBudget?: number;
   dailyMessageBudget?: number;
+  /** Opening-state suggestions shown before the visitor's first message. Generic and
+   *  tenant-configured — nothing here is hardcoded to any one business. Absent/empty = no
+   *  quick-start row (plain empty conversation, today's default behaviour). */
+  quickStarts?: WebChatQuickStart[];
+}
+
+/** One opening-state suggestion chip. Clicking it sends `prompt` through the same
+ *  secured pipeline as if the visitor had typed it — never a hardcoded answer. An
+ *  empty `prompt` means "just focus the message input", for a chip like "Ask
+ *  anything" that should not spend a model call. */
+export interface WebChatQuickStart {
+  id: string;
+  label: string;
+  prompt: string;
 }
 
 /** A link the public chat is allowed to offer. */
