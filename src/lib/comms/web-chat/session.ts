@@ -71,6 +71,7 @@ export async function getOrCreateSession(
     capturePromptShownAt: null,
     captureSkipped: false,
     pendingFollowUpTaskId: null,
+    captureSubmissionClaimedAt: null,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
     lastMessageAt: null,
@@ -188,6 +189,48 @@ export async function markCaptureSkipped(input: {
       },
       { merge: true },
     );
+}
+
+/**
+ * Idempotency guard for /api/web-chat/capture submissions. Every non-skip submit
+ * calls this FIRST, before touching Contacts, Tasks or email:
+ *
+ *   - "already-linked": this session already has a contactId from a prior
+ *     successful submit (normal retry-after-success). Do the work again? No —
+ *     the caller returns the same acknowledgement without creating anything.
+ *   - "in-flight": another submit for this session claimed the slot within the
+ *     last 30s and hasn't finished (the double-click race). Same short-circuit.
+ *   - "claimed": this call may proceed; the claim timestamp is stamped in the
+ *     same transaction so a concurrent second request sees "in-flight".
+ *
+ * The 30s TTL on a claim (rather than a permanent lock) means a request that
+ * fails after claiming still allows a later genuine retry, instead of
+ * permanently wedging the visitor.
+ */
+export type CaptureClaimStatus = "claimed" | "already-linked" | "in-flight";
+
+export async function claimCaptureSubmission(input: {
+  subAccountId: string;
+  sessionId: string;
+}): Promise<CaptureClaimStatus> {
+  const ref = getAdminDb().doc(sessionDocPath(input.subAccountId, input.sessionId));
+  return getAdminDb().runTransaction(async (txn) => {
+    const snap = await txn.get(ref);
+    const data = snap.data() as Partial<WebChatSession> | undefined;
+    if (data?.contactId) return "already-linked" as const;
+    const claimedAt = data?.captureSubmissionClaimedAt as
+      | FirebaseFirestore.Timestamp
+      | undefined;
+    if (claimedAt && Date.now() - claimedAt.toMillis() < 30_000) {
+      return "in-flight" as const;
+    }
+    txn.set(
+      ref,
+      { captureSubmissionClaimedAt: FieldValue.serverTimestamp() },
+      { merge: true },
+    );
+    return "claimed" as const;
+  });
 }
 
 export async function linkSessionToContact(input: {

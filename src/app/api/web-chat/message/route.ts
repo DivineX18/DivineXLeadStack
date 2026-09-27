@@ -138,6 +138,7 @@ export async function POST(request: Request) {
       outcome.kind === "replied" ? outcome.formFields : null;
 
     const ctas = outcome.kind === "replied" ? outcome.ctas : [];
+    const consent = outcome.kind === "replied" ? outcome.consent : false;
 
     return NextResponse.json(
       {
@@ -145,6 +146,7 @@ export async function POST(request: Request) {
         kind: outcome.kind,
         formFields,
         ctas,
+        consent,
       },
       { status: 200, headers },
     );

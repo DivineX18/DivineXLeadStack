@@ -9,8 +9,9 @@ import type { Timestamp, FieldValue } from "firebase/firestore";
  * Sessions are anonymous on creation. When the bot extracts identity
  * fields via the [[capture …]] marker (see lib/comms/web-chat/capture.ts),
  * we lazily create or reconcile a Contact and store the link on
- * `contactId`. After that, the session is treated as identified — the
- * contact context block gets injected like the SMS thread does.
+ * `contactId`. Unlike SMS, the web-chat prompt NEVER gets a contact-context
+ * block injected, identified or not (see comms/web-chat/respond.ts) — a
+ * visitor is always an anonymous stranger to the model, by design.
  *
  * Persistence path: `subAccounts/{subAccountId}/webChatSessions/{sessionId}`
  * Messages:        `subAccounts/{subAccountId}/webChatSessions/{sessionId}/messages/{messageId}`
@@ -60,6 +61,10 @@ export interface WebChatSession {
    *  for anonymous sessions and pre-Phase-2B sessions. The console reads
    *  the linked Task to show pending-follow-up status. */
   pendingFollowUpTaskId: string | null;
+  /** Transactional claim stamped by claimCaptureSubmission() the instant a
+   *  /capture submit begins, before any Contact/Task/email work — closes the
+   *  double-click / retry race so a resend can never create a duplicate. */
+  captureSubmissionClaimedAt: Timestamp | FieldValue | null;
   createdAt: Timestamp | FieldValue | null;
   updatedAt: Timestamp | FieldValue | null;
   lastMessageAt: Timestamp | FieldValue | null;

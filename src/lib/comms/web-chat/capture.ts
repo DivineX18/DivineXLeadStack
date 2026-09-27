@@ -2,10 +2,12 @@ import "server-only";
 
 import {
   parseCaptureMarker as _parseCaptureMarker,
+  parseConsentMarker as _parseConsentMarker,
   parseFormMarker as _parseFormMarker,
   reconcileContactFromCapture as _reconcileContactFromCapture,
   type CaptureFieldId as _CaptureFieldId,
   type ParsedCapture as _ParsedCapture,
+  type ParsedConsentOffer as _ParsedConsentOffer,
   type ParsedFormRequest as _ParsedFormRequest,
 } from "@/lib/comms/ai/capture";
 import { linkSessionToContact } from "@/lib/comms/web-chat/session";
@@ -24,9 +26,11 @@ import { linkSessionToContact } from "@/lib/comms/web-chat/session";
 export type CaptureFieldId = _CaptureFieldId;
 export type ParsedCapture = _ParsedCapture;
 export type ParsedFormRequest = _ParsedFormRequest;
+export type ParsedConsentOffer = _ParsedConsentOffer;
 
 export const parseCaptureMarker = _parseCaptureMarker;
 export const parseFormMarker = _parseFormMarker;
+export const parseConsentMarker = _parseConsentMarker;
 
 export interface ReconcileInput {
   agencyId: string;

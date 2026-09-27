@@ -37,6 +37,8 @@ interface ChatWindowProps {
   quickStarts?: { id: string; label: string; prompt: string }[];
   /** Signed token from the embed page (server-derived); sent with every API call. */
   embedToken?: string | null;
+  /** Used only in the fixed opt-in follow-up question; never model-authored. */
+  businessName?: string | null;
   /** Tells the parent loader to remove/hide the iframe on close. */
   embedded: boolean;
 }
@@ -54,6 +56,9 @@ type LocalMessage = {
   formFields?: CaptureFieldId[];
   /** Whitelisted links offered with this reply (server resolves them). */
   ctas?: { label: string; url: string }[];
+  /** True while this reply's opt-in follow-up offer is unanswered. Cleared
+   *  locally the moment the visitor picks Yes or No (never re-shown). */
+  consent?: boolean;
 };
 
 function sessionStorageKey(saId: string): string {
@@ -111,6 +116,7 @@ export function ChatWindow(props: ChatWindowProps) {
   const title = props.title || "Chat with us";
   const subtitle = props.subtitle ?? "We typically reply instantly";
   const quickStarts = props.quickStarts ?? [];
+  const businessName = props.businessName?.trim() || "our team";
 
   const [sessionId, setSessionId] = useState<string>("");
   const [messages, setMessages] = useState<LocalMessage[]>([]);
@@ -191,6 +197,7 @@ export function ChatWindow(props: ChatWindowProps) {
           error?: string;
           formFields?: CaptureFieldId[] | null;
           ctas?: { label: string; url: string }[];
+          consent?: boolean;
         };
         if (!res.ok || !data.reply) {
           throw new Error(data.error ?? "no reply");
@@ -206,6 +213,7 @@ export function ChatWindow(props: ChatWindowProps) {
             text: replyText,
             formFields: formFields && formFields.length > 0 ? formFields : undefined,
             ctas: safeCtas(data.ctas),
+            consent: data.consent === true || undefined,
           },
         ]);
       } catch (err) {
@@ -258,7 +266,7 @@ export function ChatWindow(props: ChatWindowProps) {
       // visitor sees it disappear regardless of network outcome.
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === messageId ? { ...m, formFields: undefined } : m,
+          m.id === messageId ? { ...m, formFields: undefined, consent: undefined } : m,
         ),
       );
       try {
@@ -304,6 +312,26 @@ export function ChatWindow(props: ChatWindowProps) {
       }
     },
     [subAccountId, sessionId, parentPageUrl, embedToken],
+  );
+
+  // "Yes, contact me": transition this message's UI from the fixed consent
+  // question straight into the (existing, reused) minimal name+email form —
+  // no server call yet; the visitor hasn't submitted anything. "Not right
+  // now": reuses the existing skip path verbatim (server marks the session so
+  // Zeno won't offer again, and appends its own reply).
+  const handleConsentYes = useCallback((messageId: string) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId ? { ...m, consent: undefined, formFields: ["name", "email"] } : m,
+      ),
+    );
+  }, []);
+  const handleConsentNo = useCallback(
+    (messageId: string) => {
+      setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, consent: undefined } : m)));
+      void handleCaptureFormDone(messageId, { skip: true });
+    },
+    [handleCaptureFormDone],
   );
 
   function handleClose() {
@@ -472,6 +500,14 @@ export function ChatWindow(props: ChatWindowProps) {
                 ))}
               </div>
             )}
+            {m.role === "assistant" && m.consent && (
+              <ConsentPrompt
+                businessName={businessName}
+                accentColor={accentColor}
+                onYes={() => handleConsentYes(m.id)}
+                onNo={() => handleConsentNo(m.id)}
+              />
+            )}
             {m.role === "assistant" && m.formFields && (
               <InlineCaptureForm
                 fields={m.formFields}
@@ -617,6 +653,75 @@ export function ChatWindow(props: ChatWindowProps) {
  * a [[form fields="…"]] marker. Visitor fills the requested fields and
  * clicks "Send details" — or skips. Both go to /api/web-chat/capture.
  */
+/**
+ * Fixed, client-rendered opt-in question. The exact wording and button labels
+ * are never authored by the model (see ai/capture.ts's parseConsentMarker) —
+ * this component IS the required copy, guaranteed regardless of what the
+ * model said around it.
+ */
+function ConsentPrompt(props: {
+  businessName: string;
+  accentColor: string;
+  onYes: () => void;
+  onNo: () => void;
+}) {
+  const { businessName, accentColor, onYes, onNo } = props;
+  return (
+    <div
+      style={{
+        marginTop: 8,
+        padding: 14,
+        background: "white",
+        border: "1px solid #e2e8f0",
+        borderRadius: 14,
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+      }}
+    >
+      <p style={{ margin: 0, fontSize: 14, color: "#0f172a" }}>
+        Would you like the {businessName} team to follow up with you?
+      </p>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          type="button"
+          onClick={onYes}
+          style={{
+            flex: 1,
+            background: accentColor,
+            color: "white",
+            border: 0,
+            borderRadius: 10,
+            padding: "9px 12px",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          Yes, contact me
+        </button>
+        <button
+          type="button"
+          onClick={onNo}
+          style={{
+            flex: 1,
+            background: "white",
+            color: "#475569",
+            border: "1px solid #e2e8f0",
+            borderRadius: 10,
+            padding: "9px 12px",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          Not right now
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function InlineCaptureForm(props: {
   fields: CaptureFieldId[];
   accentColor: string;

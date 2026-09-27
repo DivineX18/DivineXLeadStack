@@ -239,6 +239,13 @@ export interface WebChatChannelConfig {
    *  tenant-configured — nothing here is hardcoded to any one business. Absent/empty = no
    *  quick-start row (plain empty conversation, today's default behaviour). */
   quickStarts?: WebChatQuickStart[];
+  /** Opt-in, CONSENT-BASED lead capture. Independent of `leadCapture` (which stays
+   *  false for the public site — no automatic/keyword-triggered collection). When
+   *  true, Zeno may offer "Would you like the {business} team to follow up with
+   *  you?" ONLY on genuine, explicit contact intent (see the persona rules in
+   *  comms/ai/prompt.ts) — never on pricing, refunds, or general interest — and
+   *  only proceeds to collect a name/email after the visitor clicks "Yes". */
+  consentLeadCapture?: boolean;
 }
 
 /** One opening-state suggestion chip. Clicking it sends `prompt` through the same

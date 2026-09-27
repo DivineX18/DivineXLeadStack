@@ -55,6 +55,7 @@ export function WebChatChannelSection() {
   const [subtitle, setSubtitle] = useState("");
   const [alwaysOn, setAlwaysOn] = useState(false);
   const [leadCapture, setLeadCapture] = useState(true);
+  const [consentLeadCapture, setConsentLeadCapture] = useState(false);
   const [knowledgeUrl, setKnowledgeUrl] = useState("");
   const [promptOverride, setPromptOverride] = useState("");
   const [ctasText, setCtasText] = useState("");
@@ -113,6 +114,7 @@ export function WebChatChannelSection() {
           setSubtitle(wc.subtitle ?? "");
           setAlwaysOn(!!wc.alwaysOn);
           setLeadCapture(wc.leadCapture !== false);
+          setConsentLeadCapture(!!wc.consentLeadCapture);
           setKnowledgeUrl(wc.knowledgeUrl ?? "");
           setPromptOverride(wc.systemPromptOverride ?? "");
           setCtasText((wc.ctas ?? []).map((c) => `${c.id} | ${c.label} | ${c.url}`).join("\n"));
@@ -188,6 +190,7 @@ export function WebChatChannelSection() {
           subtitle,
           alwaysOn,
           leadCapture,
+          consentLeadCapture,
           knowledgeUrl: knowledgeUrl.trim(),
           systemPromptOverride: promptOverride,
           ctas: ctasText
@@ -406,6 +409,20 @@ export function WebChatChannelSection() {
             <div className="flex items-start gap-3">
               <Checkbox id="wc-capture" checked={leadCapture} onCheckedChange={(v) => setLeadCapture(!!v)} />
               <Label htmlFor="wc-capture" className="text-sm">Ask visitors for contact details (lead capture)</Label>
+            </div>
+            <div className="flex items-start gap-3">
+              <Checkbox id="wc-consent-capture" checked={consentLeadCapture} onCheckedChange={(v) => setConsentLeadCapture(!!v)} />
+              <div>
+                <Label htmlFor="wc-consent-capture" className="text-sm">
+                  Offer follow-up only when a visitor asks for it (opt-in lead capture)
+                </Label>
+                <p className="mt-1 text-[12px] text-muted-foreground">
+                  Independent of the checkbox above, and off by default. When on, Zeno only asks
+                  &ldquo;Would you like the team to follow up with you?&rdquo; after the visitor
+                  explicitly requests contact or hands-on help &mdash; never for pricing, refunds,
+                  or general interest &mdash; and only collects a name and email after they say yes.
+                </p>
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="wc-knowledge">Knowledge file URL</Label>
