@@ -141,7 +141,7 @@ export default async function HomePage() {
               <AscendCreate />
             </>
           )}
-          <BusinessOperatingSystem />
+          <BusinessOperatingSystem product={product} />
           {product === "unified" && <AscendFollowUp />}
           {/* Ascend surface only. The Flow homepage is a different funnel with
               its own audience section, and mixing the two would make neither

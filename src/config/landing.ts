@@ -72,14 +72,14 @@ export const CUSTOM_BRAND: CustomBrand = {
   name: "Flow",
 
   /** One-line positioning, surfaced in hero subtitle + meta description. */
-  tagline: "The Growth Operating System for Purpose-Driven Businesses.",
+  tagline: "Turn enquiries into customers without the busywork.",
 
   /**
    * Short (~140 char) description used under the hero headline. Should
    * read like a tweet — what the product does, for whom.
    */
   shortDescription:
-    "One intelligent platform to amplify your message, automate meaningful customer journeys, and grow your business with purpose.",
+    "Contacts, pipeline, forms, booking, quotes and automated follow-up in one place, so no lead goes cold and nothing waits on someone remembering.",
 
   /** Used on CTA buttons + the FAQ "talk to us" line + footer. */
   supportEmail: "hello@divinex.io",
@@ -91,5 +91,5 @@ export const CUSTOM_BRAND: CustomBrand = {
   parentCompany: "DivineX",
 
   /** Shown next to the name where extra context helps (page title, PWA name). */
-  productCategory: "Growth Operations Platform",
+  productCategory: "CRM & Customer Operations",
 };

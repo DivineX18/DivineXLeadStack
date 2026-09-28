@@ -35,10 +35,14 @@ import { serviceSchema } from "@/lib/seo/schema";
 export async function generateMetadata() {
   // Host-aware, exactly as / and /pricing already resolve it. Without
   // this the Ascend host served Flow's name, tagline and closing CTA.
-  const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
+  const surface = await resolveProductSurface();
+  const brand = brandForProduct(await resolveCustomBrand(), surface);
+  const isUnified = surface === "unified";
   return {
     title: `Features | ${brand.name} CRM, Pipeline & AI Agent Tools`,
-    description: `Every shipped ${brand.name} feature: AI agents across web chat, SMS, WhatsApp and voice, sales pipeline, quotes, forms, booking pages, and a public API.`,
+    description: isUnified
+      ? `Every shipped ${brand.name} feature: AI agents across web chat, SMS, WhatsApp and voice, sales pipeline, quotes, forms, booking pages, and a public API.`
+      : `${brand.name} runs the customer journey end to end: lead capture forms and booking pages, a sales pipeline, automated follow-up, quotes, shared conversations, and a public API.`,
     openGraph: { title: `Features | ${brand.name}`, type: "website" as const },
   };
 }
@@ -166,7 +170,9 @@ function FeatureGroup({
 export default async function FeaturesPage() {
   // Host-aware, exactly as / and /pricing already resolve it. Without
   // this the Ascend host served Flow's name, tagline and closing CTA.
-  const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
+  const product = await resolveProductSurface();
+  const brand = brandForProduct(await resolveCustomBrand(), product);
+  const unified = product === "unified";
   const baseUrl = await siteOrigin();
   const faqSchema = {
     "@context": "https://schema.org",
@@ -198,13 +204,29 @@ export default async function FeaturesPage() {
         <section className="py-20 text-center md:py-24">
           <div className="container mx-auto px-4">
             <p className="text-sm font-semibold uppercase tracking-wide text-primary">Features</p>
-            <h1 className="mx-auto mt-2 max-w-3xl text-balance text-4xl font-semibold tracking-tighter sm:text-5xl">
-              Every feature is something{" "}
-              <span className="font-serif font-normal italic">a real team actually uses</span>.
-            </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-              No roadmap items, no &ldquo;coming soon.&rdquo; Everything below is shipped and working today.
-            </p>
+            {unified ? (
+              <>
+                <h1 className="mx-auto mt-2 max-w-3xl text-balance text-4xl font-semibold tracking-tighter sm:text-5xl">
+                  Every feature is something{" "}
+                  <span className="font-serif font-normal italic">a real team actually uses</span>.
+                </h1>
+                <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
+                  No roadmap items, no &ldquo;coming soon.&rdquo; Everything below is shipped and working today.
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="mx-auto mt-2 max-w-3xl text-balance text-4xl font-semibold tracking-tighter sm:text-5xl">
+                  The tools that move a lead{" "}
+                  <span className="font-serif font-normal italic">from enquiry to paid</span>.
+                </h1>
+                <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
+                  Capture the enquiry, follow it up, keep the deal moving, and close it, without
+                  anyone holding the process together by memory. Everything below is shipped and
+                  working today.
+                </p>
+              </>
+            )}
           </div>
         </section>
 

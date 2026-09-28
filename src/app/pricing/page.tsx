@@ -26,10 +26,15 @@ import { siteOrigin } from "@/lib/seo/site";
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
+  const isUnified = (await resolveProductSurface()) === "unified";
   const brand = await resolveCustomBrand();
   return {
-    title: `Pricing | ${brand.name} CRM & Growth Operations Platform`,
-    description: `Simple, transparent CRM pricing for ${brand.name}. One monthly subscription for contacts, pipeline, AI agents, quotes, booking pages, and more. Cancel anytime, no contract.`,
+    title: isUnified
+      ? `Pricing | ${brand.name} Growth Intelligence & Execution`
+      : `Pricing | ${brand.name} CRM & Customer Operations`,
+    description: isUnified
+      ? `Simple, transparent pricing for ${brand.name}. One monthly subscription for the growth scan, prioritised recommendations, and the tools to act on them. Cancel anytime, no contract.`
+      : `Simple, transparent CRM pricing for ${brand.name}. One monthly subscription for contacts, pipeline, follow-up automation, quotes, forms and booking pages. Cancel anytime, no contract.`,
     openGraph: {
       title: `Pricing | ${brand.name}`,
       description: `Simple, transparent CRM pricing. One monthly subscription, cancel anytime.`,
@@ -159,15 +164,31 @@ export default async function PricingPage() {
         <section className="pt-20 pb-6 text-center md:pt-24">
           <div className="container mx-auto px-4">
             <p className="text-sm font-semibold uppercase tracking-wide text-primary">Pricing</p>
-            <h1 className="mx-auto mt-2 max-w-2xl text-balance text-4xl font-semibold tracking-tighter sm:text-5xl">
-              CRM and growth operations{" "}
-              <span className="font-serif font-normal italic">pricing that stays simple</span>.
-            </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-              One monthly subscription covers the platform, contacts, pipeline, calendar, tasks,
-              forms, booking pages, and quotes, with AI agents and channel add-ons layered in by
-              plan. No setup fee, no annual lock-in, cancel anytime.
-            </p>
+            {product === "unified" ? (
+              <>
+                <h1 className="mx-auto mt-2 max-w-2xl text-balance text-4xl font-semibold tracking-tighter sm:text-5xl">
+                  CRM and growth operations{" "}
+                  <span className="font-serif font-normal italic">pricing that stays simple</span>.
+                </h1>
+                <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
+                  One monthly subscription covers the platform, contacts, pipeline, calendar, tasks,
+                  forms, booking pages, and quotes, with AI agents and channel add-ons layered in by
+                  plan. No setup fee, no annual lock-in, cancel anytime.
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="mx-auto mt-2 max-w-2xl text-balance text-4xl font-semibold tracking-tighter sm:text-5xl">
+                  One subscription to run{" "}
+                  <span className="font-serif font-normal italic">every customer you win</span>.
+                </h1>
+                <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
+                  Contacts, pipeline, forms, booking pages, quotes and automated follow-up are in
+                  every plan, with AI agents and extra channels layered in as you need them. No
+                  setup fee, no annual lock-in, cancel anytime.
+                </p>
+              </>
+            )}
           </div>
         </section>
 

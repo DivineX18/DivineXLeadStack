@@ -23,7 +23,7 @@ import type { PlanProduct } from "@/types/billing";
  * swapped: the logo, colours and every other branding field carry through, so
  * the DivineX mark stays exactly where it is.
  */
-export function brandForProduct<T extends { name: string; tagline?: string; shortDescription?: string }>(
+export function brandForProduct<T extends { name: string; tagline?: string; shortDescription?: string; productCategory?: string }>(
   brand: T,
   product: PlanProduct,
 ): T {
@@ -42,6 +42,9 @@ export function brandForProduct<T extends { name: string; tagline?: string; shor
             "Ascend analyzes your website and marketing to identify the biggest constraint holding back conversions, shows you what to fix first, and helps you put the fix into action.",
         }
       : {}),
+    // Flow's category is now "CRM & Customer Operations", which is Flow's
+    // job and not Ascend's. Ascend keeps the broader category it sells on.
+    ...(brand.productCategory !== undefined ? { productCategory: "Growth Operations Platform" } : {}),
   };
 }
 

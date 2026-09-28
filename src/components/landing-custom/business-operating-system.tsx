@@ -1,5 +1,7 @@
 "use client";
 
+import type { PlanProduct } from "@/types/billing";
+
 import { useState } from "react";
 import { Inbox, MessageCircle, Receipt, Users2, LineChart } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -58,7 +60,14 @@ const STAGES: StageDetail[] = [
   },
 ];
 
-export function BusinessOperatingSystem() {
+/**
+ * Shared by both marketing surfaces, so the payoff word has to differ.
+ * "from first contact to understood" is Ascend's promise: the lifecycle
+ * ends when you know something. Flow's ends when the deal closes, and
+ * Flow reading "to understood" handed Flow's own narrative to the other
+ * product on a page that never mentions it.
+ */
+export function BusinessOperatingSystem({ product = "flow" }: { product?: PlanProduct } = {}) {
   const [active, setActive] = useState<StageKey>("capture");
   const stage = STAGES.find((s) => s.key === active)!;
 
@@ -69,7 +78,9 @@ export function BusinessOperatingSystem() {
           <p className="text-sm font-semibold uppercase tracking-wide text-primary">Your Business Operating System</p>
           <h2 className="mt-2 text-3xl font-semibold tracking-tighter sm:text-5xl">
             Follow a lead{" "}
-            <span className="font-serif font-normal italic">from first contact to understood</span>
+            <span className="font-serif font-normal italic">
+              {product === "unified" ? "from first contact to understood" : "from first enquiry to closed customer"}
+            </span>
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
             The same five stages every lead moves through, reading from the same record the whole way.
