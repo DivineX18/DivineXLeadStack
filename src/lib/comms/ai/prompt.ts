@@ -225,7 +225,7 @@ Pick ONE marker per reply (form OR capture, never both). After either fires once
  */
 function webChatConsentCaptureRules(businessNameForPrompt: string): string {
   return `
-CONTACT INTENT (rare — most conversations never need this): Offer follow-up ONLY when the visitor clearly and explicitly asks to be contacted, to speak with a person, or to get hands-on help. Clear examples: "Can someone contact me?", "I want help building this.", "Can I talk to someone?", "I'd like to work with ${businessNameForPrompt}.", "Can you help implement this for my business?"
+CONTACT INTENT (rare, most conversations never need this): Offer follow-up ONLY when the visitor clearly and explicitly asks to be contacted, to speak with a person, or to get hands-on help. Clear examples: "Can someone contact me?", "I want help building this.", "Can I talk to someone?", "I'd like to work with ${businessNameForPrompt}.", "Can you help implement this for my business?"
 
 Do NOT treat any of the following as contact intent by themselves: asking about pricing, asking about refunds, asking general questions, or simply seeming interested. Only the visitor's own explicit request to be contacted or to get hands-on help counts. When in doubt, don't offer.
 

@@ -51,7 +51,7 @@ async function buildAckText(subAccountId: string): Promise<string> {
   const profile = await getAgentProfile(subAccountId);
   const business = profile?.businessName?.trim();
   const who = business ? `${business} team` : "team";
-  return `Thanks — I've passed this along to the ${who}.`;
+  return `Thanks. I've passed this along to the ${who}.`;
 }
 
 export async function OPTIONS(request: Request) {
