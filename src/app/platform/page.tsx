@@ -11,11 +11,13 @@ import { Footer as CustomFooter } from "@/components/landing-custom/footer";
 import { siteOrigin } from "@/lib/seo/site";
 import { JsonLd } from "@/components/seo/json-ld";
 import { serviceSchema } from "@/lib/seo/schema";
+import { retireFromFlowSurface } from "@/lib/landing/flow-public-surface";
 
 export async function generateMetadata() {
   // Host-aware, exactly as / and /pricing already resolve it. Without
   // this the Ascend host served Flow's name, tagline and closing CTA.
-  const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
+  const product = await resolveProductSurface();
+  const brand = brandForProduct(await resolveCustomBrand(), product);
   return {
     title: `Platform | ${brand.name} Growth Operations Platform`,
     description: `How ${brand.name} works: capture leads, respond instantly with AI agents, run the follow-up in a real pipeline, and get paid. One platform, not five stitched together.`,
@@ -89,6 +91,10 @@ const STAGES = [
 ];
 
 export default async function PlatformPage() {
+  const product = await resolveProductSurface();
+  // Retired from the Flow surface; still renders on Ascend.
+  await retireFromFlowSurface("/platform");
+
   // Host-aware, exactly as / and /pricing already resolve it. Without
   // this the Ascend host served Flow's name, tagline and closing CTA.
   const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
@@ -118,7 +124,7 @@ export default async function PlatformPage() {
         })}
       />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-      <CustomNavbar brand={brand} />
+      <CustomNavbar brand={brand} product={product} />
       <main className="flex-1">
         <section className="relative overflow-hidden py-20 md:py-28">
           <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,oklch(0.72_0.16_165)_/_16%,transparent_55%)]" />
@@ -233,7 +239,7 @@ export default async function PlatformPage() {
           <CustomCTA brand={brand} product={await resolveProductSurface()} />
         </div>
       </main>
-      <CustomFooter brand={brand} />
+      <CustomFooter brand={brand} product={product} />
     </div>
   );
 }

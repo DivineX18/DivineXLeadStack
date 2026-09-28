@@ -127,7 +127,7 @@ export default async function HomePage() {
             })),
           })}
         />
-        <CustomNavbar brand={brand} />
+        <CustomNavbar brand={brand} product={product} />
         <main className="flex-1">
           {/* A. Only on the Ascend surface: the Flow homepage is a different
               funnel and mixing the two would make neither readable. */}
@@ -158,10 +158,10 @@ export default async function HomePage() {
             />
           )}
           <CustomPricing plans={plans} configured={billingStripeIsConfigured()} product={product} />
-          <CustomFAQ brand={brand} />
+          <CustomFAQ brand={brand} product={product} />
           <CustomCTA brand={brand} pricingHref="#pricing" product={product} />
         </main>
-        <CustomFooter brand={brand} />
+        <CustomFooter brand={brand} product={product} />
       </div>
     );
   }

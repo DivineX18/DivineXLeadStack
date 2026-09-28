@@ -1,3 +1,4 @@
+import type { PlanProduct } from "@/types/billing";
 import Link from "next/link";
 import type { ResolvedBrand } from "@/config/landing";
 import { FaqAccordion } from "./faq-accordion";
@@ -47,11 +48,14 @@ export const HOMEPAGE_FAQS = [
  * things am I buying. Both are fixed by delegating to FaqSection, which emits
  * the schema from the same array it renders.
  */
-export function FAQ({ brand }: { brand: ResolvedBrand }) {
+export function FAQ({ brand, product }: { brand: ResolvedBrand; product: PlanProduct }) {
   return (
     <FaqSection
       items={[...HOMEPAGE_FAQS, ...PRODUCT_FAQS_SHORT]}
       supportEmail={brand.supportEmail}
+      // Flow retired /faq to Ascend, so on Flow this would link the reader
+      // off the product they are evaluating. The questions themselves stay.
+      showFullFaqLink={product === "unified"}
     />
   );
 }

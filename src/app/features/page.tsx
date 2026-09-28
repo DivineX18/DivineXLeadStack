@@ -199,7 +199,7 @@ export default async function FeaturesPage() {
         })}
       />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-      <CustomNavbar brand={brand} />
+      <CustomNavbar brand={brand} product={product} />
       <main className="flex-1">
         <section className="py-20 text-center md:py-24">
           <div className="container mx-auto px-4">
@@ -290,7 +290,7 @@ export default async function FeaturesPage() {
 
         <CustomCTA brand={brand} product={await resolveProductSurface()} />
       </main>
-      <CustomFooter brand={brand} />
+      <CustomFooter brand={brand} product={product} />
     </div>
   );
 }

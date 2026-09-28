@@ -1,3 +1,4 @@
+import { resolveProductSurface } from "@/lib/landing/resolve-product-surface";
 import { Mail } from "lucide-react";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import { OrganizationSchema } from "@/components/landing-custom/site-schema";
@@ -9,6 +10,7 @@ import { FaqSection } from "@/components/seo/faq-section";
 import { PRODUCT_FAQS } from "@/data/product-faqs";
 
 export async function generateMetadata() {
+  const product = await resolveProductSurface();
   const brand = await resolveCustomBrand();
   return {
     title: `Contact | ${brand.name}`,
@@ -18,13 +20,14 @@ export async function generateMetadata() {
 }
 
 export default async function ContactPage() {
+  const product = await resolveProductSurface();
   const brand = await resolveCustomBrand();
   const baseUrl = await siteOrigin();
 
   return (
     <div className="marketing-accent flex min-h-screen flex-col">
       <OrganizationSchema brand={brand} baseUrl={baseUrl} />
-      <CustomNavbar brand={brand} />
+      <CustomNavbar brand={brand} product={product} />
       <main className="flex-1">
         <section className="py-20 md:py-24">
           <div className="container mx-auto px-4">
@@ -61,9 +64,14 @@ export default async function ContactPage() {
             public page answered it. FaqSection emits its own FAQPage markup
             from the same array it renders, so the copy and the structured
             data cannot drift apart. */}
-        <FaqSection items={PRODUCT_FAQS} supportEmail={brand.supportEmail} />
+        {/* Flow retired /faq to Ascend; the link would leave the product. */}
+        <FaqSection
+          items={PRODUCT_FAQS}
+          supportEmail={brand.supportEmail}
+          showFullFaqLink={product === "unified"}
+        />
       </main>
-      <CustomFooter brand={brand} />
+      <CustomFooter brand={brand} product={product} />
     </div>
   );
 }

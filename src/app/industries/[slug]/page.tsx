@@ -1,3 +1,4 @@
+import { resolveProductSurface } from "@/lib/landing/resolve-product-surface";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { CTA as CustomCTA } from "@/components/landing-custom/cta";
 import { Footer as CustomFooter } from "@/components/landing-custom/footer";
 import { INDUSTRIES, getIndustryBySlug } from "@/data/industries";
 import { siteOrigin } from "@/lib/seo/site";
+import { retireFromFlowSurface } from "@/lib/landing/flow-public-surface";
 
 export function generateStaticParams() {
   return INDUSTRIES.map((i) => ({ slug: i.slug }));
@@ -22,6 +24,7 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
   const industry = getIndustryBySlug(slug);
+  const product = await resolveProductSurface();
   const brand = await resolveCustomBrand();
   if (!industry) return { title: `Industries, ${brand.name}` };
   return {
@@ -32,7 +35,11 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 export default async function IndustryDetailPage({ params }: PageProps) {
+  const product = await resolveProductSurface();
   const { slug } = await params;
+  // Retired from the Flow surface; the redirect carries the slug so it
+  // lands on the matching page rather than a hub.
+  await retireFromFlowSurface(`/industries/${slug}`);
   const industry = getIndustryBySlug(slug);
   if (!industry) notFound();
 
@@ -62,7 +69,7 @@ export default async function IndustryDetailPage({ params }: PageProps) {
       <OrganizationSchema brand={brand} baseUrl={baseUrl} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-      <CustomNavbar brand={brand} />
+      <CustomNavbar brand={brand} product={product} />
       <main className="flex-1">
         <section className="relative isolate overflow-hidden py-24 text-center md:py-32">
           <img
@@ -154,7 +161,7 @@ export default async function IndustryDetailPage({ params }: PageProps) {
 
         <CustomCTA brand={brand} />
       </main>
-      <CustomFooter brand={brand} />
+      <CustomFooter brand={brand} product={product} />
     </div>
   );
 }

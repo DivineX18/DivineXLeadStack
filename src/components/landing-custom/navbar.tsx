@@ -1,5 +1,7 @@
 "use client";
 
+import type { PlanProduct } from "@/types/billing";
+
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Menu } from "lucide-react";
@@ -36,31 +38,54 @@ const COMPANY_MENU = [
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];
+/**
+ * Flow's nav only offers what Flow still publishes. Platform, Industries,
+ * Resources, FAQ, Implementation and About are retired on this surface and
+ * permanently redirect to Ascend, so linking to them from Flow's own header
+ * would send a visitor off the product they are reading about.
+ */
+const FLOW_COMPANY_MENU = COMPANY_MENU.filter((i) => i.href === "/contact");
 
-export function Navbar({ brand }: { brand: ResolvedBrand }) {
+// `product` is REQUIRED, not defaulted. A default silently gives one
+// surface the other's navigation on any call site that forgets it, and the
+// compiler finding them is better than a reviewer noticing.
+export function Navbar({ brand, product }: { brand: ResolvedBrand; product: PlanProduct }) {
+  const isFlow = product !== "unified";
   const { user, loading } = useAuth();
   const [open, setOpen] = useState(false);
 
   const navItems = (
     <>
-      <Link
-        href="/platform"
-        className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        Platform
-      </Link>
-      <Link
-        href="/industries"
-        className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        Industries
-      </Link>
+      {isFlow ? (
+        <Link
+          href="/features"
+          className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          Features
+        </Link>
+      ) : (
+        <>
+          <Link
+            href="/platform"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Platform
+          </Link>
+          <Link
+            href="/industries"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Industries
+          </Link>
+        </>
+      )}
       <Link
         href="/pricing"
         className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         Pricing
       </Link>
+{!isFlow && (
       <DropdownMenu>
         <DropdownMenuTrigger className="flex items-center gap-1 text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-foreground">
           Resources <ChevronDown className="h-3.5 w-3.5" />
@@ -73,12 +98,13 @@ export function Navbar({ brand }: { brand: ResolvedBrand }) {
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
+      )}
       <DropdownMenu>
         <DropdownMenuTrigger className="flex items-center gap-1 text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-foreground">
           Company <ChevronDown className="h-3.5 w-3.5" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
-          {COMPANY_MENU.map((item) => (
+          {(isFlow ? FLOW_COMPANY_MENU : COMPANY_MENU).map((item) => (
             <DropdownMenuItem key={item.href} render={<Link href={item.href} />}>
               {item.label}
             </DropdownMenuItem>
@@ -145,54 +171,66 @@ export function Navbar({ brand }: { brand: ResolvedBrand }) {
               <SheetTitle>Menu</SheetTitle>
             </SheetHeader>
             <nav className="flex flex-col gap-4 p-4">
+              {!isFlow && (
               <SheetClose
                 render={<Link href="/platform" />}
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 Platform
               </SheetClose>
+              )}
               <SheetClose
                 render={<Link href="/features" />}
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 Features
               </SheetClose>
+              {!isFlow && (
               <SheetClose
                 render={<Link href="/industries" />}
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 Industries
               </SheetClose>
+              )}
               <SheetClose
                 render={<Link href="/pricing" />}
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 Pricing
               </SheetClose>
+              {!isFlow && (
               <SheetClose
                 render={<Link href="/resources" />}
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 Resources
               </SheetClose>
+              )}
+              {!isFlow && (
               <SheetClose
                 render={<Link href="/faq" />}
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 FAQ
               </SheetClose>
+              )}
+              {!isFlow && (
               <SheetClose
                 render={<Link href="/implementation" />}
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 Implementation
               </SheetClose>
+              )}
+              {!isFlow && (
               <SheetClose
                 render={<Link href="/about" />}
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 About
               </SheetClose>
+              )}
               <SheetClose
                 render={<Link href="/contact" />}
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"

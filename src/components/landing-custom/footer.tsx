@@ -1,8 +1,15 @@
+import type { PlanProduct } from "@/types/billing";
 import Link from "next/link";
 import type { ResolvedBrand } from "@/config/landing";
 import { BrandLogo } from "./brand-logo";
 
-export function Footer({ brand }: { brand: ResolvedBrand }) {
+/**
+ * Flow's footer only lists what Flow still publishes. The retired marketing
+ * routes permanently redirect to Ascend on this surface, and a footer link
+ * to a redirect is an orphan pointing off the product.
+ */
+export function Footer({ brand, product }: { brand: ResolvedBrand; product: PlanProduct }) {
+  const isFlow = product !== "unified";
   return (
     <footer className="border-t py-12">
       <div className="container mx-auto px-4">
@@ -31,6 +38,7 @@ export function Footer({ brand }: { brand: ResolvedBrand }) {
           <div>
             <h3 className="mb-3 text-sm font-semibold">Product</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
+              {!isFlow && (
               <li>
                 <Link
                   href="/platform"
@@ -39,6 +47,7 @@ export function Footer({ brand }: { brand: ResolvedBrand }) {
                   Platform
                 </Link>
               </li>
+              )}
               <li>
                 <Link
                   href="/features"
@@ -55,6 +64,7 @@ export function Footer({ brand }: { brand: ResolvedBrand }) {
                   Pricing
                 </Link>
               </li>
+              {!isFlow && (
               <li>
                 <Link
                   href="/implementation"
@@ -63,6 +73,8 @@ export function Footer({ brand }: { brand: ResolvedBrand }) {
                   Implementation
                 </Link>
               </li>
+              )}
+              {!isFlow && (
               <li>
                 <Link
                   href="/industries"
@@ -71,6 +83,8 @@ export function Footer({ brand }: { brand: ResolvedBrand }) {
                   Industries
                 </Link>
               </li>
+              )}
+              {!isFlow && (
               <li>
                 <Link
                   href="/faq"
@@ -79,6 +93,7 @@ export function Footer({ brand }: { brand: ResolvedBrand }) {
                   FAQ
                 </Link>
               </li>
+              )}
             </ul>
           </div>
 
@@ -123,6 +138,7 @@ export function Footer({ brand }: { brand: ResolvedBrand }) {
           <div>
             <h3 className="mb-3 text-sm font-semibold">Company</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
+              {!isFlow && (
               <li>
                 <Link
                   href="/about"
@@ -131,6 +147,8 @@ export function Footer({ brand }: { brand: ResolvedBrand }) {
                   About
                 </Link>
               </li>
+              )}
+              {!isFlow && (
               <li>
                 <Link
                   href="/resources"
@@ -139,6 +157,7 @@ export function Footer({ brand }: { brand: ResolvedBrand }) {
                   Resources
                 </Link>
               </li>
+              )}
               <li>
                 <Link
                   href="/contact"

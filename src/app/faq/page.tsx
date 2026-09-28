@@ -9,11 +9,13 @@ import { FaqAccordion, type FaqItem } from "@/components/landing-custom/faq-acco
 import { HOMEPAGE_FAQS } from "@/components/landing-custom/faq";
 import { siteOrigin } from "@/lib/seo/site";
 import { PRODUCT_FAQS } from "@/data/product-faqs";
+import { retireFromFlowSurface } from "@/lib/landing/flow-public-surface";
 
 export async function generateMetadata() {
   // Host-aware, exactly as / and /pricing already resolve it. Without
   // this the Ascend host served Flow's name, tagline and closing CTA.
-  const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
+  const product = await resolveProductSurface();
+  const brand = brandForProduct(await resolveCustomBrand(), product);
   return {
     title: `FAQ | ${brand.name}`,
     description: `Answers about Zeno, Flow, and Ascend, plus getting started, billing, the AI agents, team access, and support on ${brand.name}.`,
@@ -55,6 +57,10 @@ const MORE_FAQS: FaqItem[] = [
 ];
 
 export default async function FaqPage() {
+  const product = await resolveProductSurface();
+  // Retired from the Flow surface; still renders on Ascend.
+  await retireFromFlowSurface("/faq");
+
   // Host-aware, exactly as / and /pricing already resolve it. Without
   // this the Ascend host served Flow's name, tagline and closing CTA.
   const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
@@ -77,7 +83,7 @@ export default async function FaqPage() {
     <div className="marketing-accent flex min-h-screen flex-col">
       <OrganizationSchema brand={brand} baseUrl={baseUrl} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-      <CustomNavbar brand={brand} />
+      <CustomNavbar brand={brand} product={product} />
       <main className="flex-1">
         <section className="py-20 text-center md:py-24">
           <div className="container mx-auto px-4">
@@ -111,7 +117,7 @@ export default async function FaqPage() {
           </div>
         </section>
       </main>
-      <CustomFooter brand={brand} />
+      <CustomFooter brand={brand} product={product} />
     </div>
   );
 }

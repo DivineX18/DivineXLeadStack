@@ -1,3 +1,4 @@
+import { resolveProductSurface } from "@/lib/landing/resolve-product-surface";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Footer as CustomFooter } from "@/components/landing-custom/footer";
 import { ResourceBody } from "@/components/landing-custom/resource-body";
 import { RESOURCE_POSTS, getResourcePostBySlug } from "@/data/resources-posts";
 import { siteOrigin } from "@/lib/seo/site";
+import { retireFromFlowSurface } from "@/lib/landing/flow-public-surface";
 
 export function generateStaticParams() {
   return RESOURCE_POSTS.map((p) => ({ slug: p.slug }));
@@ -21,6 +23,7 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
   const post = getResourcePostBySlug(slug);
+  const product = await resolveProductSurface();
   const brand = await resolveCustomBrand();
   if (!post) return { title: `Resources, ${brand.name}` };
   return {
@@ -31,7 +34,11 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 export default async function ResourcePostPage({ params }: PageProps) {
+  const product = await resolveProductSurface();
   const { slug } = await params;
+  // Retired from the Flow surface; the redirect carries the slug so it
+  // lands on the matching page rather than a hub.
+  await retireFromFlowSurface(`/resources/${slug}`);
   const post = getResourcePostBySlug(slug);
   if (!post) notFound();
 
@@ -65,7 +72,7 @@ export default async function ResourcePostPage({ params }: PageProps) {
       <OrganizationSchema brand={brand} baseUrl={baseUrl} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-      <CustomNavbar brand={brand} />
+      <CustomNavbar brand={brand} product={product} />
       <main className="flex-1">
         <article className="py-20 md:py-24">
           <div className="container mx-auto px-4">
@@ -105,7 +112,7 @@ export default async function ResourcePostPage({ params }: PageProps) {
 
         <CustomCTA brand={brand} />
       </main>
-      <CustomFooter brand={brand} />
+      <CustomFooter brand={brand} product={product} />
     </div>
   );
 }

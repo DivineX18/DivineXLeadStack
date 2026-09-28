@@ -1,6 +1,7 @@
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import { getPublicPlans } from "@/lib/server/public-signup-service";
 import { resolveProductSurface, brandForProduct } from "@/lib/landing/resolve-product-surface";
+import { ascendOrigin } from "@/lib/landing/flow-public-surface";
 import { billingStripeIsConfigured } from "@/lib/server/billing-service";
 import { OrganizationSchema, ProductSchema } from "@/components/landing-custom/site-schema";
 import { FaqAccordion, type FaqItem } from "@/components/landing-custom/faq-accordion";
@@ -136,6 +137,7 @@ const CONSOLIDATES = [
  */
 export default async function PricingPage() {
   const product = await resolveProductSurface();
+  const ascendHref = ascendOrigin();
   const [rawBrand, { plans }] = await Promise.all([
     resolveCustomBrand(),
     getPublicPlans(product),
@@ -159,7 +161,7 @@ export default async function PricingPage() {
       <OrganizationSchema brand={brand} baseUrl={baseUrl} />
       <ProductSchema brand={brand} baseUrl={baseUrl} plans={plans} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-      <CustomNavbar brand={brand} />
+      <CustomNavbar brand={brand} product={product} />
       <main className="flex-1">
         <section className="pt-20 pb-6 text-center md:pt-24">
           <div className="container mx-auto px-4">
@@ -187,6 +189,20 @@ export default async function PricingPage() {
                   every plan, with AI agents and extra channels layered in as you need them. No
                   setup fee, no annual lock-in, cancel anytime.
                 </p>
+                {/* A Flow visitor could not otherwise see that the other two
+                    products exist, and choosing between them is the actual
+                    decision they are making on this page. */}
+                {ascendHref ? (
+                  <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground">
+                    Flow is the execution half on its own, for a business that already knows what
+                    it wants to run.{" "}
+                    <a href={ascendHref} className="text-primary underline-offset-4 hover:underline">
+                      Ascend
+                    </a>{" "}
+                    adds the intelligence that decides what to work on first, with this same
+                    workspace underneath it.
+                  </p>
+                ) : null}
               </>
             )}
           </div>
@@ -271,7 +287,7 @@ export default async function PricingPage() {
 
         <CustomCTA brand={brand} pricingHref="#pricing" />
       </main>
-      <CustomFooter brand={brand} />
+      <CustomFooter brand={brand} product={product} />
     </div>
   );
 }

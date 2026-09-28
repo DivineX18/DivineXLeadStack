@@ -12,11 +12,13 @@ import { FaqSection } from "@/components/seo/faq-section";
 import { PRODUCT_FAQS } from "@/data/product-faqs";
 import { JsonLd } from "@/components/seo/json-ld";
 import { itemListSchema } from "@/lib/seo/schema";
+import { retireFromFlowSurface } from "@/lib/landing/flow-public-surface";
 
 export async function generateMetadata() {
   // Host-aware, exactly as / and /pricing already resolve it. Without
   // this the Ascend host served Flow's name, tagline and closing CTA.
-  const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
+  const product = await resolveProductSurface();
+  const brand = brandForProduct(await resolveCustomBrand(), product);
   return {
     title: `Industries | ${brand.name} CRM for Coaches, Agencies, Trades & More`,
     description: `${brand.name} adapted to how different industries actually sell: coaches, agencies, home services and trades, real estate, and local service businesses.`,
@@ -25,6 +27,10 @@ export async function generateMetadata() {
 }
 
 export default async function IndustriesPage() {
+  const product = await resolveProductSurface();
+  // Retired from the Flow surface; still renders on Ascend.
+  await retireFromFlowSurface("/industries");
+
   // Host-aware, exactly as / and /pricing already resolve it. Without
   // this the Ascend host served Flow's name, tagline and closing CTA.
   const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
@@ -41,7 +47,7 @@ export default async function IndustriesPage() {
           INDUSTRIES.map((i) => ({ name: i.name, url: `${baseUrl}/industries/${i.slug}` })),
         )}
       />
-      <CustomNavbar brand={brand} />
+      <CustomNavbar brand={brand} product={product} />
       <main className="flex-1">
         <section className="py-20 text-center md:py-24">
           <div className="container mx-auto px-4">
@@ -84,7 +90,7 @@ export default async function IndustriesPage() {
             data cannot drift apart. */}
         <FaqSection items={PRODUCT_FAQS} supportEmail={brand.supportEmail} />
       </main>
-      <CustomFooter brand={brand} />
+      <CustomFooter brand={brand} product={product} />
     </div>
   );
 }

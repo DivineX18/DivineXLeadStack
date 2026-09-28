@@ -1,3 +1,4 @@
+import { resolveProductSurface } from "@/lib/landing/resolve-product-surface";
 import Link from "next/link";
 import { ClipboardList, Settings2, Plug2, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,8 +12,10 @@ import { StepFlow, type FlowStep } from "@/components/landing-custom/step-flow";
 import { siteOrigin } from "@/lib/seo/site";
 import { JsonLd } from "@/components/seo/json-ld";
 import { serviceSchema } from "@/lib/seo/schema";
+import { retireFromFlowSurface } from "@/lib/landing/flow-public-surface";
 
 export async function generateMetadata() {
+  const product = await resolveProductSurface();
   const brand = await resolveCustomBrand();
   return {
     title: `Implementation & Onboarding | ${brand.name}`,
@@ -75,6 +78,10 @@ const IMPLEMENTATION_FLOW: FlowStep[] = [
 ];
 
 export default async function ImplementationPage() {
+  const product = await resolveProductSurface();
+  // Retired from the Flow surface; still renders on Ascend.
+  await retireFromFlowSurface("/implementation");
+
   const brand = await resolveCustomBrand();
   const baseUrl = await siteOrigin();
   const faqSchema = {
@@ -102,7 +109,7 @@ export default async function ImplementationPage() {
         })}
       />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-      <CustomNavbar brand={brand} />
+      <CustomNavbar brand={brand} product={product} />
       <main className="flex-1">
         <section className="py-20 text-center md:py-24">
           <div className="container mx-auto px-4">
@@ -216,7 +223,7 @@ export default async function ImplementationPage() {
 
         <CustomCTA brand={brand} />
       </main>
-      <CustomFooter brand={brand} />
+      <CustomFooter brand={brand} product={product} />
     </div>
   );
 }

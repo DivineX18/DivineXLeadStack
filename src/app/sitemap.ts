@@ -3,6 +3,8 @@ import { LANDING_VARIANT } from "@/config/landing";
 import { INDUSTRIES } from "@/data/industries";
 import { RESOURCE_POSTS } from "@/data/resources-posts";
 import { siteOrigin } from "@/lib/seo/site";
+import { isRetiredOnFlow } from "@/lib/landing/flow-public-surface";
+import { resolveProductSurface } from "@/lib/landing/resolve-product-surface";
 
 /**
  * Sitemap. Next.js 15 picks this file up automatically and serves the
@@ -22,6 +24,18 @@ import { siteOrigin } from "@/lib/seo/site";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = await siteOrigin();
   const now = new Date();
+  /**
+   * Both hosts previously published the SAME 25 URLs, so every marketing
+   * page was offered to the index twice. The routes Flow has retired still
+   * serve on Ascend and still belong in Ascend's sitemap; on Flow they
+   * permanently redirect, and a sitemap that lists a redirect is asking the
+   * crawler to find one.
+   */
+  const isFlow = (await resolveProductSurface()) !== "unified";
+  const forSurface = (entries: MetadataRoute.Sitemap) =>
+    isFlow
+      ? entries.filter((e) => !isRetiredOnFlow(new URL(e.url).pathname))
+      : entries;
 
   const sharedEntries: MetadataRoute.Sitemap = [
     { url: `${baseUrl}/`, lastModified: now, changeFrequency: "weekly", priority: 1.0 },
@@ -57,7 +71,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   if (LANDING_VARIANT !== "leadstack") {
-    return sharedEntries;
+    return forSurface(sharedEntries);
   }
 
   const leadstackOnly: MetadataRoute.Sitemap = [
@@ -70,5 +84,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // restored. Removing the entry, not the pages — no route is deleted here.
   ];
 
-  return [...sharedEntries, ...leadstackOnly];
+  return forSurface([...sharedEntries, ...leadstackOnly]);
 }

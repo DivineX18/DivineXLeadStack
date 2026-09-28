@@ -14,6 +14,7 @@ import { ChatCta, ChatLink } from "./chat-cta";
 import { siteOrigin } from "@/lib/seo/site";
 import { FaqSection } from "@/components/seo/faq-section";
 import { PRODUCT_FAQS } from "@/data/product-faqs";
+import { retireFromFlowSurface } from "@/lib/landing/flow-public-surface";
 
 /**
  * About page — branches on LANDING_VARIANT like every other dual-render
@@ -27,7 +28,8 @@ export async function generateMetadata() {
   if (LANDING_VARIANT !== "leadstack") {
     // Host-aware, exactly as / and /pricing already resolve it. Without
     // this the Ascend host served Flow's name, tagline and closing CTA.
-    const brand = brandForProduct(await resolveCustomBrand(), await resolveProductSurface());
+    const product = await resolveProductSurface();
+  const brand = brandForProduct(await resolveCustomBrand(), product);
     return {
       title: `About | ${brand.name}`,
       description: `${brand.name} is DivineX's growth operations platform. Built to run the day-to-day of a growing business: leads, follow-up, pipeline, and getting paid, in one place.`,
@@ -103,6 +105,10 @@ const PRINCIPLES = [
 ];
 
 export default async function AboutPage() {
+  const product = await resolveProductSurface();
+  // Retired from the Flow surface; still renders on Ascend.
+  await retireFromFlowSurface("/about");
+
   if (LANDING_VARIANT !== "leadstack") {
     // Host-aware, exactly as / and /pricing already resolve it. Without
     // this the Ascend host served Flow's name, tagline and closing CTA.
@@ -112,7 +118,7 @@ export default async function AboutPage() {
     return (
       <div className="marketing-accent flex min-h-screen flex-col">
         <OrganizationSchema brand={brand} baseUrl={baseUrl} />
-        <CustomNavbar brand={brand} />
+        <CustomNavbar brand={brand} product={product} />
         <main className="flex-1">
           <section className="py-20 text-center md:py-24">
             <div className="container mx-auto px-4">
@@ -261,7 +267,7 @@ export default async function AboutPage() {
               data cannot drift apart. */}
           <FaqSection items={PRODUCT_FAQS} supportEmail={brand.supportEmail} />
         </main>
-        <CustomFooter brand={brand} />
+        <CustomFooter brand={brand} product={product} />
       </div>
     );
   }
