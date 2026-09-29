@@ -89,8 +89,29 @@ export function verifyEventToken(
 }
 
 /** Build the public /e/[token] URL. Empty when NEXT_PUBLIC_APP_URL absent. */
-export function buildEventPublicUrl(token: string): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
-  if (!base) return "";
-  return `${base}/e/${token}`;
+/**
+ * The /e/[token] link the attendee uses to reschedule or cancel.
+ *
+ * `base` should be the origin the booking was actually made on, because this
+ * deployment answers on more than one host and the attendee should stay on
+ * the brand they booked with. Callers that run inside a request pass
+ * `siteOrigin()`; the QStash reminder callback has no request, so it falls
+ * back to the configured URL.
+ *
+ * Returning "" used to be silent, and the confirmation email simply rendered
+ * no "manage your booking" link at all. The attendee then had no way to
+ * reschedule or cancel and no way to know why, which is exactly how this was
+ * reported. It is still non-fatal, because a booking that exists is better
+ * than a booking that failed, but it is no longer quiet.
+ */
+export function buildEventPublicUrl(token: string, base?: string | null): string {
+  const origin = (base ?? process.env.NEXT_PUBLIC_APP_URL)?.replace(/\/$/, "");
+  if (!origin) {
+    console.error(
+      "[booking] no origin for the manage-booking link: pass a base or set NEXT_PUBLIC_APP_URL. " +
+        "The attendee will receive a confirmation with no reschedule or cancel link.",
+    );
+    return "";
+  }
+  return `${origin}/e/${token}`;
 }

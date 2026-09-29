@@ -1,3 +1,4 @@
+import { siteOrigin } from "@/lib/seo/site";
 import "server-only";
 
 import { NextResponse } from "next/server";
@@ -106,7 +107,7 @@ export async function POST(
   return NextResponse.json({
     ok: true,
     status: "scheduled",
-    publicEventUrl: buildEventPublicUrl(newToken),
+    publicEventUrl: buildEventPublicUrl(newToken, await siteOrigin()),
   });
 }
 
@@ -185,7 +186,7 @@ async function runMarkPaidSideEffects(args: {
   if (!contact || !sub || !emailIsConfigured()) return;
   if (!contact.email || contact.emailOptedOut) return;
 
-  const publicEventUrl = buildEventPublicUrl(rawToken);
+  const publicEventUrl = buildEventPublicUrl(rawToken, await siteOrigin());
   const rendered = renderBookingConfirmationEmail({
     recipientName: contact.name ?? "",
     businessName: sub.name ?? "Booking",

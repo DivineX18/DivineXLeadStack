@@ -1,3 +1,5 @@
+import { siteOrigin } from "@/lib/seo/site";
+import { notifyOperatorOfBooking } from "@/lib/booking/notify-operator";
 import { trustedClientIp } from "@/lib/comms/web-chat/client-ip";
 import {
   consumeLimits,
@@ -45,6 +47,7 @@ import {
 import {
   renderBookingConfirmationEmail,
   renderBookingPaymentPendingEmail,
+  formatStartLocal,
 } from "@/lib/booking/email";
 import { GLOBAL_TERRITORY_ID } from "@/types";
 import type { BookingPage } from "@/types/booking";
@@ -308,6 +311,9 @@ export async function POST(
     title: string;
     rawToken: string;
     tokenHash: string;
+    /** Team-mode host this landed on, so the notification reaches them
+     *  rather than every admin. Null on a single-host page. */
+    assignedToUid: string | null;
     paymentLinkUrl: string | null;
     paymentHoldExpiresAt: Date | null;
   };
@@ -474,6 +480,7 @@ export async function POST(
         tokenHash: hash,
         paymentLinkUrl,
         paymentHoldExpiresAt,
+        assignedToUid,
       };
     });
   } catch (err) {
@@ -494,13 +501,17 @@ export async function POST(
   }
 
   // ── Post-write side effects (best-effort) ──────────────────────
-  const publicEventUrl = buildEventPublicUrl(created.rawToken);
+  const publicEventUrl = buildEventPublicUrl(created.rawToken, await siteOrigin());
   const appHost =
     process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, "")
       ?.replace(/\/.*$/, "")
       ?.toLowerCase() ?? CUSTOM_BRAND.primaryDomain;
 
   // Confirmation / payment-pending email.
+  // Whether the ATTENDEE received their confirmation. The operator is told
+  // either way, and told explicitly when it failed, because a booking whose
+  // confirmation bounced needs a human to follow up rather than silence.
+  let attendeeEmailFailed = !emailIsConfigured();
   if (emailIsConfigured()) {
     try {
       const rendered = paymentRequired
@@ -566,9 +577,36 @@ export async function POST(
         icsAttachment: attachments,
       });
     } catch (err) {
-      console.warn("[booking/book] confirmation send failed", err);
+      attendeeEmailFailed = true;
+      console.error("[booking/book] attendee confirmation send FAILED", err);
     }
+  } else {
+    console.error(
+      "[booking/book] email is not configured, so the attendee received no confirmation and no reschedule link",
+    );
   }
+
+  /**
+   * Tell the operator. This did not exist: the route notified the attendee,
+   * wrote the activity, fired the trigger and emitted the webhook, and told
+   * the person whose calendar it lands on nothing at all unless web push
+   * happened to be configured AND subscribed on a device.
+   */
+  await notifyOperatorOfBooking({
+    subAccountId: saId,
+    sub,
+    assignedHostUid: created.assignedToUid ?? null,
+    pageName: page.name,
+    eventTitle: created.title,
+    whenLabel: formatStartLocal(slotStart, page.timezone),
+    attendeeName: name,
+    attendeeEmail: email,
+    attendeePhone: phone ?? null,
+    meetingUrl: page.meetingUrl ?? null,
+    notes: null,
+    eventUrl: `${await siteOrigin()}/sa/${saId}/booking`,
+    attendeeEmailFailed,
+  });
 
   // Reminder schedule (no-op when payment is pending — gets scheduled
   // on mark-paid in Slice 8).

@@ -14,19 +14,20 @@
 const ASCEND = process.env.ASCEND_BASE ?? "https://app.divinex.io";
 const FLOW = process.env.FLOW_BASE ?? "https://crm.divinex.io";
 
-/** Every public marketing route. Anything reachable by a logged-out visitor
- *  that renders the brand. */
+/**
+ * Every public marketing route that renders the brand ON BOTH HOSTS.
+ *
+ * /about, /faq, /implementation, /platform, /industries and /resources are
+ * deliberately NOT here any more. Flow retired them and they now 308 to
+ * Ascend, so following the redirect and asserting "this should be Flow"
+ * tests the opposite of the intended architecture. Their behaviour is
+ * asserted separately below, as redirects rather than as pages.
+ */
 const ROUTES = [
   "/",
-  "/about",
   "/contact",
-  "/faq",
   "/features",
-  "/implementation",
-  "/industries",
-  "/platform",
   "/pricing",
-  "/resources",
   "/start",
   "/growth-scanner",
   // "/leadstack-vs-gohighlevel" is deliberately omitted: it 404s on BOTH hosts
@@ -102,6 +103,33 @@ for (const [label, base, want, wrong] of [
     // And the positive: somewhere on an identity surface, the right name.
     const names = `${id.title} ${id.ogSite} ${id.ogTitle} ${id.appleTitle} ${id.wordmark}`;
     check(`  ${route}: identifies as ${want}`, new RegExp(`\\b${want}\\b`).test(names), names.slice(0, 70));
+  }
+}
+
+
+/**
+ * The retired half of the consolidation. These are Flow URLs that must NOT
+ * render on Flow: one permanent hop to the same path on Ascend, landing on a
+ * real page. Asserted here because the suite that used to cover them as Flow
+ * pages is the one that would otherwise go quiet.
+ */
+{
+  console.log("\n── retired on Flow, served by Ascend ──");
+  for (const path of ["/about", "/faq", "/implementation", "/platform", "/industries", "/resources"]) {
+    const res = await fetch(`${FLOW}${path}`, { redirect: "manual" });
+    const location = res.headers.get("location") ?? "";
+    check(
+      `${path}: permanently redirects off Flow`,
+      res.status === 308,
+      `got ${res.status}`,
+    );
+    check(
+      `${path}: lands on the same path on Ascend`,
+      location === `${ASCEND}${path}`,
+      location || "(no location)",
+    );
+    const followed = await fetch(`${FLOW}${path}`);
+    check(`${path}: the destination is a real page`, followed.status === 200, `got ${followed.status}`);
   }
 }
 

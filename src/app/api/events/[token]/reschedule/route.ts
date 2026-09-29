@@ -1,3 +1,4 @@
+import { siteOrigin } from "@/lib/seo/site";
 import "server-only";
 
 import { NextResponse } from "next/server";
@@ -221,7 +222,7 @@ export async function POST(
   }
   const { newToken, event, pageSnap, newStart: nsa, newEnd: nea } = outcome;
   const page = pageSnap?.data() as BookingPage | undefined;
-  const publicEventUrl = buildEventPublicUrl(newToken);
+  const publicEventUrl = buildEventPublicUrl(newToken, await siteOrigin());
 
   // Side effects: reminder reschedule + activity + trigger + emails.
   await runRescheduleSideEffects({

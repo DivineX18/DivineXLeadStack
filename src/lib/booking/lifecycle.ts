@@ -224,8 +224,10 @@ export async function scheduleEventReminders(input: {
   if (input.pendingPayment) return;
   if (input.reminderOffsetsMinutes.length === 0) return;
   if (!qstashIsConfigured()) {
-    console.warn(
-      "[booking/lifecycle] QStash not configured, reminders won't fire for event " +
+    // Loud: the attendee silently never gets a reminder, which reads to the
+    // operator as "the follow-ups don't work" with nothing to point at.
+    console.error(
+      "[booking/lifecycle] QStash is NOT configured, so NO reminder will ever be sent for event " +
         input.eventId,
     );
     return;
