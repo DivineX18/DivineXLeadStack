@@ -9,7 +9,7 @@ Deployed and verified commits:
 | Repo | Service | Host(s) | Commit |
 |---|---|---|---|
 | DivineX-Business-Intelligence | divinex-business-intelligence | ascend.divinex.io | `f6a4286` |
-| DivineXLeadStack | ascend-crm-x2j3 | crm.divinex.io, app.divinex.io | `c4bc6d9` |
+| DivineXLeadStack | ascend-crm-x2j3 | crm.divinex.io, app.divinex.io | `8286764` |
 
 Both verified by reading `/api/version` on the live host, not by trusting a
 green deploy.
@@ -201,6 +201,61 @@ which is how every call site was found.
   descriptions is a content project, not a consolidation edit.
 - Flow's `/features` title is still templated as "CRM, Pipeline & AI Agent
   Tools" on both surfaces. Changing Ascend's copy was out of scope.
+
+
+## Reopening 2: booking notifications (2026-09-29)
+
+**Why.** A customer-reported production incident, which is an explicit
+reopen condition. A real prospect booked a call: the operator received no
+notification, it was unclear whether the attendee received anything, and the
+attendee could not reschedule or cancel.
+
+**Three separate causes, all in code, none needing production data to prove.**
+
+1. **The operator was never told.** The booking route notified the attendee,
+   wrote the activity row, fired the automation trigger and emitted the
+   webhook, and told the person whose calendar it lands on nothing. The only
+   path that reached them was web push, which needs VAPID keys, a subscribed
+   device, and on iPhone a home-screen install. Miss any one and a real
+   booking arrives in silence. There is now an operator email on every
+   booking, to the assigned host on a team page and otherwise the admins,
+   carrying the attendee's details with Reply-To set to the attendee.
+
+2. **The reschedule link could be empty.** `buildEventPublicUrl` returned ""
+   whenever `NEXT_PUBLIC_APP_URL` was unset, and the confirmation email then
+   rendered no "manage your booking" link at all. It now takes the origin of
+   the request the booking was made on, so the link does not depend on env
+   config and keeps the attendee on the host they booked with, which matters
+   because this deployment answers on two.
+
+3. **Failures were silent.** A failed confirmation send was a `console.warn`
+   and the booking succeeded anyway, so nobody learned the customer got
+   nothing. It is now an error, and the operator's email states plainly when
+   the attendee was NOT reached. Reminders skipping for unconfigured QStash
+   is an error too.
+
+**Not a defect: Google Calendar.** Nothing writes to Google Calendar and
+nothing ever did. The mechanisms are the ICS attachment on the confirmation
+email and the subscribable feed under Settings, and Google polls a
+subscribed feed on its own slow schedule.
+
+**Could not verify against production data.** The local `.env.local` points
+at a different Firebase project than production, so the specific event could
+not be read. Production credentials were not requested. The fixes therefore
+address every cause provable from code rather than one confirmed cause.
+
+**Still to confirm operator-side:** if reschedule remains blocked, check the
+booking page is `published` rather than `draft`. A draft page deliberately
+refuses reschedules.
+
+**Verification.** 15 checks in `verify-booking-notifications`, seven
+mutations, seven caught. The recipient checks initially restated the
+selection rule rather than calling it, so the rule was extracted to a pure
+function and the tests now exercise the real one. Build, typecheck and lint
+clean. `verify-host-branding` had asserted Flow branding on the six routes
+Reopening 1 retired; that suite had been run BEFORE that push and so passed
+against the old production. Its route list now covers only what Flow serves
+and the retired six are asserted as redirects. It passes with zero failures.
 
 ## Reopening rules
 
