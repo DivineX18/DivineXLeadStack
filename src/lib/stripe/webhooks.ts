@@ -22,51 +22,53 @@ import {
   QUOTE_INVOICE_PAYMENT_KIND,
   handleQuoteInvoiceCheckoutCompleted,
 } from "@/lib/quotes/stripe-payment";
+import { classifyCheckoutSession } from "@/lib/stripe/checkout-identity";
 import type { SubscriptionStatus } from "@/types";
 
 export async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session,
 ) {
-  // Founders cohort: anonymous one-time purchase. No uid in metadata
-  // (buyer hasn't signed up yet — we email them within 24h to onboard).
-  // Branch on `metadata.kind` so we don't break legacy subscription flow.
-  if (session.metadata?.kind === "founders") {
-    await handleFoundersCheckout(session);
-    return;
-  }
+  // Routed strictly by the metadata stamped at session-creation time — see
+  // classifyCheckoutSession for why the amount is never allowed to decide.
+  const routed = classifyCheckoutSession(session);
 
-  // Client Billing v1: an agency's client paying for their sub-account plan.
-  // Routed strictly by metadata.kind so the founders + legacy user branches
-  // never see these sessions.
-  if (session.metadata?.kind === SUB_ACCOUNT_PLAN_KIND) {
-    await handleSubAccountPlanCheckoutCompleted(session);
-    return;
-  }
+  switch (routed.route) {
+    // Founders cohort: anonymous one-time purchase. No uid in metadata
+    // (buyer hasn't signed up yet — we email them within 24h to onboard).
+    case "founders":
+      await handleFoundersCheckout(session);
+      return;
 
-  // Public self-serve signup: a stranger paying on the public pricing page,
-  // no sub-account exists yet. Provisions the workspace, then "graduates"
-  // the subscription's metadata to SUB_ACCOUNT_PLAN_KIND so subsequent
-  // lifecycle events fall through to the branch above with no new code.
-  if (session.metadata?.kind === PUBLIC_SELF_SERVE_SIGNUP_KIND) {
-    await handlePublicSelfServeSignupCheckoutCompleted(session);
-    return;
-  }
+    // Client Billing v1: an agency's client paying for their sub-account
+    // plan. The plan itself is then loaded by planId, never by price.
+    case "subAccountPlan":
+      await handleSubAccountPlanCheckoutCompleted(session);
+      return;
 
-  // Products + Invoices: a quote/invoice recipient paying by card via the
-  // public /q/[token] page's "Pay with card" button (one-time payment,
-  // agency's own Stripe account — no Connect). Auto-flips the quote to
-  // paid, unlike the PayPal.me path which has no payment-status callback.
-  if (session.metadata?.kind === QUOTE_INVOICE_PAYMENT_KIND) {
-    await handleQuoteInvoiceCheckoutCompleted(session);
-    return;
+    // Public self-serve signup: a stranger paying on the public pricing
+    // page, no sub-account exists yet. Provisions the workspace, then
+    // "graduates" the subscription's metadata to SUB_ACCOUNT_PLAN_KIND so
+    // subsequent lifecycle events fall through to the branch above with no
+    // new code.
+    case "publicSelfServeSignup":
+      await handlePublicSelfServeSignupCheckoutCompleted(session);
+      return;
+
+    // Products + Invoices: a quote/invoice recipient paying by card via the
+    // public /q/[token] page's "Pay with card" button (one-time payment,
+    // agency's own Stripe account — no Connect). Auto-flips the quote to
+    // paid, unlike the PayPal.me path which has no payment-status callback.
+    case "quoteInvoicePayment":
+      await handleQuoteInvoiceCheckoutCompleted(session);
+      return;
+
+    case "unroutable":
+      console.error("No uid found in checkout session metadata");
+      return;
   }
 
   // Legacy subscription flow — requires uid stamped at checkout creation.
-  const uid = session.metadata?.uid;
-  if (!uid) {
-    console.error("No uid found in checkout session metadata");
-    return;
-  }
+  const uid = routed.uid;
 
   await getAdminDb().collection("users").doc(uid).update({
     stripeCustomerId: session.customer as string,

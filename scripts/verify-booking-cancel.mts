@@ -10,6 +10,10 @@
  *
  * Reschedule was broken identically and only looked healthy because an
  * operator tested it with a session cookie already in the browser.
+ *
+ * Needs AUTOMATIONS_TOKEN_SECRET set; the token half of the suite mints real
+ * tokens. Any value works:
+ *   AUTOMATIONS_TOKEN_SECRET=$(openssl rand -base64 32) <runner> scripts/verify-booking-cancel.mts
  */
 import { isPublicPath } from "../src/middleware";
 import { eventStatus, eventOccupiesSlot, isCancelledEvent } from "../src/types/events";
