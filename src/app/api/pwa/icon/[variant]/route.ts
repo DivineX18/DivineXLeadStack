@@ -51,5 +51,23 @@ export async function GET(
     // Fall through to the static mark — an icon request must never 500.
   }
 
-  return NextResponse.redirect(new URL(fallback, request.url), 302);
+  /**
+   * RELATIVE REDIRECT, ON PURPOSE.
+   *
+   * This was `new URL(fallback, request.url)`. Behind the production proxy
+   * `request.url` is the container's own address, so every icon request was
+   * answered with a 302 to https://localhost:10000/apple-touch-icon.png —
+   * a URL no phone can resolve. iOS fetches apple-touch-icon when someone
+   * adds the app to their home screen, got nothing, and fell back to a
+   * screenshot of the page, which is what "the mobile logo isn't cropped or
+   * aligned" looks like.
+   *
+   * A relative Location needs no host at all, so it cannot be derived
+   * wrongly. RFC 7231 has allowed it since 2014 and every browser and OS
+   * resolves it against the request URL they actually used.
+   */
+  return new NextResponse(null, {
+    status: 302,
+    headers: { Location: fallback, "Cache-Control": "public, max-age=3600" },
+  });
 }
