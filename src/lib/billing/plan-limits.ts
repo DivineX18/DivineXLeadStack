@@ -252,6 +252,12 @@ export async function checkPlanLimit(input: {
  */
 export function limitMessage(kind: LimitKind, limit: number, used: number): string {
   const { one, many } = LABEL[kind];
+  // A ceiling of zero is not "you ran out", it is "your plan does not include
+  // this". Falling through would produce "you've used all 0 Growth Scans
+  // (0 of 0)", which reads as a bug and tells the customer nothing.
+  if (limit === 0) {
+    return `${many[0].toUpperCase()}${many.slice(1)} aren't included in your plan. Upgrade your plan to use them.`;
+  }
   if (kind === "aiSpend") {
     /**
      * NO NUMBER AT ALL.

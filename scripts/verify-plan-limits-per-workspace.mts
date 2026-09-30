@@ -34,16 +34,36 @@ function check(label: string, pass: boolean, detail = "") {
 
 const AGENCY_ID = "U5SBAHsB0nZ7ce552H9h";
 
-/** The locked V1 pricing, restated here so a silent plan-doc edit fails loudly. */
-const EXPECTED: Record<string, [number, number, number, number, number]> = {
-  // name|product            subs  sites   emails    ai  scans
-  "flow|9900": [1, 5, 25_000, 50, 0],
-  "flow|29700": [5, 25, 75_000, 250, 0],
-  "flow|69700": [25, 100, 200_000, 500, 0],
-  "unified|19700": [1, 5, 25_000, 100, 10],
-  "unified|39700": [5, 25, 75_000, 300, 30],
-  "unified|79700": [25, 100, 200_000, 600, 60],
+/**
+ * THE LOCKED LADDER, KEYED BY PLAN DOCUMENT — NOT BY PRICE.
+ *
+ * This table used to be keyed `product|priceMonthlyCents`, and unmatched
+ * plans were skipped with `continue`. That is fail-open twice over: moving a
+ * price to a founding rate silently unmatched every expectation and the
+ * suite passed while checking nothing, and a brand-new plan was never
+ * checked at all. Keyed by doc id, a price move changes nothing here, and
+ * the coverage assertion below fails loudly when a sellable plan is missing.
+ */
+const EXPECTED: Record<
+  string,
+  { label: string; subs: number | null; sites: number | null; emails: number | null;
+    ai: number | null; scans: number | null; members: number | null;
+    aiSpend: number | null; voice: number | null; sms: number | null }
+> = {
+  Kzri3NyVTG9dyId7sJHa: { label: "Flow Solo", subs: 1, sites: 5, emails: 25_000, ai: 50, scans: 0, members: 1, aiSpend: 6, voice: 100, sms: 400 },
+  "7fOwVNe9zRu8pPesDEXd": { label: "Flow Team", subs: 5, sites: 25, emails: 75_000, ai: 250, scans: 0, members: 5, aiSpend: 20, voice: 300, sms: 1_000 },
+  ZdA2vnJSayAiquGQdXY6: { label: "Flow Agency", subs: 25, sites: 100, emails: 200_000, ai: 500, scans: 0, members: null, aiSpend: 50, voice: 750, sms: 1_500 },
+  six9XRCcbmAx7rBrgCO6: { label: "Ascend Solo", subs: 1, sites: 5, emails: 2_000, ai: 100, scans: 10, members: 1, aiSpend: 15, voice: 200, sms: 500 },
+  xZJultbFi4dTqF9vJTIY: { label: "Ascend Team", subs: 5, sites: 25, emails: 10_000, ai: 750, scans: 100, members: 5, aiSpend: 40, voice: 600, sms: 1_500 },
+  SvnbPxTVu6yWsYIl6tT6: { label: "Ascend Agency", subs: 25, sites: 100, emails: 30_000, ai: 2_000, scans: 250, members: null, aiSpend: 90, voice: 1_500, sms: 4_000 },
 };
+
+/**
+ * Plans deliberately outside the table: sold to nobody new, and grandfathered
+ * unlimited on purpose. Listed by NAME rather than skipped by absence, so a
+ * new plan cannot join them by accident.
+ */
+const GRANDFATHERED = new Set(["Growth Operations"]);
 
 const db = getAdminDb();
 const plans = await db.collection(`agencies/${AGENCY_ID}/plans`).get();
@@ -51,8 +71,7 @@ const plans = await db.collection(`agencies/${AGENCY_ID}/plans`).get();
 // ── Each purchased plan resolves to ITS OWN ceiling ──────────────────────
 for (const doc of plans.docs) {
   const p = doc.data() as Record<string, unknown>;
-  const key = `${(p.product as string) ?? "flow"}|${p.priceMonthlyCents}`;
-  const expected = EXPECTED[key];
+  const expected = EXPECTED[doc.id];
   if (!expected) continue;
 
   // A workspace on this plan, exactly as the sub-account doc would look.
@@ -60,19 +79,65 @@ for (const doc of plans.docs) {
     agencyId: AGENCY_ID,
     billing: { planId: doc.id },
   });
-  const actual = [
-    limits.maxSubAccounts,
-    limits.maxWebsites,
-    limits.maxEmailsPerMonth,
-    limits.maxAiGenerationsPerMonth,
-    limits.maxGrowthScansPerMonth,
-  ];
+  const actual = {
+    subs: limits.maxSubAccounts,
+    sites: limits.maxWebsites,
+    emails: limits.maxEmailsPerMonth,
+    ai: limits.maxAiGenerationsPerMonth,
+    scans: limits.maxGrowthScansPerMonth,
+    members: limits.maxMembers,
+    aiSpend: limits.maxAiSpendPerMonth,
+    voice: limits.maxVoiceMinutesPerMonth,
+    sms: limits.maxSharedSmsPerMonth,
+  };
+  const { label, ...want } = expected;
   check(
-    `${key} resolves to its own tier limits`,
-    JSON.stringify(actual) === JSON.stringify(expected),
+    `${label} resolves to its own tier limits`,
+    JSON.stringify(actual) === JSON.stringify(want),
     `got ${JSON.stringify(actual)}`,
   );
 }
+
+// ── Every sellable plan is covered, and every cost is bounded ────────────
+// The three costs DivineX pays per use — model spend, Vapi minutes, and SMS
+// on our own Twilio — were unbounded on the entire Flow ladder because the
+// fields simply were not present, and an absent ceiling reads as unlimited.
+// Nothing caught it, because the old table did not check those fields and
+// skipped any plan it did not recognise.
+const COST_DIMENSIONS = [
+  ["maxAiSpendPerMonth", "AI spend"],
+  ["maxVoiceMinutesPerMonth", "voice minutes"],
+  ["maxSharedSmsPerMonth", "shared SMS"],
+  ["maxEmailsPerMonth", "email"],
+] as const;
+
+let sellable = 0;
+for (const doc of plans.docs) {
+  const p = doc.data() as Record<string, unknown>;
+  if (p.status !== "active") continue;
+  const name = String(p.name ?? "");
+  if (GRANDFATHERED.has(name)) continue;
+  sellable++;
+
+  check(
+    `${name} ($${Number(p.priceMonthlyCents) / 100}) has an expectation in this file`,
+    !!EXPECTED[doc.id],
+    `plan ${doc.id} is on sale and unchecked`,
+  );
+
+  const limits = await resolvePlanLimits("synthetic", {
+    agencyId: AGENCY_ID,
+    billing: { planId: doc.id },
+  });
+  for (const [field, human] of COST_DIMENSIONS) {
+    check(
+      `${name} bounds ${human}`,
+      limits[field] !== null,
+      `${field} is unlimited on a plan we sell`,
+    );
+  }
+}
+check("some sellable plans were actually inspected", sellable >= 6, String(sellable));
 
 // ── The bug this replaced: no cross-plan merge ───────────────────────────
 const individual = plans.docs.find(

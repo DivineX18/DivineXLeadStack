@@ -107,5 +107,54 @@ console.log("\n══ what the customer is told ══");
   check("email still states its real count", /2000|2,000/.test(e));
 }
 
+console.log("\n══ zero is a ceiling, not an absence ══");
+// normalizePlanLimits required `> 0`, so an explicit 0 was stored as null,
+// and null means unlimited. A plan authored to include NONE of a metered
+// thing was therefore stored as including an unbounded amount of it. That
+// is fail-open on exactly the dimensions this file exists to bound.
+{
+  const zeroed = normalizePlanLimits({
+    maxGrowthScansPerMonth: 0,
+    maxVoiceMinutesPerMonth: 0,
+    maxSharedSmsPerMonth: 0,
+    maxAiSpendPerMonth: 0,
+  });
+  check("a zero Growth Scan ceiling survives the write path", zeroed.maxGrowthScansPerMonth === 0,
+    String(zeroed.maxGrowthScansPerMonth));
+  check("a zero voice ceiling survives the write path", zeroed.maxVoiceMinutesPerMonth === 0,
+    String(zeroed.maxVoiceMinutesPerMonth));
+  check("a zero SMS ceiling survives the write path", zeroed.maxSharedSmsPerMonth === 0,
+    String(zeroed.maxSharedSmsPerMonth));
+  check("a zero AI-spend ceiling survives the write path", zeroed.maxAiSpendPerMonth === 0,
+    String(zeroed.maxAiSpendPerMonth));
+  // The distinction that matters: absent still means unlimited, and must.
+  const absent = normalizePlanLimits({});
+  check("an absent ceiling still means unlimited", absent.maxGrowthScansPerMonth === null);
+  check("zero and absent are not the same value",
+    zeroed.maxGrowthScansPerMonth !== absent.maxGrowthScansPerMonth);
+  // Garbage must not become zero either — that would wall a customer out of
+  // something their plan never restricted.
+  const junk = normalizePlanLimits({ maxGrowthScansPerMonth: "0", maxVoiceMinutesPerMonth: NaN });
+  check("a string zero is not read as a zero ceiling", junk.maxGrowthScansPerMonth === null);
+  check("NaN is not read as a zero ceiling", junk.maxVoiceMinutesPerMonth === null);
+  // A negative must not survive in either direction: not as unlimited, and
+  // not as a negative ceiling that refuses everything with a number nobody
+  // typed.
+  const neg = normalizePlanLimits({ maxVoiceMinutesPerMonth: -5, maxAiSpendPerMonth: -0.5 });
+  check("a negative ceiling does not become unlimited", neg.maxVoiceMinutesPerMonth !== null);
+  check("a negative ceiling is clamped to zero", neg.maxVoiceMinutesPerMonth === 0,
+    String(neg.maxVoiceMinutesPerMonth));
+  check("a negative fraction does not floor to -1", neg.maxAiSpendPerMonth === 0,
+    String(neg.maxAiSpendPerMonth));
+  // And the customer must read something true when they hit it.
+  const zmsg = limitMessage("growthScans", 0, 0);
+  check("a zero ceiling says the feature is not included",
+    zmsg.includes("aren't included") && !zmsg.includes("all 0") && !zmsg.includes("0 of 0"), zmsg);
+  for (const kind of ["voiceMinutes", "sharedSms", "emails"] as LimitKind[]) {
+    const m = limitMessage(kind, 0, 0);
+    check(`a zero ${kind} ceiling reads as not included`, m.includes("aren't included"), m);
+  }
+}
+
 console.log(`\n${failures === 0 ? "COST GUARDRAILS: ALL CHECKS PASSED" : `COST GUARDRAILS: ${failures} CHECK(S) FAILED`}`);
 process.exit(failures === 0 ? 0 : 1);

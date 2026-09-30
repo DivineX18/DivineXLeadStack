@@ -159,8 +159,23 @@ export function normalizePlanLimits(input: unknown): PlanLimits {
   const limits = {} as PlanLimits;
   for (const key of LIMIT_KEYS) {
     const raw = source[key];
+    // ZERO IS A REAL CEILING, NOT A MISSING ONE.
+    //
+    // This used to require `raw > 0`, which turned an explicit 0 into null —
+    // and null means UNLIMITED here. So a plan authored to include none of
+    // something was silently stored as including an unbounded amount of it,
+    // which is the wrong direction for every metered dimension. Reading is
+    // unaffected: a doc already holding 0 always resolved as 0; only the
+    // write path destroyed it.
+    // A negative is operator error, and both readings of it are bad: null
+    // would mean unlimited (fail-open on cost), and storing it as-is walls
+    // the customer out of everything with a number nobody typed. Clamped to
+    // 0, which is the nearest thing it could have meant and now has a clean
+    // meaning and a clean refusal message.
     limits[key] =
-      typeof raw === "number" && Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : null;
+      typeof raw === "number" && Number.isFinite(raw)
+        ? Math.max(0, Math.floor(raw))
+        : null;
   }
   return limits;
 }
