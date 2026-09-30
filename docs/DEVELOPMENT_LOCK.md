@@ -508,6 +508,54 @@ needed pinning for the same reason the charged amount does.
   with these changes in place. Worth knowing before anyone spends time on it
   again.
 
+## Certification: founding pricing, closed 2026-09-30
+
+Deployed and read back from production. Flow `f4456e5` on crm.divinex.io and
+app.divinex.io; BI `ff1a325` on ascend.divinex.io.
+
+| Product | Plan | Charged | Standard | Live Stripe Price |
+|---|---|---|---|---|
+| unified | Solo | $127 | $197 | code-served (`growth_system`, no pinned Price) |
+| unified | Team | $297 | $397 | `price_1ULWNgLkc8XR0w4Gi3SeTvuM` |
+| unified | Agency | $597 | $797 | `price_1ULWVhLkc8XR0w4GPNqzknel` |
+| flow | Solo | $99 | none | unchanged |
+| flow | Team | $297 | none | unchanged |
+| flow | Agency | $697 | none | unchanged |
+
+Team and Agency were repriced by the owner through Agency to Client billing,
+which minted new live Prices and deactivated the old ones. Zeno is unchanged
+at $77. Public surfaces read back correct: 36%, 25% and 25% off with the
+price-held commitment on app.divinex.io, no founding wording on Flow.
+
+**Two owner-entry errors were caught by read-back, not by assumption.** Agency
+first landed at $697, which both collided with Flow Agency and advertised 13%
+off; then its standard rate landed at $697 against a $597 price, advertising
+14%. The second was caused by an ambiguous instruction of mine that corrected
+itself mid-sentence. Read the numbers back every time; do not accept "done" as
+evidence.
+
+Only one shared price point remains, $297 between Flow Team and ASCEND Team,
+and it passes every identity check: distinct plan documents, Stripe Prices,
+Stripe Products and surfaces, with `ascendIntelligenceEnabledByAgency` and
+Growth Scans on the unified side only. Identity never derives from amount.
+
+**No existing subscription was touched, and none could have been:** 50
+sub-accounts, 3 billing records, all `pending`, zero with a live Stripe
+subscription. The newest `billingEvents` predate this work.
+
+All six sellable plans remain bound on AI spend, voice minutes, shared SMS and
+email. Seven suites pass against live data.
+
+**Not verified, and deliberately not blocking:** no live Stripe Checkout
+Session was created, since that needs the production live key and an owner
+browser. The trial mechanism was already production-working before this
+pricing change. The 30-day AI-cost aggregate was not retrieved; it needs the
+owner's authenticated admin session. The route itself is verified: in deployed
+`ff1a325` the literal `/admin/usage/ai-cost` registers before
+`/admin/usage/:targetClerkUserId`.
+
+**Development is locked. The next work is customer acquisition.**
+
 ## Reopening rules
 
 Active Ascend AND Flow development is locked. Development reopens only for:
