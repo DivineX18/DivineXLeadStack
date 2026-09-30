@@ -273,8 +273,8 @@ export function Pricing({
                       // urgency theatre; naming the standard rate and saying the
                       // price is held makes it a commitment we can be held to.
                       <p className="text-xs font-medium text-primary">
-                        Founding rate — {founding.percentOff}% off. Your price
-                        stays at {price}/mo for as long as you stay subscribed.
+                        Founding rate, {founding.percentOff}% off. Your price stays at{" "}
+                        {price}/mo for as long as you stay subscribed.
                       </p>
                     )}
                     {!isFree && (

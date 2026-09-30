@@ -69,7 +69,7 @@ export function parseStandardPriceInput(
   }
   if (n <= priceMonthlyCents) {
     throw new Error(
-      "The standard rate has to be higher than the price you charge — otherwise it isn't a discount.",
+      "The standard rate has to be higher than the price you charge, otherwise it isn't a discount.",
     );
   }
   return n;

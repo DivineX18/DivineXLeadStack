@@ -83,7 +83,7 @@ export default async function StartTrialPage() {
         </p>
         {founding && (
           <p className="mt-1 text-center text-sm font-medium text-primary">
-            Founding rate — normally{" "}
+            Founding rate. Normally{" "}
             {money(founding.standardPriceMonthlyCents)}/month. Your price stays
             at {price}/month for as long as you stay subscribed.
           </p>
