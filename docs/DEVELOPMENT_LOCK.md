@@ -9,7 +9,7 @@ Deployed and verified commits:
 | Repo | Service | Host(s) | Commit |
 |---|---|---|---|
 | DivineX-Business-Intelligence | divinex-business-intelligence | ascend.divinex.io | `f6a4286` |
-| DivineXLeadStack | ascend-crm-x2j3 | crm.divinex.io, app.divinex.io | `baa5ceb` |
+| DivineXLeadStack | ascend-crm-x2j3 | crm.divinex.io, app.divinex.io | `7c089dd` |
 
 Both verified by reading `/api/version` on the live host, not by trusting a
 green deploy.
@@ -289,6 +289,19 @@ it against the stored `publicTokenHash`.
 their route and answer `{"error":"Invalid link"}` as JSON for a bad token,
 while `/api/events`, `by-id/*/mark-paid`, `by-id/*/assign` and
 `by-id/*/mark-status` all still 307 to `/login`.
+
+**Follow-on (`7c089dd`): a cancelled meeting was still drawn as a meeting.**
+Cancelling worked end to end, but `calendar-view.tsx` had no concept of event
+status: a cancelled booking rendered with the same pill, dot and weight as a
+live one and was counted in the month header, so it read as "still on the
+booking page even after refreshing". Nothing was stale; the calendar was
+drawing it faithfully and identically. It is now dimmed and struck through
+with the header reading "N events, 1 cancelled", and kept on the grid rather
+than hidden so the history stays visible. The check moved to
+`isCancelledEvent` beside `eventStatus` and `eventOccupiesSlot` so counting,
+drawing and slot-freeing all ask the same question. The public availability
+route already skipped cancelled events, so the slot was genuinely rebookable
+throughout.
 
 **Coverage.** `verify-booking-cancel`, 29 checks against the real
 `isPublicPath`, the real token functions and the real state model. Four
