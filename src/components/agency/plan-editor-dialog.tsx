@@ -51,6 +51,7 @@ export function PlanEditorDialog({ plan, open, onOpenChange, onSaved }: Props) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [priceDollars, setPriceDollars] = useState("");
+  const [standardDollars, setStandardDollars] = useState("");
   const [currency, setCurrency] = useState<string>("usd");
   const [gates, setGates] = useState<PlanGates>(defaultGates);
   const [saving, setSaving] = useState(false);
@@ -62,6 +63,11 @@ export function PlanEditorDialog({ plan, open, onOpenChange, onSaved }: Props) {
     setPriceDollars(
       plan ? (plan.priceMonthlyCents / 100).toFixed(2).replace(/\.00$/, "") : "",
     );
+    setStandardDollars(
+      typeof plan?.standardPriceMonthlyCents === "number"
+        ? (plan.standardPriceMonthlyCents / 100).toFixed(2).replace(/\.00$/, "")
+        : "",
+    );
     setCurrency(plan?.currency ?? "usd");
     setGates(plan ? { ...plan.gates } : defaultGates());
   }, [open, plan]);
@@ -72,8 +78,25 @@ export function PlanEditorDialog({ plan, open, onOpenChange, onSaved }: Props) {
     return Math.round(parsed * 100);
   }, [priceDollars]);
 
+  // Blank means "no discount claimed", which is a valid state, so an empty
+  // box is null rather than an error. A value that is present but not a real
+  // saving is an error, and is reported here instead of at the server so the
+  // owner sees it against the field they typed it into.
+  const standardCents = useMemo(() => {
+    if (!standardDollars.trim()) return null;
+    const parsed = Number.parseFloat(standardDollars);
+    if (!Number.isFinite(parsed) || parsed <= 0) return NaN;
+    return Math.round(parsed * 100);
+  }, [standardDollars]);
+  const standardError =
+    standardCents !== null && Number.isNaN(standardCents)
+      ? "Enter a number, or leave this blank."
+      : standardCents !== null && priceCents !== null && standardCents <= priceCents
+        ? "The standard rate has to be higher than the price you charge."
+        : null;
+
   const gateCount = PLAN_GATE_KEYS.filter((k) => gates[k]).length;
-  const canSave = !!name.trim() && priceCents !== null && !saving;
+  const canSave = !!name.trim() && priceCents !== null && !standardError && !saving;
 
   async function handleSave() {
     if (!canSave || priceCents === null) return;
@@ -84,12 +107,14 @@ export function PlanEditorDialog({ plan, open, onOpenChange, onSaved }: Props) {
             name: name.trim(),
             description: description.trim() || null,
             priceMonthlyCents: priceCents,
+            standardPriceMonthlyCents: standardCents,
             gates,
           }
         : {
             name: name.trim(),
             description: description.trim() || null,
             priceMonthlyCents: priceCents,
+            standardPriceMonthlyCents: standardCents,
             currency,
             gates,
           };
@@ -149,6 +174,30 @@ export function PlanEditorDialog({ plan, open, onOpenChange, onSaved }: Props) {
                 inputMode="decimal"
                 disabled={saving}
               />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                Standard rate{" "}
+                <span className="font-normal">(optional)</span>
+              </label>
+              <Input
+                value={standardDollars}
+                onChange={(e) => setStandardDollars(e.target.value)}
+                placeholder="397"
+                inputMode="decimal"
+                disabled={saving}
+                aria-invalid={!!standardError}
+              />
+              <p
+                className={
+                  standardError
+                    ? "mt-1 text-[11px] text-destructive"
+                    : "mt-1 text-[11px] text-muted-foreground"
+                }
+              >
+                {standardError ??
+                  "Shown crossed out beside the price, as a founding rate. Leave blank for no discount. Never charged."}
+              </p>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">

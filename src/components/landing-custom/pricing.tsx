@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { openCrispChat } from "@/lib/crisp";
 import type { PlanProduct, PublicPlanSummary } from "@/types/billing";
+import { describeFoundingRate } from "@/lib/billing/founding-rate";
 
 /**
  * Live, self-serve pricing — renders whatever plans the agency owner has
@@ -173,6 +174,17 @@ export function Pricing({
                 : `$${(plan.priceMonthlyCents / 100).toFixed(
                     plan.priceMonthlyCents % 100 === 0 ? 0 : 2,
                   )}`;
+              // A founding rate is only shown when the plan records the
+              // standard rate it is discounted from; describeFoundingRate
+              // refuses anything that is not a real saving, so a missing or
+              // mis-entered figure renders as an ordinary price rather than
+              // a fake strikethrough.
+              const founding = describeFoundingRate(plan);
+              const standardPrice = founding
+                ? `$${(founding.standardPriceMonthlyCents / 100).toFixed(
+                    founding.standardPriceMonthlyCents % 100 === 0 ? 0 : 2,
+                  )}`
+                : null;
               const starting = startingPlanId === plan.id;
               // DEFINED ONCE, RENDERED TWICE. These cards run long enough
               // that the button scrolls off before the feature list ends, so
@@ -242,14 +254,29 @@ export function Pricing({
                         {plan.description || audienceFor(plan.name)}
                       </CardDescription>
                     )}
-                    <div className="mt-4 flex items-baseline gap-1">
+                    <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1">
                       <span className="text-4xl font-bold tracking-tight">
                         {price}
                       </span>
                       {!isFree && (
                         <span className="text-muted-foreground">/mo</span>
                       )}
+                      {standardPrice && (
+                        <span className="text-base font-medium text-muted-foreground line-through decoration-muted-foreground/60">
+                          {standardPrice}
+                        </span>
+                      )}
                     </div>
+                    {founding && (
+                      // What the discount IS, in the customer's terms. "Founding
+                      // rate" with no stated end and no stated standard price is
+                      // urgency theatre; naming the standard rate and saying the
+                      // price is held makes it a commitment we can be held to.
+                      <p className="text-xs font-medium text-primary">
+                        Founding rate — {founding.percentOff}% off. Your price
+                        stays at {price}/mo for as long as you stay subscribed.
+                      </p>
+                    )}
                     {!isFree && (
                       // The trial and the price that begins after it are
                       // disclosed HERE, before checkout — a customer who only

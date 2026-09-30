@@ -106,6 +106,10 @@ export async function getPublicPlans(product: PlanProduct = "flow"): Promise<{
         name: String(data.name ?? ""),
         description: (data.description as string | null) ?? null,
         priceMonthlyCents: Number(data.priceMonthlyCents ?? 0),
+        standardPriceMonthlyCents:
+          typeof data.standardPriceMonthlyCents === "number"
+            ? data.standardPriceMonthlyCents
+            : null,
         currency: String(data.currency ?? "usd"),
         highlights: presentation.highlights,
         alsoIncluded: presentation.alsoIncluded,
@@ -134,6 +138,7 @@ export async function getPublicPlans(product: PlanProduct = "flow"): Promise<{
   if (product === "unified") {
     plans.unshift({
       ...ASCEND_SOLO_CARD,
+      standardPriceMonthlyCents: ASCEND_SOLO_CARD.standardPriceMonthlyCents,
       highlights: [...ASCEND_SOLO_CARD.highlights],
       alsoIncluded: [...ASCEND_SOLO_CARD.alsoIncluded],
       allowances: [],

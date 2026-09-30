@@ -18,6 +18,7 @@ import {
   type SubAccountBilling,
   type SubAccountBillingStatus,
 } from "@/types/billing";
+import { parseStandardPriceInput } from "@/lib/billing/founding-rate";
 
 /**
  * Client Billing v1 service — the single write path for agency plans
@@ -109,6 +110,10 @@ function serializePlan(
     name: String(data.name ?? ""),
     description: (data.description as string | null) ?? null,
     priceMonthlyCents: Number(data.priceMonthlyCents ?? 0),
+    standardPriceMonthlyCents:
+      typeof data.standardPriceMonthlyCents === "number"
+        ? data.standardPriceMonthlyCents
+        : null,
     currency: String(data.currency ?? "usd"),
     gates,
     status: data.status === "archived" ? "archived" : "active",
@@ -201,6 +206,9 @@ export async function createPlanForAgency(input: {
   name: string;
   description: string | null;
   priceMonthlyCents: number;
+  /** Display-only standard rate this price is discounted from. Omitted =
+   *  no founding discount is claimed anywhere. Never sent to Stripe. */
+  standardPriceMonthlyCents?: number | null;
   currency: string;
   gates: PlanGates;
   /** Usage ceilings. Omitted = no limits recorded = unlimited, which is what
@@ -243,6 +251,9 @@ export async function createPlanForAgency(input: {
     name: input.name,
     description: input.description,
     priceMonthlyCents: input.priceMonthlyCents,
+    ...(typeof input.standardPriceMonthlyCents === "number"
+      ? { standardPriceMonthlyCents: input.standardPriceMonthlyCents }
+      : {}),
     currency: input.currency,
     gates: input.gates,
     ...(input.limits ? { limits: input.limits } : {}),
@@ -267,6 +278,7 @@ export async function updatePlanForAgency(input: {
   name?: string;
   description?: string | null;
   priceMonthlyCents?: number;
+  standardPriceMonthlyCents?: number | null;
   gates?: PlanGates;
   limits?: PlanLimits;
   trialDays?: number | null;
@@ -289,6 +301,28 @@ export async function updatePlanForAgency(input: {
   // stale ceiling from a previous tier silently in force on the new one.
   if (input.limits) updates.limits = input.limits;
   if (input.trialDays !== undefined) updates.trialDays = input.trialDays;
+  // Display-only, so it never touches Stripe. Explicit null clears the
+  // claim, which is how a founding period ends.
+  if (input.standardPriceMonthlyCents !== undefined) {
+    // Against the price this plan will carry AFTER this request, not the one
+    // it carries now — a single PATCH can move both, and checking the stale
+    // price would let a standard rate land below the new price.
+    const effectivePrice =
+      typeof input.priceMonthlyCents === "number"
+        ? input.priceMonthlyCents
+        : plan.priceMonthlyCents;
+    try {
+      updates.standardPriceMonthlyCents = parseStandardPriceInput(
+        input.standardPriceMonthlyCents,
+        effectivePrice,
+      );
+    } catch (err) {
+      throw new BillingError(
+        err instanceof Error ? err.message : "Invalid standard rate.",
+        400,
+      );
+    }
+  }
   if (input.product) updates.product = input.product;
   if (input.status) updates.status = input.status;
   if (typeof input.publicSelfServeEnabled === "boolean") {

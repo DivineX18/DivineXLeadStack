@@ -11,6 +11,7 @@ import {
   normalizePlanLimits,
   validatePlanPricing,
 } from "@/lib/server/billing-service";
+import { parseStandardPriceInput } from "@/lib/billing/founding-rate";
 
 /**
  * Agency billing plans (Client Billing v1). Owner-only. Plans live at
@@ -73,6 +74,10 @@ export async function POST(request: Request) {
       name,
       description: descriptionRaw || null,
       priceMonthlyCents,
+      standardPriceMonthlyCents: parseStandardPriceInput(
+        body.standardPriceMonthlyCents,
+        priceMonthlyCents,
+      ),
       currency,
       gates: normalizePlanGates(body.gates),
       ...(body.limits !== undefined ? { limits: normalizePlanLimits(body.limits) } : {}),

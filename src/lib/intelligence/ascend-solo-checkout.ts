@@ -6,11 +6,11 @@ import type { PlanLimits } from "@/types/billing";
  * ONE COMMERCIAL ASCEND SOLO SUBSCRIPTION, OWNED BY BI.
  *
  * Ascend Solo existed twice: as BI's `growth_system` product, and as a Flow
- * Client Billing plan with `product: "unified"` at the same $197. They were
+ * Client Billing plan with `product: "unified"` at the same price. They were
  * independent subscriptions in independent billing systems, and only the BI
  * one grants `growth_intelligence` + `growth_operations` — which is what
  * drives workspace provisioning, the canonical mapping and the Operations SSO
- * handoff. A customer who bought the Flow one paid $197 and reached none of
+ * handoff. A customer who bought the Flow one paid for it and reached none of
  * it.
  *
  * BI is now the canonical owner. This module is what `/start` DISPLAYS; the
@@ -27,7 +27,9 @@ import type { PlanLimits } from "@/types/billing";
  * how a display and a checkout drift apart unnoticed.
  *
  * These values mirror BI's canonical `PRODUCTS.growth_system`
- * (`defaultAmount: 19700`) and `TRIAL_DAYS_BY_PRODUCT.growth_system` (14).
+ * (`defaultAmount: 12700`, the founding rate, discounted from
+ * `GROWTH_SYSTEM_STANDARD_AMOUNT` 19700) and
+ * `TRIAL_DAYS_BY_PRODUCT.growth_system` (14).
  * They are restated here rather than fetched because `/start` is a
  * cold-traffic page and a cross-service call on it would make the front door
  * fail whenever the intelligence service hiccups — a worse failure than the
@@ -42,7 +44,13 @@ export const ASCEND_SOLO_OFFER = {
   /** The canonical BI product this page sells. */
   product: "growth_system",
   name: "Ascend Solo",
-  priceMonthlyCents: 19_700,
+  /** The founding rate — what Stripe actually charges. */
+  priceMonthlyCents: 12_700,
+  /**
+   * The standard rate the founding price is discounted from. Display only;
+   * mirrors BI's `GROWTH_SYSTEM_STANDARD_AMOUNT`. Nothing charges it.
+   */
+  standardPriceMonthlyCents: 19_700,
   currency: "usd",
   trialDays: 14,
 } as const;
@@ -69,12 +77,12 @@ export const ASCEND_SOLO_OFFER = {
  * grants it rather than Client Billing selling it. `resolvePlanLimits` reads
  * an absent plan as unlimited — correct and deliberate for the comped, legacy
  * and agency-owner workspaces that clause exists for, and wrong here, because
- * this one belongs to a paying $197 customer.
+ * this one belongs to a paying customer.
  *
  * It did not leak only because three gates ship off, so the metered Flow
  * routes were unreachable and the real ceiling lived on BI. That is one
  * checkbox in the agency Manage dialog away from unlimited Growth Scans,
- * unlimited asset generations and unlimited broadcast email on a $197
+ * unlimited asset generations and unlimited broadcast email on a paid
  * subscription — and flipping one of those gates for a customer who asks for
  * the Ascend shell inside Flow is an entirely reasonable thing for an
  * operator to do. The ceiling should not depend on nobody doing it.
@@ -137,6 +145,7 @@ export const ASCEND_SOLO_CARD = {
   description:
     "Everything one operator needs: the intelligence that finds the constraint, and the CRM that acts on it.",
   priceMonthlyCents: ASCEND_SOLO_OFFER.priceMonthlyCents,
+  standardPriceMonthlyCents: ASCEND_SOLO_OFFER.standardPriceMonthlyCents,
   currency: ASCEND_SOLO_OFFER.currency,
   trialDays: ASCEND_SOLO_OFFER.trialDays,
   ctaHref: "/start",

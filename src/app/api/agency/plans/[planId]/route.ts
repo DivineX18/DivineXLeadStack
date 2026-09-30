@@ -74,6 +74,14 @@ export async function PATCH(
       throw err;
     }
   }
+  // Validated in the service, where the plan's live price is in hand — the
+  // standard rate has to beat whatever the price ENDS UP being, which may be
+  // the one arriving in this same request.
+  if (body.standardPriceMonthlyCents !== undefined) {
+    patch.standardPriceMonthlyCents = body.standardPriceMonthlyCents as
+      | number
+      | null;
+  }
   if (body.gates !== undefined) {
     patch.gates = normalizePlanGates(body.gates);
   }

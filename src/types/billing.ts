@@ -89,6 +89,22 @@ export interface BillingPlanDoc {
   description: string | null;
   /** Monthly price in integer cents. Stripe minimum (~50¢) enforced at create. */
   priceMonthlyCents: number;
+  /**
+   * The price this plan WOULD cost at standard rates, in integer cents, when
+   * `priceMonthlyCents` is a discounted founding rate. Null/absent — which is
+   * every plan predating this field — means the price charged is the only
+   * price there is, and no crossed-out number is shown anywhere.
+   *
+   * It is display-only and deliberately NOT sent to Stripe: Stripe charges
+   * `priceMonthlyCents`, full stop. This exists because a founding rate is a
+   * claim about a discount, and a claim about a discount that nothing records
+   * is one a customer cannot check and we cannot honour later.
+   *
+   * Rejected if it is not strictly greater than `priceMonthlyCents` — a
+   * "standard rate" at or below what we charge is not a discount, and showing
+   * one would be a false saving.
+   */
+  standardPriceMonthlyCents?: number | null;
   /** Lowercase ISO 4217 (e.g. "usd", "aud"). Fixed after creation. */
   currency: string;
   gates: PlanGates;
@@ -210,6 +226,8 @@ export interface BillingPlanResponse {
   name: string;
   description: string | null;
   priceMonthlyCents: number;
+  /** Display-only standard rate, when this price is a founding discount. */
+  standardPriceMonthlyCents: number | null;
   currency: string;
   gates: PlanGates;
   status: BillingPlanStatus;
@@ -229,6 +247,12 @@ export interface PublicPlanSummary {
   name: string;
   description: string | null;
   priceMonthlyCents: number;
+  /**
+   * The standard rate this plan is discounted from, when it is a founding
+   * price. Null means there is no discount to show — never render a struck-
+   * through number from a null.
+   */
+  standardPriceMonthlyCents: number | null;
   currency: string;
   /**
    * Customer-facing capability highlights, in customer-value order — see

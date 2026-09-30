@@ -4,6 +4,7 @@ import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
 import { brandForProduct, resolveProductSurface } from "@/lib/landing/resolve-product-surface";
 import { TrialSignupForm } from "@/components/landing-custom/trial-signup-form";
 import { ASCEND_SOLO_OFFER } from "@/lib/intelligence/ascend-solo-checkout";
+import { describeFoundingRate } from "@/lib/billing/founding-rate";
 import { FunnelPageView } from "@/components/analytics/funnel-page-view";
 
 export const metadata = {
@@ -44,6 +45,7 @@ export default async function StartTrialPage() {
         id: ASCEND_SOLO_OFFER.product,
         name: ASCEND_SOLO_OFFER.name,
         priceMonthlyCents: ASCEND_SOLO_OFFER.priceMonthlyCents,
+        standardPriceMonthlyCents: ASCEND_SOLO_OFFER.standardPriceMonthlyCents,
         currency: ASCEND_SOLO_OFFER.currency,
         trialDays: ASCEND_SOLO_OFFER.trialDays,
       }
@@ -56,11 +58,17 @@ export default async function StartTrialPage() {
   const trialPlan = offer;
 
   const brand = brandForProduct(await resolveCustomBrand(), product);
-  const price = (trialPlan.priceMonthlyCents / 100).toLocaleString(undefined, {
-    style: "currency",
-    currency: trialPlan.currency.toUpperCase(),
-    maximumFractionDigits: 0,
-  });
+  const money = (cents: number) =>
+    (cents / 100).toLocaleString(undefined, {
+      style: "currency",
+      currency: trialPlan.currency.toUpperCase(),
+      maximumFractionDigits: 0,
+    });
+  const price = money(trialPlan.priceMonthlyCents);
+  // Same rule as the pricing cards: no recorded standard rate, no discount
+  // claim. This page is the last thing read before a card is entered, so a
+  // number here that the checkout then contradicts is the worst place for it.
+  const founding = describeFoundingRate(trialPlan);
 
   return (
     <main className="flex min-h-svh items-center justify-center px-4 py-16">
@@ -73,6 +81,13 @@ export default async function StartTrialPage() {
         <p className="mt-3 text-center text-muted-foreground">
           {trialPlan.name} · {price}/month after your trial
         </p>
+        {founding && (
+          <p className="mt-1 text-center text-sm font-medium text-primary">
+            Founding rate — normally{" "}
+            {money(founding.standardPriceMonthlyCents)}/month. Your price stays
+            at {price}/month for as long as you stay subscribed.
+          </p>
+        )}
 
         <FunnelPageView
           event="start_page_viewed"
