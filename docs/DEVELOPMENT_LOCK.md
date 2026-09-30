@@ -455,6 +455,27 @@ treating metered as capacity fails nine.
 A customer who hits a zero now reads "Growth Scans aren't included in your
 plan" instead of "you've used all 0 Growth Scans (0 of 0)".
 
+### The last screen before a card named the wrong price
+
+Found while checking the three Ascend CTAs actually resolve. Ascend's
+`StartTrialPage` serves two routes from one component: `/start-trial` sells
+Zeno at $77 and `/start-ascend` sells Ascend Solo. Its "card required, $77/mo
+after 14 days" line was hardcoded in both places it appears, so a Solo buyer
+read $77 on the screen where they enter a card and was charged the
+`growth_system` amount. It predates the founding price and was wrong at $197
+too.
+
+The copy is derived from the resolved product now, using the same resolution
+the checkout effect already uses. The amounts are mirrored in
+`publicCheckoutProducts.ts` (the frontend cannot import server code) and
+pinned by `publicCheckoutProductsMirror.test.ts` against `PRODUCTS`,
+`TRIAL_DAYS_BY_PRODUCT` and `GROWTH_SYSTEM_STANDARD_AMOUNT`. Moving either
+side alone fails the build; so does hardcoding a price back into the page.
+
+Five existing tests broke on the price move, which is them working. They
+assert the new contract now, including the crossed-out standard rate, which
+needed pinning for the same reason the charged amount does.
+
 ### Verified
 
 - Trial contract, both checkout paths: `mode: subscription`, card collected at
