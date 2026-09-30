@@ -68,7 +68,8 @@ async function emailCheckoutLink(opts: {
       </p>
       <p style="color:#6b7280;font-size:13px;">Payment is handled securely by Stripe. Your card is charged monthly and you can update it anytime from your workspace settings.</p>
     </div>`;
-  await sendEmail({ to: opts.to, subject, text, html });
+  await sendEmail({
+      billing: { kind: "essential" }, to: opts.to, subject, text, html });
 }
 
 export async function PATCH(

@@ -360,6 +360,7 @@ async function runRescheduleSideEffects(args: {
     if (eventStatus(event) === "awaiting_payment") {
       // Skip ICS for unconfirmed holds — same logic as the book route.
       await sendEmail({
+      billing: { kind: "essential" },
         to: contact.email,
         subject: rendered.subject,
         text: rendered.text,

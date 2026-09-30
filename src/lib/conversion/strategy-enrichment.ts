@@ -31,6 +31,10 @@ export async function enrichCampaignStrategy(strategy: CampaignStrategy): Promis
   try {
     const { system, user } = buildStrategyEnrichmentPrompt(strategy);
     const result = await runAiSuiteTurn({
+      // Runs inside a capability whose own turn was already checked and
+      // billed; the workspace is not threaded this far, so it is recorded
+      // against nobody rather than guessed at.
+      subAccountId: null,
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },

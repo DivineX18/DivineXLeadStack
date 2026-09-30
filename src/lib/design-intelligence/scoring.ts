@@ -171,6 +171,7 @@ function parseScoringResponse(text: string): ScoringLlmResult {
 export async function scoreFunnelDesign(funnel: FunnelDoc): Promise<FunnelDesignReview> {
   const prompt = buildScoringPrompt(funnel);
   const result = await callAi({
+    subAccountId: funnel.subAccountId ?? null,
     messages: [{ role: "user", content: prompt }],
     maxTokens: SCORING_MODEL_MAX_TOKENS,
     temperature: 0.3,

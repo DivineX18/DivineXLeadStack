@@ -213,6 +213,7 @@ async function sendToOperator(input: {
         return;
       }
       await sendEmail({
+      billing: { kind: "essential" },
         to: recipient,
         subject: input.subject,
         text: input.text,

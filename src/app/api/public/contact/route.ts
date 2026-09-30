@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
 
   try {
     await sendEmail({
+      billing: { kind: "essential" },
       to: brand.supportEmail,
       replyTo: email,
       subject: `New contact form message from ${name}`,

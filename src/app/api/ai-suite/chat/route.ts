@@ -467,7 +467,7 @@ export async function POST(request: Request) {
   try {
     for (let hop = 0; ; hop++) {
       try {
-        turn = await runAiSuiteTurn({ messages: llmMessages, tools });
+        turn = await runAiSuiteTurn({ messages: llmMessages, tools, subAccountId: body.subAccountId ?? null });
       } catch (err) {
         throw new ModelUnreachableError(err);
       }

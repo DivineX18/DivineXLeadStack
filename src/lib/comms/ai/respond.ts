@@ -418,6 +418,7 @@ export async function maybeRespondWithAi(
       { role: "user", content: incomingMessage },
     ];
     completion = await callAi({
+      subAccountId,
       model: eff.modelOverride ?? undefined,
       messages,
     });

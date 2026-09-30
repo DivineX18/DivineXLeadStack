@@ -1,3 +1,4 @@
+import { recordPlanUsage } from "@/lib/billing/plan-limits";
 import "server-only";
 
 import { FieldValue } from "firebase-admin/firestore";
@@ -89,6 +90,24 @@ export async function handleVapiEndOfCall(input: {
   payload: VapiEndOfCallPayload;
 }): Promise<EndOfCallResult> {
   const { subAccountId, payload } = input;
+
+  /**
+   * METER THE MINUTES THAT WERE ACTUALLY SPENT.
+   *
+   * Recorded here, from Vapi's own reported duration, rather than
+   * estimated at dial time: a call that rings out costs almost nothing and
+   * a long one costs a lot, and only the completion knows which happened.
+   *
+   * Counts INBOUND as well as outbound. Inbound cannot be refused without
+   * hanging up on a live caller, so it is not gated, but it is real spend
+   * and it counts against the next outbound check.
+   *
+   * Fire-and-forget: a dropped increment costs accuracy; blocking the
+   * webhook would make Vapi retry and duplicate the Task and email.
+   */
+  if (payload.durationSec > 0) {
+    void recordPlanUsage(subAccountId, "voiceMinutes", payload.durationSec / 60);
+  }
   const errors: string[] = [];
 
   const saSnap = await getAdminDb().doc(`subAccounts/${subAccountId}`).get();

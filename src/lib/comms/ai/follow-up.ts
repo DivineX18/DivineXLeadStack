@@ -197,6 +197,7 @@ export async function createCaptureFollowUp(
           .join("\n");
 
         await sendEmail({
+      billing: { kind: "essential" },
           to,
           subject,
           text,

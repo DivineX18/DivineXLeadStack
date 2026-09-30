@@ -182,6 +182,9 @@ export function describeComposition(sections: FunnelSection[]): string {
  *  the offer rather than in the abstract. Optional — absent is today's
  *  composition-only behavior. */
 export interface CriticPageContext {
+  /** Workspace this composition belongs to, so the AI spend is billed to
+   *  it. null when the critic runs outside any workspace. */
+  subAccountId?: string | null;
   businessName?: string;
   corePromise?: string;
   prospect?: string;
@@ -266,6 +269,7 @@ export async function critiqueComposition(
   let subjective: CriticVerdict;
   try {
     const result = await callAi({
+      subAccountId: context?.subAccountId ?? null,
       messages: [
         { role: "system", content: SYSTEM },
         { role: "user", content: describeContext(context) + describeComposition(sections) },

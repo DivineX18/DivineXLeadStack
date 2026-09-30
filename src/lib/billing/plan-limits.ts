@@ -50,11 +50,14 @@ export type LimitKind =
   | "emails"
   | "aiGenerations"
   | "growthScans"
-  | "members";
+  | "members"
+  | "voiceMinutes"
+  | "aiSpend"
+  | "sharedSms";
 
 /** Counters that reset each calendar month. `subAccounts`/`websites` are
  *  point-in-time counts of live records instead, so they are absent here. */
-const MONTHLY_KINDS = ["emails", "aiGenerations", "growthScans"] as const;
+const MONTHLY_KINDS = ["emails", "aiGenerations", "growthScans", "voiceMinutes", "aiSpend", "sharedSms"] as const;
 type MonthlyKind = (typeof MONTHLY_KINDS)[number];
 
 const LIMIT_FIELD: Record<LimitKind, keyof PlanLimits> = {
@@ -64,6 +67,9 @@ const LIMIT_FIELD: Record<LimitKind, keyof PlanLimits> = {
   aiGenerations: "maxAiGenerationsPerMonth",
   growthScans: "maxGrowthScansPerMonth",
   members: "maxMembers",
+  voiceMinutes: "maxVoiceMinutesPerMonth",
+  aiSpend: "maxAiSpendPerMonth",
+  sharedSms: "maxSharedSmsPerMonth",
 };
 
 /** Customer-facing nouns. These appear in the refusal, so they are written the
@@ -75,6 +81,10 @@ const LABEL: Record<LimitKind, { one: string; many: string }> = {
   aiGenerations: { one: "generation", many: "AI generations" },
   growthScans: { one: "Growth Scan", many: "Growth Scans" },
   members: { one: "member", many: "members" },
+  voiceMinutes: { one: "voice minute", many: "voice minutes" },
+  // Customer-facing wording only. The dollar ceiling behind it is internal.
+  aiSpend: { one: "AI generation", many: "intelligent generations" },
+  sharedSms: { one: "text message", many: "text messages" },
 };
 
 export interface LimitDecision {
@@ -97,6 +107,9 @@ export const NO_LIMITS: PlanLimits = {
   maxAiGenerationsPerMonth: null,
   maxGrowthScansPerMonth: null,
   maxMembers: null,
+  maxVoiceMinutesPerMonth: null,
+  maxAiSpendPerMonth: null,
+  maxSharedSmsPerMonth: null,
 };
 
 /**
@@ -239,6 +252,22 @@ export async function checkPlanLimit(input: {
  */
 export function limitMessage(kind: LimitKind, limit: number, used: number): string {
   const { one, many } = LABEL[kind];
+  if (kind === "aiSpend") {
+    /**
+     * NO NUMBER AT ALL.
+     *
+     * The ceiling is a DOLLAR figure, and every other branch here renders
+     * the limit as a count of the thing being limited. That turned $15 into
+     * "you've used all 15 intelligent generations", which is both an
+     * internal economics leak and untrue: 15 is not a number of
+     * generations. The customer needs to know they are out and what to do,
+     * and nothing here is improved by a figure.
+     */
+    return (
+      "You've reached this month's included intelligent-generation usage. " +
+      "It resets on the 1st, and upgrading your plan raises the allowance."
+    );
+  }
   if (kind === "members") {
     // A solo plan refusing a second person is a different conversation from
     // running out of websites, so it gets its own sentence.

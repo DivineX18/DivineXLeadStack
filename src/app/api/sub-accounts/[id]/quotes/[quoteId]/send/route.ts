@@ -191,6 +191,7 @@ export async function POST(
   });
   try {
     await sendEmail({
+      billing: { kind: "customer", subAccountId: subAccountId },
       to: recipientEmail,
       subject: email.subject,
       text: email.text,

@@ -1,3 +1,4 @@
+import { checkPlanLimit } from "@/lib/billing/plan-limits";
 import "server-only";
 
 import type { AiAgentProfile, VoiceChannelConfig } from "@/types/ai";
@@ -409,7 +410,20 @@ export async function ensureVapiPhoneNumber(input: {
  *
  * Returns Vapi's call id (used as the voiceCalls doc id, same as inbound).
  */
+export class VoiceAllowanceExhaustedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "VoiceAllowanceExhaustedError";
+  }
+}
+
 export async function createOutboundCall(input: {
+  /**
+   * Workspace billed for the minutes. REQUIRED: every outbound call here
+   * spends DivineX's Vapi balance, and an optional field is the one a new
+   * caller forgets.
+   */
+  subAccountId: string;
   assistantId: string;
   phoneNumberId: string;
   customerNumber: string;
@@ -427,6 +441,27 @@ export async function createOutboundCall(input: {
    *  reached. Used to keep test calls short. */
   maxDurationSeconds?: number;
 }): Promise<{ callId: string; controlUrl: string | null }> {
+  /**
+   * THE ONLY PRE-CHECK THAT CAN WORK.
+   *
+   * Outbound is refused before the call is placed, because once Vapi dials
+   * the minutes are spent. Inbound is deliberately NOT gated here: a live
+   * caller must never be cut off mid-sentence for a billing reason, so
+   * inbound minutes are recorded after the fact and count against the next
+   * outbound check.
+   */
+  const allowance = await checkPlanLimit({
+    subAccountId: input.subAccountId,
+    kind: "voiceMinutes",
+    amount: 0,
+  });
+  if (!allowance.allowed) {
+    throw new VoiceAllowanceExhaustedError(
+      "This workspace has used its included voice minutes for the month. " +
+        "They reset on the 1st, and upgrading the plan raises the allowance.",
+    );
+  }
+
   // Call-LEVEL metadata — Vapi echoes this back as `call.metadata` on
   // every custom-LLM + end-of-call webhook, which is how the LLM webhook
   // knows to use the outbound persona. (assistantOverrides.metadata is

@@ -204,6 +204,7 @@ export async function createInviteServerSide(
       const brandName = await resolveBrandName();
 
       await sendEmail({
+      billing: { kind: "essential" },
         to: email,
         subject: `${inviterName} invited you to ${subAccountName} on ${brandName}`,
         text: renderInviteText({
@@ -426,6 +427,7 @@ async function addExistingUserAsMember(params: {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
       const brandName = await resolveBrandName();
       await sendEmail({
+      billing: { kind: "essential" },
         to: recipient,
         subject: `You've been added to ${subAccountName} on ${brandName}`,
         text: renderAddedText({

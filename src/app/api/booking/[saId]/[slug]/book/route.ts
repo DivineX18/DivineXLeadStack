@@ -765,6 +765,7 @@ function buildIcsAttachment(params: {
 async function sendEmailWithIcs(input: SendWithIcs): Promise<void> {
   if (!input.icsAttachment) {
     await sendEmail({
+      billing: { kind: "essential" },
       to: input.to,
       subject: input.subject,
       text: input.text,

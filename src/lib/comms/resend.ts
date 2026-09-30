@@ -1,3 +1,4 @@
+import { checkPlanLimit, recordPlanUsage } from "@/lib/billing/plan-limits";
 import "server-only";
 
 import { Resend } from "resend";
@@ -122,6 +123,40 @@ export function workspaceSender(
   return { from, replyTo: isValidEmail(reply) ? reply : undefined };
 }
 
+/**
+ * Which allowance a send belongs to.
+ *
+ * REQUIRED on every send, and a discriminated union rather than an optional
+ * flag, because the failure mode being designed against is a new send path
+ * quietly defaulting into the wrong class. "essential" has to be typed out,
+ * which makes exempting a send a decision someone made rather than one that
+ * happened.
+ */
+export type EmailBilling =
+  /**
+   * Account security, access, money, and commitments already made to a
+   * third party. NEVER metered and NEVER blocked: an exhausted marketing
+   * allowance must not stop a login link, an invoice, or a booking
+   * confirmation the customer's own client is waiting on.
+   */
+  | { kind: "essential" }
+  /**
+   * DivineX-paid customer communication: broadcasts (per recipient),
+   * workflow and automation email, manual one-off sends. Metered against
+   * `maxEmailsPerMonth` and refused when exhausted.
+   *
+   * `subAccountId` is null only where no workspace owns the send, which is
+   * itself unusual for this class.
+   */
+  | { kind: "customer"; subAccountId: string | null };
+
+export class EmailAllowanceExhaustedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "EmailAllowanceExhaustedError";
+  }
+}
+
 export async function sendEmail({
   to,
   subject,
@@ -129,6 +164,7 @@ export async function sendEmail({
   html,
   replyTo,
   from,
+  billing,
 }: {
   to: string;
   subject: string;
@@ -144,7 +180,23 @@ export async function sendEmail({
    * EMAIL_FROM shared sender.
    */
   from?: string;
+  /** See EmailBilling. Required so no send path can be unclassified. */
+  billing: EmailBilling;
 }): Promise<{ id: string }> {
+  if (billing.kind === "customer" && billing.subAccountId) {
+    const allowance = await checkPlanLimit({
+      subAccountId: billing.subAccountId,
+      kind: "emails",
+      amount: 1,
+    });
+    if (!allowance.allowed) {
+      throw new EmailAllowanceExhaustedError(
+        "This workspace has used its included customer emails for the month. " +
+          "They reset on the 1st, and upgrading the plan raises the allowance.",
+      );
+    }
+  }
+
   const resolvedFrom = from ?? process.env.EMAIL_FROM;
   if (!resolvedFrom) {
     throw new Error(
@@ -165,6 +217,11 @@ export async function sendEmail({
   }
   if (!result.data?.id) {
     throw new Error("Resend send failed: no message id returned");
+  }
+  // Recorded only after Resend accepted it, so a rejected send does not
+  // consume the customer's allowance.
+  if (billing.kind === "customer" && billing.subAccountId) {
+    void recordPlanUsage(billing.subAccountId, "emails", 1);
   }
   return { id: result.data.id };
 }

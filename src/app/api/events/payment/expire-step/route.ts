@@ -158,6 +158,7 @@ async function runExpireSideEffects(event: CalendarEvent): Promise<void> {
         );
         try {
           await sendEmail({
+      billing: { kind: "essential" },
             to: contact.email,
             subject: rendered.subject,
             text: rendered.text,

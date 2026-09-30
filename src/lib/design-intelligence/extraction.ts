@@ -88,6 +88,9 @@ export async function extractPrincipleFromFeedback(feedbackId: string): Promise<
 
   const prompt = buildExtractionPrompt(feedback, existingTexts.slice(0, 40));
   const result = await callAi({
+    // Internal design-learning pass, not customer product usage: it runs
+    // once per feedback row regardless of plan, so it bills nobody.
+    subAccountId: null,
     messages: [{ role: "user", content: prompt }],
     maxTokens: EXTRACTION_MAX_TOKENS,
     temperature: 0.4,

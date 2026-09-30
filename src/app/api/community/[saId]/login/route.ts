@@ -48,6 +48,7 @@ export async function POST(
       const link = `${appUrl}/api/community/${saId}/login/verify?token=${encodeURIComponent(token)}`;
 
       await sendEmail({
+      billing: { kind: "essential" },
         to: email,
         subject: "Your sign-in link",
         text: `Hi,

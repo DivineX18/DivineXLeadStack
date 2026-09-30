@@ -183,6 +183,25 @@ export interface PlanLimits {
    * and what a comped or unbilled workspace always reads as.
    */
   maxMembers: number | null;
+  /**
+   * DivineX-paid Vapi voice minutes per calendar month. Outbound is
+   * pre-checked; a live inbound call is never cut off mid-call, it is
+   * recorded and counts against the next check.
+   */
+  maxVoiceMinutesPerMonth: number | null;
+  /**
+   * INTERNAL monthly ceiling, in USD, on provider spend for AI calls this
+   * workspace causes. Never shown to a customer: they see "you've reached
+   * this month's included intelligent-generation usage", not a dollar
+   * figure, a token count or a provider name.
+   */
+  maxAiSpendPerMonth: number | null;
+  /**
+   * SMS sent on the SHARED DivineX Twilio credentials only. A workspace
+   * using its own `twilioConfig` pays its own carrier bill and must never
+   * decrement this or be blocked by it.
+   */
+  maxSharedSmsPerMonth: number | null;
 }
 
 /** Wire shape returned by /api/agency/plans (timestamps → ISO strings). */

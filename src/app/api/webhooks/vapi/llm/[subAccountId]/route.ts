@@ -273,6 +273,7 @@ export async function POST(
 
   try {
     const completion = await callAi({
+      subAccountId,
       model: agent.effective.modelOverride ?? body.model ?? undefined,
       messages,
       // Voice replies should be short — cap aggressively to avoid the

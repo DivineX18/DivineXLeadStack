@@ -61,6 +61,7 @@ export async function POST(request: Request) {
   let messageId: string;
   try {
     const result = await sendEmail({
+      billing: { kind: "customer", subAccountId: contact.subAccountId },
       to: contact.email,
       subject,
       text: body,

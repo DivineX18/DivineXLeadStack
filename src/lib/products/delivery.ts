@@ -129,6 +129,7 @@ export async function deliverDigitalProductsForQuote(
       links,
     });
     await sendEmail({
+      billing: { kind: "essential" },
       to: recipientEmail,
       subject: email.subject,
       text: email.text,

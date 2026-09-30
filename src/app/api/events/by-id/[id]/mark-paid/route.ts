@@ -251,6 +251,7 @@ async function runMarkPaidSideEffects(args: {
     console.warn("[events/mark-paid] resend-with-ics failed, retrying without", err);
     try {
       await sendEmail({
+      billing: { kind: "essential" },
         to: contact.email,
         subject: rendered.subject,
         text: rendered.text,

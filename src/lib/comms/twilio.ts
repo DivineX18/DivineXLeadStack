@@ -1,3 +1,4 @@
+import { checkPlanLimit, recordPlanUsage } from "@/lib/billing/plan-limits";
 import "server-only";
 
 import twilio, { type Twilio } from "twilio";
@@ -37,6 +38,15 @@ let _envClient: Twilio | null = null;
 const _saClientCache = new Map<string, Twilio>();
 
 export type TwilioMode = "shared" | "dedicated";
+
+/** Thrown only for SHARED-credential sends. A workspace on its own Twilio
+ *  can never see this. */
+export class SharedSmsAllowanceExhaustedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SharedSmsAllowanceExhaustedError";
+  }
+}
 
 export interface ResolvedTwilio {
   client: Twilio;
@@ -235,11 +245,43 @@ export async function sendSmsForSubAccount({
   if (!verdict.allowed) throw new SmsSuppressedError(verdict);
 
   const resolved = await getTwilioForSubAccount(subAccountId, subAccount);
+
+  /**
+   * ONLY THE SHARED CREDENTIALS ARE OURS TO METER.
+   *
+   * A workspace on its own `twilioConfig` pays its own carrier bill, so it
+   * must neither consume the DivineX allowance nor be refused when that
+   * allowance is gone. The resolver already knows which happened, so the
+   * distinction is read from `mode` rather than re-derived and allowed to
+   * drift.
+   */
+  if (resolved.mode === "shared") {
+    const allowance = await checkPlanLimit({
+      subAccountId,
+      kind: "sharedSms",
+      amount: 1,
+    });
+    if (!allowance.allowed) {
+      throw new SharedSmsAllowanceExhaustedError(
+        "This workspace has used its included text messages for the month. " +
+          "They reset on the 1st. Connecting your own Twilio number sends on your " +
+          "account instead, with no platform limit.",
+      );
+    }
+  }
+
   const msg = await resolved.client.messages.create({
     from: resolved.fromNumber,
     to: verdict.e164,
     body,
   });
+
+  // Recorded after the provider accepted it, so a rejected send does not
+  // consume the allowance.
+  if (resolved.mode === "shared") {
+    void recordPlanUsage(subAccountId, "sharedSms", 1);
+  }
+
   return { sid: msg.sid, mode: resolved.mode, from: resolved.fromNumber, e164: verdict.e164, basis: verdict.basis };
 }
 

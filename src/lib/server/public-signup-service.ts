@@ -454,6 +454,7 @@ export async function handlePublicSelfServeSignupCheckoutCompleted(
           });
           const activationUrl = buildActivationUrl(token);
           await sendEmail({
+      billing: { kind: "essential" },
             to: email,
             subject: `Set your password to access ${workspaceName} on ${brandName}`,
             text: renderActivationText({
@@ -473,6 +474,7 @@ export async function handlePublicSelfServeSignupCheckoutCompleted(
         } else {
           const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
           await sendEmail({
+      billing: { kind: "essential" },
             to: email,
             subject: `${workspaceName} is ready on ${brandName}`,
             text: renderReadyText({ workspaceName, planName: plan.name, appUrl, brandName }),
@@ -516,6 +518,7 @@ async function notifySupportOfFailure(
   if (!supportEmail) return;
   const message = err instanceof Error ? err.message : String(err);
   await sendEmail({
+      billing: { kind: "essential" },
     to: supportEmail,
     subject: "Self-serve signup failed, customer paid, workspace not created",
     text: [

@@ -143,6 +143,8 @@ export async function GET(request: Request) {
 
   try {
     const result = await callAi({
+      // Agency operator setup help, not a customer workspace action.
+      subAccountId: null,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userMessage },

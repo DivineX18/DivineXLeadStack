@@ -198,6 +198,7 @@ export async function POST(request: Request) {
   let callControlUrl: string | null = null;
   try {
     const result = await createOutboundCall({
+    subAccountId: campaign.subAccountId,
       assistantId: voice.vapiAssistantId,
       phoneNumberId: voice.vapiPhoneNumberId,
       customerNumber,

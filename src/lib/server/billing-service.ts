@@ -136,6 +136,9 @@ const LIMIT_KEYS = [
   "maxAiGenerationsPerMonth",
   "maxGrowthScansPerMonth",
   "maxMembers",
+  "maxVoiceMinutesPerMonth",
+  "maxAiSpendPerMonth",
+  "maxSharedSmsPerMonth",
 ] as const;
 
 /**

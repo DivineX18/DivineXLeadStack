@@ -121,6 +121,7 @@ export async function POST(request: Request) {
   let callId: string;
   try {
     const result = await createOutboundCall({
+    subAccountId: contact.subAccountId,
       assistantId: voice.vapiAssistantId,
       phoneNumberId: voice.vapiPhoneNumberId,
       customerNumber,

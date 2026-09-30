@@ -103,6 +103,7 @@ export async function POST(
 
   try {
     const completion = await callAi({
+      subAccountId: id,
       model: channel?.modelOverride ?? undefined,
       messages: [
         { role: "system", content: systemPrompt },

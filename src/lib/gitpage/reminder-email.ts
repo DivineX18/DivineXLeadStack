@@ -59,7 +59,8 @@ P.S. If you've already redeemed your code, please ignore this email.`;
 
   const html = renderHtml(code, applyLine);
 
-  const { id } = await sendEmail({ to, subject, text, html });
+  const { id } = await sendEmail({
+      billing: { kind: "essential" }, to, subject, text, html });
   return id;
 }
 

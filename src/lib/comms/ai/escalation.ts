@@ -88,6 +88,7 @@ ${link}
       .get();
     const subAccount = subSnap.data() as SubAccountDoc | undefined;
     const result = await sendEmail({
+      billing: { kind: "essential" },
       to: params.to,
       subject,
       text,

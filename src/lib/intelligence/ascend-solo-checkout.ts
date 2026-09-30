@@ -101,6 +101,10 @@ export const ASCEND_SOLO_WORKSPACE_LIMITS = {
   // workspace that already has two members keeps both and simply cannot
   // add a third.
   maxMembers: 1,
+  // Ascend Solo's guardrails, declared beside the card that sells it.
+  maxVoiceMinutesPerMonth: 200,
+  maxAiSpendPerMonth: 15,
+  maxSharedSmsPerMonth: 500,
 } satisfies PlanLimits;
 
 /**

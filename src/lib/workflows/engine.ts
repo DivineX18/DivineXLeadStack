@@ -181,6 +181,7 @@ const execSendEmail: NodeExecutor = async (ctx) => {
 
   try {
     await sendEmail({
+      billing: { kind: "customer", subAccountId: ctx.subAccountId },
       to,
       subject: subject || "(no subject)",
       text,
@@ -564,6 +565,7 @@ const execNotify: NodeExecutor = async (ctx) => {
   );
   try {
     await sendEmail({
+      billing: { kind: "customer", subAccountId: ctx.subAccountId },
       to,
       subject: subject || "Workflow notification",
       text,

@@ -1,3 +1,4 @@
+import { aiSpendAllowed, recordAiSpend } from "@/lib/billing/ai-cost";
 import "server-only";
 import { stripEmDashes } from "@/lib/text/dedash";
 
@@ -59,13 +60,28 @@ interface OpenRouterResponse {
  * caller can decide how to handle (typically: log + skip the AI reply,
  * never break the inbound webhook contract).
  */
+export class AiSpendExhaustedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AiSpendExhaustedError";
+  }
+}
+
 export async function callAi({
   model,
   messages,
   maxTokens = 400,
   temperature = 0.5,
+  subAccountId,
 }: {
   model?: string;
+  /**
+   * The workspace this call is billed to. REQUIRED, not optional: an
+   * optional field is silently forgotten by the next caller and the meter
+   * develops a hole. `null` is the explicit "no workspace owns this"
+   * answer, used by operator-level calls.
+   */
+  subAccountId: string | null;
   messages: AiChatMessage[];
   /** Cap on output tokens. 400 ≈ 300 words, fits within a few SMS
    *  segments. SMS replies should be short anyway. */
@@ -80,6 +96,10 @@ export async function callAi({
   }
 
   const chosenModel = model?.trim() || defaultAiModel();
+
+  // Checked BEFORE the request: cost is incurred the moment it is sent.
+  const spend = await aiSpendAllowed(subAccountId);
+  if (!spend.allowed) throw new AiSpendExhaustedError(spend.message);
 
   const res = await fetch(OPENROUTER_URL, {
     method: "POST",
@@ -116,6 +136,14 @@ export async function callAi({
   }
 
   const usage = data.usage ?? {};
+  // Fire-and-forget: a dropped increment costs accuracy, awaiting it would
+  // add provider latency to every customer-facing reply.
+  void recordAiSpend({
+    subAccountId,
+    model: data.model ?? chosenModel,
+    inputTokens: usage.prompt_tokens ?? 0,
+    outputTokens: usage.completion_tokens ?? 0,
+  });
   return {
     // Every AI reply this product sends, on every channel, leaves through
     // here, so the em dash rule is enforced at this boundary rather than in

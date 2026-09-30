@@ -1,3 +1,14 @@
+import { aiSpendAllowed, recordAiSpend } from "@/lib/billing/ai-cost";
+
+/** Thrown when a workspace has used its monthly intelligent-generation
+ *  allowance. Carries a customer-safe message; never a dollar figure. */
+export class AiSuiteSpendExhaustedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AiSuiteSpendExhaustedError";
+  }
+}
+
 import "server-only";
 import { stripEmDashes } from "@/lib/text/dedash";
 
@@ -151,11 +162,23 @@ export async function runAiSuiteTurn({
   messages,
   tools,
   maxTokens = DEFAULT_MAX_TOKENS,
+  subAccountId,
 }: {
   messages: AiSuiteLlmMessage[];
   tools: AiSuiteToolDef[];
   maxTokens?: number;
+  /**
+   * Workspace billed for this turn. REQUIRED so a new call site cannot
+   * quietly escape the meter; `null` is the explicit agency-level answer.
+   *
+   * This client runs on DEFAULT_AI_SUITE_MODEL, which is an Opus, so a turn
+   * here costs materially more than an agent reply. It is the single
+   * largest reason the spend ceiling exists.
+   */
+  subAccountId: string | null;
 }): Promise<AiSuiteTurnResult> {
+  const spend = await aiSpendAllowed(subAccountId);
+  if (!spend.allowed) throw new AiSuiteSpendExhaustedError(spend.message);
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new Error(
@@ -296,5 +319,13 @@ export async function runAiSuiteTurn({
   // Zeno's prose leaves through here. Tool-call arguments are deliberately
   // NOT touched: they carry ids, urls and enum values, not copy, and the
   // capability that receives them validates them. See lib/text/dedash.ts.
+  const usage = (data as { usage?: { prompt_tokens?: number; completion_tokens?: number } }).usage ?? {};
+  void recordAiSpend({
+    subAccountId,
+    model: aiSuiteModel(),
+    inputTokens: usage.prompt_tokens ?? 0,
+    outputTokens: usage.completion_tokens ?? 0,
+  });
+
   return { text: text === null ? text : stripEmDashes(text), toolCall, truncated };
 }

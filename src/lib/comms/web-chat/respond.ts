@@ -287,6 +287,7 @@ export async function respondToWebChat(
   let completion;
   try {
     completion = await callAi({
+      subAccountId: input.subAccountId,
       model: eff.modelOverride ?? undefined,
       messages,
     });
