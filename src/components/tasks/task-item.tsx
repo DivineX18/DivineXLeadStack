@@ -1,5 +1,6 @@
 "use client";
 
+import { initialsOf } from "@/hooks/use-assignable-members";
 import { useState } from "react";
 import Link from "next/link";
 import { Clock, User, AlertTriangle } from "lucide-react";
@@ -12,6 +13,9 @@ import type { Task } from "@/types/tasks";
 import type { Contact } from "@/types/contacts";
 
 export interface TaskItemProps {
+  /** Display name for the assignee, resolved by the list from the
+   *  workspace's real members. Absent = unassigned or a former member. */
+  assigneeName?: string | null;
   task: Task;
   contact?: Contact;
   onClick?: (task: Task) => void;
@@ -59,7 +63,7 @@ function formatDueLabel(d: Date): {
   };
 }
 
-export function TaskItem({ task, contact, onClick }: TaskItemProps) {
+export function TaskItem({ task, contact, assigneeName, onClick }: TaskItemProps) {
   const { saPath } = useSubAccount();
   const [toggling, setToggling] = useState(false);
 
@@ -121,6 +125,20 @@ export function TaskItem({ task, contact, onClick }: TaskItemProps) {
           </p>
         )}
         <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px]">
+          {/* Ownership, compact: initials chip plus the name. Only rendered
+              when the task is actually assigned, so an unassigned task is
+              not visually noisier than it was before assignment existed. */}
+          {task.assigneeUserId && (
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 font-medium text-muted-foreground"
+              title={assigneeName ? `Assigned to ${assigneeName}` : "Assigned to a former member"}
+            >
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary/15 text-[9px] font-semibold text-primary">
+                {assigneeName ? initialsOf(assigneeName) : "?"}
+              </span>
+              <span className="max-w-[10rem] truncate">{assigneeName ?? "Former member"}</span>
+            </span>
+          )}
           {dueMeta && (
             <span
               className={cn(

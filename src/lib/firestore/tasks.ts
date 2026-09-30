@@ -40,6 +40,10 @@ function dueToPatch(data: Partial<TaskFormData>): Record<string, unknown> {
   if (data.contactId !== undefined) patch.contactId = data.contactId;
   if (data.dealId !== undefined) patch.dealId = data.dealId;
   if (data.eventId !== undefined) patch.eventId = data.eventId;
+  // undefined leaves the assignment alone; null clears it. Written as null
+  // rather than deleted so "explicitly unassigned" and "never assigned"
+  // both read as Unassigned without a second state to reason about.
+  if (data.assigneeUserId !== undefined) patch.assigneeUserId = data.assigneeUserId;
   return patch;
 }
 
@@ -172,6 +176,10 @@ export async function createTask(
     agencyId: scope.agencyId,
     subAccountId: scope.subAccountId,
     createdByUid,
+    // Absent stays absent rather than writing null, so a task created
+    // without an assignee looks identical to every task that predates
+    // assignment.
+    ...(data.assigneeUserId ? { assigneeUserId: data.assigneeUserId } : {}),
     territoryId,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),

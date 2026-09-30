@@ -13,7 +13,9 @@ import { TaskDialog } from "@/components/tasks/task-dialog";
 import { TaskItem } from "@/components/tasks/task-item";
 import { cn } from "@/lib/utils";
 import type { Contact } from "@/types/contacts";
-import type { Task, TaskFilter } from "@/types/tasks";
+import { matchesAssigneeFilter } from "@/types/tasks";
+import type { Task, TaskFilter, TaskAssigneeFilter } from "@/types/tasks";
+import { useAssignableMembers } from "@/hooks/use-assignable-members";
 
 export default function TasksPage() {
   const { user, loading: authLoading } = useAuth();
@@ -24,6 +26,10 @@ export default function TasksPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<TaskFilter>("today");
+  // A SECOND axis, not a second navigation. Combines with the view above so
+  // "Today + Sarah" and "Done + Unassigned" both work.
+  const [assigneeFilter, setAssigneeFilter] = useState<TaskAssigneeFilter>("everyone");
+  const { members: assignableMembers } = useAssignableMembers(subAccountId);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
 
@@ -131,6 +137,20 @@ export default function TasksPage() {
             ? buckets.done.slice(0, 100)
             : tasks;
 
+  /**
+   * The assignee axis, applied to whichever view is showing. Deliberately
+   * after the date bucketing so the view tabs keep counting the whole
+   * workspace and only the list narrows.
+   */
+  const visible = useMemo(() => {
+    return shown.filter((t) => matchesAssigneeFilter(t, assigneeFilter, user?.uid));
+  }, [shown, assigneeFilter, user?.uid]);
+
+  const memberNameByUid = useMemo(
+    () => new Map(assignableMembers.map((m) => [m.uid, m.name])),
+    [assignableMembers],
+  );
+
   function openNew() {
     setEditTask(null);
     setDialogOpen(true);
@@ -191,17 +211,43 @@ export default function TasksPage() {
         })}
       </div>
 
+      {/* The assignee axis. One compact control beside the existing views
+          rather than another Tasks section. */}
+      <div className="mb-4 flex items-center gap-2">
+        <label htmlFor="task-assignee-filter" className="text-xs text-muted-foreground">
+          Assignee
+        </label>
+        <select
+          id="task-assignee-filter"
+          value={assigneeFilter}
+          onChange={(e) => setAssigneeFilter(e.target.value as TaskAssigneeFilter)}
+          className="h-8 max-w-[14rem] rounded-md border bg-background px-2 text-sm"
+        >
+          <option value="everyone">Everyone</option>
+          <option value="mine">My tasks</option>
+          <option value="unassigned">Unassigned</option>
+          {assignableMembers
+            .filter((m) => m.uid !== user?.uid)
+            .map((m) => (
+              <option key={m.uid} value={m.uid}>
+                {m.name}
+              </option>
+            ))}
+        </select>
+      </div>
+
       {loading ? (
         <ListSkeleton />
-      ) : shown.length === 0 ? (
+      ) : visible.length === 0 ? (
         <EmptyState filter={filter} onAdd={openNew} />
       ) : (
         <div className="space-y-2">
-          {shown.map((t) => (
+          {visible.map((t) => (
             <TaskItem
               key={t.id}
               task={t}
               contact={t.contactId ? contactById.get(t.contactId) : undefined}
+              assigneeName={t.assigneeUserId ? (memberNameByUid.get(t.assigneeUserId) ?? null) : null}
               onClick={openEdit}
             />
           ))}

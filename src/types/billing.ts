@@ -174,6 +174,15 @@ export interface PlanLimits {
   maxAiGenerationsPerMonth: number | null;
   /** Growth Scans per calendar month, pooled. Unified + Ascend only. */
   maxGrowthScansPerMonth: number | null;
+  /**
+   * Active members a workspace may have at once. Team collaboration is
+   * included in the plan price: this is a capacity ceiling, never a per-seat
+   * charge, and no Stripe object exists for it.
+   *
+   * null = unlimited, which is what every plan predating this field reads as
+   * and what a comped or unbilled workspace always reads as.
+   */
+  maxMembers: number | null;
 }
 
 /** Wire shape returned by /api/agency/plans (timestamps → ISO strings). */

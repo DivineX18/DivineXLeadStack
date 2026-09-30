@@ -49,7 +49,8 @@ export type LimitKind =
   | "websites"
   | "emails"
   | "aiGenerations"
-  | "growthScans";
+  | "growthScans"
+  | "members";
 
 /** Counters that reset each calendar month. `subAccounts`/`websites` are
  *  point-in-time counts of live records instead, so they are absent here. */
@@ -62,6 +63,7 @@ const LIMIT_FIELD: Record<LimitKind, keyof PlanLimits> = {
   emails: "maxEmailsPerMonth",
   aiGenerations: "maxAiGenerationsPerMonth",
   growthScans: "maxGrowthScansPerMonth",
+  members: "maxMembers",
 };
 
 /** Customer-facing nouns. These appear in the refusal, so they are written the
@@ -72,6 +74,7 @@ const LABEL: Record<LimitKind, { one: string; many: string }> = {
   emails: { one: "email", many: "emails" },
   aiGenerations: { one: "generation", many: "AI generations" },
   growthScans: { one: "Growth Scan", many: "Growth Scans" },
+  members: { one: "member", many: "members" },
 };
 
 export interface LimitDecision {
@@ -93,6 +96,7 @@ export const NO_LIMITS: PlanLimits = {
   maxEmailsPerMonth: null,
   maxAiGenerationsPerMonth: null,
   maxGrowthScansPerMonth: null,
+  maxMembers: null,
 };
 
 /**
@@ -235,6 +239,20 @@ export async function checkPlanLimit(input: {
  */
 export function limitMessage(kind: LimitKind, limit: number, used: number): string {
   const { one, many } = LABEL[kind];
+  if (kind === "members") {
+    // A solo plan refusing a second person is a different conversation from
+    // running out of websites, so it gets its own sentence.
+    if (limit === 1) {
+      return (
+        "Your plan includes a single user, so there is nobody to invite yet. " +
+        "Upgrade your plan to work with a team."
+      );
+    }
+    return (
+      `You've reached the ${limit}-member limit on your plan (${used} of ${limit} in use). ` +
+      `Upgrade your plan to add more, or remove a member you no longer need.`
+    );
+  }
   if (kind === "subAccounts" || kind === "websites") {
     return (
       `Your plan includes ${limit} ${limit === 1 ? one : many}, and you're using ${used}. ` +
@@ -293,6 +311,54 @@ export async function checkSubAccountLimit(input: {
   } catch (err) {
     // Same fail-open reasoning as everywhere else in this module.
     console.warn("[plan-limits] seat check failed; allowing", { ...input, err });
+    return unlimited;
+  }
+}
+
+/**
+ * Seat check for the membership path.
+ *
+ * GRANDFATHER-SAFE BY CONSTRUCTION. This answers one question only: may
+ * ANOTHER member be added right now. It never evicts, never disables and
+ * never audits what is already there, so introducing a limit below a
+ * workspace's current headcount leaves every existing member working and
+ * only stops the next addition. Fall back below the cap and the next
+ * addition is allowed again, because the count is read live every time.
+ *
+ * Counts ACTIVE members only: a removed member is not occupying a seat.
+ *
+ * Fails OPEN, like everything else in this module. A Firestore hiccup must
+ * not lock an admin out of inviting their own team; an uncounted seat is
+ * the cheaper mistake.
+ */
+export async function checkMemberLimit(input: {
+  subAccountId: string;
+  subAccountData?: Record<string, unknown> | null;
+  /** Members being added in this operation. Defaults to 1. */
+  amount?: number;
+}): Promise<LimitDecision> {
+  const unlimited: LimitDecision = { allowed: true, limit: null, used: 0 };
+  try {
+    const limits = await resolvePlanLimits(input.subAccountId, input.subAccountData);
+    if (limits.maxMembers === null || limits.maxMembers === undefined) return unlimited;
+
+    const snap = await getAdminDb()
+      .collection(`subAccounts/${input.subAccountId}/subAccountMembers`)
+      .get();
+    const active = snap.docs.filter((d) => (d.data() as { status?: string }).status === "active");
+
+    return checkPlanLimit({
+      subAccountId: input.subAccountId,
+      kind: "members",
+      currentCount: active.length,
+      amount: input.amount ?? 1,
+      limits,
+    });
+  } catch (err) {
+    console.warn("[plan-limits] member check failed; allowing", {
+      subAccountId: input.subAccountId,
+      err,
+    });
     return unlimited;
   }
 }

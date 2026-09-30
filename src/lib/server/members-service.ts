@@ -2,6 +2,7 @@ import "server-only";
 
 import { FieldValue } from "firebase-admin/firestore";
 import type { UserRecord } from "firebase-admin/auth";
+import { checkMemberLimit } from "@/lib/billing/plan-limits";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import { emailIsConfigured, sendEmail } from "@/lib/comms/resend";
 import { emitWebhookEvent } from "@/lib/api/webhooks/dispatch";
@@ -90,6 +91,25 @@ export async function createInviteServerSide(
   const sub = subSnap.data() ?? {};
   const agencyId = (sub.agencyId as string) ?? "";
   const subAccountName = (sub.name as string) || "their workspace";
+
+  /**
+   * SEAT CHECK, BEFORE EITHER BRANCH.
+   *
+   * Both paths below end in a membership: an existing user is added
+   * immediately, and a new one holds a pending invite that becomes a
+   * membership on signup. Checking here stops a workspace queueing up
+   * invitations it has no capacity to honour, and the claim path checks
+   * again at the moment the seat is actually taken.
+   *
+   * Grandfather-safe: this only refuses the NEXT member. Nobody already in
+   * the workspace is touched, whatever the limit is set to afterwards.
+   */
+  const seat = await checkMemberLimit({ subAccountId, subAccountData: sub });
+  if (!seat.allowed) {
+    throw new MemberAddBlockedError(
+      seat.message ?? "This workspace has reached the member limit on its plan.",
+    );
+  }
 
   // Pre-assign territories: only meaningful for collaborators (admins see
   // every territory regardless). Validate each id against this sub-account's

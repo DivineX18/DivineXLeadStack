@@ -2,6 +2,7 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
+import { checkMemberLimit } from "@/lib/billing/plan-limits";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import { GLOBAL_TERRITORY_ID } from "@/types";
 
@@ -70,6 +71,9 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const attached: Array<{ subAccountId: string; name: string }> = [];
+  // Invites left pending because the workspace is at its member limit. The
+  // caller can say so instead of the invite silently doing nothing.
+  const skipped: Array<{ subAccountId: string; reason: string }> = [];
 
   // Process each invite in its own batch so a single bad doc doesn't
   // block the rest. Each batch is small (3 writes) so this stays cheap.
@@ -112,6 +116,33 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const subSnap = await db.doc(`subAccounts/${invite.subAccountId}`).get();
     const subName = (subSnap.data()?.name as string) ?? "Sub-account";
+
+    /**
+     * RE-CHECK THE SEAT AT THE MOMENT IT IS TAKEN.
+     *
+     * The cap was already checked when the invite was created, but two
+     * pending invites against one free seat both pass that check: 4 of 5,
+     * two invites out, first accepts to 5 of 5, and the second must not
+     * become 6. This is the only point that knows the real count.
+     *
+     * An existing membership is exempt: re-running this route must stay
+     * idempotent and must never revoke a seat somebody already holds.
+     */
+    if (!memberSnap.exists) {
+      const seat = await checkMemberLimit({
+        subAccountId: invite.subAccountId,
+        subAccountData: subSnap.data() ?? null,
+      });
+      if (!seat.allowed) {
+        // The invite stays pending on purpose. Freeing a seat makes it
+        // claimable rather than forcing the admin to re-send it.
+        console.warn(
+          `[claim-invites] seat limit reached on ${invite.subAccountId}; invite ${inviteDoc.id} left pending`,
+        );
+        skipped.push({ subAccountId: invite.subAccountId, reason: "member_limit" });
+        continue;
+      }
+    }
 
     const batch = db.batch();
 
@@ -159,5 +190,5 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
   }
 
-  return NextResponse.json({ attached });
+  return NextResponse.json(skipped.length > 0 ? { attached, skipped } : { attached });
 }

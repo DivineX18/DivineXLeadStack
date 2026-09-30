@@ -20,6 +20,8 @@ import { useSubAccount } from "@/context/sub-account-context";
 import { updateTask, deleteTask } from "@/lib/firestore/tasks";
 import { toDate } from "@/lib/format";
 import type { Task, TaskFormData } from "@/types/tasks";
+import { useAssignableMembers } from "@/hooks/use-assignable-members";
+import { useAuth } from "@/hooks/use-auth";
 import type { Contact } from "@/types/contacts";
 
 interface TaskDialogProps {
@@ -51,6 +53,8 @@ export function TaskDialog({
   defaultContactId,
 }: TaskDialogProps) {
   const { subAccountId } = useSubAccount();
+  const { user } = useAuth();
+  const { members } = useAssignableMembers(subAccountId);
   const isEdit = !!task;
 
   const [title, setTitle] = useState("");
@@ -58,6 +62,9 @@ export function TaskDialog({
   const [dueDate, setDueDate] = useState("");
   const [dueTime, setDueTime] = useState("");
   const [contactId, setContactId] = useState<string | null>(null);
+  // "" is Unassigned. A uid must be one of the workspace's active members;
+  // the Firestore rule rejects anything else, whatever the form submits.
+  const [assigneeUserId, setAssigneeUserId] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -71,12 +78,14 @@ export function TaskDialog({
       setDueDate(d ? toDateInput(d) : "");
       setDueTime(d ? toTimeInput(d) : "");
       setContactId(task.contactId);
+      setAssigneeUserId(task.assigneeUserId ?? "");
     } else {
       setTitle("");
       setNotes("");
       setDueDate("");
       setDueTime("");
       setContactId(defaultContactId ?? null);
+      setAssigneeUserId("");
     }
     setErrors({});
   }, [open, task, defaultContactId]);
@@ -101,6 +110,9 @@ export function TaskDialog({
       contactId,
       dealId: task?.dealId ?? null,
       eventId: task?.eventId ?? null,
+      // null clears it; a uid sets it. Never undefined here, so an edit
+      // that removes the assignee actually removes it.
+      assigneeUserId: assigneeUserId || null,
     };
 
     setSaving(true);
@@ -203,6 +215,31 @@ export function TaskDialog({
                 disabled={!dueDate}
               />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="task-assignee">Assignee</Label>
+            <select
+              id="task-assignee"
+              value={assigneeUserId}
+              onChange={(e) => setAssigneeUserId(e.target.value)}
+              className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+            >
+              <option value="">Unassigned</option>
+              {/* Built from ACTUAL active members of this workspace, never
+                  from the plan's seat capacity. A solo workspace shows one
+                  person, which is correct rather than a missing feature. */}
+              {members.map((m) => (
+                <option key={m.uid} value={m.uid}>
+                  {m.uid === user?.uid ? `${m.name} (me)` : m.name}
+                </option>
+              ))}
+              {/* A former member who still holds the task stays selectable
+                  so an edit does not silently reassign it. */}
+              {assigneeUserId && !members.some((m) => m.uid === assigneeUserId) && (
+                <option value={assigneeUserId}>Former member</option>
+              )}
+            </select>
           </div>
 
           <div className="space-y-1.5">

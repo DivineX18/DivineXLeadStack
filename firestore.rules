@@ -46,6 +46,24 @@ service cloud.firestore {
       return isSubMemberActive(saId) && getSubMember(saId).role == "admin";
     }
 
+    /**
+     * A task's assignee must be a real, ACTIVE member of that task's own
+     * workspace. Tasks are written by the client, so this rule is the
+     * authoritative check, not the UI that builds the picker.
+     *
+     * Agency membership alone never qualifies: plan capacity is not
+     * workspace authorization, and an agency user with no access to Client
+     * A must not be assignable inside Client A.
+     *
+     * Absent or null is Unassigned, which every task predating assignment
+     * is, so no migration is required.
+     */
+    function assigneeAllowed(saId, assignee) {
+      return assignee == null
+        || (exists(/databases/$(database)/documents/subAccounts/$(saId)/subAccountMembers/$(assignee))
+            && get(/databases/$(database)/documents/subAccounts/$(saId)/subAccountMembers/$(assignee)).data.status == "active");
+    }
+
     function canAccessSub(saId, agencyId) {
       return isAgencyOwner(agencyId) || isSubMemberActive(saId);
     }
@@ -930,6 +948,9 @@ service cloud.firestore {
         request.resource.data.subAccountId,
         request.resource.data.agencyId,
         request.resource.data.get("territoryId", null)
+      ) && assigneeAllowed(
+        request.resource.data.subAccountId,
+        request.resource.data.get("assigneeUserId", null)
       );
       allow update: if canSeeScopedDoc(
         resource.data.subAccountId,
@@ -939,6 +960,12 @@ service cloud.firestore {
         && territoryIdUnchangedOrAdmin(
           resource.data.subAccountId,
           resource.data.agencyId
+        )
+        // Checked against the task's OWN subAccountId (the stored one, which
+        // tenantFieldsLockedOnUpdate pins), never a value from the request.
+        && assigneeAllowed(
+          resource.data.subAccountId,
+          request.resource.data.get("assigneeUserId", null)
         );
       allow delete: if canSeeScopedDoc(
         resource.data.subAccountId,

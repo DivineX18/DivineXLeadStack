@@ -95,6 +95,12 @@ export const ASCEND_SOLO_WORKSPACE_LIMITS = {
   maxEmailsPerMonth: 25_000,
   maxAiGenerationsPerMonth: 50,
   maxGrowthScansPerMonth: 15,
+  // Solo is one person by definition, and this constant is declared beside
+  // the pricing card for exactly this reason: the advertised plan and the
+  // enforced plan are one statement. Grandfather-safe, so an existing Solo
+  // workspace that already has two members keeps both and simply cannot
+  // add a third.
+  maxMembers: 1,
 } satisfies PlanLimits;
 
 /**
