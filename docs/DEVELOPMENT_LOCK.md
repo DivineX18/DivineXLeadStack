@@ -352,6 +352,135 @@ deployed rules are verified by content, not by behaviour. Tasks responsive QA
 is also outstanding: the page is auth-gated and signing into production as
 the owner to screenshot it is not something to do unasked.
 
+## Reopening 4: founding pricing and unbounded variable cost (2026-09-30)
+
+**Why.** Approved roadmap work: put the founding prices in front of customers,
+and finish bounding the costs DivineX pays per use before selling harder.
+
+### The $297 collision
+
+Flow's Team plan and ASCEND's Team tier both cost $297/month. Anything that
+decided what a customer bought by reading the amount would hand Flow
+customers ASCEND entitlements and the reverse. Both sides already routed on
+metadata, but the Flow half proved it only by reading the code: the routing
+was an inline if-chain inside the webhook handler.
+
+It is now `classifyCheckoutSession`, a pure function the webhook sits on top
+of, so the invariant is exercised rather than asserted. `verify-price-collision`
+(29 checks) feeds two sessions with a deliberately identical $297 through the
+real classifier and the real limit check and shows they reach different
+handlers with different allowances. Four mutations, all caught, three of them
+behaviourally: identity reduced to amount-only, the plan id dropped from the
+route, the ASCEND route folded into Flow's, and the plan document looked up
+by price.
+
+ASCEND grants entitlements from `metadata.product`; Flow resolves the plan
+from `metadata.planId`. Neither consults an amount anywhere.
+
+### Founding pricing
+
+| Tier | Charged | Standard | State |
+|---|---|---|---|
+| Ascend Solo | $127 | $197 | **Done in code.** Billed by the intelligence service from `PRODUCTS.growth_system.defaultAmount`; no Stripe Price is pinned for it, so it moves on deploy. |
+| Ascend Team | $397 | $297 target | **Owner action.** Needs a new Stripe Price. |
+| Ascend Agency | $797 | $597 target | **Owner action.** Needs a new Stripe Price. |
+
+A plan now records `standardPriceMonthlyCents` beside the price it charges,
+and `describeFoundingRate` is the only thing allowed to turn that into a
+discount. It refuses a missing rate, a non-numeric one, one at or below what
+we charge, and one so close it rounds to nothing. The value is display only
+and never reaches Stripe; `verify-founding-pricing` (37 checks) re-reads every
+`prices.create` call to keep it that way, and compares this repo's advertised
+number against the intelligence service's own product definition and against
+`render.yaml`, to confirm no env-pinned Price has quietly taken over from the
+code amount.
+
+Team and Agency move through **Agency to Client billing, edit the plan, set
+the monthly price and the standard rate, save**. One save does both: the
+service validates the standard rate against the price arriving in the same
+request, not the stale one. The price change mints a new Stripe Price and
+deactivates the old; existing subscribers keep the price they signed up at.
+It has to be done there because only production holds the live Stripe key.
+
+### The Flow ladder had no cost ceilings at all
+
+Flow Solo, Team and Agency carried no `maxAiSpendPerMonth`, no
+`maxVoiceMinutesPerMonth` and no `maxSharedSmsPerMonth`, and an absent ceiling
+reads as unlimited. A $99 customer could run up model spend, Vapi minutes and
+SMS on our own Twilio without any bound. The earlier guardrail work applied
+those dimensions to the Ascend tiers only.
+
+Nothing caught it because `verify-plan-limits-per-workspace` was keyed on
+price and skipped any plan it did not recognise, so it checked five fields on
+some plans and nothing at all on others. It is now keyed by plan document,
+which also means a founding-price change cannot silently unmatch every
+expectation, and it asserts that every plan on sale appears in the table and
+bounds all four metered costs. Grandfathered plans are named rather than
+skipped by absence.
+
+Applied to production (limits only, prices and Stripe ids untouched):
+
+| Plan | scans | AI spend | voice min | shared SMS |
+|---|---|---|---|---|
+| Flow Solo $99 | 0 | $6 | 100 | 400 |
+| Flow Team $297 | 0 | $20 | 300 | 1,000 |
+| Flow Agency $697 | 0 | $50 | 750 | 1,500 |
+| Ascend Solo | 10 | $15 | 200 | 500 |
+| Ascend Team | 100 | $40 | 600 | 1,500 |
+| Ascend Agency | 250 | $90 | 1,500 | 4,000 |
+
+The Flow numbers are derived, not picked: the approved Ascend Solo tier spends
+at most about 22% of its price on variable cost, and the same ratio is applied
+to each Flow price, weighted toward voice because Flow is execution rather
+than intelligence. Worth revisiting against real usage.
+
+### Zero was not a number a plan could hold
+
+`normalizePlanLimits` required `> 0`, so an explicit 0 was written as null,
+and null means unlimited. A plan authored to include none of something was
+stored as including an unbounded amount of it. That is why Flow could not
+simply be given a zero scan ceiling.
+
+The rule is now per-key, and the two halves fail in opposite directions on
+purpose. Metered dimensions fail CLOSED on cost: zero is a real ceiling, a
+negative clamps to it, neither becomes unlimited. The two capacity dimensions,
+`maxMembers` and `maxSubAccounts`, fail OPEN on access: zero and negatives
+read as unset, because `maxMembers: 0` would lock every person out of a
+workspace they are paying for, owner included. `verify-plan-seats` caught the
+first attempt, which collapsed both into one rule.
+
+Both directions are asserted. Treating capacity as metered fails four checks;
+treating metered as capacity fails nine.
+
+A customer who hits a zero now reads "Growth Scans aren't included in your
+plan" instead of "you've used all 0 Growth Scans (0 of 0)".
+
+### Verified
+
+- Trial contract, both checkout paths: `mode: subscription`, card collected at
+  Stripe's default for subscription mode, `trial_period_days: 14`,
+  `missing_payment_method: "cancel"`, converting to the founding price.
+- Rendered output at 1440 / 390 / 375 / 360 on `/pricing` and `/start`, against
+  the unified host resolved to the local server. No horizontal overflow at any
+  width; the founding line wraps to two lines and stays legible.
+- `verify-em-dash` caught three em dashes I had written into customer copy.
+  Run it after writing copy, not after removing it.
+
+### NOT verified, carried forward
+
+- **Stripe charges $127.** The local Stripe key is TEST mode and production is
+  LIVE, so no production Checkout Session was created. The code path is
+  verified; the actual charge is not. Two-minute owner check: open
+  app.divinex.io/pricing, Start free trial, confirm Stripe shows $0 today and
+  $127/month after the trial.
+- **Team and Agency prices.** Still $397 and $797. See the table above.
+- `verify-task-assignment-rules.mts` still has never executed: no JRE on this
+  machine. Unchanged from Reopening 3.
+- Three suites fail for environmental reasons and failed identically before
+  this work: `divinex-unification` and `workspace-identity-coherence` need the
+  Neon endpoint, which is disabled, and `plan-survives-edit` needs a staging
+  fixture that does not exist.
+
 ## Reopening rules
 
 Active Ascend AND Flow development is locked. Development reopens only for:
