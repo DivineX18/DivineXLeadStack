@@ -154,31 +154,56 @@ const LIMIT_KEYS = [
  * customer more than intended (recoverable, and visible in the cost data)
  * rather than walling a paying customer out on a parse error.
  */
+/**
+ * CEILINGS WHERE ZERO WOULD LOCK SOMEONE OUT OF WHAT THEY PAID FOR.
+ *
+ * Zero is a real, useful ceiling for everything we meter — a plan that
+ * includes no Growth Scans, no voice minutes or no shared SMS is an ordinary
+ * plan. It is NOT a useful ceiling for capacity: zero members means nobody
+ * can be in the workspace, including its owner, and zero workspaces means a
+ * paying customer has nowhere to work. Neither is a thing anyone intends to
+ * author, so for these two a zero is read as "unset" and left unlimited.
+ *
+ * The asymmetry is deliberate and runs the safe way in both directions: the
+ * metered dimensions fail CLOSED on cost, the capacity dimensions fail OPEN
+ * on access.
+ */
+const ZERO_MEANS_UNSET: ReadonlySet<keyof PlanLimits> = new Set([
+  "maxMembers",
+  "maxSubAccounts",
+]);
+
 export function normalizePlanLimits(input: unknown): PlanLimits {
   const source = (input ?? {}) as Record<string, unknown>;
   const limits = {} as PlanLimits;
   for (const key of LIMIT_KEYS) {
     const raw = source[key];
-    // ZERO IS A REAL CEILING, NOT A MISSING ONE.
+    if (typeof raw !== "number" || !Number.isFinite(raw)) {
+      limits[key] = null;
+      continue;
+    }
+    // ZERO IS A REAL CEILING ON EVERYTHING WE METER.
     //
-    // This used to require `raw > 0`, which turned an explicit 0 into null —
-    // and null means UNLIMITED here. So a plan authored to include none of
-    // something was silently stored as including an unbounded amount of it,
-    // which is the wrong direction for every metered dimension. Reading is
-    // unaffected: a doc already holding 0 always resolved as 0; only the
-    // write path destroyed it.
-    // A negative is operator error, and both readings of it are bad: null
-    // would mean unlimited (fail-open on cost), and storing it as-is walls
-    // the customer out of everything with a number nobody typed. Clamped to
-    // 0, which is the nearest thing it could have meant and now has a clean
-    // meaning and a clean refusal message.
-    limits[key] =
-      typeof raw === "number" && Number.isFinite(raw)
-        ? Math.max(0, Math.floor(raw))
-        : null;
+    // This used to require `raw > 0` for every key, which turned an explicit
+    // 0 into null — and null means UNLIMITED here. So a plan authored to
+    // include none of something was silently stored as including an
+    // unbounded amount of it, which is the wrong direction for a metered
+    // cost. Reading was unaffected: a document already holding 0 always
+    // resolved as 0; only the write path destroyed it.
+    //
+    // A negative is operator error. On a metered key it clamps to 0, the
+    // nearest thing it could have meant, rather than becoming unlimited. On
+    // a capacity key it is unset, because refusing to let anyone into a
+    // workspace is worse than not restricting it.
+    if (ZERO_MEANS_UNSET.has(key)) {
+      limits[key] = raw >= 1 ? Math.floor(raw) : null;
+    } else {
+      limits[key] = Math.max(0, Math.floor(raw));
+    }
   }
   return limits;
 }
+
 
 export function validatePlanPricing(
   priceMonthlyCents: unknown,

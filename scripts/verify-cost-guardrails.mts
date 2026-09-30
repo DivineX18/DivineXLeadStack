@@ -147,6 +147,28 @@ console.log("\n══ zero is a ceiling, not an absence ══");
   check("a negative fraction does not floor to -1", neg.maxAiSpendPerMonth === 0,
     String(neg.maxAiSpendPerMonth));
   // And the customer must read something true when they hit it.
+  // THE ASYMMETRY, ASSERTED IN BOTH DIRECTIONS.
+  //
+  // Making zero real on the metered keys is only safe because it is NOT
+  // real on the capacity keys: maxMembers 0 would lock every person out of
+  // a workspace they are paying for, owner included. Metered fails closed
+  // on cost; capacity fails open on access. A change that collapses the two
+  // into one rule breaks one of these two blocks whichever way it goes.
+  const capacityZero = normalizePlanLimits({ maxMembers: 0, maxSubAccounts: 0 });
+  check("a zero member ceiling is read as unset, not as a lockout",
+    capacityZero.maxMembers === null, String(capacityZero.maxMembers));
+  check("a zero workspace ceiling is read as unset, not as a lockout",
+    capacityZero.maxSubAccounts === null, String(capacityZero.maxSubAccounts));
+  const capacityNeg = normalizePlanLimits({ maxMembers: -3 });
+  check("a negative member ceiling cannot lock a workspace out",
+    capacityNeg.maxMembers === null, String(capacityNeg.maxMembers));
+  check("a real member ceiling still survives",
+    normalizePlanLimits({ maxMembers: 5 }).maxMembers === 5);
+  // And the two rules are genuinely different, not the same rule twice.
+  check("zero means opposite things for a metered key and a capacity key",
+    normalizePlanLimits({ maxVoiceMinutesPerMonth: 0 }).maxVoiceMinutesPerMonth === 0 &&
+      capacityZero.maxMembers === null);
+
   const zmsg = limitMessage("growthScans", 0, 0);
   check("a zero ceiling says the feature is not included",
     zmsg.includes("aren't included") && !zmsg.includes("all 0") && !zmsg.includes("0 of 0"), zmsg);
