@@ -5,6 +5,7 @@ import { Resend } from "resend";
 
 import { sendEmail, workspaceSender, tenantFrom } from "@/lib/comms/resend";
 import { generateIcs } from "@/lib/booking/ics";
+import { buildCalendarLinks } from "@/lib/booking/add-to-calendar";
 import type { SubAccountMemberDoc } from "@/types/tenancy";
 
 /**
@@ -119,6 +120,37 @@ export async function resolveBookingNotifyRecipients(
 }
 
 
+
+/** Same one-click row the attendee gets. The ICS covers Apple and desktop
+ *  Outlook; Google and Outlook web need a URL. */
+function operatorCalendarHtml(ics: OperatorIcs | null | undefined): string {
+  if (!ics || ics.method === "CANCEL") return "";
+  const links = buildCalendarLinks({
+    title: ics.title,
+    startAt: ics.startAt,
+    endAt: ics.endAt,
+    details: ics.description,
+    location: ics.location,
+  });
+  if (!links) return "";
+  const a = (href: string, label: string) =>
+    `<a href="${href.replace(/&/g, "&amp;").replace(/"/g, "&quot;")}" style="display:inline-block;border:1px solid #d7d9e0;border-radius:8px;padding:8px 14px;margin:0 8px 8px 0;font-size:13px;color:#0F766E;text-decoration:none;">${label}</a>`;
+  return `<p style="margin:18px 0 6px;font-size:13px;color:#6a6a74;">Add it to your calendar</p><p style="margin:0 0 4px;">${a(links.google, "Google Calendar")}${a(links.outlook, "Outlook")}</p><p style="margin:0 0 8px;font-size:12px;color:#9a9aa4;">Apple Calendar and Outlook desktop: open the attached invite.</p>`;
+}
+
+function operatorCalendarText(ics: OperatorIcs | null | undefined): string[] {
+  if (!ics || ics.method === "CANCEL") return [];
+  const links = buildCalendarLinks({
+    title: ics.title,
+    startAt: ics.startAt,
+    endAt: ics.endAt,
+    details: ics.description,
+    location: ics.location,
+  });
+  if (!links) return [];
+  return ["", "Add it to your calendar:", `Google: ${links.google}`, `Outlook: ${links.outlook}`];
+}
+
 /** sendEmail() cannot carry attachments, so an ICS goes through Resend
  *  directly. Falls back to the plain path when there is nothing to attach
  *  or the direct send is not possible. */
@@ -224,6 +256,7 @@ export async function notifyOperatorOfBooking(input: NotifyInput): Promise<void>
       ...(input.notes ? ["", `Notes: ${input.notes}`] : []),
       "",
       `Open it here: ${input.eventUrl}`,
+      ...operatorCalendarText(input.ics),
       warn,
     ];
 
@@ -245,6 +278,7 @@ export async function notifyOperatorOfBooking(input: NotifyInput): Promise<void>
         </table>
         ${input.notes ? `<p style="margin:0 0 16px;font-size:14px;"><span style="color:#6a6a74;">Notes:</span> ${esc(input.notes)}</p>` : ""}
         <p style="margin:0 0 16px;"><a href="${esc(input.eventUrl)}" style="background:#0F766E;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-size:14px;">Open the booking</a></p>
+        ${operatorCalendarHtml(input.ics)}
         ${
           input.attendeeEmailFailed
             ? `<p style="margin:16px 0 0;padding:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:13px;color:#991b1b;">The confirmation email to the attendee could not be sent, so they have <strong>not</strong> received the details or a reschedule link. Please contact them directly.</p>`
@@ -325,6 +359,7 @@ export async function notifyOperatorOfBookingChange(input: {
         : "The attached update removes it from your calendar.",
       "",
       `Open it here: ${input.eventUrl}`,
+      ...operatorCalendarText(input.ics),
     ];
 
     const esc = (v: string) =>
@@ -344,7 +379,8 @@ export async function notifyOperatorOfBookingChange(input: {
         </table>
         ${input.cancelReason ? `<p style="margin:0 0 16px;font-size:14px;"><span style="color:#6a6a74;">Reason:</span> ${esc(input.cancelReason)}</p>` : ""}
         <p style="margin:0 0 16px;font-size:13px;color:#6a6a74;">${moved ? "The attached invite updates the entry already on your calendar." : "The attached update removes it from your calendar."}</p>
-        <p style="margin:0;"><a href="${esc(input.eventUrl)}" style="background:#0F766E;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-size:14px;">Open the booking</a></p>
+        <p style="margin:0 0 4px;"><a href="${esc(input.eventUrl)}" style="background:#0F766E;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-size:14px;">Open the booking</a></p>
+        ${operatorCalendarHtml(input.ics)}
       </div>`;
 
     await sendToOperator({

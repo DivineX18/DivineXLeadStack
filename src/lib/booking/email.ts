@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { BookingPage } from "@/types/booking";
+import { buildCalendarLinks } from "@/lib/booking/add-to-calendar";
 
 /**
  * Email template rendering for the booking lifecycle. Pure functions
@@ -88,6 +89,13 @@ export function renderBookingConfirmationEmail(
     `When: ${whenLocal} (${input.page.durationMinutes} min)`,
     input.meetingUrl ? `Join the meeting: ${input.meetingUrl}` : null,
     input.location ? `Where: ${input.location}` : null,
+    ...addToCalendarText({
+      title: input.page.name,
+      startAt: input.startAt,
+      endAt: input.endAt,
+      details: input.meetingUrl ? `Join: ${input.meetingUrl}` : (input.page.confirmationMessage ?? ""),
+      location: input.meetingUrl ?? input.location ?? "",
+    }),
     "",
     input.publicEventUrl
       ? `Manage your booking (reschedule / cancel): ${input.publicEventUrl}`
@@ -111,6 +119,13 @@ export function renderBookingConfirmationEmail(
         ${input.location ? `<tr><td style="padding:0 16px 10px;font-size:14px;"><strong>Where:</strong> ${escapeHtml(input.location)}</td></tr>` : ""}
       </table>
       ${input.meetingUrl ? primaryCta(input.meetingUrl, "Join the meeting") : ""}
+      ${addToCalendarHtml({
+        title: input.page.name,
+        startAt: input.startAt,
+        endAt: input.endAt,
+        details: input.meetingUrl ? `Join: ${input.meetingUrl}` : (input.page.confirmationMessage ?? ""),
+        location: input.meetingUrl ?? input.location ?? "",
+      })}
       ${input.publicEventUrl ? `<p style="margin:16px 0 0;font-size:13px;color:#6a6a74;">Need to reschedule or cancel? <a href="${escapeHtml(input.publicEventUrl)}" style="color:#0F766E;">Manage your booking</a>.</p>` : ""}
     `,
   );
@@ -253,6 +268,51 @@ export function renderBookingCancelledEmail(
 }
 
 // ── Shared HTML scaffolding ──────────────────────────────────────────
+
+
+/**
+ * One-click add-to-calendar row. The .ics attachment already handles Apple,
+ * iPhone and desktop Outlook; Google and Outlook on the web need a URL, and
+ * those are the two most people actually use. Renders nothing when the
+ * dates are unusable rather than linking to an empty calendar entry.
+ */
+function addToCalendarHtml(input: {
+  title: string;
+  startAt: Date;
+  endAt: Date;
+  details?: string;
+  location?: string;
+}): string {
+  const links = buildCalendarLinks(input);
+  if (!links) return "";
+  const a = (href: string, label: string) =>
+    `<a href="${escapeHtml(href)}" style="display:inline-block;border:1px solid #d7d9e0;border-radius:8px;padding:8px 14px;margin:0 8px 8px 0;font-size:13px;color:#0F766E;text-decoration:none;">${label}</a>`;
+  return `
+      <p style="margin:20px 0 8px;font-size:13px;color:#6a6a74;">Add it to your calendar</p>
+      <p style="margin:0 0 4px;">
+        ${a(links.google, "Google Calendar")}${a(links.outlook, "Outlook")}
+      </p>
+      <p style="margin:0;font-size:12px;color:#9a9aa4;">Apple Calendar and Outlook desktop: open the attached invite.</p>`;
+}
+
+/** Plain-text equivalent, so a text-only client still gets the links. */
+function addToCalendarText(input: {
+  title: string;
+  startAt: Date;
+  endAt: Date;
+  details?: string;
+  location?: string;
+}): string[] {
+  const links = buildCalendarLinks(input);
+  if (!links) return [];
+  return [
+    "",
+    "Add it to your calendar:",
+    `Google: ${links.google}`,
+    `Outlook: ${links.outlook}`,
+    "Apple Calendar and Outlook desktop: open the attached invite.",
+  ];
+}
 
 function wrapHtml(
   businessName: string,
