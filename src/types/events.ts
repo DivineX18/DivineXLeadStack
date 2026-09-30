@@ -152,3 +152,15 @@ export function eventSource(
 export function eventOccupiesSlot(status: EventStatus): boolean {
   return status === "scheduled" || status === "awaiting_payment";
 }
+
+/**
+ * A cancelled meeting is not a meeting. Every surface that counts or draws
+ * events needs the same answer, so it is asked here rather than re-derived:
+ * a cancelled booking that renders identically to a live one reads as
+ * "still on the calendar" no matter how many times the page is refreshed.
+ */
+export function isCancelledEvent(
+  e: Pick<CalendarEvent, "status"> | { status?: EventStatus },
+): boolean {
+  return eventStatus(e) === "cancelled";
+}

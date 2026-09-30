@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { toDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { EventDialog } from "@/components/calendar/event-dialog";
-import type { CalendarEvent } from "@/types/events";
+import { isCancelledEvent, type CalendarEvent } from "@/types/events";
 import type { Contact } from "@/types/contacts";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -53,6 +53,14 @@ export function CalendarView({ events, contacts }: CalendarViewProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editEvent, setEditEvent] = useState<CalendarEvent | null>(null);
   const [defaultDate, setDefaultDate] = useState<Date | null>(null);
+
+  // Counted separately so the header cannot describe a cancelled booking
+  // as something still on the calendar.
+  const activeCount = useMemo(
+    () => events.filter((e) => !isCancelledEvent(e)).length,
+    [events],
+  );
+  const cancelledCount = events.length - activeCount;
 
   const monthLabel = cursor.toLocaleDateString("en-US", {
     month: "long",
@@ -130,7 +138,8 @@ export function CalendarView({ events, contacts }: CalendarViewProps) {
               {monthLabel}
             </h2>
             <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-              {events.length} events
+              {activeCount} {activeCount === 1 ? "event" : "events"}
+              {cancelledCount > 0 ? ` · ${cancelledCount} cancelled` : ""}
             </span>
           </div>
           <div className="flex items-center gap-1">
@@ -227,14 +236,32 @@ export function CalendarView({ events, contacts }: CalendarViewProps) {
                     const contact = ev.contactId
                       ? contactById.get(ev.contactId)
                       : null;
+                    // A cancelled meeting is not a meeting. It stays on the
+                    // grid so the history is visible and the operator can
+                    // reopen it, but it must not look like something still
+                    // happening at that time.
+                    const isCancelled = isCancelledEvent(ev);
                     return (
                       <button
                         key={ev.id}
                         type="button"
                         onClick={(e) => openEdit(ev, e)}
-                        className="group/event flex w-full items-center gap-1 truncate rounded-md border border-transparent bg-gradient-to-r from-indigo-500/10 via-violet-500/10 to-pink-500/10 px-1.5 py-1 text-left text-[11px] font-medium leading-tight transition-colors hover:border-primary/30"
+                        title={isCancelled ? `Cancelled: ${ev.title}` : ev.title}
+                        className={cn(
+                          "group/event flex w-full items-center gap-1 truncate rounded-md border border-transparent px-1.5 py-1 text-left text-[11px] font-medium leading-tight transition-colors hover:border-primary/30",
+                          isCancelled
+                            ? "bg-muted/40 text-muted-foreground line-through opacity-60"
+                            : "bg-gradient-to-r from-indigo-500/10 via-violet-500/10 to-pink-500/10",
+                        )}
                       >
-                        <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-gradient-to-br from-indigo-500 via-violet-500 to-pink-500" />
+                        <span
+                          className={cn(
+                            "inline-block h-1.5 w-1.5 shrink-0 rounded-full",
+                            isCancelled
+                              ? "bg-muted-foreground/50"
+                              : "bg-gradient-to-br from-indigo-500 via-violet-500 to-pink-500",
+                          )}
+                        />
                         {start && (
                           <span className="shrink-0 text-muted-foreground">
                             {formatTime(start)}

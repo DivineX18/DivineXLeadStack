@@ -12,7 +12,7 @@
  * operator tested it with a session cookie already in the browser.
  */
 import { isPublicPath } from "../src/middleware";
-import { eventStatus, eventOccupiesSlot } from "../src/types/events";
+import { eventStatus, eventOccupiesSlot, isCancelledEvent } from "../src/types/events";
 import { buildEventPublicUrl, hashEventToken, verifyEventToken, issueEventToken } from "../src/lib/booking/event-token";
 
 let failures = 0;
@@ -79,6 +79,31 @@ console.log("\n══ the cancelled state ══");
   check("a scheduled event still occupies its slot", eventOccupiesSlot("scheduled"));
   check("an unpaid hold still occupies its slot", eventOccupiesSlot("awaiting_payment"));
   check("a completed meeting does not occupy a future slot", !eventOccupiesSlot("completed"));
+}
+
+console.log("\n══ the operator's calendar ══");
+{
+  // Reported after the cancel fix shipped: the cancellation email arrived and
+  // the event showed "Cancelled" in the editor, but the calendar still drew
+  // it exactly like a live meeting, so it read as "still on the booking page
+  // even after refreshing".
+  check("a cancelled booking is recognised as cancelled", isCancelledEvent({ status: "cancelled" }));
+  check("a scheduled booking is not", !isCancelledEvent({ status: "scheduled" }));
+  check("an unpaid hold is not", !isCancelledEvent({ status: "awaiting_payment" }));
+  check("a legacy event with no status is not", !isCancelledEvent({}));
+  check("a completed meeting is not cancelled", !isCancelledEvent({ status: "completed" }));
+
+  // The month header counts what is still happening. Counting a cancelled
+  // booking there is what makes it look live.
+  const month = [
+    { status: "scheduled" as const },
+    { status: "cancelled" as const },
+    { status: "awaiting_payment" as const },
+    {},
+  ];
+  const active = month.filter((e) => !isCancelledEvent(e)).length;
+  check("the active count excludes cancelled", active === 3, String(active));
+  check("the cancelled count is the remainder", month.length - active === 1);
 }
 
 console.log("\n══ the manage link survives cancellation ══");
