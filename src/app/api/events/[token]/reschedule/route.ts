@@ -30,7 +30,8 @@ import {
   recordBookingActivity,
   scheduleEventReminders,
 } from "@/lib/booking/lifecycle";
-import { renderBookingConfirmationEmail } from "@/lib/booking/email";
+import { formatStartLocal, renderBookingConfirmationEmail } from "@/lib/booking/email";
+import { icsSequenceNow, notifyOperatorOfBookingChange } from "@/lib/booking/notify-operator";
 import { eventStatus } from "@/types/events";
 import type { BookingPage } from "@/types/booking";
 import type { CalendarEvent } from "@/types/events";
@@ -261,6 +262,10 @@ async function runRescheduleSideEffects(args: {
 }): Promise<void> {
   const db = getAdminDb();
   const { event, page, newRawToken, publicEventUrl, startAt, endAt } = args;
+  // `event` is the snapshot read BEFORE the move, so its startAt is the time
+  // the booking is coming FROM. Shown to the operator struck through.
+  const previousStartAt =
+    (event.startAt as { toDate?: () => Date } | null)?.toDate?.() ?? null;
 
   // Re-publish reminder callbacks with a fresh schedule nonce so the
   // QStash dedup key doesn't collapse onto the previous ones.
@@ -331,6 +336,10 @@ async function runRescheduleSideEffects(args: {
       process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, "")
         ?.replace(/\/.*$/, "")
         ?.toLowerCase() ?? CUSTOM_BRAND.primaryDomain;
+    // One SEQUENCE per change, shared by both copies. Hardcoding 1 meant a
+    // SECOND reschedule was not newer than the first, so calendar clients
+    // kept the stale time.
+    const sequence = icsSequenceNow();
     const ics = generateIcs({
       uid: event.id,
       domain: appHost,
@@ -341,7 +350,7 @@ async function runRescheduleSideEffects(args: {
       location: event.location || "",
       method: "REQUEST",
       status: "CONFIRMED",
-      sequence: 1, // bump so calendar apps treat as update
+      sequence,
       attendeeEmail: contact.email,
       attendeeName: contact.name ?? undefined,
       organizerEmail: sub.replyToEmail ?? undefined,
@@ -360,6 +369,38 @@ async function runRescheduleSideEffects(args: {
       });
       return;
     }
+
+    // The attendee's updated confirmation went out and the operator heard
+    // nothing, so the new time never reached the person who has to attend.
+    await notifyOperatorOfBookingChange({
+      subAccountId: event.subAccountId,
+      sub,
+      assignedHostUid: event.assignedToUid ?? null,
+      change: "rescheduled",
+      pageName: page?.name ?? event.title ?? "Meeting",
+      attendeeName: contact.name ?? contact.email,
+      attendeeEmail: contact.email,
+      whenLabel: formatStartLocal(startAt, page?.timezone ?? "UTC"),
+      previousWhenLabel: previousStartAt
+        ? formatStartLocal(previousStartAt, page?.timezone ?? "UTC")
+        : null,
+      eventUrl: `${await siteOrigin()}/sa/${event.subAccountId}/calendar`,
+      ics: {
+        eventId: event.id,
+        startAt,
+        endAt,
+        title: event.title || page?.name || "Meeting",
+        description: page?.confirmationMessage ?? "",
+        location: event.location || "",
+        domain: appHost,
+        organizerEmail: sub.replyToEmail ?? undefined,
+        organizerName: sub.name ?? undefined,
+        attendeeEmail: contact.email,
+        attendeeName: contact.name ?? undefined,
+        method: "REQUEST",
+        sequence,
+      },
+    });
 
     const key = process.env.RESEND_API_KEY;
     if (!key) throw new Error("RESEND_API_KEY missing");

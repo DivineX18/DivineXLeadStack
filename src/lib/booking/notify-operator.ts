@@ -1,7 +1,10 @@
 import "server-only";
 
 import { getAdminDb } from "@/lib/firebase/admin";
-import { sendEmail, workspaceSender } from "@/lib/comms/resend";
+import { Resend } from "resend";
+
+import { sendEmail, workspaceSender, tenantFrom } from "@/lib/comms/resend";
+import { generateIcs } from "@/lib/booking/ics";
 import type { SubAccountMemberDoc } from "@/types/tenancy";
 
 /**
@@ -37,6 +40,38 @@ interface NotifyInput {
   /** True when the attendee's confirmation email could NOT be sent, so the
    *  operator knows to reach out by hand instead of assuming it arrived. */
   attendeeEmailFailed: boolean;
+  /** Calendar invite for the operator. Without this the booking never
+   *  reaches their calendar at all, so there is nothing for a later
+   *  reschedule or cancellation to update. */
+  ics?: OperatorIcs | null;
+}
+
+export interface OperatorIcs {
+  eventId: string;
+  startAt: Date;
+  endAt: Date;
+  title: string;
+  description?: string;
+  location?: string;
+  domain: string;
+  organizerEmail?: string;
+  organizerName?: string;
+  attendeeEmail: string;
+  attendeeName?: string;
+  method: "REQUEST" | "CANCEL";
+  /**
+   * Must INCREASE on every update or calendar apps ignore the newer copy.
+   * Seconds since the epoch, computed once per change and shared by the
+   * attendee and operator copies so both describe the same revision.
+   */
+  sequence: number;
+}
+
+/** A monotonic SEQUENCE. Reschedule previously hardcoded 1, so a SECOND
+ *  reschedule was not newer than the first and calendar clients kept the
+ *  stale time. */
+export function icsSequenceNow(): number {
+  return Math.floor(Date.now() / 1000);
 }
 
 /**
@@ -81,6 +116,87 @@ export async function resolveBookingNotifyRecipients(
     return { ...m, uid: m.uid ?? d.id };
   });
   return selectBookingNotifyRecipients(members, assignedHostUid);
+}
+
+
+/** sendEmail() cannot carry attachments, so an ICS goes through Resend
+ *  directly. Falls back to the plain path when there is nothing to attach
+ *  or the direct send is not possible. */
+async function sendToOperator(input: {
+  to: string[];
+  subject: string;
+  text: string;
+  html: string;
+  sub: Parameters<typeof workspaceSender>[0];
+  replyTo?: string;
+  ics?: OperatorIcs | null;
+}): Promise<void> {
+  const sender = workspaceSender(input.sub);
+  const attachments = input.ics
+    ? [
+        {
+          filename: input.ics.method === "CANCEL" ? "cancel.ics" : "invite.ics",
+          content: Buffer.from(
+            generateIcs({
+              uid: input.ics.eventId,
+              domain: input.ics.domain,
+              startAt: input.ics.startAt,
+              endAt: input.ics.endAt,
+              summary: input.ics.title,
+              description: input.ics.description ?? "",
+              location: input.ics.location ?? "",
+              method: input.ics.method,
+              status: input.ics.method === "CANCEL" ? "CANCELLED" : "CONFIRMED",
+              sequence: input.ics.sequence,
+              attendeeEmail: input.ics.attendeeEmail,
+              attendeeName: input.ics.attendeeName,
+              organizerEmail: input.ics.organizerEmail,
+              organizerName: input.ics.organizerName,
+            }),
+            "utf-8",
+          ).toString("base64"),
+        },
+      ]
+    : undefined;
+
+  const key = process.env.RESEND_API_KEY;
+  const from = tenantFrom(input.sub) ?? sender.from ?? process.env.EMAIL_FROM;
+  const canAttach = Boolean(attachments && key && from);
+
+  // Sent per recipient and settled independently, so one bad address cannot
+  // suppress everyone else's copy.
+  const results = await Promise.allSettled(
+    input.to.map(async (recipient) => {
+      if (canAttach) {
+        const client = new Resend(key);
+        await client.emails.send({
+          from: from as string,
+          to: recipient,
+          subject: input.subject,
+          text: input.text,
+          html: input.html,
+          replyTo: input.replyTo,
+          attachments,
+        });
+        return;
+      }
+      await sendEmail({
+        to: recipient,
+        subject: input.subject,
+        text: input.text,
+        html: input.html,
+        ...sender,
+        replyTo: input.replyTo,
+      });
+    }),
+  );
+  const failed = results.filter((r) => r.status === "rejected");
+  if (failed.length > 0) {
+    console.error(
+      `[booking/notify] ${failed.length}/${input.to.length} operator notifications failed`,
+      (failed[0] as PromiseRejectedResult).reason,
+    );
+  }
 }
 
 export async function notifyOperatorOfBooking(input: NotifyInput): Promise<void> {
@@ -136,29 +252,113 @@ export async function notifyOperatorOfBooking(input: NotifyInput): Promise<void>
         }
       </div>`;
 
-    // sendEmail takes one recipient. Sent individually and settled
-    // independently so one bad address cannot suppress everyone else's copy.
-    const results = await Promise.allSettled(
-      to.map((recipient) =>
-        sendEmail({
-          to: recipient,
-          subject: `New booking: ${input.attendeeName}, ${input.whenLabel}`,
-          text: lines.join("\n"),
-          html,
-          ...workspaceSender(input.sub),
-          // Replying should reach the person who booked, not the workspace.
-          replyTo: input.attendeeEmail,
-        }),
-      ),
-    );
-    const failed = results.filter((r) => r.status === "rejected");
-    if (failed.length > 0) {
-      console.error(
-        `[booking/notify] ${failed.length}/${to.length} operator notifications failed`,
-        (failed[0] as PromiseRejectedResult).reason,
-      );
-    }
+    await sendToOperator({
+      to,
+      subject: `New booking: ${input.attendeeName}, ${input.whenLabel}`,
+      text: lines.join("\n"),
+      html,
+      sub: input.sub,
+      // Replying should reach the person who booked, not the workspace.
+      replyTo: input.attendeeEmail,
+      ics: input.ics ?? null,
+    });
   } catch (err) {
     console.error("[booking/notify] operator notification failed", err);
+  }
+}
+
+/**
+ * Tell the operator a booking MOVED or was CANCELLED.
+ *
+ * Reported after the new-booking notification shipped: the attendee's
+ * updated confirmation went out on reschedule and the operator heard
+ * nothing, so the new time never reached the person who has to be there.
+ * Cancellation had the same gap and only looked covered because the
+ * operator had booked as the attendee while testing.
+ *
+ * The ICS carries the SAME uid as the original with a higher SEQUENCE, so
+ * the operator's calendar moves the existing entry instead of adding a
+ * second one. Best-effort: the change is already committed and must not be
+ * undone by a mail failure.
+ */
+export async function notifyOperatorOfBookingChange(input: {
+  subAccountId: string;
+  sub: Parameters<typeof workspaceSender>[0];
+  assignedHostUid?: string | null;
+  change: "rescheduled" | "cancelled";
+  pageName: string;
+  attendeeName: string;
+  attendeeEmail: string;
+  /** The time it moved TO, or the time that was cancelled. */
+  whenLabel: string;
+  /** Only for a reschedule: the time it moved FROM. */
+  previousWhenLabel?: string | null;
+  cancelReason?: string | null;
+  eventUrl: string;
+  ics?: OperatorIcs | null;
+}): Promise<void> {
+  try {
+    const to = await resolveBookingNotifyRecipients(input.subAccountId, input.assignedHostUid);
+    if (to.length === 0) {
+      console.error(
+        `[booking/notify] no active member with an email in ${input.subAccountId}; nobody was told this booking was ${input.change}`,
+      );
+      return;
+    }
+
+    const moved = input.change === "rescheduled";
+    const headline = moved
+      ? `${input.attendeeName} moved ${input.pageName}.`
+      : `${input.attendeeName} cancelled ${input.pageName}.`;
+
+    const lines = [
+      headline,
+      "",
+      ...(moved && input.previousWhenLabel ? [`Was:  ${input.previousWhenLabel}`] : []),
+      `${moved ? "Now: " : "When:"} ${input.whenLabel}`,
+      `Name:  ${input.attendeeName}`,
+      `Email: ${input.attendeeEmail}`,
+      ...(input.cancelReason ? ["", `Reason: ${input.cancelReason}`] : []),
+      "",
+      moved
+        ? "The attached invite updates the entry already on your calendar."
+        : "The attached update removes it from your calendar.",
+      "",
+      `Open it here: ${input.eventUrl}`,
+    ];
+
+    const esc = (v: string) =>
+      v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const row = (k: string, v: string, strike = false) =>
+      `<tr><td style="padding:4px 12px 4px 0;color:#6a6a74;font-size:14px;">${k}</td><td style="padding:4px 0;font-size:14px;${strike ? "text-decoration:line-through;color:#6a6a74;" : ""}"><strong>${esc(v)}</strong></td></tr>`;
+
+    const html = `
+      <div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:560px;">
+        <h2 style="margin:0 0 4px;font-size:18px;">${moved ? "Booking moved" : "Booking cancelled"}</h2>
+        <p style="margin:0 0 16px;color:#6a6a74;font-size:14px;">${esc(headline)}</p>
+        <table style="border-collapse:collapse;margin-bottom:16px;">
+          ${moved && input.previousWhenLabel ? row("Was", input.previousWhenLabel, true) : ""}
+          ${row(moved ? "Now" : "When", input.whenLabel)}
+          ${row("Name", input.attendeeName)}
+          ${row("Email", input.attendeeEmail)}
+        </table>
+        ${input.cancelReason ? `<p style="margin:0 0 16px;font-size:14px;"><span style="color:#6a6a74;">Reason:</span> ${esc(input.cancelReason)}</p>` : ""}
+        <p style="margin:0 0 16px;font-size:13px;color:#6a6a74;">${moved ? "The attached invite updates the entry already on your calendar." : "The attached update removes it from your calendar."}</p>
+        <p style="margin:0;"><a href="${esc(input.eventUrl)}" style="background:#0F766E;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-size:14px;">Open the booking</a></p>
+      </div>`;
+
+    await sendToOperator({
+      to,
+      subject: moved
+        ? `Moved: ${input.attendeeName}, now ${input.whenLabel}`
+        : `Cancelled: ${input.attendeeName}, ${input.whenLabel}`,
+      text: lines.join("\n"),
+      html,
+      sub: input.sub,
+      replyTo: input.attendeeEmail,
+      ics: input.ics ?? null,
+    });
+  } catch (err) {
+    console.error(`[booking/notify] operator ${input.change} notification failed`, err);
   }
 }

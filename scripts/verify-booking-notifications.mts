@@ -6,7 +6,8 @@
  * not reschedule or cancel. Three separate causes, all provable here.
  */
 import { buildEventPublicUrl } from "../src/lib/booking/event-token";
-import { selectBookingNotifyRecipients } from "../src/lib/booking/notify-operator";
+import { selectBookingNotifyRecipients, icsSequenceNow } from "../src/lib/booking/notify-operator";
+import { generateIcs } from "../src/lib/booking/ics";
 
 let failures = 0;
 function check(label: string, ok: boolean, detail = "") {
@@ -69,6 +70,47 @@ console.log("\n══ who gets told ══");
   check("a member with no usable email is skipped", pick([m("a", "notanemail", "active", "admin"), m("b", "ok@x.io", "active", "admin")], null).join() === "ok@x.io");
   check("duplicate addresses are sent once", pick([m("a", "same@x.io", "active", "admin"), m("b", "same@x.io", "active", "admin")], null).length === 1);
   check("the fan-out is capped", pick(Array.from({ length: 30 }, (_, i) => m(`u${i}`, `u${i}@x.io`, "active", "admin")), null).length === 10);
+}
+
+console.log("\n══ the operator's calendar actually moves ══");
+{
+  // Reported: the attendee got the updated time, the operator got nothing,
+  // so the new time never reached the person who has to attend.
+  const base = {
+    uid: "evt_1",
+    domain: "crm.divinex.io",
+    startAt: new Date("2026-10-01T14:00:00Z"),
+    endAt: new Date("2026-10-01T14:30:00Z"),
+    summary: "30-minute consultation",
+    attendeeEmail: "a@x.io",
+  };
+
+  const invite = generateIcs({ ...base, method: "REQUEST", sequence: 0 });
+  const moved = generateIcs({
+    ...base,
+    startAt: new Date("2026-10-02T09:00:00Z"),
+    endAt: new Date("2026-10-02T09:30:00Z"),
+    method: "REQUEST",
+    sequence: icsSequenceNow(),
+  });
+  const killed = generateIcs({ ...base, method: "CANCEL", status: "CANCELLED", sequence: icsSequenceNow() });
+
+  // Same UID is what makes a calendar MOVE the entry instead of adding a
+  // second one next to it.
+  const uidOf = (ics: string) => /UID:(.+)/.exec(ics)?.[1]?.trim();
+  check("the update carries the original uid", uidOf(invite) === uidOf(moved), String(uidOf(moved)));
+  check("the cancellation carries it too", uidOf(invite) === uidOf(killed));
+
+  const seqOf = (ics: string) => Number(/SEQUENCE:(\d+)/.exec(ics)?.[1]);
+  check("the update is a newer revision than the invite", seqOf(moved) > seqOf(invite), `${seqOf(invite)} -> ${seqOf(moved)}`);
+  check("the cancellation is newer than the invite", seqOf(killed) > seqOf(invite));
+  check("the update carries the NEW time", /DTSTART[^\n]*20261002T0900/.test(moved), "");
+  check("METHOD:CANCEL removes rather than re-invites", /METHOD:CANCEL/.test(killed) && /STATUS:CANCELLED/.test(killed));
+
+  // The bug behind a SECOND reschedule silently not updating: a hardcoded
+  // sequence is never newer than the one before it.
+  const first = icsSequenceNow();
+  check("two reschedules never share a sequence they cannot beat", first >= seqOf(invite) && first > 1, String(first));
 }
 
 console.log(`\n${failures === 0 ? "BOOKING NOTIFICATIONS: ALL CHECKS PASSED" : `BOOKING NOTIFICATIONS: ${failures} CHECK(S) FAILED`}`);

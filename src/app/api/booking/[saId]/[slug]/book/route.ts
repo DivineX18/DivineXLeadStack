@@ -604,8 +604,28 @@ export async function POST(
     attendeePhone: phone ?? null,
     meetingUrl: page.meetingUrl ?? null,
     notes: null,
-    eventUrl: `${await siteOrigin()}/sa/${saId}/booking`,
+    eventUrl: `${await siteOrigin()}/sa/${saId}/calendar`,
     attendeeEmailFailed,
+    // Without an invite the booking never reaches the operator's calendar,
+    // so a later reschedule has no entry to move and a cancellation has
+    // none to remove. Skipped for an unpaid hold, same as the attendee's.
+    ics: paymentRequired
+      ? null
+      : {
+          eventId: created.eventDocRef.id,
+          startAt: slotStart,
+          endAt: slotEnd,
+          title: created.title,
+          description: page.confirmationMessage || "",
+          location: page.meetingUrl ?? "",
+          domain: appHost,
+          organizerEmail: sub.replyToEmail ?? undefined,
+          organizerName: sub.name ?? undefined,
+          attendeeEmail: email,
+          attendeeName: name,
+          method: "REQUEST" as const,
+          sequence: 0,
+        },
   });
 
   // Reminder schedule (no-op when payment is pending — gets scheduled

@@ -18,7 +18,9 @@ import {
   fireBookingTrigger,
   recordBookingActivity,
 } from "@/lib/booking/lifecycle";
-import { renderBookingCancelledEmail } from "@/lib/booking/email";
+import { formatStartLocal, renderBookingCancelledEmail } from "@/lib/booking/email";
+import { icsSequenceNow, notifyOperatorOfBookingChange } from "@/lib/booking/notify-operator";
+import { siteOrigin } from "@/lib/seo/site";
 import { eventStatus } from "@/types/events";
 import type { BookingPage } from "@/types/booking";
 import type { CalendarEvent } from "@/types/events";
@@ -167,6 +169,59 @@ async function runSideEffects(event: CalendarEvent): Promise<void> {
     }
   } catch (err) {
     console.warn("[events/cancel] side-effect read failed", err);
+  }
+
+  // The operator was never told either. This only looked covered because
+  // the operator had booked as the attendee while testing. The ICS carries
+  // the same uid with METHOD:CANCEL, so their calendar entry is removed
+  // rather than left sitting there.
+  try {
+    const [subSnap, contactSnap, pageSnap] = await Promise.all([
+      getAdminDb().doc(`subAccounts/${event.subAccountId}`).get(),
+      getAdminDb().collection("contacts").doc(event.contactId).get(),
+      event.bookingPageSlug
+        ? getAdminDb()
+            .doc(`subAccounts/${event.subAccountId}/bookingPages/${event.bookingPageSlug}`)
+            .get()
+        : Promise.resolve(null),
+    ]);
+    const sub = (subSnap.data() ?? null) as SubAccountDoc | null;
+    const contact = (contactSnap.data() ?? null) as Contact | null;
+    const page = (pageSnap?.data() ?? null) as BookingPage | null;
+    const startAt = (event.startAt as { toDate?: () => Date } | null)?.toDate?.();
+    const endAt = (event.endAt as { toDate?: () => Date } | null)?.toDate?.();
+    if (sub && contact?.email && startAt instanceof Date && endAt instanceof Date) {
+      const origin = await siteOrigin();
+      await notifyOperatorOfBookingChange({
+        subAccountId: event.subAccountId,
+        sub,
+        assignedHostUid: event.assignedToUid ?? null,
+        change: "cancelled",
+        pageName: page?.name ?? event.title ?? "Meeting",
+        attendeeName: contact.name ?? contact.email,
+        attendeeEmail: contact.email,
+        whenLabel: formatStartLocal(startAt, page?.timezone ?? "UTC"),
+        cancelReason: "Cancelled by the attendee",
+        eventUrl: `${origin}/sa/${event.subAccountId}/calendar`,
+        ics: {
+          eventId: event.id,
+          startAt,
+          endAt,
+          title: event.title || page?.name || "Meeting",
+          description: page?.confirmationMessage ?? "",
+          location: event.location || "",
+          domain: new URL(origin).host,
+          organizerEmail: sub.replyToEmail ?? undefined,
+          organizerName: sub.name ?? undefined,
+          attendeeEmail: contact.email,
+          attendeeName: contact.name ?? undefined,
+          method: "CANCEL",
+          sequence: icsSequenceNow(),
+        },
+      });
+    }
+  } catch (err) {
+    console.error("[events/cancel] operator notification failed", err);
   }
 
   await recordBookingActivity(
