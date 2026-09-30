@@ -9,7 +9,7 @@ Deployed and verified commits:
 | Repo | Service | Host(s) | Commit |
 |---|---|---|---|
 | DivineX-Business-Intelligence | divinex-business-intelligence | ascend.divinex.io | `f6a4286` |
-| DivineXLeadStack | ascend-crm-x2j3 | crm.divinex.io, app.divinex.io | `8286764` |
+| DivineXLeadStack | ascend-crm-x2j3 | crm.divinex.io, app.divinex.io | `baa5ceb` |
 
 Both verified by reading `/api/version` on the live host, not by trusting a
 green deploy.
@@ -256,6 +256,44 @@ clean. `verify-host-branding` had asserted Flow branding on the six routes
 Reopening 1 retired; that suite had been run BEFORE that push and so passed
 against the old production. Its route list now covers only what Flow serves
 and the retired six are asserted as redirects. It passes with zero failures.
+
+
+## Reopening 3: attendee cancellation (2026-09-29)
+
+**Why.** Customer-reported production bug after Reopening 2's fixes: booking,
+both emails, the manage link and rescheduling all worked, but cancelling
+returned "Couldn't cancel." every time.
+
+**Root cause, and it was not in the cancel route.** Nothing in that route ever
+ran. `/api/events/{token}/cancel` was never a public path, so middleware
+307'd the logged-out attendee to `/login`, the browser got HTML, `res.json()`
+threw, and the UI fell back to its own message because there was no server
+error to display.
+
+**Reschedule was broken identically.** It only appeared to work because it
+was tested in a browser already holding an operator session cookie. The
+attendee is a member of nothing and never has one. Fixing cancel alone would
+have left the real customer path half-broken, so one regex covers both.
+
+The middleware comment above `"/e"` had claimed both endpoints were public
+since they were written. Only the page ever was.
+
+**Fix.** One anchored pattern in `PUBLIC_PATH_PATTERNS`:
+`/^\/api\/events\/[^/]+\/(?:cancel|reschedule)$/`. Deliberately not an
+`"/api/events"` prefix, which would also publish the authenticated
+list/create route and every `/api/events/by-id/*` operator action. Security
+is unchanged: the HMAC token is the credential and the route still verifies
+it against the stored `publicTokenHash`.
+
+**Verified in production at `baa5ceb`:** cancel and reschedule now reach
+their route and answer `{"error":"Invalid link"}` as JSON for a bad token,
+while `/api/events`, `by-id/*/mark-paid`, `by-id/*/assign` and
+`by-id/*/mark-status` all still 307 to `/login`.
+
+**Coverage.** `verify-booking-cancel`, 29 checks against the real
+`isPublicPath`, the real token functions and the real state model. Four
+mutations, four caught, including the two dangerous ones (over-broad prefix,
+unanchored pattern).
 
 ## Reopening rules
 
