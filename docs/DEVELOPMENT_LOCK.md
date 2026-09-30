@@ -239,10 +239,17 @@ nothing ever did. The mechanisms are the ICS attachment on the confirmation
 email and the subscribable feed under Settings, and Google polls a
 subscribed feed on its own slow schedule.
 
-**Could not verify against production data.** The local `.env.local` points
-at a different Firebase project than production, so the specific event could
-not be read. Production credentials were not requested. The fixes therefore
-address every cause provable from code rather than one confirmed cause.
+**Could not verify against production data at the time.** I believed the
+local `.env.local` pointed at a different Firebase project than production,
+because a lookup of the reported sub-account returned nothing.
+
+**That conclusion was WRONG, corrected 2026-09-30.** The id had been
+transcribed from a screenshot with one character misread (`MEYB8CbWIE...`
+for `MEYB8CbWlE...`, capital i for lowercase L). Local `.env.local`,
+`.firebaserc` and the production client bundle all carry the same project,
+`ascend-crm-jvm`, and the credentials read production fine. The booking
+fixes below still stand on their own, but the stated reason for not
+confirming the specific event does not.
 
 **Still to confirm operator-side:** if reschedule remains blocked, check the
 booking page is `published` rather than `draft`. A draft page deliberately
@@ -307,6 +314,43 @@ throughout.
 `isPublicPath`, the real token functions and the real state model. Four
 mutations, four caught, including the two dangerous ones (over-broad prefix,
 unanchored pattern).
+
+
+## Reopening 4: plan seats + task assignment (2026-09-30)
+
+Approved pre-lock work. Seat capacity on the existing `PlanLimits` system
+(`maxMembers`, null = unlimited) and one optional assignee per task.
+
+**Production Firebase project is `ascend-crm-jvm`**, proven four ways: the
+live client bundle served from crm.divinex.io, `.env.local`, `.firebaserc`,
+and `firebase projects:list`. An earlier note in Reopening 2 claiming local
+credentials pointed elsewhere was wrong and has been corrected in place.
+
+**Firestore rules deployed** to `ascend-crm-jvm` on 2026-09-30, rules only
+(no indexes, hosting, functions or storage). Verified by reading the LIVE
+released ruleset back from the Firebase Rules API rather than trusting CLI
+output: `assigneeAllowed` present, enforced on task create and update,
+active-status requirement intact, three occurrences.
+
+**Plan limits configured**, prices and Stripe ids untouched:
+
+| Plan | Product | maxMembers |
+|---|---|---|
+| Solo | flow, unified | 1 |
+| Team | flow, unified | 5 |
+| Agency | flow, unified | unset = unlimited |
+
+Written through `normalizePlanLimits`, the same function the plan admin
+route uses, so the values are indistinguishable from ones set in the UI.
+
+**Grandfather audit, now possible:** 49 workspaces, 2 carry a member cap,
+both exactly at it, **none over it**. No existing customer is affected.
+
+**Still not proven:** `verify-task-assignment-rules.mts` (19 emulator checks
+incl. cross-tenant) has never executed, because this machine has no JRE. The
+deployed rules are verified by content, not by behaviour. Tasks responsive QA
+is also outstanding: the page is auth-gated and signing into production as
+the owner to screenshot it is not something to do unasked.
 
 ## Reopening rules
 
