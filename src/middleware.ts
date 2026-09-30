@@ -148,10 +148,13 @@ const PUBLIC_PATHS = [
   //    visitor can't double-book a slot
   "/b",
   "/api/booking",
-  // Public event-management page (/e/[token]) + cancel/reschedule
-  // endpoints. All gated by HMAC-token + hash match against the stored
-  // `event.publicTokenHash`. Reschedule rotates the token so any
-  // previously-mailed link invalidates cleanly.
+  // Public event-management PAGE (/e/[token]). Gated by HMAC-token + hash
+  // match against the stored `event.publicTokenHash`.
+  //
+  // The cancel/reschedule ENDPOINTS this comment used to claim were also
+  // covered are NOT prefix-matchable: "/api/events" would expose the
+  // authenticated list/create route and every /api/events/by-id/* operator
+  // action with it. They are a precise regex in PUBLIC_PATH_PATTERNS below.
   "/e",
   // Booking reminder + payment-auto-expire QStash callbacks. Security:
   // Upstash-Signature header verification inside the route.
@@ -243,9 +246,29 @@ const PUBLIC_PATH_PATTERNS: RegExp[] = [
   // the per-tenant signature check inside the route, not the session
   // cookie — same model as every other regex entry here.
   /^\/api\/webhooks\/stripe\/tenant\/[^/]+$/,
+  /**
+   * Attendee cancel + reschedule: /api/events/{token}/cancel|reschedule.
+   *
+   * The attendee is a member of nothing and has no session, so middleware
+   * was redirecting these to /login. The browser then got HTML, res.json()
+   * threw, and the UI reported "Couldn't cancel." with no server error to
+   * show, because there was no server response to read. Reschedule was
+   * broken in exactly the same way and only looked fine when an operator
+   * tested it with a session cookie already in the browser.
+   *
+   * Security is the HMAC token, which the route re-verifies against the
+   * stored `event.publicTokenHash` before touching anything. Same model as
+   * the /e/[token] page these endpoints serve.
+   *
+   * Deliberately NOT a "/api/events" prefix: that would also publish the
+   * authenticated list/create route and every /api/events/by-id/* operator
+   * action. Two segments only, and the last one has to be cancel or
+   * reschedule, so /api/events/by-id/{id}/mark-paid cannot match.
+   */
+  /^\/api\/events\/[^/]+\/(?:cancel|reschedule)$/,
 ];
 
-function isPublicPath(pathname: string): boolean {
+export function isPublicPath(pathname: string): boolean {
   if (
     PUBLIC_PATHS.some(
       (path) => pathname === path || pathname.startsWith(`${path}/`),
