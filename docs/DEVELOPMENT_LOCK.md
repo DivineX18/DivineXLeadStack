@@ -497,10 +497,16 @@ needed pinning for the same reason the charged amount does.
 - **Team and Agency prices.** Still $397 and $797. See the table above.
 - `verify-task-assignment-rules.mts` still has never executed: no JRE on this
   machine. Unchanged from Reopening 3.
-- Three suites fail for environmental reasons and failed identically before
-  this work: `divinex-unification` and `workspace-identity-coherence` need the
-  Neon endpoint, which is disabled, and `plan-survives-edit` needs a staging
-  fixture that does not exist.
+- **Full regression, all 169 verify suites, zero regressions.** 63 fail; all
+  63 were baselined at the pre-session commit in a detached worktree and 62
+  fail identically without this work. They need the Neon endpoint (disabled),
+  live model calls, or staging fixtures that do not exist.
+
+  The one suite that differed, `verify-unified-navigation`, is a flake and not
+  a regression: it drives `flow-growth-scan-staging.onrender.com` over the
+  network rather than any local code, and passes on three consecutive re-runs
+  with these changes in place. Worth knowing before anyone spends time on it
+  again.
 
 ## Reopening rules
 
