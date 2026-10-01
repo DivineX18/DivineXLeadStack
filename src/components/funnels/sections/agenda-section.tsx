@@ -24,7 +24,12 @@ export function AgendaSection({
           className="mb-7 text-balance text-center font-extrabold tracking-tight"
           style={{ fontSize: "clamp(1.5rem, 4vw, 2.25rem)", lineHeight: 1.15 }}
         >
-          Everything you&apos;ll learn
+          {/* NOT hardcoded any more. This section renders a webinar agenda
+              AND an application/booking process, and claiming the reader
+              will "learn" from a roof inspection is a promise the page
+              cannot keep. The fallback describes a step list truthfully,
+              which is accurate for both roles. */}
+          {config.heading?.trim() || "What happens, step by step"}
         </h2>
         {/* Centered vertical timeline — steps flow down a single column with a
             connecting line, like a sales letter, not a 2-col card grid. */}

@@ -6,6 +6,7 @@ import { getAdminDb } from "@/lib/firebase/admin";
 import { requireSubAccountAdmin } from "@/lib/auth/require-tenancy";
 import { GitpageError, pollBuild } from "@/lib/gitpage/client";
 import { markGitpageKeyInvalid } from "@/lib/gitpage/heartbeat";
+import { assessPublishedSite } from "@/lib/website/publish-gate";
 import { publishCallback, qstashIsConfigured } from "@/lib/automations/qstash";
 import type { WebsiteDoc } from "@/types/website";
 
@@ -88,16 +89,26 @@ export async function POST(
 
   if (pollResult.isTerminal) {
     if (pollResult.status === "Published") {
+      // The manual "check now" button reached `ready` WITHOUT auditing at
+      // all, so a fabricated site promoted itself the moment an operator got
+      // impatient and clicked it. Same gate as the scheduled poll, with no
+      // retry: this path is one-shot, so an unfetchable page is reported as
+      // unverified rather than quietly passed.
+      const integrity = await assessPublishedSite(pollResult.pagesUrl, {
+        canRetry: false,
+      });
       await docRef.update({
-        status: "ready",
+        status: integrity.outcome,
         liveUrl: pollResult.pagesUrl,
         errorMessage: null,
         partialErrors: pollResult.partialErrors,
+        contentFlags: integrity.contentFlags,
+        integrityReason: integrity.integrityReason,
         updatedAt: FieldValue.serverTimestamp(),
       });
       return NextResponse.json({
         ok: true,
-        settled: "ready",
+        settled: integrity.outcome,
         liveUrl: pollResult.pagesUrl,
       });
     }

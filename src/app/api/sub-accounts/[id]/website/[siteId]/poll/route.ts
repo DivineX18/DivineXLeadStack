@@ -10,7 +10,7 @@ import {
 } from "@/lib/automations/qstash";
 import { GitpageError, pollBuild } from "@/lib/gitpage/client";
 import { markGitpageKeyInvalid } from "@/lib/gitpage/heartbeat";
-import { auditGeneratedContent } from "@/lib/website/content-audit";
+import { assessPublishedSite } from "@/lib/website/publish-gate";
 import type { WebsiteDoc } from "@/types/website";
 
 export const dynamic = "force-dynamic";
@@ -170,35 +170,38 @@ export async function POST(
   // Terminal states — update the doc and stop polling.
   if (pollResult.isTerminal) {
     if (pollResult.status === "Published") {
-      // Best-effort content audit — gitpage's generic template fills empty
-      // sections with fabricated testimonials/stats/program details (see
-      // lib/website/content-audit.ts). A fetch failure here must never
-      // block the build from being marked ready; the operator just won't
-      // see a warning banner until the next successful scan.
-      let contentFlags: ReturnType<typeof auditGeneratedContent> | null = null;
-      if (pollResult.pagesUrl) {
-        try {
-          const pageRes = await fetch(pollResult.pagesUrl, { redirect: "follow" });
-          if (pageRes.ok) {
-            const html = await pageRes.text();
-            const flags = auditGeneratedContent(html);
-            contentFlags = flags.length > 0 ? flags : null;
-          }
-        } catch (err) {
-          console.warn("[website/poll] content audit fetch failed", err);
-        }
+      // THE AUDIT DECIDES THE STATUS, it is not a banner on a finished site.
+      // gitpage's template invents testimonials, stats and program details,
+      // and a warning the operator can scroll past is not a safety gate when
+      // a trial prospect is about to copy the link. See lib/website/publish-gate.ts.
+      const integrity = await assessPublishedSite(pollResult.pagesUrl, {
+        canRetry: attempts < MAX_POLL_ATTEMPTS,
+      });
+
+      // The page is published but not fetchable yet, which GitHub Pages does
+      // for a few seconds. Ask again rather than guess; an unverifiable page
+      // must never settle as ready.
+      if (integrity.outcome === "retry") {
+        await docRef.update({
+          pollAttempts: attempts,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        await rescheduleNext(subAccountId, siteId, payload.formResponseId, attempts);
+        return NextResponse.json({ ok: true, deferred: "integrity-unfetched" });
       }
 
       await docRef.update({
-        status: "ready",
+        status: integrity.outcome,
+        // Kept on both paths: a flagged site is corrected, not discarded.
         liveUrl: pollResult.pagesUrl,
         errorMessage: null,
         partialErrors: pollResult.partialErrors,
-        contentFlags,
+        contentFlags: integrity.contentFlags,
+        integrityReason: integrity.integrityReason,
         pollAttempts: attempts,
         updatedAt: FieldValue.serverTimestamp(),
       });
-      return NextResponse.json({ ok: true, settled: "ready" });
+      return NextResponse.json({ ok: true, settled: integrity.outcome });
     }
     await docRef.update({
       status: "failed",

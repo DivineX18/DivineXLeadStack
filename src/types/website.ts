@@ -21,7 +21,17 @@ export type WebsiteStatus =
   | "queued"
   | "building"
   | "ready"
+  /**
+   * Built, but the content audit found claims we cannot stand behind (or
+   * could not verify the page at all). The work is kept and the live URL is
+   * retained for correction; it is NOT a publish-ready deliverable. See
+   * lib/website/publish-gate.ts.
+   */
+  | "needs_review"
   | "failed";
+
+/** Why a build settled as `needs_review`. Null on every other status. */
+export type WebsiteIntegrityReason = "fabricated_content" | "unverified";
 
 export type BuildType = "local" | "vsl";
 
@@ -143,6 +153,8 @@ export interface WebsiteDoc {
    */
   name?: string;
   status: WebsiteStatus;
+  /** Set only when status is "needs_review". */
+  integrityReason?: WebsiteIntegrityReason | null;
   /** Provider job id — null until a build is submitted. */
   gitpageJobId: string | null;
   /** Live URL once status === "ready". */

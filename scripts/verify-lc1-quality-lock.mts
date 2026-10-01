@@ -57,8 +57,23 @@ function check(label: string, ok: boolean, detail?: string) {
     bullets: ["Real benefit one", "Real benefit two"],
     subheadline: overlong,
   });
-  check("1a. Overlong subheadline proposal validates", validated.ok);
-  if (validated.ok) {
+  // POLICY CHANGED, AND FOR THE BETTER. This used to assert that overlong
+  // copy was silently TRUNCATED at a word boundary. It is now REJECTED with
+  // an instruction telling the model to rewrite the text as a complete
+  // sentence within the limit and call again. Truncation shipped
+  // "...spreadsheets together every" to a customer's page; a rewrite ships a
+  // finished sentence. The quality law is unchanged (no overlong copy
+  // reaches a page) and the mechanism is strictly better, so these follow
+  // the law rather than the old mechanism.
+  check("1a. An overlong subheadline never reaches the page", !validated.ok);
+  if (!validated.ok) {
+    check("1b. The refusal states the real limit", /limit is 140/.test(validated.error), validated.error.slice(0, 60));
+    check("1c. It tells the model to rewrite, not start over or ask",
+      /Rewrite THIS text/.test(validated.error) && /Do not start over/.test(validated.error) && /do not ask the user/i.test(validated.error));
+    check("1d. It asks for a COMPLETE sentence, not a shorter cut",
+      /complete sentence/i.test(validated.error));
+  }
+  if (false) {
     const sub = validated.args.subheadline as string;
     check("1b. Subheadline is capped at <=140 chars", sub.length <= 140, `len=${sub.length}`);
     // The character immediately after the kept text in the ORIGINAL string
@@ -104,8 +119,10 @@ function check(label: string, ok: boolean, detail?: string) {
     bullets: ["Real benefit one", "Real benefit two"],
     cta_banner_subtext: overlong,
   });
-  check("1g. Overlong cta_banner_subtext proposal validates", validated.ok);
-  if (validated.ok) {
+  check("1g. An overlong cta_banner_subtext never reaches the page", !validated.ok);
+  check("1g2. ...and the refusal names that field, so the model fixes the right one",
+    !validated.ok && /cta_banner_subtext/.test(validated.error), validated.ok ? "accepted" : validated.error.slice(0, 60));
+  if (false) {
     const sub = validated.args.ctaBannerSubtext as string;
     const boundaryChar = overlong[sub.length];
     check(

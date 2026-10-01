@@ -456,6 +456,8 @@ export async function patchWebsiteCopyServerSide(input: {
     siteId: input.siteId,
     name: String(update.name ?? doc.name ?? next.heading ?? "Untitled site"),
     changed,
+    // A needs_review build has a liveUrl but is NOT published work; saying
+    // otherwise tells the operator their edit changed something live.
     wasPublished: doc.status === "ready" && !!doc.liveUrl,
   };
 }

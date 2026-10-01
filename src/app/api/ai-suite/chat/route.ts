@@ -266,6 +266,89 @@ export async function POST(request: Request) {
     .join("\n");
   const cards = retrieveKnowledge(retrievalQuery, lvl);
 
+  // THE BUSINESS IS NOT A FUNNEL-BUILDING DETAIL.
+  //
+  // This injection used to sit inside the `create_funnel` branch below,
+  // so Zeno only knew whose business it was when that one tool happened
+  // to be in scope. Everywhere else, at agency level, for a member who
+  // is not an admin, on any surface with a narrower tool set, it asked
+  // the customer what their business was and who they sell to while the
+  // answers sat unread in canonical context. For a product whose promise
+  // is "give it your business and watch what it understands", that is
+  // the worst possible first exchange.
+  //
+  // Who Zeno is talking to is context for EVERY turn, so it is gathered
+  // before any tool-dependent branch and never again depends on one.
+    // DIVINEX SLICE 7, shared Zeno context: the canonical Business/Brand
+    // profile reaches Flow's Zeno the same way frameworks do, so one
+    // strategist knows the business across both products. Best-effort;
+    // no snapshot = today's context exactly.
+    try {
+    // Authorized accessor, not the raw snapshot: this block puts the
+    // business's name, website, audience, offers, brand voice and palette
+    // straight into Zeno's context, so a foreign profile here does not just
+    // mislead a page, it tells the strategist it IS another company.
+    const { getAuthorizedProfileSnapshotOrNull } = await import("@/lib/divinex/authorized-profile");
+    const snap = await getAuthorizedProfileSnapshotOrNull(actionCtx.subAccountId!);
+    if (snap) {
+      const business = snap.business as Record<string, unknown>;
+      const brand = (snap.brand ?? {}) as { visual?: Record<string, unknown>; voice?: Record<string, unknown> };
+      const approved = (snap.assets ?? []).filter((a) => (a.status ?? "approved") === "approved");
+      const lines = [
+        `Business: ${business.name ?? "(unnamed)"}${business.type ? `, ${business.type}` : ""}`,
+        business.websiteUrl ? `Website: ${business.websiteUrl}` : "",
+        business.audience ? `Audience: ${business.audience}` : "",
+        business.offer ? `Primary offer: ${business.offer}` : "",
+        snap.offers?.length ? `Known offers (reference by id): ${snap.offers.map((o) => `${o.id} = "${o.name}"`).join("; ")}` : "",
+        brand.voice ? `Brand voice: ${JSON.stringify(brand.voice).slice(0, 400)}` : "",
+        brand.visual ? `Brand visual: ${JSON.stringify(brand.visual).slice(0, 400)}` : "",
+        approved.length
+          ? `Approved brand assets (${approved.length}): ${approved.slice(0, 12).map((a) => `#${a.id} ${a.classification ?? "asset"}`).join(", ")}`
+          : "No approved brand assets yet. Ask for the ones that would most strengthen the page rather than using stand-ins.",
+        "",
+      ];
+      // ASCEND'S DIAGNOSIS. Rendered as reasoning material, not as fields to
+      // recite: Zeno should conclude "your constraint is conversion, so
+      // build X", never read a score aloud. Absent intelligence stays
+      // absent, an undiagnosed business must not be told it was diagnosed.
+      const intel = (snap as { intelligence?: {
+        primaryConstraint?: string;
+        opportunities?: { title: string; why?: string }[];
+        recommendedFunnelType?: string; recommendedLeadMagnet?: string;
+        scoreLabel?: string; assessedAt?: string;
+      } }).intelligence;
+      if (intel && (intel.primaryConstraint || intel.opportunities?.length)) {
+        lines.push(
+          "",
+          "WHAT ASCEND HAS DIAGNOSED ABOUT THIS BUSINESS:",
+          intel.primaryConstraint ? `Biggest thing holding growth back: ${intel.primaryConstraint}` : "",
+          intel.opportunities?.length
+            ? `Best opportunities, strongest first: ${intel.opportunities.slice(0, 3).map((o) => o.title + (o.why ? ` (${o.why})` : "")).join("; ")}`
+            : "",
+          intel.recommendedFunnelType ? `Campaign shape that fits: ${intel.recommendedFunnelType}` : "",
+          intel.recommendedLeadMagnet ? `Lead magnet that fits: ${intel.recommendedLeadMagnet}` : "",
+          intel.scoreLabel ? `Overall growth stage: ${intel.scoreLabel}` : "",
+          "",
+          "REASON FROM THIS. When they ask what to do, or ask you to build something, let the constraint and the opportunities shape WHAT you recommend and WHAT you build, not just how you describe it. Do not quote scores, field names or this list back at them; speak as someone who already understands their business. Never claim a diagnosis you were not given.",
+        );
+      }
+      lines.push(
+        "USE THIS: never ask the customer for anything above. You already know it. Reference offers and assets by their ids. This is DURABLE business truth; campaign-specific intent (what to promote right now, to whom, with what follow-up) is gathered per campaign and never written back here.",
+      );
+      const body = lines.filter(Boolean).join("\n");
+      cards.push({
+        id: "divinex-business-profile",
+        levels: ["sub-account"],
+        title: "This workspace's business + brand (canonical)",
+        location: "DivineX Business Profile",
+        keywords: ["business", "brand", "profile", "assets", "offers"],
+        body,
+      });
+    }
+    } catch {
+    // Swallowed, Zeno works without the profile, same as before.
+    }
+
   // Calibration Engine v1, inject the Design Knowledge Vault's learned
   // principles as additional REFERENCE MATERIAL cards, exactly like the
   // static knowledge base above, whenever this turn can call create_funnel.
@@ -298,75 +381,6 @@ export async function POST(request: Request) {
     // Ascend Intelligence Library (synced frameworks, see
     // lib/conversion/ascend-frameworks.ts). Best-effort: zero synced docs or
     // a read failure leaves the context exactly as before the bridge existed.
-    // DIVINEX SLICE 7, shared Zeno context: the canonical Business/Brand
-    // profile reaches Flow's Zeno the same way frameworks do, so one
-    // strategist knows the business across both products. Best-effort;
-    // no snapshot = today's context exactly.
-    try {
-      // Authorized accessor, not the raw snapshot: this block puts the
-      // business's name, website, audience, offers, brand voice and palette
-      // straight into Zeno's context, so a foreign profile here does not just
-      // mislead a page, it tells the strategist it IS another company.
-      const { getAuthorizedProfileSnapshotOrNull } = await import("@/lib/divinex/authorized-profile");
-      const snap = await getAuthorizedProfileSnapshotOrNull(actionCtx.subAccountId!);
-      if (snap) {
-        const business = snap.business as Record<string, unknown>;
-        const brand = (snap.brand ?? {}) as { visual?: Record<string, unknown>; voice?: Record<string, unknown> };
-        const approved = (snap.assets ?? []).filter((a) => (a.status ?? "approved") === "approved");
-        const lines = [
-          `Business: ${business.name ?? "(unnamed)"}${business.type ? `, ${business.type}` : ""}`,
-          business.websiteUrl ? `Website: ${business.websiteUrl}` : "",
-          business.audience ? `Audience: ${business.audience}` : "",
-          business.offer ? `Primary offer: ${business.offer}` : "",
-          snap.offers?.length ? `Known offers (reference by id): ${snap.offers.map((o) => `${o.id} = "${o.name}"`).join("; ")}` : "",
-          brand.voice ? `Brand voice: ${JSON.stringify(brand.voice).slice(0, 400)}` : "",
-          brand.visual ? `Brand visual: ${JSON.stringify(brand.visual).slice(0, 400)}` : "",
-          approved.length
-            ? `Approved brand assets (${approved.length}): ${approved.slice(0, 12).map((a) => `#${a.id} ${a.classification ?? "asset"}`).join(", ")}`
-            : "No approved brand assets yet. Ask for the ones that would most strengthen the page rather than using stand-ins.",
-          "",
-        ];
-        // ASCEND'S DIAGNOSIS. Rendered as reasoning material, not as fields to
-        // recite: Zeno should conclude "your constraint is conversion, so
-        // build X", never read a score aloud. Absent intelligence stays
-        // absent, an undiagnosed business must not be told it was diagnosed.
-        const intel = (snap as { intelligence?: {
-          primaryConstraint?: string;
-          opportunities?: { title: string; why?: string }[];
-          recommendedFunnelType?: string; recommendedLeadMagnet?: string;
-          scoreLabel?: string; assessedAt?: string;
-        } }).intelligence;
-        if (intel && (intel.primaryConstraint || intel.opportunities?.length)) {
-          lines.push(
-            "",
-            "WHAT ASCEND HAS DIAGNOSED ABOUT THIS BUSINESS:",
-            intel.primaryConstraint ? `Biggest thing holding growth back: ${intel.primaryConstraint}` : "",
-            intel.opportunities?.length
-              ? `Best opportunities, strongest first: ${intel.opportunities.slice(0, 3).map((o) => o.title + (o.why ? ` (${o.why})` : "")).join("; ")}`
-              : "",
-            intel.recommendedFunnelType ? `Campaign shape that fits: ${intel.recommendedFunnelType}` : "",
-            intel.recommendedLeadMagnet ? `Lead magnet that fits: ${intel.recommendedLeadMagnet}` : "",
-            intel.scoreLabel ? `Overall growth stage: ${intel.scoreLabel}` : "",
-            "",
-            "REASON FROM THIS. When they ask what to do, or ask you to build something, let the constraint and the opportunities shape WHAT you recommend and WHAT you build, not just how you describe it. Do not quote scores, field names or this list back at them; speak as someone who already understands their business. Never claim a diagnosis you were not given.",
-          );
-        }
-        lines.push(
-          "USE THIS: never ask the customer for anything above. You already know it. Reference offers and assets by their ids. This is DURABLE business truth; campaign-specific intent (what to promote right now, to whom, with what follow-up) is gathered per campaign and never written back here.",
-        );
-        const body = lines.filter(Boolean).join("\n");
-        cards.push({
-          id: "divinex-business-profile",
-          levels: ["sub-account"],
-          title: "This workspace's business + brand (canonical)",
-          location: "DivineX Business Profile",
-          keywords: ["business", "brand", "profile", "assets", "offers"],
-          body,
-        });
-      }
-    } catch {
-      // Swallowed, Zeno works without the profile, same as before.
-    }
     try {
       const { listAscendFrameworks, renderAscendFrameworksAsCards } = await import("@/lib/conversion/ascend-frameworks");
       cards.push(...renderAscendFrameworksAsCards(await listAscendFrameworks()));

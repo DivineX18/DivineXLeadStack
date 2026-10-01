@@ -994,3 +994,77 @@ export function operatorFigureStatements(userMessages: readonly string[]): strin
   }
   return out.slice(-60);
 }
+
+/**
+ * A HEADING MAY NOT PROMISE A KIND OF THING THE PAGE DOES NOT DELIVER.
+ *
+ * "Everything you'll learn" shipped on three consecutive generated pages in
+ * beta acceptance: above a roof inspection's deliverables, above a dog
+ * groom's benefits, and above a CFO review's agenda. Nobody learns anything
+ * from having their roof photographed. The visitor is told the section is a
+ * curriculum and shown a list of what they receive, which is the same
+ * mislabelling as "As seen in" over a customer's own photographs.
+ *
+ * The Critic already DETECTS this and writes an honest replacement, but its
+ * auto-apply is deliberately off: it also flags "How it works" over process
+ * steps, which is honest, and rewriting on model judgment would corrupt
+ * correct copy across every page (see funnels/critic-correction.ts).
+ *
+ * So this is the narrow deterministic subset instead, with no judgment in
+ * it: a heading whose PROMISE is teaching, on a funnel whose genre teaches
+ * nothing. Educational genres keep their curriculum headings, because there
+ * the promise is true. Prompt instruction was not enough here, the tool
+ * description already demands headings that honestly describe their content
+ * and the heading shipped anyway, so the rule lives in code.
+ */
+
+/** Genres whose whole offer IS instruction, where a curriculum heading is honest. */
+const TEACHING_GENRES = new Set(["webinar", "challenge", "lead_magnet", "course", "vsl"]);
+
+/** Headings that promise the reader will be taught something. */
+const LEARNING_PROMISE =
+  /^\s*(everything|all|what|here'?s what|the)?\s*(you'?ll|you will|you'?re going to|we'?ll)\s*(learn|discover|find out|be taught)\b|^\s*(the\s+)?(curriculum|syllabus|lessons?|modules?|what you'?ll learn)\s*$/i;
+
+/**
+ * True when this heading promises teaching on a funnel that does not teach.
+ * Pure; the caller decides what to do about it.
+ */
+export function promisesLearningItCannotDeliver(heading: string, genre: string): boolean {
+  if (!heading.trim()) return false;
+  if (TEACHING_GENRES.has(genre)) return false;
+  return LEARNING_PROMISE.test(heading.trim());
+}
+
+/**
+ * The honest replacement. Deliberately plain rather than clever: the Critic's
+ * own guidance is that a generic-but-accurate heading is CORRECT, and an
+ * invented specific one would be this module guessing at the offer.
+ */
+export function neutralHeadingFor(genre: string): string {
+  return genre === "booking" || genre === "lead_gen" ? "What's included" : "What you get";
+}
+
+/**
+ * Rewrite a heading that promises teaching on a non-teaching funnel. Returns
+ * the heading unchanged when it is honest, so callers can apply this blindly.
+ */
+export function groundSectionHeading(
+  heading: string,
+  genre: string,
+): { heading: string; replaced: boolean } {
+  if (!promisesLearningItCannotDeliver(heading, genre)) return { heading, replaced: false };
+  return { heading: neutralHeadingFor(genre), replaced: true };
+}
+
+/**
+ * The agenda/process section's heading.
+ *
+ * One section type serves a webinar's Agenda and an application or booking
+ * Process. The renderer hardcoded "Everything you'll learn" for both, so a
+ * roof inspection, a dog groom and a CFO review all promised a curriculum in
+ * beta acceptance. Teaching genres keep the teaching heading because there it
+ * is true; everything else describes the step list truthfully.
+ */
+export function agendaHeadingFor(genre: string): string {
+  return TEACHING_GENRES.has(genre) ? "Everything you'll learn" : "What happens, step by step";
+}

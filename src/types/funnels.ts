@@ -416,6 +416,15 @@ export interface CountdownConfig {
 
 export interface AgendaConfig {
   days: { label: string; title: string; bullets: string[] }[];
+  /**
+   * The section's heading. One section type serves two different stage roles:
+   * a webinar's Agenda (where the reader really is being taught) and an
+   * application/booking Process (where they are not). The renderer used to
+   * hardcode "Everything you'll learn" for both, so a roof inspection and a
+   * dog groom both promised a curriculum. Set at generation from the genre;
+   * absent falls back to wording that is true of any step list.
+   */
+  heading?: string;
 }
 
 export interface TicketTiersConfig {

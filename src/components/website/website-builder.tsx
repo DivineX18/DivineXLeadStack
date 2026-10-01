@@ -144,7 +144,7 @@ export function WebsiteBuilder({
 
   const status = doc.status;
   const isLocked =
-    status === "queued" || status === "building" || status === "ready";
+    status === "queued" || status === "building" || status === "ready" || status === "needs_review";
   const isInFlight = status === "queued" || status === "building";
   const buildType: BuildType = config.build_type ?? "local";
   const niche: Niche | null = isNicheKey(config.niche) ? config.niche : null;
@@ -179,7 +179,7 @@ export function WebsiteBuilder({
     () => status === "draft" || status === "failed",
   );
   useEffect(() => {
-    if (status === "queued" || status === "building" || status === "ready") {
+    if (status === "queued" || status === "building" || status === "ready" || status === "needs_review") {
       setExpanded(false);
     } else if (status === "draft") {
       setExpanded(true);
@@ -345,10 +345,10 @@ export function WebsiteBuilder({
       );
       const payload = (await res.json().catch(() => ({}))) as {
         error?: string;
-        settled?: "ready" | "failed" | "client-error";
+        settled?: "ready" | "needs_review" | "failed" | "client-error";
       };
       if (!res.ok) throw new Error(payload.error ?? "Could not re-check.");
-      if (payload.settled === "ready") {
+      if (payload.settled === "ready" || payload.settled === "needs_review") {
         toast.success("Build is live. URL updated.");
       } else if (payload.settled === "failed") {
         toast.error("Build failed on gitpage's side.");
@@ -415,7 +415,9 @@ export function WebsiteBuilder({
   const accentClass =
     status === "ready"
       ? "border-emerald-500/30 bg-emerald-500/5"
-      : status === "failed"
+      : status === "needs_review"
+        ? "border-destructive/40 bg-destructive/5"
+        : status === "failed"
         ? "border-rose-500/30 bg-rose-500/5"
         : isInFlight
           ? "border-amber-500/30 bg-amber-500/5"
@@ -540,7 +542,7 @@ export function WebsiteBuilder({
               Visit
             </Button>
           )}
-          {(status === "ready" || status === "failed") && (
+          {(status === "ready" || status === "needs_review" || status === "failed") && (
             <Button
               type="button"
               size="sm"
@@ -567,21 +569,51 @@ export function WebsiteBuilder({
         </div>
       </div>
 
-      {doc.contentFlags && doc.contentFlags.length > 0 && (
-        <div className="border-t border-destructive/30 bg-destructive/5 px-4 py-3">
-          <p className="flex items-center gap-1.5 text-xs font-medium text-destructive">
+      {status === "needs_review" && (
+        <div className="border-t border-destructive/40 bg-destructive/5 px-4 py-3">
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-destructive">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-            This page may contain generic filler content. Review before sharing the link
+            {doc.integrityReason === "unverified"
+              ? "Not ready to share: we couldn't check this page"
+              : "Not ready to share: this page states things we can't verify"}
           </p>
           <p className="mt-1 text-[11px] text-destructive/80">
-            gitpage&apos;s template sometimes invents testimonials, stats, or program details
-            that aren&apos;t true for your product. Detected:
+            {doc.integrityReason === "unverified" ? (
+              <>
+                The build finished, but the published page couldn&apos;t be read back, so we
+                can&apos;t confirm what it says. Rebuild, or open the preview and check it
+                yourself before sending it to anyone.
+              </>
+            ) : (
+              <>
+                The site generator fills empty sections with invented content: testimonials from
+                people who don&apos;t exist, statistics nobody measured, and program details that
+                aren&apos;t real for this business. Remove or replace the following before this
+                page goes to a client:
+              </>
+            )}
           </p>
-          <ul className="mt-1 list-disc pl-5 text-[11px] text-destructive/90">
-            {doc.contentFlags.map((flag, i) => (
-              <li key={i}>{contentFlagCategoryLabel(flag.category)}</li>
-            ))}
-          </ul>
+          {doc.contentFlags && doc.contentFlags.length > 0 && (
+            <ul className="mt-1 list-disc pl-5 text-[11px] font-medium text-destructive/90">
+              {doc.contentFlags.map((flag, i) => (
+                <li key={i}>
+                  {contentFlagCategoryLabel(flag.category)}
+                  {flag.excerpt ? (
+                    <span className="font-normal text-destructive/70"> &mdash; &ldquo;{flag.excerpt.slice(0, 90)}&rdquo;</span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+          {liveUrl && (
+            <p className="mt-2 text-[11px] text-destructive/80">
+              Your work is kept.{" "}
+              <a href={liveUrl} target="_blank" rel="noreferrer" className="underline underline-offset-2">
+                Open the preview
+              </a>{" "}
+              to see it, then use Rebuild once the source details are filled in.
+            </p>
+          )}
         </div>
       )}
 

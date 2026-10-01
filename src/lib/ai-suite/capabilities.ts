@@ -114,6 +114,8 @@ import {
   buildCopyGrounding,
   isUnsupportedTrustClaim,
   stripUngroundedClaims,
+  groundSectionHeading,
+  agendaHeadingFor,
   unsupportedZeroPriceClaims,
   type CopyGrounding,
 } from "@/lib/funnels/claim-integrity";
@@ -3734,15 +3736,22 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         const detail =
           status === "ready" && w.liveUrl
             ? `live at ${w.liveUrl}`
-            : status === "failed"
-              ? `failed${w.errorMessage ? `, ${w.errorMessage}` : ""}`
-              : status === "queued" || status === "building"
-                ? "building now (usually 1–3 minutes)"
-                : "draft (not built yet)";
+            : status === "needs_review"
+              ? // NOT "live". Reporting a flagged build as live is how the
+                // assistant ends up telling someone their site is done when
+                // it contains claims nobody can stand behind.
+                `BUILT BUT NOT PUBLISHABLE YET, held for review${w.liveUrl ? ` (preview: ${w.liveUrl})` : ""}`
+              : status === "failed"
+                ? `failed${w.errorMessage ? `, ${w.errorMessage}` : ""}`
+                : status === "queued" || status === "building"
+                  ? "building now (usually 1-3 minutes)"
+                  : "draft (not built yet)";
         const flagWarning =
-          status === "ready" && contentFlags && contentFlags.length > 0
-            ? " ⚠️ may contain generic filler content (fake testimonials/stats/program details). Tell the user to review before sharing this link"
-            : "";
+          status === "needs_review" && contentFlags && contentFlags.length > 0
+            ? ". The generator invented content that is not true for this business (fake testimonials/stats/program details). Tell the user plainly that it is NOT ready to share and these need removing first; do not describe it as finished or live"
+            : status === "needs_review"
+              ? ". We could not verify the published page, so it is not confirmed safe to share"
+              : "";
         return `- “${name}” (id: ${d.id}): ${detail}${flagWarning}${editable ? `\n${editable}` : ""}`;
       });
       return {
@@ -4576,7 +4585,16 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         .slice(0, 9)
         .map((s) => ({
           sectionType: s1(s, "section_type", "sectionType").slice(0, 40),
-          headline: s1(s, "headline", "headline").slice(0, 100),
+          // A heading may not promise a KIND of thing this funnel does not
+          // deliver. "Everything you'll learn" shipped above a roof
+          // inspection, a dog groom and a CFO review in beta acceptance;
+          // nobody learns anything from having their roof photographed. The
+          // Critic detects this and writes an honest replacement, but its
+          // auto-apply is off because it also flags honest headings, so the
+          // deterministic subset (teaching promise on a non-teaching genre)
+          // is enforced here where the genre is known. See
+          // funnels/claim-integrity.ts::groundSectionHeading.
+          headline: groundSectionHeading(s1(s, "headline", "headline").slice(0, 100), genre).heading,
           text: fixLiteralNewlines(s1(s, "text", "text")).slice(0, 800),
           secondaryHeadline: s1(s, "secondary_headline", "secondaryHeadline").slice(0, 100),
           secondaryText: fixLiteralNewlines(s1(s, "secondary_text", "secondaryText")).slice(0, 800),
@@ -5491,7 +5509,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           };
         }
         if (section.type === "agenda" && processSteps.length > 0) {
-          return { ...section, config: { days: processSteps.map((s) => ({ label: s.label, title: s.title, bullets: s.bullets })) } };
+          return {
+            ...section,
+            config: {
+              days: processSteps.map((s) => ({ label: s.label, title: s.title, bullets: s.bullets })),
+              // Only a genre that actually teaches may promise teaching.
+              heading: agendaHeadingFor(genre),
+            },
+          };
         }
         if (section.type === "callout" && content?.text) {
           return { ...section, config: { text: content.text, tone: "highlight" as const } };
