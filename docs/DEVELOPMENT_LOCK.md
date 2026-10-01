@@ -648,6 +648,86 @@ credentials. Zero overflow, zero broken images, zero bracket placeholders.
 
 **Development is locked again. The next work is customer outreach.**
 
+## Reopening 6: the connected customer journey (2026-10-01)
+
+Deliverable quality was certified immediately before this. This pass asked
+the only question that certification cannot: do the SEAMS hold when a real
+prospect travels the whole path. Everything previously certified was carried
+forward, not rerun.
+
+### The journey, as outcomes
+
+A business was planted the way a Growth Scan leaves one, including a real
+`intelligence.primaryConstraint`, in a workspace whose profile is genuinely
+AUTHORIZED. Then: ask what to fix, ask for a build, confirm it, publish it
+through the real guards, arrive at the published page as a logged-out
+stranger carrying UTM parameters, submit the form, and look at what landed.
+
+**Growth Scan to Zeno holds.** Given only the scan and the profile, Zeno
+answered "fix the first visit, specifically, make it concrete. Right now your
+site explains the modalities but never tells a nervous first-timer what
+actually happens in the room." It reasoned FROM the constraint rather than
+reciting it, named the real audience, never asked the customer to restate
+their business, and claimed no traffic, conversion or revenue data it was
+never given. A scanned business does not become a blank account.
+
+**Zeno to Flow holds.** The build request became a real funnel, correctly NOT
+auto-published, grounded in the business, publishing only through the real
+completeness guards.
+
+**The lead reaches the CRM with its attribution intact.** utmSource
+`facebook`, utmMedium `cpc`, utmCampaign `hobart_back_pain`, utmContent
+`vid_a`, landing page and referrer all survived onto the contact, and
+`source` resolved to `facebook` rather than a generic default. One contact,
+one workspace, no duplicate, no cross-tenant bleed.
+
+**Every workflow node does what the page promised.** Driven directly:
+`create_deal=deal_created:new`, `add_tag=tag+:Assessment Booking Requested`,
+`send_email=ok`, `notify=ok`, `wait`, `if_else`.
+
+### The defect, and the boundary
+
+A real lead produced a run with `status: "failed"`, an empty history, no
+error and no node. The contact existed, the page said thank you, and the
+promised opportunity and follow-up never arrived with nothing anywhere
+saying why. The customer saw success; the operator saw a dead run.
+
+The CAUSE was environmental: QStash refuses a localhost callback URL, which
+production does not have. Recording nothing about it was not. Every failed
+run now carries a sentence naming the likely cause and the node it stopped
+at; testing that surfaced two further silent paths (workflow deleted
+mid-run, contact deleted mid-run). The history of what already ran is never
+cleared, since that is the record of the deal and tag that did land.
+
+**The one hop local cannot test is QStash delivery to a public URL, and it
+is closed by independent evidence:** the gitpage heartbeat is a
+QStash-scheduled callback into production and it landed 24 minutes before
+this was written.
+
+### Behaviour worth knowing before a live demo
+
+- Contacts dedupe on PHONE. A repeat submission from the same number updates
+  the same person, PRESERVES first-touch attribution rather than overwriting
+  it, and appends a second entry to the timeline. All three are correct.
+- Zeno occasionally answers a build request with a question instead of a
+  proposal. Intermittent, not deterministic, roughly 2 in 5 across this and
+  the previous pass. It offers the correct default and builds next turn.
+- Asking to revise "that page" when a workspace holds several similarly named
+  funnels gets a disambiguation question, including when a draft and a live
+  copy share a name. Correct, and worth naming the funnel in a demo.
+- Phrasing steers which artifact is built: "book the assessment" produced a
+  booking page rather than a funnel on one probe.
+
+### Four harness bugs, recorded because each looked like a product defect
+
+Snake_case attribution when the client emits camelCase; a phone reused
+across runs so the second updated the first's contact; a CTA selector that
+guessed at wording and missed "Pick a time"; and reading a draft's correct
+refusal to render as a render failure. Every one produced a false negative.
+Check the product's contract before believing the test.
+
+**Development is locked. The next source of evidence is real customers.**
+
 ## Reopening rules
 
 Active Ascend AND Flow development is locked. Development reopens only for:
