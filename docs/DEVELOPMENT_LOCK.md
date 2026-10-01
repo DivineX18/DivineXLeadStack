@@ -556,6 +556,98 @@ owner's authenticated admin session. The route itself is verified: in deployed
 
 **Development is locked. The next work is customer acquisition.**
 
+## Reopening 5: generated deliverable integrity (2026-10-01)
+
+Reopened for one scoped exception before customer outreach, because the
+acquisition path puts a prospect in front of a live generation. Pricing,
+billing, entitlements and cost guardrails stayed locked and were not touched.
+
+### What was wrong, and what fixed it
+
+**A website that invents facts is no longer a finished deliverable.**
+gitpage's template fabricates testimonials, statistics and program details,
+and it is a third-party generator we cannot configure. The audit used to
+decorate a `ready` site with a warning banner, which makes the warning
+optional, and optional is not a safety mechanism when the reader is a trial
+customer about to copy the link. The audit now DECIDES the status: flagged
+builds land in `needs_review` with the specific claims listed, the work and
+preview URL kept for correction, and no success treatment anywhere including
+in what Zeno says. An unverifiable page is re-polled once, then held. Found
+while wiring it: the manual "Re-check now" button never audited at all and
+set `ready` directly.
+
+**"Everything you'll learn" shipped above a roof inspection, a dog groom and
+a CFO review.** The first fix was in the wrong place and is worth recording:
+lib/ held no template source, so the model looked responsible, and a
+genre-aware rule went into the model-written path. It passed 38 checks and
+changed nothing on screen, because `AgendaSection` HARDCODED the heading and
+that one component renders both a webinar's agenda and a booking's process.
+Only re-rendering and reading the headings caught it. The heading now follows
+the stage role; teaching genres keep it, because there the promise is true.
+
+**The canonical business profile was injected inside the `create_funnel`
+branch**, so Zeno knew whose business it was only when that tool was in
+scope. This did NOT cause the symptom first attributed to it (see below); it
+is wrong on its own terms.
+
+### Suite classification, 31 suites
+
+17 ENVIRONMENT (6 pass outright once a render server runs on 3114 and
+`FLOW_PROBE_SA` is set; the rest refuse to run with stated reasons, which is
+correct design). 5 OBSOLETE TEST, each with a named cause: a regex pinned to
+a syntactic shape a `safeValidate` refactor changed (both call sites verified
+still grounding), em dashes the dedash pass replaced, a `do NOT`/`Do NOT`
+case mismatch, and a byte-identical snapshot against a pre-Slice-8 commit.
+1 STALE FIXTURE. 3 REAL and fixed. 3 REAL and not blocking.
+
+**A misdiagnosis worth keeping.** `zeno-live-behavior` B2 was first reported
+as the profile nesting bug. It is not. The fixture plants
+`businessProfileId: 0` against a workspace mapped to `3`, and the tenant
+guard correctly withholds all context rather than risk serving another
+company's business. The guard is right; the fixture is stale. Verify the
+other branch before naming a root cause.
+
+### Real-output acceptance
+
+Three materially different businesses (local service, a business with no
+website at all, B2B professional), each planted as an AUTHORIZED profile,
+each asked the way a customer asks. All three completed: grounded reply,
+proposal, confirm, funnel created, workflow activated, published through the
+real completeness guards, rendered at 1440 and 390, lead captured through the
+popup CTA, copy specific enough that it would not survive a name swap. Zero
+fabricated testimonials, statistics, founder history, guarantees or
+credentials. Zero overflow, zero broken images, zero bracket placeholders.
+
+### Known beta limitations, acceptable and honestly represented
+
+- Zeno sometimes asks one optional setup question (a booking-calendar slug)
+  instead of drafting, against its own tool description. Intermittent, 2 of 4
+  runs on one business. It offers the correct default and builds next turn.
+- Image presence is non-deterministic: the same business and prompt produced
+  0, 1 and 2 images across runs. At 0 an honest "Photo needed" placeholder
+  renders, which is the designed behavior for a workspace with no assets.
+- Critic heading auto-apply stays OFF. Its own control still reproduces the
+  false positive that gated it. The deterministic subset is enforced instead.
+- The gitpage website path was not exercised locally (stale local key).
+  Production gitpage is healthy: `agency=true`, `hasApiKey=true`,
+  `lastError=null`.
+
+### Operational findings, not code
+
+- **OpenRouter credit exhaustion took Zeno down for every workspace** during
+  this pass (HTTP 402). Small requests still returned 200, so it is not
+  obvious from a smoke test. Resolved by the owner. Worth monitoring: this is
+  a single point of failure for the entire product promise.
+- `subAccounts/MEYB8CbWlE5fxAn3TJOp` holds `businessProfileId: 0` with the
+  business name "Portrait Only", leftover fixture data, so Zeno has no
+  business context in the DivineX workspace itself. Repair by republishing
+  the profile from Ascend. Do NOT correct the id, that would authorize
+  fixture content.
+- A `divinexProfiles` document literally named `undefined` exists, plus
+  `dx-loop-test` and `qa-unify-sub`. Unmapped, so withheld, harmless.
+
+**Development is locked again. The next work is customer outreach.**
+
 ## Reopening rules
 
 Active Ascend AND Flow development is locked. Development reopens only for:
