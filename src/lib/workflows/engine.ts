@@ -861,7 +861,14 @@ async function enroll(
     .catch(() => {});
 
   if (!qstashIsConfigured()) {
-    await runRef.update({ status: "failed" });
+    // Same rule as scheduleNode: never leave a failed run unexplained.
+    await runRef.update({
+      status: "failed",
+      error:
+        "The follow-up queue is not configured on this deployment, so no workflow step could run. Set the QSTASH_* environment variables.",
+      failedNodeId: wf.startNodeId ?? null,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
     return;
   }
   await scheduleNode(runRef, wf.startNodeId!, 0);
@@ -881,8 +888,23 @@ async function scheduleNode(
     deduplicationId: `wf_${runRef.id}_${nodeId}`,
   });
   if (!res) {
+    // A RUN THAT FAILS MUST SAY WHY.
+    //
+    // This recorded `failed` and nothing else, so an operator opening the
+    // run saw a dead workflow with an empty reason and no next step: the
+    // contact was created, the page said thank you, and the promised
+    // opportunity and follow-up simply never arrived. The work the run had
+    // already done is in `history`; what was missing was the sentence
+    // explaining why the rest stopped.
+    //
+    // Scheduling is the only thing that can fail here, and it fails for one
+    // of two reasons: the queue is unreachable, or the callback URL it was
+    // handed is not publicly reachable (a localhost NEXT_PUBLIC_APP_URL is
+    // the usual cause outside production).
     await runRef.update({
       status: "failed",
+      error: `Could not schedule the next step (${nodeId}). The follow-up queue did not accept the job, which usually means QStash is unreachable or NEXT_PUBLIC_APP_URL is not a publicly reachable address.`,
+      failedNodeId: nodeId,
       updatedAt: FieldValue.serverTimestamp(),
     });
     return;
@@ -923,8 +945,12 @@ export async function runStep(runId: string, nodeId: string): Promise<void> {
 
   const wfSnap = await db.doc(`workflows/${run.workflowId}`).get();
   if (!wfSnap.exists) {
+    // Same rule as scheduling: a failed run always says why. A deleted
+    // workflow mid-run is rare and completely opaque without this.
     await runRef.update({
       status: "failed",
+      error: "The workflow this run belongs to no longer exists, so the remaining steps could not run.",
+      failedNodeId: nodeId,
       updatedAt: FieldValue.serverTimestamp(),
     });
     return;
@@ -950,6 +976,8 @@ export async function runStep(runId: string, nodeId: string): Promise<void> {
   if (!contactSnap.exists) {
     await runRef.update({
       status: "failed",
+      error: "The contact this follow-up was for has been deleted, so the remaining steps were stopped.",
+      failedNodeId: nodeId,
       updatedAt: FieldValue.serverTimestamp(),
     });
     return;
