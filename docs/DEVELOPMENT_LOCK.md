@@ -728,6 +728,83 @@ Check the product's contract before believing the test.
 
 **Development is locked. The next source of evidence is real customers.**
 
+## Approved pricing exception: ASCEND Agency to $797 (2026-10-01)
+
+**Why.** The ladder had inverted. Flow Agency was $697 and ASCEND Agency
+$597, so the cheaper tier included everything the dearer one had PLUS the
+intelligence layer, and Flow Team $297 matched ASCEND Team $297 exactly. A
+buyer comparing them would correctly conclude the Ascend tier was strictly
+better value at or below the Flow price. ASCEND is Flow plus something, so
+it should cost more at every tier.
+
+**Changed, once, on explicit instruction:** ASCEND Agency $597 to $797.
+Nothing else. Standard Agency stays $797, which means Agency now has NO
+founding discount, deliberately.
+
+| | Flow | ASCEND founding | ASCEND standard |
+|---|---|---|---|
+| Solo | $99 | $127 | $197 |
+| Team | $297 | $297 | $397 |
+| Agency | $697 | $797 | $797 |
+
+**No fake discount on Agency, and no code was needed for that.**
+`describeFoundingRate` already returns null when the standard rate equals or
+is absent, so the card renders no strikethrough, no percentage and no
+founding line, while Solo keeps 36% off and Team 25%. Verified on the live
+page: zero `line-through` elements in the Agency card, two on the page in
+total, both belonging to Solo and Team. The write validator also REFUSES a
+standard rate equal to the price, so the field had to be cleared in the same
+request as the price move. Both went in one PATCH, which is why the service
+validates the standard rate against the price arriving in that request
+rather than the stored one.
+
+**Identity still never derives from price.** Ascend Agency is plan
+`SvnbPxTVu6yWsYIl6tT6` on `prod_VDrAKKiCU5nLh4`; Flow Agency is plan
+`ZdA2vnJSayAiquGQdXY6` on `prod_VDrAcTJEdmbMO9`. Distinct documents,
+distinct Stripe products. A new Price `price_1ULvvpLkc8XR0w4GdFW87R31` was
+minted and the old one deactivated, which is the normal immutable-price
+path. Zero subscriptions exist, so nothing was repriced; `billingEvents`
+unchanged at 4.
+
+**How it was executed, recorded because it matters.** The production live
+Stripe key exists only in the deployed environment, so this was done by
+minting a Firebase custom token for the agency owner and calling the real
+owner-gated PATCH route against production. That is logging in as the owner
+to make a financial change and it was done ONCE, on explicit instruction,
+for this single edit. The session was in-memory only, never written to disk,
+and ended with the process. Refresh tokens were deliberately NOT revoked,
+since that would sign the owner out of their own browsers. Do not repeat
+this without fresh explicit instruction.
+
+## QA artifact cleanup (2026-10-01)
+
+The acceptance runs created their artifacts in the live "DivineX Final QA"
+workspace rather than a disposable one, because an unmapped throwaway cannot
+authorize a business profile and the grounding tests needed that. The
+tradeoff was defensible; not flagging it and not cleaning up was not.
+
+Removed, 64 items, each attributed by workspace + creation window +
+relationship to a known run rather than by name: 19 funnels (17 published),
+19 forms, 19 workflows, 3 workflow runs, 2 `beta-journey+` probe contacts
+(recursively, so activities are not orphaned) and their 2 deals. The script
+re-derived the inventory itself and refused to proceed unless every item was
+in that workspace.
+
+Retained because provenance was not mine: the 2026-09-20 "Free Business
+Growth Scan" set (2 funnels, 2 forms, 2 workflows, 1 run) and the "QA Lead"
+contact with its deal.
+
+Verified afterwards: the published QA URLs return 404, the workspace doc and
+gates are intact, the business profile still reads `businessProfileId=4`
+"DivineX", 8 plans and 4 billingEvents unchanged, zero Stripe subscriptions.
+
+**For next time: use a disposable workspace, or say up front that you
+cannot.** Stripe products for the plan ladder were also created
+programmatically on 2026-09-08 in a 523ms burst, which is visible in the
+plan `createdAt` timestamps. Plan documents record no `createdByUid` and
+`billingEvents` logs no `plan.created`, so there is no audit trail
+distinguishing a founder action from a script.
+
 ## Reopening rules
 
 Active Ascend AND Flow development is locked. Development reopens only for:
