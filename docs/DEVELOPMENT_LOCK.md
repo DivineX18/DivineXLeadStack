@@ -848,15 +848,30 @@ confirmed caught) and `scripts/verify-assessment-visitor.mts` (10 checks,
 which publishes a real assessment and walks it in a browser with no
 session).
 
-**What could not be verified live.** The OpenRouter balance ran out during
-this work ($345 granted, $343.36 used). The model path therefore could not
-be exercised end to end on the final build, in staging or production. What
-WAS observed live before credits ran out: a five-screen stepped assessment
-with four real diagnostic questions, the model declining to rebuild an
-existing funnel, and exactly one booking page where the previous run made
-two. The customer-facing half is covered independently by the visitor suite,
-which needs no model. **Re-run both suites against production once credits
-are topped up before treating the model path as certified.**
+**Model path, certified 2026-10-03.** The OpenRouter balance ran out during
+the original pass, so the model-driven half could not be exercised. It has
+now been run end to end on the final build, and the reproduction found one
+more instance of the same defect this work started from.
+
+`bridge_next_href` wanted an app path and its guidance showed
+`/b/<subAccountId>/<slug>`. The model is never told the workspace id, so it
+filled the template literally: `/b/{subAccountId}/root-cause-consult`. The
+sanitiser refused and created nothing, which is the behaviour we built and
+it held, but the refusal repeated the same example so the retry failed the
+same way, and Zeno ended up telling the customer it could not continue
+without "the booking page's public URL", a fact the server already has.
+Same shape as the unlinked-journey bug: an argument the model cannot
+produce. Fixed the same way, in `cca11a6`, by making the slug the only part
+it has to supply and assembling the path server-side.
+
+Certified run, 29 checks: booking page created first, exactly one
+`create_funnel`, four questions the model wrote itself, the real slug
+passed and resolved, the completion opening the real diary, four subsequent
+turns declining to rebuild ("that would just create a duplicate"), nothing
+published or activated on its own, and a stranger walking five screens into
+a booking with one contact, one submission and every answer retained.
+`verify-assessment-journey` 71 checks with ten mutations caught;
+`verify-assessment-visitor` 10 checks green on staging and production.
 
 ## Reopening rules
 
