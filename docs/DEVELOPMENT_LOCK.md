@@ -1199,14 +1199,56 @@ economics are certified, because those products do not exist.
 successful eligible payments per referred customer, 30-day hold, monthly
 payout batches. The capacity analysis gave no reason to change it.
 
-### Open owner decision
+### Resolved: ASCEND SMS is BYO Twilio only
 
-Whether ASCEND should be strictly BYO Twilio with `maxSharedSmsPerMonth: 0`,
-accepting that any workspace currently sending on the shared sender stops
-immediately and reads "Text messages aren't included in your plan", or keep
-the bounded 500. Not decidable from code. Production `TWILIO_*` could not be
-confirmed from this environment, so whether the path is live on the current
-deployment is unverified.
+Owner decision, shipped in `426483f`. See the entry below.
+
+## ASCEND SMS = BYO Twilio only (2026-10-03)
+
+Production `426483f`. **DivineX shared SMS allowance for ASCEND = 0.**
+
+`ASCEND_SOLO_WORKSPACE_LIMITS.maxSharedSmsPerMonth` is **`0`**. A workspace
+with no `twilioConfig` otherwise falls back to the deployment's shared
+Twilio credentials, which is DivineX's carrier bill; Ascend does not sell
+that capacity, so the shared sender is closed to it. The customer's own
+Twilio is the supported path and is unaffected.
+
+**ZERO, NEVER ABSENT.** `checkPlanLimit` reads an absent or null ceiling as
+UNLIMITED. So deleting the field, which is the change that looks like
+removing an allowance contradicting BYO, would instead hand out unlimited
+DivineX-paid SMS. The field stays and carries the number.
+`verify-ascend-byo-twilio.mts` pins all three shapes (0 refuses, absent
+allows, null allows) so the tidy-looking version cannot come back.
+
+**What the customer reads.** The generic zero-ceiling copy ("not included,
+upgrade your plan") is wrong for SMS twice over: texting IS supported, and
+no plan sells the shared sender, so upgrading fixes nothing. Both refusal
+sites, `limitMessage` and the error thrown in the send path, say
+**"Connect your Twilio account to send text messages (Settings → SMS)."**
+The send path still distinguishes the two cases, because a workspace that
+ran out mid-month should be told it resets, while one that never had an
+allowance would be waiting for a 1st that changes nothing.
+
+**Entry points.** All five real SMS paths (manual route, missed-call
+text-back, AI reply, workflow engine, review request) go through
+`sendSmsForSubAccount`, where the allowance is checked before Twilio is
+touched and only when `mode === "shared"`, so a dedicated workspace neither
+consumes nor is refused by it. The bare `sendSms()` helper talks to env
+Twilio directly and has no callers; the suite keeps it that way.
+
+**Other products unchanged:** a comped or legacy workspace keeps unlimited
+shared SMS, a plan with a real allowance still sends under it, and Ascend's
+other ceilings (AI $15, voice 200, email 25,000, scans 15) are untouched.
+
+Coverage: `verify-ascend-byo-twilio.mts` (24 checks, four mutations caught),
+`verify-cost-guardrails.mts` updated to the new policy and green, plus
+verify-ascend-solo-limits, verify-plan-limits-per-workspace,
+verify-workspace-entitlements, verify-price-collision, verify-plan-seats.
+
+**Not verified:** production `TWILIO_*` could not be read from this
+environment, so whether the shared sender was ever reachable on the live
+deployment is unknown. The ceiling closes it either way. No SMS was sent to
+verify, deliberately.
 
 ## Reopening rules
 
