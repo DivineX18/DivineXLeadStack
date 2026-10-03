@@ -1250,6 +1250,77 @@ environment, so whether the shared sender was ever reachable on the live
 deployment is unknown. The ceiling closes it either way. No SMS was sent to
 verify, deliberately.
 
+## Referral + revenue production path — PARTIALLY certified 2026-10-03
+
+**NOT certified end to end.** The live-money half could not be executed from
+this environment, and §2 of the certification brief says to stop rather than
+guess. No code changed.
+
+### What WAS proved
+
+**The deployed code is the certified implementation.** BI production runs
+`808372a`, which is the referral work itself (`a0fb75b` + `808372a`), and the
+working tree is identical to it. 55 referral tests and the full 791-test
+Ascend suite pass against exactly that commit.
+
+**The chain is traced, first-hand, end to end in code:** `?ref=CODE` →
+`useReferralTracking` records the click once per browser session → the
+`ascend_ref` cookie is read at checkout → `session.metadata.ref` is stamped
+at both checkout-creation sites → `checkout.session.completed` calls
+`creditFirstPayment` → `invoice.paid` (billing_reason
+`subscription_cycle`) calls `creditRenewalCharge`, resolved by
+`stripeCustomerId` rather than by price → the unique index on
+`stripe_payment_reference` makes a replayed webhook a no-op →
+`charge.refunded` and `charge.dispute.created` reverse the accrual. Product
+identity comes from `metadata.product`, never from an amount
+(`verify-price-collision.mts`, 29 checks).
+
+**Payout safety (§8), without paying anyone:** a transfer refuses anything
+inside the 30-day hold, refuses a reversed commission, the automatic sweep
+holds for 30 days rather than the old 7, a held referral is reported as
+skipped rather than failed, the transfer is idempotent per referral, and
+money already paid out is left for human reconciliation rather than silently
+clawed back.
+
+**The 12-payment cap (§9), without 12 charges:** earns on payments 1, 2 and
+12, stops permanently after the twelfth, counts per CUSTOMER so cancelling
+and resubscribing does not restart the clock, and excludes reversed rows so
+a refund returns its slot. Nine mutations were confirmed caught when this
+shipped.
+
+### What is BLOCKED, and why
+
+**No live transaction was created.** Both prerequisites fail, verified
+today:
+
+1. **Stripe is TEST, not live.** The available `STRIPE_SECRET_KEY` is
+   `sk_test_*`, and `STRIPE_PRICE_GROWTH_SYSTEM` is not set in this
+   environment at all. Live product identity, the active Price, the amount
+   and the webhook configuration therefore cannot be authoritatively read,
+   and any checkout created here would be a test charge that never touches
+   the production money path.
+2. **Referral accounting cannot be read.** The Neon endpoint is disabled
+   ("The endpoint has been disabled"), so `partner_referrals`, `partners`
+   and the entitlement rows are unreadable. Even a charge performed by the
+   owner could not be verified against application accounting from here.
+
+Consequently §3 to §7 (controlled live transaction, settlement
+verification, provisioning from a real payment, refund/reversal) are not
+done. The accrual arithmetic, the hold and the cap are proved
+deterministically; what remains unproved is that a REAL Stripe settlement
+flows through them, which is precisely what the brief existed to establish.
+
+### What the owner needs to do to unblock
+
+Minimum: re-enable the Neon endpoint (read access is enough) AND perform one
+checkout on a disposable identity through the real public flow, then share
+the resulting checkout-session id. A live READ-ONLY Stripe key would
+additionally let the collected amount, tax and interval be reconciled
+directly rather than taken on trust. A card must never be entered in chat,
+so the hosted-checkout step is the owner's to perform.
+
+Until then: **the logic is certified, the money path is not.**
+
 ## Reopening rules
 
 Active Ascend AND Flow development is locked. Development reopens only for:
