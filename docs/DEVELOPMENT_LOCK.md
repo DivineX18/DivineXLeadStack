@@ -1055,6 +1055,67 @@ recipient clicks. Documents remain capped at 5MB. There is no asset library
 UI: a deliverable is attached per funnel, which is the existing model and
 was deliberately not expanded into a DAM.
 
+## Pricing + entitlement reconciliation (2026-10-03) — NO CODE CHANGED
+
+A correction pass was requested off the back of the capacity economics
+report. Tracing the authoritative path found that two of that report's
+findings were WRONG, and that the premise of the correction does not hold.
+Nothing was changed: the safe conclusion was that there is nothing here to
+safely change.
+
+**Correction 1: the NO_LIMITS fallthrough is not a defect.** The report said
+an Ascend-provisioned Flow workspace resolves to unlimited. It does not.
+`resolvePlanLimits` has a branch ABOVE the grandfather clause returning
+`ASCEND_SOLO_WORKSPACE_LIMITS` when `ascendOperations.provisionedByAscend`
+is true. Verified by running it: 1 workspace, 5 websites, 25,000 emails, 50
+AI generations, 15 Growth Scans, 1 member, 200 voice minutes. The report
+read the default and missed the branch.
+
+**Correction 2: the AI spend ceiling already exists.** The report said
+ASCEND has no enforced AI-dollar ceiling. `ASCEND_SOLO_WORKSPACE_LIMITS`
+carries `maxAiSpendPerMonth: 15`, which is exactly the Solo figure the
+correction pass asked for, enforced through `aiSpendAllowed` before every
+model call. `scripts/verify-cost-guardrails.mts` already asserts refusal AT
+the ceiling and already tests the message for ceilings 15, 40 and 90.
+
+The one remaining "unlimited" case, an Ascend grant ATTACHED to a workspace
+the customer already owned (`provisionedByAscend: false`), is deliberate and
+asserted: "grant not raised by provisioning stays unlimited", because that
+workspace belongs to a paying Flow customer who must not be downgraded.
+`verify-ascend-solo-limits.mts` is mutation-tested against all three cases.
+
+**The pricing premise does not hold.** The intended ASCEND ladder, Solo
+$127 / Team $297 / Agency $797, was not something production drifted away
+from. ASCEND Team and ASCEND Agency HAVE NEVER EXISTED as products. The
+catalog is `ascend_pro` (Zeno Pro), the Zeno Agency ladder
+(`ascend_agency_starter` / `ascend_agency` / `ascend_agency_pro`), and
+`growth_system`, and `growth_system` is the ONLY product granting
+`growth_operations`. $297/$497/$997 belong to Zeno Agency, a different
+product line. The capacity report matched them to ASCEND by price, which is
+what made it look like drift, and the correction brief inherited that. The
+`AscendOperationsGrant.product` field is typed to the single literal
+`"growth_system"`, so the Flow side could not carry a Solo/Team/Agency tier
+even if one were assigned.
+
+Building that ladder is therefore new product construction, not a surgical
+correction: two Stripe products, two prices, two entitlement keys, plan
+limit rows, provisioning, checkout and pricing-page work.
+
+**And it is blocked regardless.** The local Stripe key is TEST mode, so
+production products and prices cannot be authoritatively read; the Neon
+endpoint is disabled ("The endpoint has been disabled"), so plan documents,
+entitlement rows and the subscriber inventory cannot be read. The brief
+itself required stating this before any change risking billing
+inconsistency. Changing the public price to $797 while unable to confirm
+what Stripe charges would create exactly that inconsistency.
+
+Verified green while tracing: verify-ascend-solo-limits, verify-cost-guardrails,
+verify-plan-limits-per-workspace, verify-workspace-entitlements,
+verify-workspace-entitlement-evaluator, verify-plan-seats.
+
+Referral economics unchanged: 20% x maximum 12 successful eligible payments,
+30-day hold, monthly payouts.
+
 ## Reopening rules
 
 Active Ascend AND Flow development is locked. Development reopens only for:
