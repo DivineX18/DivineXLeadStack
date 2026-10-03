@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
  * write-once (a replacement upload mints a new id/URL).
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ assetId: string }> },
 ): Promise<NextResponse> {
   const { assetId } = await params;
@@ -20,6 +20,14 @@ export async function GET(
   }
   const asset = await readFunnelAsset(assetId);
   if (!asset) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Video and audio are REFERENCED, not stored here (see lib/funnels/assets.ts).
+  // Serving or redirecting would put the provider's address in front of the
+  // recipient, so an old or hand-typed link lands on the branded player
+  // instead, which is where that deliverable is meant to be experienced.
+  if (asset.meta.kind === "video" || asset.meta.kind === "audio") {
+    return NextResponse.redirect(new URL(`/d/${assetId}`, request.url), 302);
+  }
 
   return new NextResponse(new Uint8Array(asset.bytes), {
     status: 200,

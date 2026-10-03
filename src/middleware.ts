@@ -134,6 +134,15 @@ const PUBLIC_PATHS = [
   // unguessable asset id is the capability token; the link is what a
   // subscriber receives by email, so it must resolve without a session.
   "/api/funnel-asset",
+  // Branded delivery player for a referenced video/audio deliverable. Public
+  // for the same reason the asset route is: the unguessable id is the
+  // capability, and a lead who just gave their email must not meet a login
+  // between them and the resource they were promised.
+  // No trailing slash: the matcher tests `pathname === path` or
+  // `startsWith(path + "/")`, so "/d/" would look for "/d//" and never match,
+  // which sent recipients to the login page. "/dashboard" is unaffected,
+  // since it does not start with "/d/".
+  "/d",
   "/api/webhooks/divinex",
   // Custom-domain resolver — internal rewrite target for Funnels custom
   // domains (see customDomainRewrite() below); never linked to directly.

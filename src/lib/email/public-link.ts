@@ -47,7 +47,7 @@ export function publicLinkBase(): string {
  * Matches the path rather than the host, so a link baked in by an older
  * deployment is corrected rather than left alone.
  */
-const ASSET_URL = /https?:\/\/[^\s"'<>)\]]*?(\/api\/funnel-asset\/[A-Za-z0-9_-]+)/g;
+const ASSET_URL = /https?:\/\/[^\s"'<>)\]]*?(\/(?:api\/funnel-asset|d)\/[A-Za-z0-9_-]+)/g;
 
 export function withPublicAssetHost(body: string, base: string = publicLinkBase()): string {
   if (!base) return body;

@@ -989,7 +989,20 @@ export interface FunnelDoc {
    *  stored via the chunked funnelAssets store; `url` is the public serve
    *  path (/api/funnel-asset/[id]) appended into the confirmation workflow
    *  email at upload time. */
-  leadMagnetAsset?: { assetId: string; filename: string; url: string };
+  /**
+   * The deliverable this page promises, by IDENTITY rather than location.
+   * `url` is the relative delivery path (`/api/funnel-asset/<id>` for a
+   * download, `/d/<id>` for the branded player), so the host is resolved
+   * when the mail is sent and a deployment move cannot strand it. `kind`
+   * drives the email's wording; `ctaLabel` is the operator's override.
+   */
+  leadMagnetAsset?: {
+    assetId: string;
+    filename: string;
+    url: string;
+    kind?: "pdf" | "video" | "audio" | "file";
+    ctaLabel?: string | null;
+  };
   /** Persuasion depth this funnel was composed at (lean/standard/deep) —
    *  how much BELIEF CHANGE the page performs. Persisted for certification
    *  traces + Zeno explainability. */

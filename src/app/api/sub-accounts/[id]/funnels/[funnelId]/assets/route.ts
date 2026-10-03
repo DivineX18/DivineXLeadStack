@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireSubAccountMember } from "@/lib/auth/require-tenancy";
-import { getAdminDb } from "@/lib/firebase/admin";
 import { getFunnel } from "@/lib/server/funnels-service";
-import { ALLOWED_ASSET_TYPES, MAX_ASSET_BYTES, storeFunnelAsset } from "@/lib/funnels/assets";
-import { withDeliveryLink } from "@/lib/funnels/cta-integrity";
-import type { FunnelSection, HeroConfig, OfferConfig } from "@/types/funnels";
+import { ALLOWED_ASSET_TYPES, MAX_ASSET_BYTES, storeFunnelAsset, storeExternalAsset } from "@/lib/funnels/assets";
+import { wireDeliveryIntoWorkflows } from "@/lib/funnels/delivery-wiring";
+import { kindForContentType } from "@/lib/funnels/delivery";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +25,58 @@ export async function POST(
 
   const funnel = await getFunnel(subAccountId, funnelId);
   if (!funnel) return NextResponse.json({ error: "Funnel not found" }, { status: 404 });
+
+  // A deliverable arrives one of two ways and is treated identically after
+  // this point: a file we store, or a link to media that already exists.
+  // Video and audio are referenced because uploads are capped at
+  // MAX_ASSET_BYTES (measured), which is right for a document and nowhere
+  // near a video. See lib/funnels/delivery.ts.
+  if ((request.headers.get("content-type") ?? "").includes("application/json")) {
+    let body: { kind?: string; url?: string; title?: string; ctaLabel?: string };
+    try {
+      body = (await request.json()) as typeof body;
+    } catch {
+      return NextResponse.json({ error: "Expected a JSON body" }, { status: 400 });
+    }
+    if (body.kind !== "video" && body.kind !== "audio") {
+      return NextResponse.json(
+        { error: "Only video and audio can be delivered by link. Upload a document instead." },
+        { status: 400 },
+      );
+    }
+    let registered: { assetId: string; url: string };
+    try {
+      registered = await storeExternalAsset({
+        subAccountId,
+        agencyId: funnel.agencyId,
+        funnelId,
+        createdByUid: access.uid,
+        kind: body.kind,
+        url: String(body.url ?? ""),
+        title: body.title ?? null,
+      });
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "That link could not be used" },
+        { status: 400 },
+      );
+    }
+    const wired = await wireDeliveryIntoWorkflows({
+      subAccountId,
+      funnelId,
+      funnel,
+      assetId: registered.assetId,
+      kind: body.kind,
+      filename: body.title?.slice(0, 200) || (body.kind === "video" ? "Video" : "Audio"),
+      ctaLabel: body.ctaLabel ?? null,
+    });
+    return NextResponse.json({
+      assetId: registered.assetId,
+      url: registered.url,
+      kind: body.kind,
+      wiredWorkflows: wired.wiredWorkflows,
+    });
+  }
 
   let form: FormData;
   try {
@@ -56,42 +107,16 @@ export async function POST(
     bytes,
   });
 
-  // PDF = the lead magnet: store the reference + wire email delivery.
+  // A document is the lead magnet: record it and wire the follow-up email.
   if (file.type === "application/pdf") {
-    const db = getAdminDb();
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
-    const absoluteUrl = `${appUrl}${stored.url}`;
-    await db.doc(`funnels/${funnelId}`).update({
-      leadMagnetAsset: { assetId: stored.assetId, filename: file.name || "download.pdf", url: stored.url },
+    await wireDeliveryIntoWorkflows({
+      subAccountId,
+      funnelId,
+      funnel,
+      assetId: stored.assetId,
+      kind: kindForContentType(file.type),
+      filename: file.name || "download.pdf",
     });
-
-    // Find the capture form this funnel converts through, then append the
-    // download link to every send_email node of workflows triggered by it.
-    const formIds = new Set<string>();
-    for (const s of funnel.sections as FunnelSection[]) {
-      const fid = (s.config as HeroConfig | OfferConfig).formId;
-      if (typeof fid === "string" && fid) formIds.add(fid);
-    }
-    if (formIds.size > 0 && appUrl) {
-      const wfs = await db.collection("workflows").where("subAccountId", "==", subAccountId).get();
-      for (const wf of wfs.docs) {
-        const data = wf.data() as { trigger?: { formId?: string }; nodes?: Record<string, { type?: string; config?: { body?: string } }> };
-        if (!data.trigger?.formId || !formIds.has(data.trigger.formId) || !data.nodes) continue;
-        let changed = false;
-        const nodes = { ...data.nodes };
-        for (const [nid, node] of Object.entries(nodes)) {
-          if (node?.type !== "send_email" || !node.config || typeof node.config.body !== "string") continue;
-          // Placement and de-duplication both live in withDeliveryLink, beside
-          // the publish check that verifies the result. The link lands above
-          // the unsubscribe footer, and a replacement upload leaves exactly one.
-          const nextBody = withDeliveryLink(node.config.body, absoluteUrl);
-          if (nextBody === node.config.body) continue;
-          nodes[nid] = { ...node, config: { ...node.config, body: nextBody } };
-          changed = true;
-        }
-        if (changed) await wf.ref.update({ nodes });
-      }
-    }
   }
 
   return NextResponse.json({ assetId: stored.assetId, url: stored.url, kind: ALLOWED_ASSET_TYPES[file.type] });

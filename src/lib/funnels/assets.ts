@@ -47,6 +47,19 @@ const CHUNK_BYTES = 700_000; // base64 of this stays under the 1MB doc limit
  */
 export const MAX_ASSET_BYTES = 5 * 1024 * 1024;
 
+/**
+ * Kinds an asset document can describe.
+ *
+ * "image" and "pdf" hold their bytes in the chunks subcollection. "video"
+ * and "audio" hold a URL instead: uploads are capped at MAX_ASSET_BYTES
+ * (measured, see above) which is fine for a PDF and nowhere near a video, so
+ * a media deliverable records where it already lives and is played on a
+ * branded page rather than being hosted here. Both are the same kind of
+ * thing to everything downstream, a funnelAssets id, which is what lets an
+ * automation keep working when storage or deployment changes.
+ */
+export type FunnelAssetKind = "image" | "pdf" | "video" | "audio";
+
 export const ALLOWED_ASSET_TYPES: Record<string, "image" | "pdf"> = {
   "image/jpeg": "image",
   "image/png": "image",
@@ -59,8 +72,12 @@ export interface FunnelAssetMeta {
   subAccountId: string;
   agencyId: string;
   funnelId: string;
-  kind: "image" | "pdf";
+  kind: FunnelAssetKind;
   contentType: string;
+  /** Set only for referenced media. Never shown to a recipient. */
+  externalUrl?: string | null;
+  /** What the operator called it, shown on the branded player. */
+  title?: string | null;
   filename: string;
   sizeBytes: number;
   chunkCount: number;
@@ -136,4 +153,54 @@ export async function deleteFunnelAsset(subAccountId: string, assetId: string): 
   batch.delete(ref);
   await batch.commit();
   return true;
+}
+
+
+/**
+ * Records a video or audio deliverable that already lives somewhere else.
+ *
+ * No bytes are copied. The point is to give a referenced deliverable the
+ * SAME identity an uploaded one has, an unguessable funnelAssets id, so the
+ * email, the player and every integrity check treat the two alike and the
+ * provider's URL stays server-side.
+ */
+export async function storeExternalAsset(opts: {
+  subAccountId: string;
+  agencyId: string;
+  funnelId: string;
+  createdByUid: string;
+  kind: "video" | "audio";
+  url: string;
+  title?: string | null;
+}): Promise<{ assetId: string; url: string }> {
+  const url = opts.url.trim();
+  // Only https, and nothing that could become script or a local probe. This
+  // value is rendered into a player, so it is an injection surface.
+  if (!/^https:\/\/[^\s"'<>]+$/i.test(url)) {
+    throw new Error("A video or audio link must be a full https:// URL");
+  }
+  const db = getAdminDb();
+  const ref = db.collection("funnelAssets").doc();
+  await ref.set({
+    id: ref.id,
+    subAccountId: opts.subAccountId,
+    agencyId: opts.agencyId,
+    funnelId: opts.funnelId,
+    kind: opts.kind,
+    contentType: opts.kind === "video" ? "video/*" : "audio/*",
+    filename: (opts.title ?? "").slice(0, 200) || (opts.kind === "video" ? "Video" : "Audio"),
+    title: (opts.title ?? "").slice(0, 200) || null,
+    externalUrl: url,
+    sizeBytes: 0,
+    chunkCount: 0,
+    createdByUid: opts.createdByUid,
+    createdAt: new Date(),
+  });
+  return { assetId: ref.id, url: `/d/${ref.id}` };
+}
+
+/** Metadata only, with no chunk reads. Used by the branded player. */
+export async function readFunnelAssetMeta(assetId: string): Promise<FunnelAssetMeta | null> {
+  const snap = await getAdminDb().doc(`funnelAssets/${assetId}`).get();
+  return snap.exists ? (snap.data() as FunnelAssetMeta) : null;
 }

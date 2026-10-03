@@ -255,10 +255,14 @@ export function deliveryRejection(gaps: string[]): string {
  * is why it lives here: the pattern that removes a previous link and the
  * check that looks for the current one cannot drift apart in one file.
  */
-const DELIVERY_LINE_RE =
-  /\n*(?:\[button(?: secondary)?: [^\]]*\]\(\S*\/api\/funnel-asset\/\S+?\)|Download your copy here: \S*\/api\/funnel-asset\/\S+)/g;
-const DELIVERY_LINE =
-  /(?:\[button(?: secondary)?: [^\]]*\]\(\S*\/api\/funnel-asset\/\S+?\)|Download your copy here: \S*\/api\/funnel-asset\/\S+)/;
+const DELIVERY_URL = String.raw`\S*\/(?:api\/funnel-asset|d)\/[A-Za-z0-9_-]+`;
+const DELIVERY_LINE_RE = new RegExp(
+  `\n*(?:\\[button(?: secondary)?: [^\\]]*\\]\\(${DELIVERY_URL}\\)|Download your copy here: ${DELIVERY_URL})`,
+  "g",
+);
+const DELIVERY_LINE = new RegExp(
+  `(?:\\[button(?: secondary)?: [^\\]]*\\]\\(${DELIVERY_URL}\\)|Download your copy here: ${DELIVERY_URL})`,
+);
 const UNSUBSCRIBE_TOKEN = "{{unsubscribeLink}}";
 
 /**
@@ -359,13 +363,13 @@ export function claimsAttachment(body: string): boolean {
   return /\battach(ed|ment|ments|ing)\b/i.test(body);
 }
 
-export function withDeliveryLink(rawBody: string, absoluteUrl: string): string {
+export function withDeliveryLink(rawBody: string, absoluteUrl: string, label?: string): string {
   // The asset arrives as a link, so the copy may not claim an attachment.
   const body = withoutAttachmentClaims(rawBody).text;
   // A button, not a pasted URL: the renderer already draws these, and
   // renderBodyText falls back to "Label: https://…" for plain-text readers,
   // so nobody loses the link.
-  const line = `[button: Download your copy](${absoluteUrl})`;
+  const line = `[button: ${(label ?? "Download your copy").replace(/[\[\]()]/g, "").trim() || "Download your copy"}](${absoluteUrl})`;
   const footerAt = body.indexOf(UNSUBSCRIBE_TOKEN);
   const found = DELIVERY_LINE.exec(body);
   const count = (body.match(DELIVERY_LINE_RE) ?? []).length;
@@ -396,9 +400,9 @@ export function withDeliveryLink(rawBody: string, absoluteUrl: string): string {
  * body that already carries a button is returned untouched.
  */
 export function withDeliveryButton(body: string, label = "Download your copy"): string {
-  if (/\[button(?: secondary)?:[^\]]*\]\(\S*\/api\/funnel-asset\//.test(body)) return body;
+  if (new RegExp(`\\[button(?: secondary)?:[^\\]]*\\]\\(${DELIVERY_URL}\\)`).test(body)) return body;
   return body.replace(
-    /Download your copy here:\s*(\S*\/api\/funnel-asset\/[A-Za-z0-9_-]+)/g,
+    new RegExp(`Download your copy here:\\s*(${DELIVERY_URL})`, "g"),
     (_m, url: string) => `[button: ${label}](${url})`,
   );
 }
