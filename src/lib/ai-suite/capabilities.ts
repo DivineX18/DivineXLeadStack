@@ -4140,7 +4140,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         bridge_next_href: {
           type: "string",
           description:
-            "MULTISTEP FUNNELS, FINAL STEP: where this funnel's thank-you page sends people when the next step is NOT another funnel, typically a booking page ('/b/<subAccountId>/<slug>') or the customer's own calendar URL. This is how a journey ENDS in 'book a call' without building a whole extra funnel whose only job is to carry one button: the assessment's own thank-you page holds the CTA. Use bridge_next_funnel_id instead when the next step really is another page you built. Only one is needed; the funnel id wins if both are set. Pair with bridge_next_cta for the button label.",
+            "MULTISTEP FUNNELS, FINAL STEP: where this funnel's thank-you page sends people when the next step is NOT another funnel. For a booking page in this workspace pass JUST ITS SLUG (e.g. 'root-cause-consult') and the full link is built for you: do NOT try to construct a /b/ path, you are not told this workspace's id and guessing it fails. Otherwise pass the customer's own full https:// calendar URL. This is how a journey ENDS in 'book a call' without building a whole extra funnel whose only job is to carry one button: the assessment's own thank-you page holds the CTA. Use bridge_next_funnel_id instead when the next step really is another page you built. Only one is needed; the funnel id wins if both are set. Pair with bridge_next_cta for the button label.",
         },
         bridge_next_cta: {
           type: "string",
@@ -5168,14 +5168,40 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       let bridgeHref: string | null = null;
       if (typeof args.bridgeNextHref === "string" && args.bridgeNextHref.trim()) {
         const raw = args.bridgeNextHref.trim();
-        if (/^\/[A-Za-z0-9/_-]*$/.test(raw)) {
-          bridgeHref = raw;
-        } else if (/^https:\/\/[^\s"'<>]+$/i.test(raw)) {
-          bridgeHref = raw;
-        } else {
-          throw new CapabilityUserError(
-            `bridge_next_href "${raw.slice(0, 60)}" isn't usable. Give an app path like /b/<subAccountId>/<slug> or a full https:// URL. Nothing was created.`,
-          );
+
+        // A booking link contains this workspace's id, which the model is
+        // never told. Asking it for one produced exactly what asking for an
+        // unseeable funnel id produced: a guess, "{subAccountId}", a refusal,
+        // and finally Zeno asking the customer for a URL the server already
+        // knows. So the slug is the only part it has to get right, and we
+        // build the path. Accepts a bare slug or any /b/<whatever>/<slug>.
+        const asBooking = /^\/b\/[^/]+\/([A-Za-z0-9_-]+)\/?$/.exec(raw)?.[1]
+          ?? (/^[A-Za-z0-9_-]+$/.test(raw) ? raw : null);
+        if (asBooking) {
+          const { listBookingPages } = await import("@/lib/server/booking-pages-service");
+          const pages = await listBookingPages(subAccountId);
+          const hit = pages.find((p) => p.slug === asBooking);
+          if (hit) {
+            bridgeHref = `/b/${subAccountId}/${hit.slug}`;
+          } else if (!raw.startsWith("/")) {
+            throw new CapabilityUserError(
+              `There is no booking page with the slug "${asBooking}" in this workspace` +
+                (pages.length ? `. The ones that exist are: ${pages.map((p) => p.slug).join(", ")}.` : " yet, so create one first with create_booking_page.") +
+                " Nothing was created.",
+            );
+          }
+        }
+
+        if (!bridgeHref) {
+          if (/^\/[A-Za-z0-9/_-]*$/.test(raw)) {
+            bridgeHref = raw;
+          } else if (/^https:\/\/[^\s"'<>]+$/i.test(raw)) {
+            bridgeHref = raw;
+          } else {
+            throw new CapabilityUserError(
+              `bridge_next_href "${raw.slice(0, 60)}" isn't usable. For a booking page give just its slug and the link is built for you; otherwise give a full https:// URL. Nothing was created.`,
+            );
+          }
         }
       }
 

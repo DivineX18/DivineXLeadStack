@@ -168,6 +168,18 @@ console.log("\n8. A diagnostic is asked one question at a time");
   check("and the booking page is offered as a slug, which is what the CTA takes",
     /booking page, slug "\$\{r\.resultRef!\.id\}/.test(rbCard) &&
     /pass its slug as cta_booking_page_slug instead of creating another one/.test(rbCard));
+  // The model is never told this workspace's id, so a /b/ path is a fact it
+  // cannot supply. Asking for one made it guess "{subAccountId}", get
+  // refused, and finally ask the CUSTOMER for the booking URL.
+  check("a booking destination is resolved from the slug, not templated by the model",
+    /const asBooking = \/\^\\\/b/.test(cap) && /bridgeHref = `\/b\/\$\{subAccountId\}\/\$\{hit\.slug\}`/.test(cap));
+  check("a bare slug is accepted as the booking destination",
+    /\(\/\^\[A-Za-z0-9_-\]\+\$\/\.test\(raw\) \? raw : null\)/.test(cap));
+  check("an unknown slug is refused with the real ones named",
+    /There is no booking page with the slug/.test(cap) && /The ones that exist are:/.test(cap));
+  check("the model is no longer shown a /b/ template it cannot fill",
+    !/'\/b\/<subAccountId>\/<slug>'/.test(cap) &&
+    /do NOT try to construct a \/b\/ path, you are not told this workspace's id/.test(cap));
   check("the model is told to create the booking page FIRST",
     /create the booking page FIRST with create_booking_page, then pass its slug as cta_booking_page_slug/.test(cap));
   check("and told what going the other way costs",
