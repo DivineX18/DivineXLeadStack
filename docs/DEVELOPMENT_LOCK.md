@@ -1116,6 +1116,98 @@ verify-workspace-entitlement-evaluator, verify-plan-seats.
 Referral economics unchanged: 20% x maximum 12 successful eligible payments,
 30-day hold, monthly payouts.
 
+## CURRENT ASCEND capacity economics — CLOSED 2026-10-03
+
+Authoritative. Supersedes the capacity economics report delivered in
+session, which contained two errors and one wrong premise, all corrected
+below. No code was changed to close this.
+
+### Read this before touching ASCEND economics again
+
+**CURRENT ASCEND IS `growth_system` AT $127/month** ($197 standard/reference
+where configured). It is the only product that grants `growth_operations`.
+
+**There is no ASCEND Team and no ASCEND Agency.** $297 / $497 / $997 are
+tiers of the SEPARATE **Zeno Agency** product line
+(`ascend_agency_starter` / `ascend_agency` / `ascend_agency_pro`), and $77 is
+**Zeno Pro** (`ascend_pro`), which grants no Growth Operations. Any
+calculation treating those prices as ASCEND tiers is hypothetical, not a
+production baseline. **Do not infer an ASCEND product from a Zeno Agency
+price.** That inference is exactly what produced the earlier false "pricing
+drift" finding. Future ASCEND tiers are a roadmap decision triggered by
+customer demand, not an outstanding correction.
+
+### FACT, verified by running the implementation
+
+An ASCEND-provisioned Flow workspace resolves to bounded limits: **1
+workspace, 5 websites, 25,000 emails/month, 50 AI generations, 15 Growth
+Scans, 1 member, 200 voice minutes**, and a **$15/month internal AI spend
+ceiling** enforced through `aiSpendAllowed` before every model call. The
+$15 is an INTERNAL cost guardrail. It is not a credit, balance or allowance
+and must never appear in customer-facing copy.
+
+**NO_LIMITS is not an ASCEND defect.** `resolvePlanLimits` returns
+`ASCEND_SOLO_WORKSPACE_LIMITS` for a workspace with
+`ascendOperations.provisionedByAscend === true`, via a branch ABOVE the
+grandfather clause. The earlier report read the default and missed the
+branch.
+
+**The one remaining unlimited case is intentional.** A grant ATTACHED to a
+workspace the customer already owned (`provisionedByAscend: false`) stays
+unlimited, because that workspace belongs to a paying Flow customer who must
+not be downgraded by also buying ASCEND. `verify-ascend-solo-limits.mts`
+asserts all three cases and is mutation-tested. Do not "fix" this.
+
+**Identity is never resolved from price.** `verify-price-collision.mts` (29
+checks) proves no routing, webhook or entitlement branch reads an amount,
+and that `growth_system` grants `growth_operations` from
+`metadata.product`. Zeno Pro and ASCEND may share a `professional` limits
+row and still cannot be confused: only `growth_system` grants Operations.
+
+### The shared-SMS field is NOT stale, and removing it would invert it
+
+`ASCEND_SOLO_WORKSPACE_LIMITS.maxSharedSmsPerMonth = 500` looks like a
+leftover contradicting BYO Twilio. It is not. Traced and then RUN:
+
+- `checkPlanLimit` returns `allowed` with an UNLIMITED ceiling when the
+  field is `undefined` or `null`. **Deleting the field would grant unlimited
+  DivineX-paid SMS**, the exact opposite of the intent.
+- The path is real and reachable: no sub-account `twilioConfig` →
+  `agencyAllowsSharedSms` (defaults TRUE) → `smsIsConfigured()` (deployment
+  `TWILIO_*`) → the send runs on DivineX's Twilio, is checked against this
+  ceiling and recorded (`twilio.ts`).
+- `0` is the supported way to say "not included" and reads "Text messages
+  aren't included in your plan."
+
+So the 500 is the load-bearing cost bound on a DivineX-paid path, not dead
+configuration. Making ASCEND strictly BYO is a **customer-visible change**
+(a workspace sending shared SMS today would stop at zero), so it was NOT
+made. See the open owner decision below.
+
+### MODELLED, not measured
+
+Contribution margin for `growth_system` at $127 is healthy at realistic
+usage while paying the 20% referral commission. Those figures are MODELLED:
+the Neon endpoint is disabled, so `ai_usage_log` could not be read and AI
+cost per unit is derived from code (call counts and `maxTokens`), not
+measured. This is contribution margin, not company profit. No Team/Agency
+economics are certified, because those products do not exist.
+
+### Referral, unchanged
+
+20% of eligible collected subscription revenue excluding tax, maximum 12
+successful eligible payments per referred customer, 30-day hold, monthly
+payout batches. The capacity analysis gave no reason to change it.
+
+### Open owner decision
+
+Whether ASCEND should be strictly BYO Twilio with `maxSharedSmsPerMonth: 0`,
+accepting that any workspace currently sending on the shared sender stops
+immediately and reads "Text messages aren't included in your plan", or keep
+the bounded 500. Not decidable from code. Production `TWILIO_*` could not be
+confirmed from this environment, so whether the path is live on the current
+deployment is unverified.
+
 ## Reopening rules
 
 Active Ascend AND Flow development is locked. Development reopens only for:
