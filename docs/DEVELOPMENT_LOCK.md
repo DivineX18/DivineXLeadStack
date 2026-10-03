@@ -873,6 +873,47 @@ a booking with one contact, one submission and every answer retained.
 `verify-assessment-journey` 71 checks with ten mutations caught;
 `verify-assessment-visitor` 10 checks green on staging and production.
 
+## Reopening 8: a hosting hostname in a customer's inbox (2026-10-03)
+
+Opened under rule 2. A lead-magnet email reached a real inbox reading
+"Download your copy here:
+https://flow-growth-scan-staging.onrender.com/api/funnel-asset/...".
+Two independent faults.
+
+**The host was where the app runs.** `NEXT_PUBLIC_APP_URL` is a deployment
+address, a `*.onrender.com` name on Render; the brand's domain lives in
+`CUSTOM_BRAND.primaryDomain`. Internals may use the former, anything a lead
+reads must carry the latter, because a hosting hostname tells people where
+their file really lives and an unfamiliar domain in a mail is what
+recipients report as phishing. `publicLinkBase()`
+(`src/lib/email/public-link.ts`) returns a configured real domain as-is,
+including a buyer's own, and falls back to the brand domain only when what
+is configured is a hosting address.
+
+**The URL was frozen.** It was written into the stored email body at PDF
+UPLOAD time, so the body kept whichever host uploaded it and changing
+configuration later fixed nothing. The unsubscribe link never had this
+problem because it is built at send time, so the download host is resolved
+at send time too. No re-upload and no migration: of the 21 delivery emails
+in this deployment 14 carried the staging hostname, and all 14 are corrected
+on their way out.
+
+**A download is an action**, so it is now the button the renderer already
+draws rather than a pasted URL. The same send-time pass upgrades bodies
+written before this, so all 21 become buttons, and `renderBodyText` still
+gives plain-text readers the URL. The publish gate matches the asset's
+relative path, which the button contains, so it is unaffected.
+
+Verified against a real stored body: the staging host is gone, the anchor
+renders, the plain-text fallback carries the URL. Coverage:
+`scripts/verify-email-link-host.mts`, 31 checks, seven mutations tested. One
+survived, showing an assertion that could not fail; it was replaced with an
+idempotence check that can.
+
+Not done, and deliberately: attaching the PDF to the mail instead of linking
+it. The codebase currently rewrites attachment claims into download links on
+purpose, so that is a separate change, not a variation of this one.
+
 ## Reopening rules
 
 Active Ascend AND Flow development is locked. Development reopens only for:
