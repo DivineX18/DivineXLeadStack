@@ -985,6 +985,76 @@ exercised end to end in production because doing so would require creating
 real charges and real payouts. The economics are deterministic and covered
 by the tests above.
 
+## Asset delivery + branded email URLs, closed 2026-10-03
+
+Production `300d956`. Closes both the hosting-hostname defect and
+fulfilment for documents, video and audio, as one system.
+
+**Root cause of the URL defect, restated because it was two faults.** The
+host was the deployment's address (`*.onrender.com` on Render) rather than
+the brand's domain, AND the whole URL was frozen into the stored email body
+at upload time, so changing configuration later fixed nothing. The
+unsubscribe link never had this problem because it is built at send time;
+downloads now work the same way. Of 21 delivery emails in this deployment,
+14 carried the staging hostname and all 14 are corrected on their way out,
+with no re-upload and no workflow rebuilt.
+
+**One identity per deliverable.** A `funnelAssets` document is what a
+deliverable IS; where its bytes sit is a detail. An uploaded document keeps
+its Firestore chunks, a video or audio file records where it already lives
+(`externalUrl`), and everything downstream, the email, the player, the
+publish guard, sees the same unguessable id. That is what lets an automation
+survive a deployment move or a swapped file: it refers to the identity, and
+the host is resolved when the mail is sent.
+
+**Why media is referenced, not uploaded.** `MAX_ASSET_BYTES` is 5MB and it
+is MEASURED, not chosen: the platform in front of this app rejects bodies
+above roughly 8.4MB before the route runs. Comfortable for a document,
+nowhere near a video. Rather than becoming a storage product, media records
+its source and is PLAYED on a branded page at `/d/[assetId]`, so the
+recipient sees the brand's domain and never the provider's. Supported
+uploads remain JPEG, PNG, WebP and PDF.
+
+**Delivery by kind**, chosen automatically and overridable by the operator:
+PDF and other files "Download your copy" / "Access your file" to the
+download route; video "Watch video" and audio "Listen now" to the branded
+player. HTML gets a styled button, plain text gets
+`Watch video: https://<brand>/d/...`, and no markdown leaks either way.
+
+**Three things the recipient walk found that unit tests would not.** `/d`
+was added to `PUBLIC_PATHS` as `"/d/"`, and the matcher tests `=== path` or
+`startsWith(path + "/")`, so it looked for `"/d//"` and every recipient hit
+the LOGIN PAGE. A video requested from the download route is redirected to
+the player rather than served, because serving it would hand over the
+provider's address. And the player refuses anything that is not media,
+including an asset carrying a URL whose kind is not video or audio, so it
+can never become a way to read a document.
+
+**Security model, unchanged and deliberately.** The unguessable Firestore
+auto-id is the capability, which is the standard lead-magnet model and was
+already how downloads worked. No login, on purpose: a lead who just gave
+their address must not meet an authentication wall on the way to the
+resource they were promised. The player adds no new exposure because it
+serves only media and renders nothing for any other kind.
+
+**Coverage:** `scripts/verify-asset-delivery.mts`, 44 recipient-journey
+checks across document, video and audio, driven in a browser with no
+session, green locally, on staging and against production. Two mutations
+survived at first and both were real gaps in the tests rather than the code:
+routing media to the download route still "worked" via the redirect, and the
+player's kind check was not load-bearing because a document happens to carry
+no URL. Both are now proven. Regressions green: email-link-host,
+assessment-journey, assessment-visitor, funnel-quality, funnel-e2e,
+funnel-runtime, funnel-matrix, funnel-assets, funnel-frameworks,
+claim-badge-integrity, capability-idempotency, workflow-failure, em-dash.
+Lint at its 27-error baseline.
+
+**Remaining limitations, stated plainly.** Video and audio are referenced,
+so a dead or private source URL is not something this can detect before a
+recipient clicks. Documents remain capped at 5MB. There is no asset library
+UI: a deliverable is attached per funnel, which is the existing model and
+was deliberately not expanded into a DAM.
+
 ## Reopening rules
 
 Active Ascend AND Flow development is locked. Development reopens only for:
