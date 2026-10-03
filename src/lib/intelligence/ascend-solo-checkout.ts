@@ -112,7 +112,22 @@ export const ASCEND_SOLO_WORKSPACE_LIMITS = {
   // Ascend Solo's guardrails, declared beside the card that sells it.
   maxVoiceMinutesPerMonth: 200,
   maxAiSpendPerMonth: 15,
-  maxSharedSmsPerMonth: 500,
+  /**
+   * ZERO, AND IT HAS TO BE THE NUMBER RATHER THAN THE FIELD'S ABSENCE.
+   *
+   * Ascend SMS is strictly bring-your-own Twilio: the customer connects
+   * their account and pays their own carrier. A workspace with no
+   * `twilioConfig` otherwise falls back to the deployment's shared Twilio
+   * credentials, which is DivineX's bill, and this ceiling is the only
+   * thing standing in that path.
+   *
+   * Deleting the field or setting it null does NOT express "none". An
+   * absent or null ceiling reads as UNLIMITED in checkPlanLimit, so the
+   * tidy-looking change is the dangerous one: it would hand out unlimited
+   * DivineX-paid SMS while appearing to remove an allowance. Zero is the
+   * supported way to say the shared sender is not available here.
+   */
+  maxSharedSmsPerMonth: 0,
 } satisfies PlanLimits;
 
 /**

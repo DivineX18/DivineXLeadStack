@@ -255,6 +255,13 @@ export function limitMessage(kind: LimitKind, limit: number, used: number): stri
   // A ceiling of zero is not "you ran out", it is "your plan does not include
   // this". Falling through would produce "you've used all 0 Growth Scans
   // (0 of 0)", which reads as a bug and tells the customer nothing.
+  // Shared SMS at zero is not an upsell. Texting IS supported, on the
+  // customer's own Twilio account, so "upgrade your plan" would be wrong
+  // twice: no plan sells the shared sender, and the thing they need is a
+  // connection they can make themselves in Settings.
+  if (kind === "sharedSms" && limit === 0) {
+    return "Connect your Twilio account to send text messages (Settings → SMS).";
+  }
   if (limit === 0) {
     return `${many[0].toUpperCase()}${many.slice(1)} aren't included in your plan. Upgrade your plan to use them.`;
   }

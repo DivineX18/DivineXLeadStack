@@ -71,7 +71,12 @@ console.log("\n══ shared SMS only ══");
 {
   check("shared sends are capped", !allows({ maxSharedSmsPerMonth: 500 }, "maxSharedSmsPerMonth", 500));
   check("under the cap is allowed", allows({ maxSharedSmsPerMonth: 500 }, "maxSharedSmsPerMonth", 499));
-  check("Ascend Solo carries the approved 500", ASCEND_SOLO_WORKSPACE_LIMITS.maxSharedSmsPerMonth === 500);
+  // Ascend is strictly bring-your-own Twilio: it sells no shared capacity,
+  // so its ceiling is zero. Zero rather than absent, because an absent or
+  // null ceiling reads as unlimited. See verify-ascend-byo-twilio.mts.
+  check("Ascend sells no shared SMS", ASCEND_SOLO_WORKSPACE_LIMITS.maxSharedSmsPerMonth === 0);
+  check("so Ascend cannot spend the shared sender",
+    !allows(ASCEND_SOLO_WORKSPACE_LIMITS, "maxSharedSmsPerMonth", 0));
 }
 
 console.log("\n══ what the customer is told ══");
@@ -172,10 +177,16 @@ console.log("\n══ zero is a ceiling, not an absence ══");
   const zmsg = limitMessage("growthScans", 0, 0);
   check("a zero ceiling says the feature is not included",
     zmsg.includes("aren't included") && !zmsg.includes("all 0") && !zmsg.includes("0 of 0"), zmsg);
-  for (const kind of ["voiceMinutes", "sharedSms", "emails"] as LimitKind[]) {
+  for (const kind of ["voiceMinutes", "emails"] as LimitKind[]) {
     const m = limitMessage(kind, 0, 0);
     check(`a zero ${kind} ceiling reads as not included`, m.includes("aren't included"), m);
   }
+  // sharedSms is deliberately the exception. Texting IS supported, on the
+  // customer's own Twilio, so "not included, upgrade" would be wrong twice:
+  // no plan sells the shared sender, and the fix is theirs to make.
+  const smsMsg = limitMessage("sharedSms" as LimitKind, 0, 0);
+  check("a zero sharedSms ceiling points at connecting Twilio, not an upgrade",
+    /connect your twilio/i.test(smsMsg) && !/aren't included/i.test(smsMsg) && !/upgrade/i.test(smsMsg), smsMsg);
 }
 
 console.log(`\n${failures === 0 ? "COST GUARDRAILS: ALL CHECKS PASSED" : `COST GUARDRAILS: ${failures} CHECK(S) FAILED`}`);

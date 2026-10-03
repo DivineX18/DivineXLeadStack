@@ -262,10 +262,17 @@ export async function sendSmsForSubAccount({
       amount: 1,
     });
     if (!allowance.allowed) {
+      // Two different situations wear the same error. A workspace that ran
+      // out mid-month should be told it resets; a workspace whose plan has
+      // NO shared allowance at all (Ascend, which is strictly bring-your-own
+      // Twilio) never had one to exhaust, and telling it to wait for the 1st
+      // would be a lie that costs the customer a month.
       throw new SharedSmsAllowanceExhaustedError(
-        "This workspace has used its included text messages for the month. " +
-          "They reset on the 1st. Connecting your own Twilio number sends on your " +
-          "account instead, with no platform limit.",
+        allowance.limit === 0
+          ? "Connect your Twilio account to send text messages (Settings → SMS)."
+          : "This workspace has used its included text messages for the month. " +
+            "They reset on the 1st. Connecting your own Twilio number sends on your " +
+            "account instead, with no platform limit.",
       );
     }
   }
