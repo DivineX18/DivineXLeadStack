@@ -255,8 +255,10 @@ export function deliveryRejection(gaps: string[]): string {
  * is why it lives here: the pattern that removes a previous link and the
  * check that looks for the current one cannot drift apart in one file.
  */
-const DELIVERY_LINE_RE = /\n*Download your copy here: \S*\/api\/funnel-asset\/\S+/g;
-const DELIVERY_LINE = /Download your copy here: \S*\/api\/funnel-asset\/\S+/;
+const DELIVERY_LINE_RE =
+  /\n*(?:\[button(?: secondary)?: [^\]]*\]\(\S*\/api\/funnel-asset\/\S+?\)|Download your copy here: \S*\/api\/funnel-asset\/\S+)/g;
+const DELIVERY_LINE =
+  /(?:\[button(?: secondary)?: [^\]]*\]\(\S*\/api\/funnel-asset\/\S+?\)|Download your copy here: \S*\/api\/funnel-asset\/\S+)/;
 const UNSUBSCRIBE_TOKEN = "{{unsubscribeLink}}";
 
 /**
@@ -360,7 +362,10 @@ export function claimsAttachment(body: string): boolean {
 export function withDeliveryLink(rawBody: string, absoluteUrl: string): string {
   // The asset arrives as a link, so the copy may not claim an attachment.
   const body = withoutAttachmentClaims(rawBody).text;
-  const line = `Download your copy here: ${absoluteUrl}`;
+  // A button, not a pasted URL: the renderer already draws these, and
+  // renderBodyText falls back to "Label: https://…" for plain-text readers,
+  // so nobody loses the link.
+  const line = `[button: Download your copy](${absoluteUrl})`;
   const footerAt = body.indexOf(UNSUBSCRIBE_TOKEN);
   const found = DELIVERY_LINE.exec(body);
   const count = (body.match(DELIVERY_LINE_RE) ?? []).length;
@@ -379,4 +384,21 @@ export function withDeliveryLink(rawBody: string, absoluteUrl: string): string {
   const before = cleaned.slice(0, at).trimEnd();
   const footer = cleaned.slice(at);
   return `${before ? `${before}\n\n` : ""}${line}\n\n${footer}`;
+}
+
+/**
+ * A pasted delivery URL, upgraded to the button it should always have been.
+ *
+ * Applied at SEND time, so the emails already written with a bare
+ * "Download your copy here: https://…" line become buttons without the
+ * operator re-uploading anything. Deliberately conservative: it only ever
+ * touches a line that is exactly the delivery line this file writes, and a
+ * body that already carries a button is returned untouched.
+ */
+export function withDeliveryButton(body: string, label = "Download your copy"): string {
+  if (/\[button(?: secondary)?:[^\]]*\]\(\S*\/api\/funnel-asset\//.test(body)) return body;
+  return body.replace(
+    /Download your copy here:\s*(\S*\/api\/funnel-asset\/[A-Za-z0-9_-]+)/g,
+    (_m, url: string) => `[button: ${label}](${url})`,
+  );
 }

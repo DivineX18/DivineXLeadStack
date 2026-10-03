@@ -19,6 +19,8 @@ import {
   type MergeTagSubject,
 } from "@/lib/automations/merge-tags";
 import { buildUnsubscribeUrl } from "@/lib/automations/unsubscribe-token";
+import { withPublicAssetHost } from "@/lib/email/public-link";
+import { withDeliveryButton } from "@/lib/funnels/cta-integrity";
 import { publishCallback, qstashIsConfigured } from "@/lib/automations/qstash";
 import { evalConditionGroup } from "./conditions";
 import type { Contact } from "@/types/contacts";
@@ -155,16 +157,21 @@ const execSendEmail: NodeExecutor = async (ctx) => {
 
   const UNSUB_TOKEN = "@@UNSUBSCRIBE_LINK@@";
   const unsubscribeLink = buildUnsubscribeUrl(contact.id);
+  // The download host is resolved HERE, not where the PDF was uploaded, so a
+  // body carrying an old hosting URL is corrected on its way out.
+  // Host first, then shape: an email written before either fix goes out with
+  // the brand's domain and a real button, with nothing re-uploaded.
+  const body = withDeliveryButton(withPublicAssetHost(cfg.body ?? ""));
   const subject = resolveMergeTags(
     cfg.subject ?? "",
     mergeSubject(ctx, unsubscribeLink)
   );
   // A plain-text reader must get "Label: https://…", not the button markup.
   const text = renderBodyText(
-    resolveMergeTags(cfg.body ?? "", mergeSubject(ctx, unsubscribeLink))
+    resolveMergeTags(body, mergeSubject(ctx, unsubscribeLink))
   );
   const resolvedForHtml = resolveMergeTags(
-    cfg.body ?? "",
+    body,
     mergeSubject(ctx, UNSUB_TOKEN)
   );
   const html = wrapEmailHtml(
