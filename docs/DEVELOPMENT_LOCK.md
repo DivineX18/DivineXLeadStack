@@ -805,6 +805,59 @@ plan `createdAt` timestamps. Plan documents record no `createdByUid` and
 `billingEvents` logs no `plan.created`, so there is no audit trail
 distinguishing a founder action from a script.
 
+## Reopening 7: the connected assessment journey (2026-10-03)
+
+Opened under rule 2, a customer-reported bug. A customer asked for an
+opt-in, then a short assessment, then a thank-you that books a call. They
+got disconnected pages, a duplicate, and an assessment classified as a
+downloadable lead magnet. Three defects, three different causes.
+
+**Journeys came out unlinked, because of a boundary we built on purpose.**
+`create_funnel`'s receipt ends with the new Funnel ID and the instruction to
+pass it as `bridge_next_funnel_id` when building the upstream step. The
+confirm route withholds that receipt from the client (U1) because it carries
+raw ids and internal parameter names that must never reach a customer's
+screen, and the chat client builds the model's history out of what it
+received. The model was being told to carry an id it was structurally
+prevented from seeing, so it invented one. U1 was not weakened. The ids now
+reach the model server-side, by reading back what the workspace actually
+built (`src/lib/ai-suite/recent-builds.ts`). The same card is why the model
+stopped rebuilding pages that already exist.
+
+**A wrong bridge id used to build everything, throw, and then report that
+nothing happened** over a page that very much existed, which is how one bad
+argument became a duplicate. Validation now runs before the write.
+
+**Assessments were generated as `lead_magnet`,** which cannot publish
+without an attached file. The tempting fix was to relax the file
+requirement; that requirement is correct and `cta-integrity.ts` is
+untouched. The classification was wrong, so a page offering a diagnostic and
+promising no file is refused at validate with a note naming the right genre.
+
+**Presentation.** The assessment is shown one question at a time through the
+multi-step renderer that already existed, over the ordinary form schema and
+submission path. No scoring, no branching, no personality result, no
+page-per-question. Ordinary stacked forms are unchanged.
+
+**Journey shape.** `bridge.nextHref` lets the assessment's own completion
+page carry the Book a Call button, so the journey is three steps, not four.
+No funnel exists solely to hold a link.
+
+Coverage: `scripts/verify-assessment-journey.mts` (67 checks, six mutations
+confirmed caught) and `scripts/verify-assessment-visitor.mts` (10 checks,
+which publishes a real assessment and walks it in a browser with no
+session).
+
+**What could not be verified live.** The OpenRouter balance ran out during
+this work ($345 granted, $343.36 used). The model path therefore could not
+be exercised end to end on the final build, in staging or production. What
+WAS observed live before credits ran out: a five-screen stepped assessment
+with four real diagnostic questions, the model declining to rebuild an
+existing funnel, and exactly one booking page where the previous run made
+two. The customer-facing half is covered independently by the visitor suite,
+which needs no model. **Re-run both suites against production once credits
+are topped up before treating the model path as certified.**
+
 ## Reopening rules
 
 Active Ascend AND Flow development is locked. Development reopens only for:
