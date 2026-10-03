@@ -914,6 +914,77 @@ Not done, and deliberately: attaching the PDF to the mail instead of linking
 it. The codebase currently rewrites attachment claims into download links on
 purpose, so that is a separate change, not a variation of this one.
 
+## Referral economics, locked 2026-10-03
+
+**20% of the eligible amount collected, for at most 12 successful payments
+per referred customer, held 30 days, paid in monthly batches.** After the
+twelfth successful payment that customer's commission permanently ends.
+
+The program is in the **Ascend repo** (`DivineX-Business-Intelligence`,
+`artifacts/api-server/src/lib/partners/`), not this one. Flow's
+`/agency/affiliates` is a separate, manual program and was not touched.
+Commits `a0fb75b` and `808372a`.
+
+**What it was.** 25% on the first payment and every renewal for as long as
+the customer stayed subscribed, with the partner pages advertising exactly
+that. A commission with no end.
+
+**Where the rules live now.** `lib/partners/commission.ts`, as functions
+that touch nothing: no database, no Stripe, no clock they are not handed.
+Money rules are the ones most worth testing and the hardest to test through
+a webhook, so the arithmetic is separate from the recording of it.
+
+**Basis.** What was actually collected, less tax. Checkout credits use the
+pre-tax subtotal, renewals subtract the invoice's tax, and a discount or
+proration reduces the commission with the charge rather than paying on list
+price. Nothing collected earns nothing.
+
+**The window** counts the referred CUSTOMER's payments, not a
+subscription's, so cancelling and resubscribing continues it instead of
+starting a new one. Reversed rows are excluded, so a refunded payment
+returns its slot rather than consuming one it never earned.
+
+**Refunds and disputes** were not handled at all, so a refunded payment kept
+its commission. Both now reverse the accrual. Reversal resolves BOTH the
+invoice and the checkout session, because a first payment is recorded
+against the session and a renewal against the invoice; matching only the
+invoice would have missed every first-payment refund. A commission already
+paid out is deliberately not clawed back by a webhook, it is logged for a
+person to decide.
+
+**Two ways money could still have left wrongly,** found by reading the
+payout path after writing the reversal: `transferCommission` refused the
+legacy `voided` status but not the new `reversed` one, and the hold was
+enforced only inside the automatic sweep, at 7 days, so a manual or bulk
+payout released money that had not cleared. The hold now sits at the
+transfer, where every path passes it, at 30 days.
+
+**Idempotency** is unchanged and still the unique index on
+`stripe_payment_reference`; a reversal is idempotent by updating only a row
+that is still pending, so concurrent deliveries cannot both deduct.
+
+**No migration was required.** Every rule is enforced from columns that
+already exist: the hold is derived from the accrual date rather than stored,
+and `payable` is derived rather than written by a job, so money is never
+payable in fact but pending in the table because a cron did not run.
+
+**A stale rate cannot out-rank the policy.** `partnerRatePct()` caps a
+stored `commissionPct` at 20 while still honouring a deliberately lower
+arrangement, so rows left at the old 25 default pay the published terms.
+Historical commissions were NOT restated: money already accrued under the
+previous terms is what partners were told they were owed.
+
+**Coverage:** 51 targeted tests (`partnerCommission.test.ts`,
+`partnerReferralWiring.test.ts`), nine mutations confirmed caught, full
+Ascend suite 791 passing. One mutation caught a partner page still promising
+commission "for as long as they stay subscribed".
+
+**Production verification is limited, and deliberately.** The certified
+build is live and the full suite is green, but the accrual path was not
+exercised end to end in production because doing so would require creating
+real charges and real payouts. The economics are deterministic and covered
+by the tests above.
+
 ## Reopening rules
 
 Active Ascend AND Flow development is locked. Development reopens only for:
