@@ -1068,3 +1068,65 @@ export function groundSectionHeading(
 export function agendaHeadingFor(genre: string): string {
   return TEACHING_GENRES.has(genre) ? "Everything you'll learn" : "What happens, step by step";
 }
+
+/**
+ * A LEAD MAGNET IS A PAGE THAT HANDS OVER A FILE.
+ *
+ * `lead_magnet` carries a fulfilment contract the other genres do not: the
+ * publish guard refuses the page unless a real downloadable asset is
+ * attached, because a visitor who typed their email for a promised download
+ * and received nothing is the one failure that genre can produce. See
+ * funnels/cta-integrity.ts.
+ *
+ * Assessments, diagnostics, quizzes and questionnaires promise no file. They
+ * were nonetheless being generated as `lead_magnet` (two live examples:
+ * "Get Your Free Assessment" and "Book Your Free Assessment", both with no
+ * asset and no download anywhere in the copy), which left a correct guard
+ * blocking a page that was never going to deliver a file because it never
+ * said it would.
+ *
+ * The guard is right and is untouched. What is wrong is calling these pages
+ * lead magnets. Detected from what the copy actually PROMISES rather than
+ * from the absence of an asset, because at generation time no page has an
+ * asset yet and absence proves nothing.
+ */
+
+/** Words that only appear when a file is being handed over. */
+const PROMISES_DOWNLOAD =
+  /\b(download|downloadable|pdf|e-?book|ebook|checklist|cheat ?sheet|swipe file|template|worksheet|workbook|toolkit|guide|playbook|whitepaper|white paper|send (?:it|me) (?:the|your)|get (?:the|your) (?:copy|guide|pdf|checklist|template))\b/i;
+
+/** Words that name an interactive evaluation rather than a file. */
+const PROMISES_ASSESSMENT =
+  /\b(assessment|diagnostic|quiz|questionnaire|scorecard|self-?assessment|evaluation|audit|survey|find out (?:what|where|which|how)|see (?:what|where|which)'?s? (?:actually )?(?:driving|causing|blocking|holding))\b/i;
+
+export interface GenreMismatch {
+  /** The genre the caller declared. */
+  declared: string;
+  /** Short reason, written for the model that has to fix it. */
+  reason: string;
+}
+
+/**
+ * True when `lead_magnet` was declared over copy that promises an assessment
+ * and never promises a file.
+ *
+ * Both halves are required. A real magnet whose bonus is a scorecard still
+ * delivers a file and stays a magnet; only a page with an assessment promise
+ * and NO download promise anywhere is misclassified.
+ */
+export function detectLeadMagnetMismatch(input: {
+  genre: string;
+  /** Every piece of customer-visible copy that states the offer. */
+  copy: readonly (string | undefined | null)[];
+}): GenreMismatch | null {
+  if (input.genre !== "lead_magnet") return null;
+  const text = input.copy.filter(Boolean).join(" \n ");
+  if (!text.trim()) return null;
+  if (PROMISES_DOWNLOAD.test(text)) return null;
+  if (!PROMISES_ASSESSMENT.test(text)) return null;
+  return {
+    declared: "lead_magnet",
+    reason:
+      "this page offers an assessment, not a downloadable file, and the lead_magnet genre requires a real file to be attached before it can ever be published",
+  };
+}

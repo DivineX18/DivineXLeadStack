@@ -103,14 +103,17 @@ export default async function FunnelThanksPage({
         </a>
       )}
 
-      {!paid && bridge?.nextFunnelId && (
+      {!paid && (bridge?.nextFunnelId || bridge?.nextHref) && (
         <div className="mt-10 w-full max-w-md rounded-2xl border p-6" style={{ borderColor: `${accent}33`, background: `linear-gradient(180deg, ${accent}0f, transparent)` }}>
           <p className="text-sm font-bold uppercase tracking-widest" style={{ color: accent }}>
             {bridge.nextLabel || "One more thing"}
           </p>
           <p className="mt-2 text-lg font-bold tracking-tight">{bridge.nextHeadline || "A special offer for new subscribers"}</p>
           <a
-            href={`/lp/${bridge.nextFunnelId}`}
+            // An internal step wins when both are set: it is the more
+            // specific instruction. Otherwise this carries the journey's
+            // real destination, which is usually a booking page.
+            href={bridge.nextFunnelId ? `/lp/${bridge.nextFunnelId}` : (bridge.nextHref as string)}
             className="mt-4 inline-flex rounded-xl border px-6 py-3 text-sm font-bold transition-colors"
             style={{ borderColor: accent, color: accent }}
           >

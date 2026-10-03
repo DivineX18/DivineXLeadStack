@@ -959,6 +959,18 @@ export interface FunnelDoc {
     headline?: string;
     message?: string;
     nextFunnelId?: string | null;
+    /**
+     * A destination that is NOT another funnel: a booking page, a calendar,
+     * the customer's own URL.
+     *
+     * The completion step could previously only point at another funnel, so
+     * a journey ending in "book a call" had a whole extra funnel built for
+     * it whose only job was to carry one button. The assessment's own
+     * thank-you page is the right place for that CTA, and this is what lets
+     * it hold one. `nextFunnelId` still wins when both are set, since an
+     * internal step is the more specific instruction.
+     */
+    nextHref?: string | null;
     nextLabel?: string;
     nextHeadline?: string;
     nextCta?: string;

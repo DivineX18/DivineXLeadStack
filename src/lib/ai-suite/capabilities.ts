@@ -116,6 +116,7 @@ import {
   stripUngroundedClaims,
   groundSectionHeading,
   agendaHeadingFor,
+  detectLeadMagnetMismatch,
   unsupportedZeroPriceClaims,
   type CopyGrounding,
 } from "@/lib/funnels/claim-integrity";
@@ -139,6 +140,7 @@ import {
 } from "@/lib/funnels/design-strategy";
 import { planPageVisuals } from "@/lib/funnels/image-director";
 import { createFormServerSide } from "@/lib/server/forms-service";
+import { assessmentFormFields, assessmentSteps } from "@/lib/funnels/assessment-form";
 import type { FormField } from "@/types/forms";
 import {
   createBookingPageServerSide,
@@ -4118,9 +4120,31 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           description:
             "MULTISTEP FUNNELS: the id of an ALREADY-CREATED funnel (returned as 'Funnel ID' by a previous create_funnel call) that THIS funnel's thank-you page should route new signups to, the magnet→offer chain link. When the user asks for a multistep funnel (lead magnet → offer → checkout → upsell), call create_funnel once per page, DOWNSTREAM FIRST (the offer/sales page), then the lead-magnet page with this set to the offer funnel's id. Omit for single-page funnels. NEVER pass a placeholder value here, and NEVER create both steps of a chain in one parallel batch (the link needs the real id, and a re-create makes a duplicate page). Sequence STRICTLY: (1) one create_funnel call for the DOWNSTREAM offer alone and nothing else; (2) read the 'Funnel ID' from its result; (3) one more create_funnel call for the upstream lead-magnet page with this field set to that id. To link two funnels that BOTH already exist, call link_funnel_steps instead, never re-create a page just to add the link.",
         },
+        assessment_questions: {
+          type: "array",
+          description:
+            "GUIDED ASSESSMENT / DIAGNOSTIC / QUIZ. The questions to ask, in order. Supplying these turns the page's capture into a one-question-at-a-time flow with progress and Back/Continue, instead of one long stacked form: the visitor gives their name and email on the first screen, then answers one question per screen. Use this whenever the customer asks for an assessment, diagnostic, quiz, questionnaire or scorecard. It is still ONE form and ONE submission, so the contact and every answer arrive together. There is no scoring, branching or results page, do not promise any. Keep it to 3-8 questions; more is abandoned. Omit entirely for an ordinary page. ENDING IN A CALL: when the journey finishes with 'book a call', create the booking page FIRST with create_booking_page, then pass its slug as cta_booking_page_slug on this call. The assessment's own completion screen then sends people straight into the diary, which is the highest-intent ending a diagnostic can have. Build it the other way round and the completion screen falls back to a plain thank-you message, and a second funnel gets built later just to hold the booking button, which is a page nobody needed.",
+          items: {
+            type: "object",
+            properties: {
+              question: { type: "string", description: "The question as the visitor reads it. Max 160 chars." },
+              options: {
+                type: "array",
+                items: { type: "string" },
+                description: "2-8 preset answers to pick from. Give these whenever the answers are predictable, they are faster to answer and comparable across leads. Omit for a free-text answer.",
+              },
+            },
+            required: ["question"],
+          },
+        },
+        bridge_next_href: {
+          type: "string",
+          description:
+            "MULTISTEP FUNNELS, FINAL STEP: where this funnel's thank-you page sends people when the next step is NOT another funnel, typically a booking page ('/b/<subAccountId>/<slug>') or the customer's own calendar URL. This is how a journey ENDS in 'book a call' without building a whole extra funnel whose only job is to carry one button: the assessment's own thank-you page holds the CTA. Use bridge_next_funnel_id instead when the next step really is another page you built. Only one is needed; the funnel id wins if both are set. Pair with bridge_next_cta for the button label.",
+        },
         bridge_next_cta: {
           type: "string",
-          description: "Button label for the thank-you page's next-offer card (e.g. 'See the workshop'). Only used with bridge_next_funnel_id. Max 60 chars.",
+          description: "Button label for the thank-you page's next-step card (e.g. 'See the workshop', 'Book your call'). Used with bridge_next_funnel_id or bridge_next_href. Max 60 chars.",
         },
         supplied_evidence_logos: {
           type: "array",
@@ -4413,6 +4437,44 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       // a deliverable, so an unrecognised value now degrades into a page that
       // still works instead of one that is blocked.
       const genre = validGenres.includes(genreRaw) ? genreRaw : "lead_gen";
+
+      // A LEAD MAGNET IS A PAGE THAT HANDS OVER A FILE.
+      //
+      // The genre above is recognised; this catches the one that is
+      // recognised and wrong. `lead_magnet` carries a fulfilment contract
+      // (cta-integrity refuses to publish without a real attached file),
+      // and assessments kept being generated into it: two live pages,
+      // "Get Your Free Assessment" and "Book Your Free Assessment", neither
+      // promising a download anywhere, both permanently unpublishable by a
+      // guard that was doing exactly its job.
+      //
+      // Rejected rather than silently reclassified. stage_content is written
+      // for the declared genre, and lead_magnet is a single fold while the
+      // others run five or more stages, so swapping the label underneath the
+      // copy produces a structurally empty page. A validation error is an
+      // instruction this tool already tells the model to act on, and it
+      // comes back with content that fits the genre it should have picked.
+      {
+        const mismatch = detectLeadMagnetMismatch({
+          genre,
+          copy: [
+            str(raw, "headline"),
+            str(raw, "subheadline"),
+            str(raw, "cta_label"),
+            str(raw, "funnel_name"),
+            typeof raw.bullets === "string" ? raw.bullets : Array.isArray(raw.bullets) ? raw.bullets.join(", ") : "",
+          ],
+        });
+        if (mismatch) {
+          return {
+            ok: false,
+            error:
+              `genre "lead_magnet" is wrong for this page: ${mismatch.reason}. ` +
+              `Use "application" if this page IS the assessment (it gets the qualify-then-call sequence), or "lead_gen" if it is a simple opt-in that leads somewhere else. ` +
+              `Rewrite stage_content for whichever you pick and call create_funnel again. Nothing was created.`,
+          };
+        }
+      }
 
       const priceCentsRaw = raw.price_cents;
       let priceCents: number | null = null;
@@ -4829,6 +4891,18 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           ctaSecondaryLabel: str(raw, "cta_secondary_label").slice(0, 40),
           ctaSecondaryHref: str(raw, "cta_secondary_href").slice(0, 500),
           bridgeNextFunnelId: str(raw, "bridge_next_funnel_id").trim().slice(0, 40),
+          assessmentQuestions: (Array.isArray(raw.assessment_questions) ? raw.assessment_questions : [])
+            .filter((q): q is Record<string, unknown> => !!q && typeof q === "object")
+            .map((q) => ({
+              question: String(q.question ?? "").trim().slice(0, 160),
+              options: (Array.isArray(q.options) ? q.options : [])
+                .map((o) => String(o).trim())
+                .filter(Boolean)
+                .slice(0, 8),
+            }))
+            .filter((q) => q.question.length > 0)
+            .slice(0, 8),
+          bridgeNextHref: str(raw, "bridge_next_href").trim().slice(0, 500),
           bridgeNextCta: str(raw, "bridge_next_cta").trim().slice(0, 60),
           suppliedEvidenceLogos: (() => {
             const v = (raw as Record<string, unknown>).supplied_evidence_logos ?? (raw as Record<string, unknown>).suppliedEvidenceLogos;
@@ -5072,6 +5146,49 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           return null;
         }
       })();
+
+      // ── RESOLVE THE CHAIN LINK BEFORE ANYTHING IS WRITTEN ───────────
+      //
+      // This check used to sit ~1700 lines below, AFTER the funnel, its
+      // capture form, its email template and its workflow had all been
+      // created. A bad bridge_next_funnel_id therefore built the entire
+      // system, threw, and answered "this did not happen" over a workspace
+      // that now contained an orphaned page nobody linked to. Observed
+      // live: the assistant passed a placeholder id, the create reported
+      // failure, the page existed anyway, and the next turn built a second
+      // copy of an earlier step because the first was believed lost.
+      //
+      // Nothing about validating a link needs the funnel to exist first,
+      // except the self-reference test, which is deferred to the one line
+      // below that can still do it. Everything else fails here, before the
+      // first write, so a rejected link leaves the workspace untouched.
+      // A destination, not a page we own: only same-origin app paths and
+      // real https URLs. A javascript: or data: href on a published page is
+      // an injection, and a bare word is a broken button.
+      let bridgeHref: string | null = null;
+      if (typeof args.bridgeNextHref === "string" && args.bridgeNextHref.trim()) {
+        const raw = args.bridgeNextHref.trim();
+        if (/^\/[A-Za-z0-9/_-]*$/.test(raw)) {
+          bridgeHref = raw;
+        } else if (/^https:\/\/[^\s"'<>]+$/i.test(raw)) {
+          bridgeHref = raw;
+        } else {
+          throw new CapabilityUserError(
+            `bridge_next_href "${raw.slice(0, 60)}" isn't usable. Give an app path like /b/<subAccountId>/<slug> or a full https:// URL. Nothing was created.`,
+          );
+        }
+      }
+
+      let bridgeTarget: string | null = null;
+      if (typeof args.bridgeNextFunnelId === "string" && args.bridgeNextFunnelId) {
+        const target = await getFunnel(subAccountId, args.bridgeNextFunnelId);
+        if (!target) {
+          throw new CapabilityUserError(
+            `bridge_next_funnel_id "${args.bridgeNextFunnelId}" doesn't match a funnel in this workspace. Use the exact Funnel ID returned by the earlier create_funnel call. Nothing was created, so call create_funnel again with the real id rather than rebuilding the other pages.`,
+          );
+        }
+        bridgeTarget = target.id;
+      }
 
       const funnelId = await createFunnelServerSide({
         subAccountId,
@@ -5730,10 +5847,18 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       let createdWorkflowId: string | null = null;
 
       if ((wantsPackage || !hasWorkingAltTarget) && (hasOffer || hasTicketTiers || hasHeroCapture)) {
+        // A GUIDED ASSESSMENT IS THE SAME FORM, ASKED DIFFERENTLY.
+        //
+        // The questions become ordinary fields on this same capture form, so
+        // the contact, the answers, the automation trigger and the
+        // conversion count all behave exactly as they do for a stacked form.
+        // Only the presentation changes, further down.
+        const assessment = (args.assessmentQuestions ?? []) as { question: string; options: string[] }[];
         createdFormId = await createFormServerSide({
           subAccountId,
           createdByUid: ctx.uid,
           name: `${(args.funnelName as string) || (args.headline as string)}, capture form`,
+          ...(assessment.length > 0 ? { fields: assessmentFormFields(assessment) } : {}),
         });
         sectionsToSave = sectionsToSave.map((s) => {
           if (s.type === "offer") return { ...s, config: { ...s.config, formId: createdFormId } };
@@ -5763,6 +5888,47 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           }
           return s;
         });
+
+        // THE ASSESSMENT'S PRESENTATION, AND ONLY ITS PRESENTATION.
+        //
+        // The offer section becomes a one-question-at-a-time flow over the
+        // form that was just created: same fields, same validation, same
+        // single submission. A stacked intake form asking a visitor eight
+        // diagnostic questions at once is the experience being replaced, not
+        // the data model.
+        //
+        // The completion step is where the journey ends. A booking page in
+        // this workspace is the highest-intent destination a diagnostic can
+        // have, so it is used when one exists; otherwise the visitor gets an
+        // honest confirmation rather than a dead button.
+        if (assessment.length > 0) {
+          const offerIdx = sectionsToSave.findIndex((x) => x.type === "offer");
+          if (offerIdx >= 0) {
+            const prev = sectionsToSave[offerIdx].config as Record<string, unknown>;
+            const bookingSlug = typeof args.ctaBookingPageSlug === "string" ? args.ctaBookingPageSlug.trim() : "";
+            sectionsToSave = sectionsToSave.map((x, i) =>
+              i !== offerIdx
+                ? x
+                : ({
+                    type: "multi_step_form",
+                    config: {
+                      eyebrow: "",
+                      headline: String(prev.headline ?? "") || "Start your assessment",
+                      subheadline: String(prev.subheadline ?? ""),
+                      formId: createdFormId,
+                      steps: assessmentSteps(assessment),
+                      submitLabel: "See my results",
+                      completion: bookingSlug
+                        ? { mode: "booking" as const, bookingSlug }
+                        : {
+                            mode: "message" as const,
+                            message: "Thanks, that's everything we need. We'll be in touch with what your answers point to.",
+                          },
+                    },
+                  } as FunnelSection),
+            );
+          }
+        }
 
         const emailSubject =
           (args.confirmationEmailSubject as string) || `You're in, ${args.headline as string}`;
@@ -6779,22 +6945,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           : null;
 
       // MULTISTEP: when the model chains this funnel into an already-created
-      // downstream step (magnet -> offer), verify the target actually exists
-      // in THIS sub-account before storing the link, a typo'd or foreign id
-      // would render a dead next-offer card on the live thank-you page.
-      let bridgeTarget: string | null = null;
-      if (typeof args.bridgeNextFunnelId === "string" && args.bridgeNextFunnelId) {
-        const target = await getFunnel(subAccountId, args.bridgeNextFunnelId);
-        if (!target) {
-          throw new CapabilityUserError(
-            `bridge_next_funnel_id "${args.bridgeNextFunnelId}" doesn't match a funnel in this workspace. Use the exact Funnel ID returned by the earlier create_funnel call.`,
-          );
-        }
-        if (target.id === funnelId) {
-          throw new CapabilityUserError("bridge_next_funnel_id can't point at the funnel being created.");
-        }
-        bridgeTarget = target.id;
-      }
+      // The target's existence was already proven above, before the first
+      // write. Only the self-reference test needs the new id, and a funnel
+      // cannot be handed its own id by a caller that has not seen it yet,
+      // so this is a belt-and-braces drop of the link rather than a throw:
+      // discarding a nonsensical link is better than destroying a page that
+      // is otherwise complete.
+      if (bridgeTarget && bridgeTarget === funnelId) bridgeTarget = null;
 
       // ── LANDING PAGE CRITIC (P0.5), judges the FINISHED composition ────
       //
@@ -6914,10 +7071,15 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               title: `${(args.headline as string) || (args.funnelName as string) || "Untitled"}`.slice(0, 70),
               description: `${(args.subheadline as string) || (args.salesArgument as { corePromise?: string } | null)?.corePromise || ""}`.slice(0, 170),
             },
-            ...(bridgeTarget
+            // The completion step. An internal funnel wins when both are
+            // given; otherwise a plain destination (usually a booking page)
+            // lets the journey END here instead of needing another funnel
+            // built solely to hold one button.
+            ...(bridgeTarget || bridgeHref
               ? {
                   bridge: {
-                    nextFunnelId: bridgeTarget,
+                    ...(bridgeTarget ? { nextFunnelId: bridgeTarget } : {}),
+                    ...(!bridgeTarget && bridgeHref ? { nextHref: bridgeHref } : {}),
                     ...(args.bridgeNextCta ? { nextCta: args.bridgeNextCta as string } : {}),
                   },
                 }

@@ -266,6 +266,22 @@ export async function POST(request: Request) {
     .join("\n");
   const cards = retrieveKnowledge(retrievalQuery, lvl);
 
+  // WHAT ZENO ALREADY BUILT, WITH THE IDS TO REFERENCE IT.
+  //
+  // A multistep journey is linked by passing the downstream funnel's id
+  // upstream. That id lives in create_funnel's receipt, which the confirm
+  // route withholds from the client (U1), so the model never saw it and
+  // every journey came out as unlinked pages. Read back from the audit
+  // trail here instead: the model learns what it created and nothing
+  // internal crosses the network to the browser.
+  try {
+    const { renderRecentBuildsCard } = await import("@/lib/ai-suite/recent-builds");
+    const built = await renderRecentBuildsCard(actionCtx.subAccountId ?? null);
+    if (built) cards.push(built);
+  } catch {
+    // Best-effort, exactly like the profile block below.
+  }
+
   // THE BUSINESS IS NOT A FUNNEL-BUILDING DETAIL.
   //
   // This injection used to sit inside the `create_funnel` branch below,
