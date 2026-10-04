@@ -1,6 +1,9 @@
 import "server-only";
 
 import { getAdminDb, getAdminStorageBucket } from "@/lib/firebase/admin";
+import { MAX_ASSET_BYTES, MAX_AUDIO_BYTES } from "./asset-limits";
+
+export { MAX_ASSET_BYTES, MAX_AUDIO_BYTES };
 
 /**
  * Funnel asset storage (Multistep Journey pass, increment 1) — operator-
@@ -45,7 +48,7 @@ const CHUNK_BYTES = 700_000; // base64 of this stays under the 1MB doc limit
  * side, leaving room for a slow connection. Raising it again means measuring
  * again, not editing this number. See scripts/verify-funnel-runtime.mts.
  */
-export const MAX_ASSET_BYTES = 5 * 1024 * 1024;
+
 
 /**
  * Kinds an asset document can describe.
@@ -95,7 +98,7 @@ export const ALLOWED_AUDIO_TYPES: Record<string, true> = {
  * 11 at 96kbps, 8 at 128kbps stereo. A 30-minute file at a high bitrate
  * does NOT fit and cannot, without client-direct upload.
  */
-export const MAX_AUDIO_BYTES = 8 * 1024 * 1024;
+
 
 export const ALLOWED_ASSET_TYPES: Record<string, "image" | "pdf"> = {
   "image/jpeg": "image",

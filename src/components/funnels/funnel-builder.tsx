@@ -63,6 +63,7 @@ import type {
 import { DESIGN_PACKS, type DesignPackId } from "@/lib/funnels/design-packs";
 import { isChainOnlySection, isChainStepFunnel } from "@/lib/funnels/commercial-structure";
 import { uploadFunnelAsset } from "@/lib/funnels/upload-client";
+import { MAX_ASSET_BYTES, MAX_AUDIO_BYTES } from "@/lib/funnels/asset-limits";
 import {
   VISUAL_ARCHETYPES,
   VISUAL_ARCHETYPE_IDS,
@@ -227,10 +228,28 @@ export function FunnelBuilder({
   }, [saId, funnelId]);
 
   async function handleAssetUpload(file: File) {
+    // CHECKED HERE AS WELL AS ON THE SERVER, because the server never sees
+    // an oversized body: the platform in front of this app rejects it at
+    // roughly 8.4MB and answers an HTML 502, so the route's own friendly
+    // refusal cannot run. Without this the customer gets "Unexpected token
+    // '<'" instead of being told the file is too big.
+    const isAudio = file.type.startsWith("audio/");
+    const ceiling = isAudio ? MAX_AUDIO_BYTES : MAX_ASSET_BYTES;
+    if (file.size > ceiling) {
+      alert(
+        isAudio
+          ? `That audio file is ${(file.size / 1024 / 1024).toFixed(1)}MB. Keep it under ` +
+            `${Math.round(ceiling / 1024 / 1024)}MB, which is roughly 16 minutes at 64kbps or ` +
+            `8 minutes at 128kbps. Exporting spoken word as mono at a lower bitrate is usually enough.`
+          : `That file is ${(file.size / 1024 / 1024).toFixed(1)}MB. Keep it under ${Math.round(ceiling / 1024 / 1024)}MB.`,
+      );
+      return;
+    }
     setUploading(true);
     try {
       const json = await uploadFunnelAsset(saId, funnelId, file);
-      if (json.kind === "pdf") setLeadMagnetName(file.name);
+      // Audio is a deliverable like the PDF, not a page image to paste.
+      if (json.kind === "pdf" || json.kind === "audio") setLeadMagnetName(file.name);
       else {
         setUploadedImageUrl(json.url);
         try { await navigator.clipboard.writeText(json.url); } catch { /* clipboard optional */ }
@@ -496,13 +515,13 @@ export function FunnelBuilder({
       <div className="rounded-xl border bg-card p-4">
         <p className="text-[13px] font-semibold">Files &amp; delivery</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Upload an <b>image</b> (JPEG/PNG/WebP. Its URL is copied to your clipboard to paste into any Media/Image field) or your <b>lead magnet PDF</b>, the PDF is delivered automatically in the confirmation email and on the thank-you page.
+          Upload an <b>image</b> (JPEG/PNG/WebP. Its URL is copied to your clipboard to paste into any Media/Image field) or your <b>lead magnet</b> as a PDF or audio file (MP3/M4A/WAV, up to 8MB). A lead magnet is delivered automatically in the confirmation email and on the thank-you page, with audio playing on its own branded page.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-black/[0.03] dark:hover:bg-white/[0.06]">
             <input
               type="file"
-              accept="image/jpeg,image/png,image/webp,application/pdf"
+              accept="image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/mp4,audio/x-m4a,audio/wav"
               className="hidden"
               disabled={uploading}
               onChange={(e) => {
@@ -511,7 +530,7 @@ export function FunnelBuilder({
                 e.target.value = "";
               }}
             />
-            {uploading ? "Uploading…" : "Upload image or PDF"}
+            {uploading ? "Uploading…" : "Upload image, PDF or audio"}
           </label>
           {leadMagnetName && (
             <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">

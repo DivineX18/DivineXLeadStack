@@ -46,7 +46,11 @@ const mkFunnel = async (sa: string) => {
   const res = await fetch(`${BASE}/api/sub-accounts/${sa}/funnels`, {
     method:"POST", headers:{ "Content-Type":"application/json", Cookie },
     body: JSON.stringify({ name: `Audio test ${RUN}`, genre: "lead_magnet" }) });
-  return (await res.json() as { id: string }).id;
+  const text = await res.text();
+  // Production answers an unauthorised call with the login PAGE, so a JSON
+  // parse here throws HTML instead of reporting what happened.
+  try { return (JSON.parse(text) as { id: string }).id; }
+  catch { throw new Error(`create funnel in ${sa} -> HTTP ${res.status} (${text.slice(0,60).replace(/\s+/g," ")})`); }
 };
 const upload = async (sa: string, funnelId: string, file: string, type: string, name: string) => {
   const fd = new FormData();
@@ -110,7 +114,10 @@ console.log("\n3. The subscriber opens the branded page");
 const br = await chromium.launch();
 for (const [label, w] of [["desktop", 1280], ["mobile", 390]] as const) {
   const pg = await br.newPage({ viewport: { width: w, height: 900 } });
-  await pg.goto(`${BASE}/d/${assetId}`, { waitUntil: "networkidle", timeout: 60000 });
+  // NOT networkidle: a streaming <audio> keeps the network busy, so the page
+  // never goes idle and the wait times out on a working player.
+  await pg.goto(`${BASE}/d/${assetId}`, { waitUntil: "domcontentloaded", timeout: 60000 });
+  await pg.waitForSelector("audio", { timeout: 30000 }).catch(() => {});
   const audio = pg.locator("audio").first();
   check(`${label}: an audio player is rendered`, (await audio.count()) > 0);
   if (!(await audio.count())) { await pg.close(); continue; }
@@ -147,9 +154,19 @@ check("it is a button labelled for listening", /\[button: Listen/i.test(emailBod
 check("no storage URL is in the email", !/googleapis|storage\.cloud|appspot/.test(emailBody));
 
 console.log("\n5. Limits and spoofing are enforced server-side");
-const tooBig = await upload(SA, funnelId, "big.mp3", "audio/mpeg", "long.mp3");
-check("a 9MB file is refused", tooBig.status === 400, `HTTP ${tooBig.status}`);
-check("with guidance a human can act on", /under 8MB|bitrate|minutes/i.test(String(tooBig.body.error)), String(tooBig.body.error).slice(0,110));
+// 8.2MB: over the app's ceiling but UNDER the platform's ~8.4MB cliff, so
+// the route actually runs and its refusal is the one the customer sees.
+// A file past the cliff is killed by the platform with an HTML 502 before
+// any route executes, which is why the builder checks size before sending.
+const tooBig = await upload(SA, funnelId, "overcap.mp3", "audio/mpeg", "long.mp3");
+check("a file over the ceiling is refused by the server", tooBig.status === 400, `HTTP ${tooBig.status}`);
+check("with guidance a human can act on", /8MB|bitrate|minutes/i.test(String(tooBig.body.error)), String(tooBig.body.error).slice(0,110));
+const builder = readFileSync("src/components/funnels/funnel-builder.tsx", "utf8");
+check("the picker offers audio, so an MP3 can be chosen at all", /accept="[^"]*audio\/mpeg/.test(builder));
+check("and size is checked before upload, since the platform kills big bodies first",
+  /file\.size > ceiling/.test(builder) && /MAX_AUDIO_BYTES/.test(builder));
+check("audio counts as the lead magnet, not a page image",
+  /json\.kind === "pdf" \|\| json\.kind === "audio"/.test(builder));
 const spoof = await upload(SA, funnelId, "meditation.mp3", "application/x-msdownload", "evil.exe");
 check("an unsupported type is refused", spoof.status === 400, `HTTP ${spoof.status}`);
 
