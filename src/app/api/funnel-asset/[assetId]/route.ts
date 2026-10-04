@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { readFunnelAsset } from "@/lib/funnels/assets";
+import { readFunnelAsset, signedAudioUrl } from "@/lib/funnels/assets";
 
 export const dynamic = "force-dynamic";
 
@@ -21,10 +21,21 @@ export async function GET(
   const asset = await readFunnelAsset(assetId);
   if (!asset) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Video and audio are REFERENCED, not stored here (see lib/funnels/assets.ts).
-  // Serving or redirecting would put the provider's address in front of the
-  // recipient, so an old or hand-typed link lands on the branded player
-  // instead, which is where that deliverable is meant to be experienced.
+  // UPLOADED audio lives in Storage, so this is where its bytes are fetched
+  // from. The redirect to a short-lived signed URL is deliberate: Cloud
+  // Storage answers Range requests natively, which is what lets an <audio>
+  // element seek, and it keeps a multi-megabyte buffer out of this process
+  // entirely. The customer-facing URL stays this branded one; the signed
+  // target is an implementation detail that expires.
+  if (asset.meta.kind === "audio" && asset.meta.storagePath) {
+    const signed = await signedAudioUrl(asset.meta);
+    if (!signed) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.redirect(signed, 302);
+  }
+
+  // REFERENCED video/audio is not stored here at all. Serving or redirecting
+  // to the provider would put its address in front of the recipient, so an
+  // old or hand-typed link lands on the branded player instead.
   if (asset.meta.kind === "video" || asset.meta.kind === "audio") {
     return NextResponse.redirect(new URL(`/d/${assetId}`, request.url), 302);
   }

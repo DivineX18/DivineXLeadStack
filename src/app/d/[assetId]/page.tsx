@@ -47,8 +47,12 @@ export default async function DeliveryPage({
   const { assetId } = await params;
   const meta = /^[A-Za-z0-9]{10,40}$/.test(assetId) ? await readFunnelAssetMeta(assetId) : null;
   const playable = meta?.kind === "video" || meta?.kind === "audio";
+  // Referenced media plays from its source; UPLOADED audio plays from the
+  // branded route, which redirects to a signed, range-capable URL. Either
+  // way the provider never appears here.
+  const src = meta?.externalUrl ?? (meta?.storagePath ? `/api/funnel-asset/${assetId}` : null);
 
-  if (!meta || !playable || !meta.externalUrl) {
+  if (!meta || !playable || !src) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-6 dark:bg-neutral-950">
         <div className="mx-auto w-full max-w-md text-center">
@@ -84,9 +88,9 @@ export default async function DeliveryPage({
             {/* An embed (YouTube, Vimeo, Loom) renders in an iframe; a direct
                 file plays natively. Both keep the provider's address out of
                 the visible page. */}
-            {isEmbed(meta.externalUrl) ? (
+            {isEmbed(src) ? (
               <iframe
-                src={meta.externalUrl}
+                src={src}
                 title={title}
                 className="h-full w-full"
                 allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
@@ -94,15 +98,28 @@ export default async function DeliveryPage({
               />
             ) : (
               <video className="h-full w-full" controls preload="metadata" playsInline>
-                <source src={meta.externalUrl} />
+                <source src={src} />
               </video>
             )}
           </div>
         ) : (
           <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5 dark:bg-neutral-900 dark:ring-white/10">
             <audio className="w-full" controls preload="metadata">
-              <source src={meta.externalUrl} />
+              <source src={src} type={meta.contentType || undefined} />
             </audio>
+            {meta.storagePath && (
+              // Only an uploaded file can be handed over; a referenced one
+              // is not ours to offer as a download.
+              <p className="mt-4 text-center">
+                <a
+                  href={`/api/funnel-asset/${assetId}`}
+                  download={meta.filename || "audio"}
+                  className="text-sm font-medium text-teal-600 underline-offset-4 hover:underline dark:text-teal-400"
+                >
+                  Download audio
+                </a>
+              </p>
+            )}
           </div>
         )}
 

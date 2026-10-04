@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server";
 import { requireSubAccountMember } from "@/lib/auth/require-tenancy";
 import { getFunnel } from "@/lib/server/funnels-service";
-import { ALLOWED_ASSET_TYPES, MAX_ASSET_BYTES, storeFunnelAsset, storeExternalAsset } from "@/lib/funnels/assets";
+import {
+  ALLOWED_ASSET_TYPES,
+  ALLOWED_AUDIO_TYPES,
+  MAX_ASSET_BYTES,
+  MAX_AUDIO_BYTES,
+  storeFunnelAsset,
+  storeExternalAsset,
+  storeAudioAsset,
+} from "@/lib/funnels/assets";
 import { wireDeliveryIntoWorkflows } from "@/lib/funnels/delivery-wiring";
 import { kindForContentType } from "@/lib/funnels/delivery";
 
@@ -86,8 +94,64 @@ export async function POST(
   }
   const file = form.get("file");
   if (!(file instanceof File)) return NextResponse.json({ error: "Missing file" }, { status: 400 });
+
+  // AUDIO TAKES A DIFFERENT ROUTE THROUGH THE SAME DOOR. It is stored in
+  // Firebase Storage rather than the Firestore chunk table, because audio is
+  // read back in full on every play and needs Range support to seek. Same
+  // upload for the customer, same asset identity afterwards.
+  if (ALLOWED_AUDIO_TYPES[file.type]) {
+    if (file.size > MAX_AUDIO_BYTES) {
+      return NextResponse.json(
+        {
+          error:
+            `That audio file is ${(file.size / 1024 / 1024).toFixed(1)}MB. ` +
+            `Keep it under ${Math.round(MAX_AUDIO_BYTES / 1024 / 1024)}MB, ` +
+            `which is roughly 16 minutes at 64kbps or 8 minutes at 128kbps. ` +
+            `Exporting spoken-word audio as mono at a lower bitrate is usually enough.`,
+        },
+        { status: 400 },
+      );
+    }
+    let stored: { assetId: string; url: string };
+    try {
+      stored = await storeAudioAsset({
+        subAccountId,
+        agencyId: funnel.agencyId,
+        funnelId,
+        createdByUid: access.uid,
+        contentType: file.type,
+        filename: file.name || "audio.mp3",
+        bytes: Buffer.from(await file.arrayBuffer()),
+        title: (form.get("title") as string | null) ?? null,
+      });
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "That audio file could not be stored" },
+        { status: 400 },
+      );
+    }
+    const wired = await wireDeliveryIntoWorkflows({
+      subAccountId,
+      funnelId,
+      funnel,
+      assetId: stored.assetId,
+      kind: "audio",
+      filename: file.name || "audio.mp3",
+      ctaLabel: (form.get("ctaLabel") as string | null) ?? null,
+    });
+    return NextResponse.json({
+      assetId: stored.assetId,
+      url: stored.url,
+      kind: "audio",
+      wiredWorkflows: wired.wiredWorkflows,
+    });
+  }
+
   if (!ALLOWED_ASSET_TYPES[file.type]) {
-    return NextResponse.json({ error: "Only JPEG, PNG, WebP images and PDF files are supported" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Only JPEG, PNG, WebP images, PDF files and MP3 audio are supported" },
+      { status: 400 },
+    );
   }
   if (file.size > MAX_ASSET_BYTES) {
     return NextResponse.json(
