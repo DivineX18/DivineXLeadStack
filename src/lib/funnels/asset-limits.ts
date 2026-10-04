@@ -9,21 +9,35 @@
  */
 
 /**
- * 5MB, and it is a MEASURED limit. The platform in front of this app
- * rejects bodies at roughly 8.4MB with an HTML 502 before any route runs;
- * 8MB uploaded in 18.6s, 9MB had the connection terminated. 5MB sits well
- * clear of that and uploads in about 11s. Raising it means measuring again.
+ * 4MB. RE-MEASURED against this deployment on 2026-10-04, because the
+ * previous 5MB was above the real ceiling and therefore could not work.
+ *
+ * The earlier note recorded a cliff near 8.4MB. That is no longer true
+ * here. Uploading MP3s of increasing size to production, with long gaps so
+ * one rejection could not taint the next: 4MB, 4.25MB and 4.4MB were
+ * accepted in about 4s; 4.6MB and 5MB came back as an HTML 502. The body is
+ * rejected before any route runs, so nothing in this app can catch it or
+ * explain it, which is why the builder also checks size before sending.
+ *
+ * So a 5MB limit promised a size the platform refuses: a PDF between 4.5
+ * and 5MB passed our own check and then failed with "Unexpected token '<'".
+ * 4MB sits under the measured cliff with margin, and matches
+ * MAX_PRODUCT_FILE_BYTES, which was measured independently and agreed.
  */
-export const MAX_ASSET_BYTES = 5 * 1024 * 1024;
+export const MAX_ASSET_BYTES = 4 * 1024 * 1024;
 
 /**
- * 8MB for audio, chosen against the same cliff rather than preference.
+ * 4MB for audio too, for the same measured reason, not a preference.
  *
- * Roughly 16 minutes of spoken word at 64kbps mono, 11 at 96kbps, 8 at
- * 128kbps stereo, which covers an ordinary guided meditation. It sits
- * closer to the ~8.4MB ceiling than MAX_ASSET_BYTES does, deliberately:
- * audio needs the room and a document does not. Anything beyond the cliff
- * cannot be fixed by raising this number, it needs an upload that does not
- * pass through this server.
+ * This was set to 8MB on the strength of the stale note above and did not
+ * survive contact with production. The ceiling is the request body, and the
+ * request body is capped at roughly 4.5MB whatever the file contains.
+ *
+ * What that buys for spoken word: about 8 minutes at 64kbps mono, 5.5 at
+ * 96kbps, 4 at 128kbps stereo. A longer meditation does NOT fit and cannot
+ * be made to by raising this number. It needs an upload that does not pass
+ * through this server (client-direct to Storage), which this project tried
+ * and abandoned when Storage-to-Firestore rule evaluation proved unreliable
+ * across two buckets in two regions. That is a separate piece of work.
  */
-export const MAX_AUDIO_BYTES = 8 * 1024 * 1024;
+export const MAX_AUDIO_BYTES = 4 * 1024 * 1024;

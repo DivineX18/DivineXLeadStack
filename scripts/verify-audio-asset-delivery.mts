@@ -154,8 +154,9 @@ check("it is a button labelled for listening", /\[button: Listen/i.test(emailBod
 check("no storage URL is in the email", !/googleapis|storage\.cloud|appspot/.test(emailBody));
 
 console.log("\n5. Limits and spoofing are enforced server-side");
-// 8.2MB: over the app's ceiling but UNDER the platform's ~8.4MB cliff, so
-// the route actually runs and its refusal is the one the customer sees.
+// 4.3MB: over the app's 4MB ceiling but under the platform's measured
+// ~4.5MB cliff, so the route actually runs and its refusal is the one the
+// customer sees.
 // A file past the cliff is killed by the platform with an HTML 502 before
 // any route executes, which is why the builder checks size before sending.
 const tooBig = await upload(SA, funnelId, "overcap.mp3", "audio/mpeg", "long.mp3");
