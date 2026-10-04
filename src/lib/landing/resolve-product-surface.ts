@@ -23,7 +23,7 @@ import type { PlanProduct } from "@/types/billing";
  * swapped: the logo, colours and every other branding field carry through, so
  * the DivineX mark stays exactly where it is.
  */
-export function brandForProduct<T extends { name: string; tagline?: string; shortDescription?: string; productCategory?: string }>(
+export function brandForProduct<T extends { name: string; tagline?: string; shortDescription?: string; productCategory?: string; logoUrl?: string | null }>(
   brand: T,
   product: PlanProduct,
 ): T {
@@ -45,6 +45,13 @@ export function brandForProduct<T extends { name: string; tagline?: string; shor
     // Flow's category is now "CRM & Customer Operations", which is Flow's
     // job and not Ascend's. Ascend keeps the broader category it sells on.
     ...(brand.productCategory !== undefined ? { productCategory: "Growth Operations Platform" } : {}),
+    // Ascend's own mark, shipped with the app. The agency record's logoUrl is
+    // the Flow/white-label brand and has been 404ing here, which is why the
+    // header and footer fell back to the built-in badge. Transparent and
+    // mark-only on purpose: the wordmark in the source lockup is white, so it
+    // would disappear on this surface's light background, and the name is
+    // already rendered beside it as text.
+    ...(brand.logoUrl !== undefined ? { logoUrl: "/ascend-mark.png" } : {}),
   };
 }
 

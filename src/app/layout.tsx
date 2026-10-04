@@ -162,6 +162,15 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 
   if (!isAscend) return base;
+  // Ascend ships its own mark. The shared defaults above are the BUYER's
+  // (the green "my CRM" badge, the agency-uploaded app icon), so they are
+  // overridden here rather than replaced in /public, where doing so would
+  // rebrand every white-label deployment as Ascend.
+  //
+  // The share card is the full lockup on its black field at 1200x630, which
+  // is why the Twitter card becomes summary_large_image: a `summary` card
+  // crops to a small square and throws the wordmark away, and this image is
+  // what a link renders as in iMessage, Slack and LinkedIn.
   return {
     ...base,
     title: ascendTitle,
@@ -171,8 +180,16 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "Ascend",
       description: ascendDescription,
       siteName: "Ascend",
+      images: [{ url: "/ascend-og.png", width: 1200, height: 630, alt: "Ascend" }],
     },
-    twitter: { ...(base.twitter ?? {}), title: "Ascend", description: ascendDescription },
+    twitter: {
+      ...(base.twitter ?? {}),
+      card: "summary_large_image" as const,
+      title: "Ascend",
+      description: ascendDescription,
+      images: ["/ascend-og.png"],
+    },
+    icons: { icon: "/ascend-icon-192.png", apple: "/ascend-apple-touch-icon.png" },
     appleWebApp:
       typeof base.appleWebApp === "object" && base.appleWebApp
         ? { ...base.appleWebApp, title: "Ascend" }
