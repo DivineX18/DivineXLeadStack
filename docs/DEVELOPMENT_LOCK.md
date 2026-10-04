@@ -1321,6 +1321,60 @@ so the hosted-checkout step is the owner's to perform.
 
 Until then: **the logic is certified, the money path is not.**
 
+## Affiliate + agency GTM readiness (2026-10-03) — one defect fixed, money path still unproved
+
+BI production `f5cdb2b`.
+
+### The defect, which is the reason this pass existed
+
+**Partners were quoted 30% and paid 20%.** `DEFAULT_COMMISSION_PCT` in
+`lib/partners/account.ts` was its own literal 30, and because the insert
+passes it explicitly the schema default of 20 never applied. Both partner
+surfaces interpolated that stored column straight into "Earn 30% recurring
+commission", while `partnerRatePct()` capped actual earning at 20.
+
+No existing test caught it because every one of them checks what is EARNED,
+and nothing checked what the partner is TOLD. Fixed at both causes:
+enrolment now takes `COMMISSION_RATE_PCT` so no second percentage exists to
+drift, and `/partners/me` and `/partners/app/referral` report
+`partnerRatePct(stored)` so rows already on the old 25 and 30 defaults are
+quoted the 20 they will be paid. A deliberately reduced partner still sees
+their real lower rate, because the cap only lowers.
+`partnerFacingRate.test.ts`, 12 checks, four mutations caught.
+
+### The shipped partner architecture, as it actually is
+
+**There is ONE partner program, and an agency is a partner.** No separate
+agency-as-referrer product exists; do not infer one from a schema field or
+a legacy plan containing the word "agency". Two enrolment paths: public
+`/partners/signup` (no purchase required) and auto-enrolment for any
+signed-in Ascend user (`/partners/app/referral`, idempotent by email).
+Referral link is `{appUrl}/?ref={code}`. Payout rides Stripe Connect
+Express.
+
+**Attribution rule: last click, 60-day cookie, ownership locked at first
+payment.** `ascend_ref` is set on `/partners/track` and read at checkout.
+Once a customer has paid, `creditRenewalCharge` resolves the partner from
+that customer's prior referral row by `stripeCustomerId` and never from a
+cookie, so a later click by Partner B cannot take Partner A's renewals.
+
+### Verified by test against the deployed commit
+
+803 Ascend tests including 47 tenant-isolation; Flow side green on
+verify-ascend-byo-twilio, verify-cost-guardrails, verify-ascend-solo-limits,
+verify-price-collision, verify-workspace-entitlements,
+verify-plan-limits-per-workspace, verify-plan-seats, verify-em-dash.
+`scripts/verify-tenant-isolation.mts` fails on a missing probe fixture, an
+ENVIRONMENT issue, not a product defect.
+
+### Still NOT certified
+
+The controlled production money test did not run. The Neon endpoint remains
+disabled, so referral accounting cannot be read, and no real charge was
+created. Logic is certified; the money path is not. Unblocking needs read
+access to Neon plus one owner-performed checkout, as recorded in the
+previous entry.
+
 ## Reopening rules
 
 Active Ascend AND Flow development is locked. Development reopens only for:
