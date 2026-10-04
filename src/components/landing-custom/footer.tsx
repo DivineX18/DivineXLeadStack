@@ -33,6 +33,25 @@ export function Footer({ brand, product }: { brand: ResolvedBrand; product: Plan
             <p className="mt-3 text-sm text-muted-foreground">
               {/[.!?]$/.test(brand.tagline) ? brand.tagline : `${brand.tagline}.`}
             </p>
+            {/* Parent-company attribution, and only on the surface DivineX
+                owns. This footer is also the white-label one a buyer brands
+                as their own product, so showing it unconditionally would
+                stamp our name across every customer's deployment. `isFlow`
+                is the same hostname-resolved flag the rest of this footer
+                already uses. Deliberately quiet: a line of provenance, not
+                a second call to action. */}
+            {!isFlow && (
+              <p className="mt-4 text-xs text-muted-foreground/70">
+                Powered by{" "}
+                <a
+                  href="https://divinex.io"
+                  aria-label={`DivineX, the parent company behind ${brand.name}`}
+                  className="font-medium text-teal-500 transition-colors hover:text-teal-400 dark:text-teal-400 dark:hover:text-teal-300"
+                >
+                  DivineX
+                </a>
+              </p>
+            )}
           </div>
 
           <div>
