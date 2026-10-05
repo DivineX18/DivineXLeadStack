@@ -30,6 +30,42 @@ export function ZenoLauncher({ workspaceId }: { workspaceId?: string | null } = 
   // (/app/*) does not — its active workspace is resolved server-side — so the
   // layout passes it in. Same component, same chat, same capabilities; only
   // how the scope is discovered differs.
+  /**
+   * The funnel the customer is standing in front of, taken from the URL.
+   *
+   * The builder's own embedded chat passes an artifactRef, but Zeno opened
+   * from this launcher had none, so on the very same screen it could see
+   * the page from one entry point and not the other. That is what "Zeno
+   * doesn't have my funnel" actually was. A seeded ref still wins, since
+   * that one names a specific artifact on purpose.
+   *
+   * The id is only a hint: the server re-resolves it against the
+   * authenticated workspace and returns nothing for anything foreign.
+   */
+  /**
+   * Every route that puts one asset on screen, mapped to what that asset is.
+   * Order matters only in that the first match wins; the patterns do not
+   * overlap. A booking page is addressed by its slug in the product's own
+   * URL, and the registry resolves either a slug or an id, so the raw URL
+   * segment is passed through untranslated.
+   */
+  const routeArtifact = ((): { kind: string; id: string } | null => {
+    const PATTERNS: [RegExp, string][] = [
+      [/\/create\/funnels?\/([A-Za-z0-9_-]{4,64})/, "funnel"],
+      [/\/campaigns\/funnel\/([A-Za-z0-9_-]{4,64})/, "funnel"],
+      [/\/create\/forms\/([A-Za-z0-9_-]{4,64})/, "form"],
+      [/\/launch\/workflows\/([A-Za-z0-9_-]{4,64})/, "workflow"],
+      [/\/create\/booking\/([A-Za-z0-9_-]{2,64})/, "booking_page"],
+      [/\/create\/templates\/([A-Za-z0-9_-]{4,64})/, "email_template"],
+    ];
+    for (const [re, kind] of PATTERNS) {
+      const m = pathname.match(re);
+      // "new" is the create screen, not an existing asset.
+      if (m && m[1] !== "new") return { kind, id: m[1] };
+    }
+    return null;
+  })();
+
   const saMatch = pathname.match(/^\/sa\/([^/]+)/);
   const subAccountId = saMatch ? saMatch[1] : (workspaceId ?? null);
   const onAgencyPages = pathname.startsWith("/agency");
@@ -134,7 +170,11 @@ export function ZenoLauncher({ workspaceId }: { workspaceId?: string | null } = 
               level={level}
               subAccountId={subAccountId ?? undefined}
               seedPrompt={seed?.prompt ?? null}
-              {...(seed?.artifactRef ? { artifactRef: seed.artifactRef } : {})}
+              {...(seed?.artifactRef
+                ? { artifactRef: seed.artifactRef }
+                : routeArtifact
+                  ? { artifactRef: routeArtifact }
+                  : {})}
             />
           </div>
         </div>

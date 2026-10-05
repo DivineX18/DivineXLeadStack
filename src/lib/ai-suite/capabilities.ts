@@ -68,6 +68,13 @@ import {
 import { gitpageIsConfigured } from "@/lib/gitpage/client";
 import { effectiveWebsiteCap } from "@/lib/website/limits";
 import {
+  isFlowAssetKind,
+  readFlowAsset,
+  traceFlowSystem,
+  renderFlowTrace,
+  type FlowAssetKind,
+} from "@/lib/ai-suite/flow-domains";
+import {
   createFunnelServerSide,
   getFunnel,
   listFunnels,
@@ -7610,6 +7617,753 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     },
   },
   {
+    name: "inspect_asset",
+    level: "sub-account",
+    requiredRole: "subAccountMember",
+    readonly: true,
+    menuLabel: "Read anything the customer has built",
+    description:
+      "READ one thing the customer has built, exactly as it stands in their workspace right now: a landing page, a capture form, a follow-up automation, a booking page, a campaign, a website, or a saved email. " +
+      "Use it the moment you need to know what something actually says or is set to, INSTEAD of asking the customer to tell you. They should never have to describe their own workspace back to you. " +
+      "You usually already have the id: it is in your page context TOOL REFERENCES, or it came back from a list tool. " +
+      "Returns the real content plus what the asset is connected to. To follow those connections, use trace_connected_system.",
+    parameters: {
+      type: "object",
+      properties: {
+        kind: {
+          type: "string",
+          enum: ["funnel", "form", "workflow", "booking_page", "campaign", "website", "email_template"],
+          description: "What sort of thing it is. funnel = a landing page. workflow = a follow-up automation. email_template = a saved email.",
+        },
+        id: {
+          type: "string",
+          description: "Its id. For a booking page the URL slug works too.",
+        },
+      },
+      required: ["kind", "id"],
+      additionalProperties: false,
+    },
+    validate: (rawIn) => {
+      const raw = aliasCamelKeysDeep(deepStripDebris({ ...((rawIn ?? {}) as Record<string, unknown>) }));
+      const kind = str(raw, "kind");
+      const id = str(raw, "id");
+      if (!isFlowAssetKind(kind)) return { ok: false, error: "kind must be one of: funnel, form, workflow, booking_page, campaign, website, email_template." };
+      if (!id) return { ok: false, error: "id is required." };
+      return { ok: true, args: { kind, id } };
+    },
+    summarize: (args) => `Read the ${String(args.kind).replace(/_/g, " ")} ${args.id}`,
+    execute: async (ctx, args) => {
+      const view = await readFlowAsset(ctx.subAccountId!, args.kind as FlowAssetKind, args.id as string);
+      // Foreign and nonexistent are deliberately the same answer. Saying
+      // "that belongs to another workspace" would confirm it exists.
+      if (!view) {
+        return {
+          resultText:
+            `No ${String(args.kind).replace(/_/g, " ")} with that id exists in this workspace. Do not guess at its contents. ` +
+            `If the customer is looking at something, read the id from your page context rather than inventing one.`,
+        };
+      }
+      return {
+        resultText:
+          `${view.label} "${view.name}" (${view.state}) ${Object.entries(view.refs).map(([k, v]) => `${k}="${v}"`).join(" ")}\n` +
+          view.lines.join("\n") +
+          (view.edges.length
+            ? `\nConnected to: ${view.edges.map((e) => `${e.relation} ${e.kind} ${e.id}`).join("; ")}`
+            : "") +
+          `\nYou can: ${Object.entries(view.operations).map(([op, tool]) => `${op} via ${tool}`).join(", ")}.`,
+      };
+    },
+  },
+  {
+    name: "trace_connected_system",
+    level: "sub-account",
+    requiredRole: "subAccountMember",
+    readonly: true,
+    menuLabel: "Follow the whole journey, page to form to follow-up to booking",
+    description:
+      "FOLLOW THE CUSTOMER'S JOURNEY from one asset outward: the landing page, the form it captures through, the automation that form triggers, the emails in it, and the booking page it ends at. " +
+      "Use this whenever the question is about the SYSTEM rather than one page: 'people download this but never book', 'review my lead generation and tell me what's broken', 'what happens after someone fills this in'. " +
+      "Reading the page alone cannot answer those, because the break is usually in the email that never bridges to the call, or in an automation still sitting in draft. " +
+      "It also reports links that point at something no longer there, which is a real dead end for a visitor. Read first, then say what you found, before proposing any change.",
+    parameters: {
+      type: "object",
+      properties: {
+        kind: {
+          type: "string",
+          enum: ["funnel", "form", "workflow", "booking_page", "campaign"],
+          description: "Where to start. Usually the landing page the customer is looking at.",
+        },
+        id: { type: "string", description: "The id of that starting asset." },
+      },
+      required: ["kind", "id"],
+      additionalProperties: false,
+    },
+    validate: (rawIn) => {
+      const raw = aliasCamelKeysDeep(deepStripDebris({ ...((rawIn ?? {}) as Record<string, unknown>) }));
+      const kind = str(raw, "kind");
+      const id = str(raw, "id");
+      const STARTS = ["funnel", "form", "workflow", "booking_page", "campaign"];
+      if (!STARTS.includes(kind)) return { ok: false, error: `kind must be one of: ${STARTS.join(", ")}.` };
+      if (!id) return { ok: false, error: "id is required." };
+      return { ok: true, args: { kind, id } };
+    },
+    summarize: (args) => `Follow the journey out from the ${String(args.kind).replace(/_/g, " ")} ${args.id}`,
+    execute: async (ctx, args) => {
+      const trace = await traceFlowSystem(ctx.subAccountId!, args.kind as FlowAssetKind, args.id as string);
+      if (trace.nodes.length === 0) {
+        return { resultText: "Nothing with that id exists in this workspace, so there is no journey to follow. Do not describe one." };
+      }
+      return {
+        resultText:
+          `THE REAL CONNECTED JOURNEY, read from this workspace just now:\n${renderFlowTrace(trace)}\n` +
+          (trace.unreachable.length
+            ? "The BROKEN LINK lines above are real dead ends a visitor would hit. Lead with them.\n"
+            : "") +
+          `Every id above can be passed to an edit tool. Judge this journey on what it actually contains, not on what a journey like it usually contains.`,
+      };
+    },
+  },
+  {
+    name: "edit_funnel_structure",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Add, remove, move or brief a section on a landing page",
+    description:
+      "CHANGE THE SHAPE of a landing page that already exists: add a section, remove one, move one, or mark the spot where a real photo belongs. " +
+      "Use this when the customer wants something revise_funnel_copy cannot do: 'add a testimonials section after the benefits', 'move the pricing above the FAQ', 'drop the stats block', 'put a placeholder for a real clinic photo under the hero'. " +
+      "Your page context lists every section in order with its id. Always target BY ID, never by position, because positions move. One operation per call. " +
+      "NEVER invent testimonials, numbers or review counts. Quotes and stats must be the customer's own words, repeated verbatim. If you do not have them, ask for them instead of calling this. " +
+      "add_media_placeholder does not produce an image. It marks the slot, carries a shot brief the customer can act on, and shows up as outstanding media in their editor. Reach for it whenever a real photograph would carry more weight than anything generated. " +
+      "This never publishes and never unpublishes: the page stays exactly as draft or live as it already was.",
+    parameters: {
+      type: "object",
+      properties: {
+        funnel_id: {
+          type: "string",
+          description: "The page being edited. Use the exact funnel_id from your page context TOOL REFERENCES.",
+        },
+        operation: {
+          type: "string",
+          enum: ["add_section", "remove_section", "move_section", "add_media_placeholder"],
+          description: "What to do. One per call.",
+        },
+        section_type: {
+          type: "string",
+          enum: [
+            "testimonials",
+            "faq",
+            "benefits_grid",
+            "stats",
+            "callout",
+            "cta_banner",
+            "story",
+            "guarantee",
+            "problem_solution",
+            "image_text",
+            "video",
+          ],
+          description: "add_section only: which kind of section to add.",
+        },
+        after_section_id: {
+          type: "string",
+          description:
+            "The id of the section this should sit DIRECTLY BELOW. For add_section, omit it to put the new section at the very end of the page. For move_section, omit it only to move the section above everything, including the hero. To place something under the hero, pass the hero's own id here.",
+        },
+        section_id: {
+          type: "string",
+          description: "remove_section, move_section and add_media_placeholder: the section being acted on, by id.",
+        },
+        headline: { type: "string", description: "add_section: the section's heading. For problem_solution, the problem's heading." },
+        body: { type: "string", description: "add_section: the supporting copy. For problem_solution, the problem's copy." },
+        items: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "add_section, for the list-shaped types. Write each entry as two halves separated by a pipe: testimonials \"Quote | Who said it\", faq \"Question | Answer\", benefits_grid \"Title | What it means\", stats \"The number | What it counts\". Required for those four types.",
+        },
+        solution_headline: { type: "string", description: "problem_solution only: the heading for the turn toward the answer." },
+        solution_body: { type: "string", description: "problem_solution only: the copy describing the answer." },
+        cta_label: { type: "string", description: "cta_banner only: the words on the button." },
+        cta_href: {
+          type: "string",
+          description:
+            "cta_banner only: where the button goes. Omit to reuse the destination the page's existing buttons already point at.",
+        },
+        brief: {
+          type: "string",
+          description:
+            "add_media_placeholder: what the photograph should show and why, specific enough to shoot from. Name the subject, the setting, and what it has to prove.",
+        },
+        why: { type: "string", description: "One short sentence on what this improves, shown on the confirm card." },
+      },
+      required: ["funnel_id", "operation"],
+      additionalProperties: false,
+    },
+    validate: (rawIn) => {
+      const raw = aliasCamelKeysDeep(deepStripDebris({ ...((rawIn ?? {}) as Record<string, unknown>) }));
+      const funnelId = str(raw, "funnel_id");
+      const operation = str(raw, "operation");
+      if (!funnelId) return { ok: false, error: "funnel_id is required, take it from the page context you were given." };
+      const OPS = ["add_section", "remove_section", "move_section", "add_media_placeholder"];
+      if (!OPS.includes(operation)) return { ok: false, error: `operation must be one of: ${OPS.join(", ")}.` };
+
+      const sectionId = str(raw, "section_id");
+      const afterSectionId = str(raw, "after_section_id");
+      const out: Record<string, unknown> = {
+        funnelId,
+        operation,
+        sectionId,
+        afterSectionId,
+        why: str(raw, "why").slice(0, 200),
+      };
+
+      if (operation === "add_section") {
+        const TYPES = [
+          "testimonials", "faq", "benefits_grid", "stats", "callout",
+          "cta_banner", "story", "guarantee", "problem_solution", "image_text", "video",
+        ];
+        const type = str(raw, "section_type");
+        if (!TYPES.includes(type)) return { ok: false, error: `section_type must be one of: ${TYPES.join(", ")}.` };
+        const headline = fixLiteralNewlines(str(raw, "headline")).slice(0, 200);
+        const body = fixLiteralNewlines(str(raw, "body")).slice(0, 2000);
+        const items = Array.isArray(raw.items)
+          ? (raw.items as unknown[])
+              .filter((x): x is string => typeof x === "string" && !!x.trim())
+              .slice(0, 12)
+              .map((x) => fixLiteralNewlines(x).trim().slice(0, 400))
+          : [];
+
+        // A section that would render as a dead zone is refused here rather
+        // than created and pruned later, so the refusal says something the
+        // customer can act on. The per-type minimums mirror
+        // lib/funnels/section-completeness.ts exactly.
+        const LIST_TYPES: Record<string, string> = {
+          testimonials: "the customer's own quotes, written as “Quote | Who said it”",
+          faq: "the questions and answers, written as “Question | Answer”",
+          benefits_grid: "the points, written as “Title | What it means”",
+          stats: "the real numbers, written as “The number | What it counts”",
+        };
+        if (LIST_TYPES[type] && items.length === 0) {
+          return { ok: false, error: `A ${type.replace(/_/g, " ")} section needs items: send ${LIST_TYPES[type]}. Ask the customer for them rather than writing them yourself.` };
+        }
+        if (type === "problem_solution") {
+          const sh = fixLiteralNewlines(str(raw, "solution_headline")).slice(0, 200);
+          const sb = fixLiteralNewlines(str(raw, "solution_body")).slice(0, 2000);
+          if ((!headline && !body) || (!sh && !sb)) {
+            return { ok: false, error: "A problem/solution section needs both halves: the problem (headline and body) and the answer (solution_headline and solution_body). One side alone reads as a mistake." };
+          }
+          Object.assign(out, { solutionHeadline: sh, solutionBody: sb });
+        }
+        if (type === "cta_banner") {
+          const label = fixLiteralNewlines(str(raw, "cta_label")).slice(0, 60);
+          const href = str(raw, "cta_href").slice(0, 500);
+          if (!headline) return { ok: false, error: "A closing CTA banner needs a headline above the button." };
+          if (href && href.trim() === "#") {
+            return { ok: false, error: "“#” is not a destination. Either give a real cta_href or omit it so the page's existing button destination is reused." };
+          }
+          Object.assign(out, { ctaLabel: label || "Get started", ctaHref: href });
+        }
+        if (["callout", "story", "guarantee"].includes(type) && !body) {
+          return { ok: false, error: `A ${type} section needs its copy in body. A heading on its own renders as an empty band.` };
+        }
+        if (["image_text", "video"].includes(type) && !headline && !body) {
+          return { ok: false, error: `A ${type.replace(/_/g, " ")} section needs a headline or body.` };
+        }
+        Object.assign(out, { sectionType: type, headline, body, items });
+      } else if (operation === "add_media_placeholder") {
+        const brief = fixLiteralNewlines(str(raw, "brief")).slice(0, 600);
+        if (!brief) return { ok: false, error: "brief is required: say what the photo should show, where, and what it needs to prove." };
+        if (!sectionId && !afterSectionId) {
+          return { ok: false, error: "Say where the photo belongs: pass section_id for the section it sits in, or after_section_id for the section it should follow." };
+        }
+        out.brief = brief;
+      } else if (!sectionId) {
+        return { ok: false, error: "section_id is required, take it from the section list in your page context." };
+      }
+      return { ok: true, args: out };
+    },
+    summarize: (args) => {
+      const why = args.why ? `. ${args.why as string}` : "";
+      switch (args.operation) {
+        case "add_section":
+          return `Add a ${String(args.sectionType).replace(/_/g, " ")} section${args.afterSectionId ? " below the section you pointed at" : " at the end of the page"}: “${String(args.headline || args.body || (args.items as string[])?.[0] || "").slice(0, 80)}”${why}`;
+        case "remove_section":
+          return `Remove one section from the page${why}`;
+        case "move_section":
+          return `Move one section${args.afterSectionId ? " further down the page" : " to the top of the page"}${why}`;
+        default:
+          return `Mark a spot for a real photo: “${String(args.brief).slice(0, 110)}”${why}`;
+      }
+    },
+    execute: async (ctx, args) => {
+      const subAccountId = ctx.subAccountId!;
+      const funnel = await getFunnel(subAccountId, args.funnelId as string);
+      if (!funnel) throw new CapabilityUserError("I couldn't find that page in this workspace.");
+      const sections = [...funnel.sections];
+      const op = args.operation as string;
+      const idx = (id: string) => sections.findIndex((x) => x.id === id);
+      const gone = "That section isn't on the page any more. Reopen the page and I'll work from what's actually there now.";
+      const newId = (prefix: string) =>
+        `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+      // Each list entry arrives as "left half | right half". A missing right
+      // half is kept rather than dropped, because the left half is the part a
+      // visitor reads and losing it would be the worse failure.
+      const split = (raw: string): [string, string] => {
+        const at = raw.indexOf("|");
+        return at < 0 ? [raw.trim(), ""] : [raw.slice(0, at).trim(), raw.slice(at + 1).trim()];
+      };
+
+      let outcome = "";
+      let nextSections = sections;
+      let nextRequirements: typeof funnel.visualRequirements | undefined;
+
+      if (op === "add_section") {
+        const type = args.sectionType as string;
+        const headline = args.headline as string;
+        const body = args.body as string;
+        const items = ((args.items as string[]) ?? []).map(split);
+        // Every shape below is the one its renderer and the completeness
+        // rules actually read. A near-miss here (items vs testimonials,
+        // body vs bodyText) produces a section that saves and then renders
+        // as a blank band, which is the exact failure this system exists to
+        // prevent, so these are matched field by field to src/types/funnels.ts.
+        const config: Record<string, unknown> = (() => {
+          switch (type) {
+            case "testimonials":
+              return { items: items.map(([quote, name]) => ({ quote, name })) };
+            case "faq":
+              return { items: items.map(([question, answer]) => ({ question, answer })) };
+            case "benefits_grid":
+              return {
+                ...(headline ? { headline } : {}),
+                items: items.map(([title, description]) => ({ title, ...(description ? { description } : {}) })),
+                variant: "flowing_checklist",
+              };
+            case "stats":
+              return { items: items.map(([value, label]) => ({ value, label })) };
+            case "callout":
+              return { text: body, tone: "highlight" };
+            case "cta_banner": {
+              // A button that goes nowhere is worse than no button: it reads
+              // as working and silently loses the click. When the model does
+              // not supply a destination, the page's own existing CTA is
+              // reused rather than inventing one.
+              const inherited = sections
+                .map((sec) => (sec.config as Record<string, unknown> | undefined)?.ctaHref)
+                .find((href): href is string => typeof href === "string" && !!href.trim() && href.trim() !== "#");
+              const href = (args.ctaHref as string) || inherited || "";
+              if (!href) {
+                throw new CapabilityUserError(
+                  "This page has no button destination to reuse, so a new CTA banner would do nothing. Ask the customer where the button should send people, then pass it as cta_href.",
+                );
+              }
+              return { headline, ...(body ? { subtext: body } : {}), ctaLabel: args.ctaLabel as string, ctaHref: href };
+            }
+            case "story":
+              return {
+                byline: headline,
+                paragraphs: body.split(/\n{2,}/).map((x) => x.trim()).filter(Boolean),
+              };
+            case "guarantee":
+              return { headline, bodyText: body };
+            case "problem_solution":
+              return {
+                problemHeadline: headline,
+                problemText: body,
+                solutionHeadline: args.solutionHeadline as string,
+                solutionText: args.solutionBody as string,
+                variant: "stacked",
+              };
+            case "video":
+              return {
+                embedUrl: "",
+                ...(headline ? { headline } : {}),
+                ...(body ? { subtext: body } : {}),
+                placeholderLabel: "Add your video",
+              };
+            default:
+              return { blocks: [{ headline, text: body, imagePosition: "left" }] };
+          }
+        })();
+
+        const at = args.afterSectionId ? idx(args.afterSectionId as string) : -1;
+        if (args.afterSectionId && at < 0) throw new CapabilityUserError(gone);
+        const added = { id: newId("s"), type, config } as (typeof sections)[number];
+        nextSections = [...sections];
+        if (at >= 0) nextSections.splice(at + 1, 0, added);
+        else nextSections.push(added);
+        outcome = `Added a ${type.replace(/_/g, " ")} section${args.afterSectionId ? " directly below the one you pointed at" : " at the end of the page"}.`;
+      } else if (op === "remove_section") {
+        const i = idx(args.sectionId as string);
+        if (i < 0) throw new CapabilityUserError(gone);
+        nextSections = sections.filter((_, n) => n !== i);
+        outcome = `Removed the ${sections[i].type.replace(/_/g, " ")} section.`;
+      } else if (op === "move_section") {
+        const i = idx(args.sectionId as string);
+        if (i < 0) throw new CapabilityUserError(gone);
+        const [moved] = (nextSections = [...sections]).splice(i, 1);
+        if (args.afterSectionId) {
+          const j = nextSections.findIndex((x) => x.id === args.afterSectionId);
+          if (j < 0) throw new CapabilityUserError(gone);
+          nextSections.splice(j + 1, 0, moved);
+        } else {
+          nextSections.unshift(moved);
+        }
+        outcome = `Moved the ${moved.type.replace(/_/g, " ")} section${args.afterSectionId ? " further down the page" : " to the top of the page"}.`;
+      } else {
+        // A placeholder is a REQUIREMENT, not a picture. It is recorded in
+        // visualRequirements, which the editor already surfaces as
+        // outstanding media, AND rendered as an honest labelled slot on the
+        // page, so the gap is visible in both places rather than living only
+        // in a chat transcript.
+        const brief = args.brief as string;
+        // The label is the short line shown inside the empty frame, so it
+        // must read as a finished phrase. A hard slice produced
+        // "...seated on the ground outside (grass, " in testing, which
+        // looks like a rendering bug rather than a brief.
+        const label =
+          truncateAtWord(brief.split(/[.:\n]/)[0].trim(), 70) || "Add a real photo";
+        const anchorId = (args.sectionId as string) || (args.afterSectionId as string);
+        const i = idx(anchorId);
+        if (i < 0) throw new CapabilityUserError(gone);
+        const target = sections[i];
+        const cfg = (target.config ?? {}) as Record<string, unknown>;
+
+        // Three section types carry their own media slot. Using it keeps the
+        // photo where the customer asked for it instead of pushing a second
+        // section between two that belong together.
+        const inPlace =
+          args.sectionId && ["hero", "story", "photo_gallery"].includes(target.type);
+        if (inPlace) {
+          const patched =
+            target.type === "hero"
+              ? {
+                  ...cfg,
+                  // The hero hides its media column entirely while mediaType
+                  // is "none", so the placeholder would never appear.
+                  mediaType: cfg.mediaType && cfg.mediaType !== "none" ? cfg.mediaType : "image",
+                  mediaPlaceholderLabel: label,
+                  mediaPlaceholderBrief: brief,
+                }
+              : target.type === "story"
+                ? { ...cfg, photoPlaceholderLabel: label, photoPlaceholderBrief: brief }
+                : { ...cfg, placeholderLabel: label, placeholderBrief: brief };
+          nextSections = sections.map((x, n) => (n === i ? { ...x, config: patched } : x)) as typeof sections;
+          outcome = `Marked the ${target.type.replace(/_/g, " ")} section's image slot for a real photo, with a brief for what it should show.`;
+        } else {
+          const gallery = {
+            id: newId("s"),
+            type: "photo_gallery",
+            config: { images: [], layout: "grid", placeholderLabel: label, placeholderBrief: brief },
+          } as (typeof sections)[number];
+          nextSections = [...sections];
+          nextSections.splice(i + 1, 0, gallery);
+          outcome = `Added a photo slot directly below the ${target.type.replace(/_/g, " ")} section, with a brief for what it should show.`;
+        }
+
+        // One slot, one requirement. The id is derived from the section it
+        // belongs to, so asking twice for the same photo re-briefs that slot
+        // instead of stacking a second outstanding item the customer can
+        // never clear. A requirement that has already been RESOLVED is left
+        // alone, because resolution is evidence and must not be erased by a
+        // later brief.
+        const slotId = `vr_${inPlace ? target.id : (nextSections.find((x) => !sections.some((o) => o.id === x.id))?.id ?? target.id)}_media`;
+        nextRequirements = [
+          ...(funnel.visualRequirements ?? []).filter((r) => r.id !== slotId || !!r.resolvedWith),
+          {
+            id: slotId,
+            role: "supporting_evidence",
+            sectionType: inPlace ? target.type : "photo_gallery",
+            brief,
+            necessity: "recommended" as const,
+          },
+        ];
+      }
+
+      let saved: boolean;
+      try {
+        saved = await updateFunnelServerSide({
+          subAccountId,
+          funnelId: funnel.id,
+          patch: {
+            sections: nextSections,
+            ...(nextRequirements ? { visualRequirements: nextRequirements } : {}),
+            // The empty-section law applies to anything written by the AI
+            // Suite. It also stops a removal from leaving a page with no
+            // headline or no way to act: that fails closed rather than
+            // saving a page that looks finished and does nothing.
+            enforceCompleteness: true,
+          },
+        });
+      } catch (err) {
+        if (err instanceof FunnelValidationError) throw new CapabilityUserError(err.message);
+        throw err;
+      }
+      if (!saved) throw new CapabilityUserError("I couldn't save that change to the page.");
+
+      return {
+        resultText:
+          `${outcome} Funnel ${funnel.id} now has ${nextSections.length} sections, in this order: ` +
+          `${nextSections.map((x) => `${x.type}(${x.id})`).join(", ")}. Status unchanged: ${funnel.status}.`,
+        completion: {
+          outcome,
+          review: [
+            op === "add_section"
+              ? "It carries the words you approved. Open the page to see it styled and in place."
+              : op === "add_media_placeholder"
+                ? "The slot is marked and briefed. Upload the photo in the editor when you have it, and nothing on the page claims a photo that isn't there yet."
+                : "Open the page to check it reads right in its new position.",
+            funnel.status === "published"
+              ? "This page is live, so visitors can see the change now."
+              : "The page is still a draft, so nothing is public yet.",
+          ],
+          nextActions: [{ label: "Preview the page", kind: "preview" as const }],
+        },
+      };
+    },
+  },
+  {
+    name: "edit_workflow_steps",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Add, remove or retime one step in a follow-up automation",
+    description:
+      "CHANGE THE SHAPE of a follow-up automation that already exists: add an email, add or change a wait, or remove a step. " +
+      "Use it for 'wait a day before email 2', 'add an email a day after they download encouraging them to book', 'drop the last reminder'. " +
+      "Do NOT use apply_workflow_plan for these: that replaces the whole sequence and throws away the customer's other emails. This changes only the step you name. " +
+      "Read the automation first with inspect_asset so you have the real step ids and order. Target by step id, never by position. " +
+      "Adding an email here creates it with the subject and body you supply, so write the real email, not a placeholder. " +
+      "This never activates anything: a draft automation stays a draft, a sending one keeps sending the rest of its steps unchanged.",
+    parameters: {
+      type: "object",
+      properties: {
+        workflow_id: { type: "string", description: "The automation to change. From inspect_asset or list_workflows." },
+        operation: {
+          type: "string",
+          enum: ["insert_email", "insert_wait", "set_wait", "remove_step"],
+          description: "One per call. insert_* puts a NEW step directly after after_step_id. set_wait retimes an existing wait. remove_step takes one out and closes the gap.",
+        },
+        after_step_id: { type: "string", description: "insert_email and insert_wait: the step the new one goes directly after. Leave out to put it first, before everything else." },
+        step_id: { type: "string", description: "set_wait and remove_step: the step being changed, by its id." },
+        days: { type: "number", description: "insert_wait and set_wait: how long to wait, in days. Use hours instead for anything under a day." },
+        hours: { type: "number", description: "insert_wait and set_wait: how long to wait, in hours. Ignored when days is given." },
+        subject: { type: "string", description: "insert_email: the subject line." },
+        body: { type: "string", description: "insert_email: the full email. Include {{unsubscribeLink}} on its own line at the end, every marketing email legally needs it." },
+        why: { type: "string", description: "One short sentence on what this improves, shown on the confirm card." },
+      },
+      required: ["workflow_id", "operation"],
+      additionalProperties: false,
+    },
+    validate: (rawIn) => {
+      const raw = aliasCamelKeysDeep(deepStripDebris({ ...((rawIn ?? {}) as Record<string, unknown>) }));
+      const workflowId = str(raw, "workflow_id");
+      const op = str(raw, "operation");
+      if (!workflowId) return { ok: false, error: "workflow_id is required." };
+      const OPS = ["insert_email", "insert_wait", "set_wait", "remove_step"];
+      if (!OPS.includes(op)) return { ok: false, error: `operation must be one of: ${OPS.join(", ")}.` };
+      const out: Record<string, unknown> = {
+        workflowId,
+        op,
+        afterStepId: str(raw, "after_step_id"),
+        stepId: str(raw, "step_id"),
+        why: str(raw, "why").slice(0, 200),
+      };
+      if (op === "insert_wait" || op === "set_wait") {
+        const days = Number(raw.days ?? 0);
+        const hours = Number(raw.hours ?? 0);
+        const seconds = days > 0 ? Math.round(days * 86_400) : Math.round(hours * 3_600);
+        if (!Number.isFinite(seconds) || seconds < 60) {
+          return { ok: false, error: "Say how long to wait, in days or hours. The shortest supported wait is a minute." };
+        }
+        if (seconds > 365 * 86_400) return { ok: false, error: "A wait longer than a year is almost certainly a mistake." };
+        out.seconds = seconds;
+      }
+      if (op === "set_wait" || op === "remove_step") {
+        if (!out.stepId) return { ok: false, error: "step_id is required. Read the automation first so you have the real ids." };
+      }
+      if (op === "insert_email") {
+        const subject = fixLiteralNewlines(str(raw, "subject")).slice(0, 200);
+        const body = fixLiteralNewlines(str(raw, "body")).slice(0, 6000);
+        if (!subject) return { ok: false, error: "insert_email needs a subject line." };
+        if (!body) return { ok: false, error: "insert_email needs the email body. Write the real email." };
+        // Same rule the rest of the sending stack enforces: an email with no
+        // way out of the list cannot lawfully be sent, and discovering that
+        // at send time is far worse than refusing it here.
+        const withLink = body.includes("{{unsubscribeLink}}")
+          ? body
+          : `${body.trimEnd()}\n\n{{unsubscribeLink}}`;
+        Object.assign(out, { subject, body: withLink });
+      }
+      return { ok: true, args: out };
+    },
+    summarize: (args) => {
+      const why = args.why ? `. ${args.why as string}` : "";
+      const span = args.seconds
+        ? Number(args.seconds) % 86_400 === 0
+          ? `${Number(args.seconds) / 86_400} day(s)`
+          : `${Math.round(Number(args.seconds) / 3_600)} hour(s)`
+        : "";
+      switch (args.op) {
+        case "insert_email":
+          return `Add an email to this automation: “${String(args.subject).slice(0, 80)}”${why}`;
+        case "insert_wait":
+          return `Add a ${span} wait to this automation${why}`;
+        case "set_wait":
+          return `Change a wait in this automation to ${span}${why}`;
+        default:
+          return `Remove one step from this automation${why}`;
+      }
+    },
+    execute: async (ctx, args) => {
+      const { patchWorkflowStepsServerSide } = await import("@/lib/server/workflows-service");
+      const res = await patchWorkflowStepsServerSide({
+        subAccountId: ctx.subAccountId!,
+        workflowId: args.workflowId as string,
+        op: args.op as "insert_email" | "insert_wait" | "set_wait" | "remove_step",
+        ...(args.afterStepId ? { afterStepId: args.afterStepId as string } : {}),
+        ...(args.stepId ? { stepId: args.stepId as string } : {}),
+        ...(args.seconds ? { seconds: args.seconds as number } : {}),
+        ...(args.subject ? { subject: args.subject as string } : {}),
+        ...(args.body ? { body: args.body as string } : {}),
+      });
+      if (!res.ok) {
+        if (res.reason === "missing") throw new CapabilityUserError("I couldn't find that automation in this workspace.");
+        if (res.reason === "no_step") throw new CapabilityUserError("That step isn't in the automation any more. Read it again and I'll work from what's there now.");
+        if (res.reason === "branch") {
+          throw new CapabilityUserError(
+            "That step splits into two paths, so there is no single place that comes 'after' it. Say which path you mean, or make that change in the automation builder.",
+          );
+        }
+        throw new CapabilityUserError(res.detail ?? "That change isn't valid for this automation.");
+      }
+      return {
+        resultText:
+          `Workflow ${args.workflowId}: ${res.summary}. It now runs: ${res.steps.join(" -> ")}. Status unchanged: ${res.status}.`,
+        completion: {
+          outcome: `In "${res.workflowName}", I ${res.summary}.`,
+          review: [
+            `It now runs: ${res.steps.join(", then ")}.`,
+            res.status === "active"
+              ? "This automation is live, so the new timing applies to anyone who enrols from now on."
+              : "It is still a draft, so nothing sends until you turn it on.",
+          ],
+          nextActions: [{ label: "Review the automation", kind: "review" as const }],
+        },
+      };
+    },
+  },
+  {
+    name: "revise_workflow_email",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Rewrite one email in an automation",
+    description:
+      "REWRITE ONE email inside an existing automation, leaving every other message in the sequence exactly as it is. Use this whenever the customer names a single message: 'rewrite email 3', 'make the first one warmer', 'email 4 repeats email 3, fix it'. " +
+      "Call list_workflows FIRST and work from the body it shows you, never from the subject alone or from a fresh draft. Send the COMPLETE new body: it replaces the stored one. " +
+      "This is the targeted tool. apply_workflow_plan REPLACES THE WHOLE SEQUENCE and must not be used to change one message, because every other email would be rewritten with it. " +
+      "Two things are carried over for you and must not be removed: {{unsubscribeLink}}, which is a legal requirement, and any [button: …](…) line, which is usually the lead-magnet delivery link. Leave them out of your body and they are restored automatically. " +
+      "Editing a message never activates or pauses the automation.",
+    parameters: {
+      type: "object",
+      properties: {
+        workflow_id: { type: "string", description: "The automation that owns the email (from list_workflows)." },
+        email_number: { type: "number", description: "Which email in the sequence, counting from 1 in the order list_workflows showed them. 'Email 3' is 3." },
+        body: { type: "string", description: "The complete new body for that one email. Omit to change only the subject." },
+        subject: { type: "string", description: "Optional new subject. Omit to keep the current one." },
+        why: { type: "string", description: "One short sentence on what this improves, shown on the confirm card." },
+      },
+      required: ["workflow_id", "email_number"],
+      additionalProperties: false,
+    },
+    validate: (rawIn) => {
+      const raw = aliasCamelKeysDeep(deepStripDebris({ ...((rawIn ?? {}) as Record<string, unknown>) }));
+      const workflowId = str(raw, "workflow_id");
+      const n = Number(raw.email_number);
+      if (!workflowId) return { ok: false, error: "workflow_id is required. Call list_workflows to find it." };
+      if (!Number.isInteger(n) || n < 1) {
+        return { ok: false, error: "email_number must be which email in the sequence, counting from 1." };
+      }
+      const body = fixLiteralNewlines(str(raw, "body")).trim();
+      const subject = str(raw, "subject").trim();
+      if (!body && !subject) {
+        return { ok: false, error: "send a new body, a new subject, or both. Nothing was supplied to change." };
+      }
+      return {
+        ok: true,
+        args: {
+          workflowId,
+          emailNumber: n,
+          ...(body ? { body: body.slice(0, 8000) } : {}),
+          ...(subject ? { subject: subject.slice(0, 200) } : {}),
+          why: str(raw, "why").slice(0, 200),
+        },
+      };
+    },
+    summarize: (args) => {
+      const bits: string[] = [];
+      if (args.subject) bits.push(`subject \u201c${String(args.subject).slice(0, 70)}\u201d`);
+      if (args.body) bits.push(`a new body (${String(args.body).split(/\s+/).length} words)`);
+      return `Rewrite email ${args.emailNumber as number} in one automation: ${bits.join(" and ")}${args.why ? `. ${args.why as string}` : ""}. The other emails are untouched.`;
+    },
+    execute: async (ctx, args) => {
+      const { patchWorkflowEmailBodyServerSide } = await import("@/lib/server/workflows-service");
+      const newBody = args.body as string | undefined;
+      const out = await patchWorkflowEmailBodyServerSide({
+        subAccountId: ctx.subAccountId!,
+        workflowId: args.workflowId as string,
+        emailIndex: args.emailNumber as number,
+        ...(args.subject ? { subject: args.subject as string } : {}),
+        edit: (current) => {
+          if (!newBody) return { ok: true, body: current };
+          let next = newBody;
+          // THE TWO THINGS A REWRITE MUST NOT LOSE. "Make it warmer" is not
+          // permission to drop the delivery button or the unsubscribe line,
+          // and a model rewriting prose will drop both without meaning to.
+          // Restored rather than refused, because refusing would just make
+          // the customer ask twice.
+          const button = current.match(/\[button(?: secondary)?:[^\]]*\]\([^)]*\)/);
+          if (button && !/\[button(?: secondary)?:/.test(next)) {
+            next = `${next.trimEnd()}\n\n${button[0]}`;
+          }
+          if (current.includes("{{unsubscribeLink}}") && !next.includes("{{unsubscribeLink}}")) {
+            next = `${next.trimEnd()}\n\n{{unsubscribeLink}}`;
+          }
+          return { ok: true, body: next };
+        },
+      });
+      if (!out.ok) {
+        if (out.reason === "missing") throw new CapabilityUserError("I couldn't find that automation in this workspace.");
+        if (out.reason === "no_email") {
+          throw new CapabilityUserError(
+            out.emailCount
+              ? `That automation has ${out.emailCount} email${out.emailCount === 1 ? "" : "s"}, so there is no email ${args.emailNumber as number}.`
+              : "That automation doesn't send any emails yet.",
+          );
+        }
+        throw new CapabilityUserError(out.detail ?? "I couldn't rewrite that email.");
+      }
+      const restored =
+        !!newBody && out.after.length > newBody.length ? " The delivery link and unsubscribe line were kept." : "";
+      return {
+        resultText:
+          `Rewrote email ${args.emailNumber as number} ("${out.subject}") in "${out.workflowName}".${restored}\n\n` +
+          `The automation is still ${out.status}. Nothing else in the sequence changed.`,
+        completion: {
+          outcome:
+            `Rewrote email ${args.emailNumber as number}, "${out.subject}", in ${out.workflowName}. ` +
+            `Every other message in the sequence is exactly as it was.`,
+          review: [
+            ...(restored ? ["The delivery link and unsubscribe line were kept in place."] : []),
+            out.status === "active"
+              ? "This automation is live, so the new wording goes out to anyone who enters it from now on."
+              : "The automation is still a draft, so nothing has been sent.",
+          ],
+          nextActions: [{ label: "Review the sequence", kind: "review" as const }],
+        },
+      };
+    },
+  },
+  {
     name: "revise_funnel_copy",
     level: "sub-account",
     requiredRole: "subAccountAdmin",
@@ -7618,7 +8372,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       "REWRITE copy on a section of an EXISTING funnel page. Use when the customer asks you to change wording on a page they are looking at, 'make this headline clearer', 'make this offer easier to understand', 'tighten the FAQ'. " +
       "You are given the page's real current sections in your context; work from THAT draft, never from the funnel's title or from defaults, and never regenerate the whole page when the customer asked about one part. " +
       "Send ONLY the fields you are actually changing: anything you omit is left exactly as the customer has it. This is how their own edits survive. " +
-      "Change copy only. You cannot add, delete, reorder or retype sections here, the customer does that in the editor. " +
+      "Change copy only. To add, remove, move or retype a section, or to mark where a real photo belongs, use edit_funnel_structure instead. " +
       "The customer reviews and confirms before anything is written, so propose the real replacement text rather than describing it.",
     parameters: {
       type: "object",
@@ -8434,6 +9188,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       type: "object",
       properties: {
         form_id: { type: "string", description: "The form to change (from list_forms)." },
+        reorder_question_ids: { type: "array", items: { type: "string" }, description: "The questions in their NEW order, as field ids. List every question you want moved; any you leave out keep their relative place at the end." },
         rename: { type: "string", description: "New name for the form." },
         add_question: {
           type: "object",
@@ -8452,6 +9207,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
             placeholder: { type: "string" },
             options: { type: "array", items: { type: "string" }, description: "Choices, for a select." },
             saves_to: { type: "string", enum: ["name", "email", "phone", "company", "notes"], description: "Which contact field the answer fills, if any." },
+            after_question_id: { type: "string", description: "Put it directly AFTER this question (a field id from list_forms). Leave out to add it at the end. Order is what the visitor experiences, so use this whenever the customer names a position." },
           },
           required: ["label", "type"],
           additionalProperties: false,
@@ -8482,9 +9238,12 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const add = (r.add_question ?? r.addQuestion) as Record<string, unknown> | undefined;
       const upd = (r.update_question ?? r.updateQuestion) as Record<string, unknown> | undefined;
       const removeId = strEither(raw, "remove_question_id").trim();
+      const reorder = (
+        Array.isArray(r.reorder_question_ids) ? r.reorder_question_ids : Array.isArray(r.reorderQuestionIds) ? r.reorderQuestionIds : []
+      ).filter((x): x is string => typeof x === "string" && !!x.trim());
 
-      const ops = [rename ? 1 : 0, add ? 1 : 0, upd ? 1 : 0, removeId ? 1 : 0].reduce((a, b) => a + b, 0);
-      if (ops === 0) return { ok: false, error: "Nothing to change. Rename the form, or add, change or remove one question." };
+      const ops = [rename ? 1 : 0, add ? 1 : 0, upd ? 1 : 0, removeId ? 1 : 0, reorder.length ? 1 : 0].reduce((a, b) => a + b, 0);
+      if (ops === 0) return { ok: false, error: "Nothing to change. Rename the form, or add, change, reorder or remove questions." };
       if (ops > 1) return { ok: false, error: "Do one change per call so the customer can see what each one does." };
 
       if (add) {
@@ -8509,6 +9268,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               placeholder: typeof add.placeholder === "string" ? add.placeholder.trim() : "",
               options,
               savesTo: typeof (add.saves_to ?? add.savesTo) === "string" ? (add.saves_to ?? add.savesTo) : null,
+              afterQuestionId:
+                typeof (add.after_question_id ?? add.afterQuestionId) === "string"
+                  ? String(add.after_question_id ?? add.afterQuestionId).trim()
+                  : "",
             },
           },
         };
@@ -8526,18 +9289,23 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         return { ok: true, args: { formId, updateQuestion: patch } };
       }
 
+      if (reorder.length) return { ok: true, args: { formId, reorderQuestionIds: reorder } };
       if (removeId) return { ok: true, args: { formId, removeQuestionId: removeId } };
       return { ok: true, args: { formId, rename } };
     },
     summarize: (args) => {
       if (args.rename) return `Rename this form to "${args.rename as string}".`;
-      if (args.addQuestion) return `Add the question "${(args.addQuestion as { label: string }).label}" to this form.`;
+      if (args.addQuestion) {
+        const q = args.addQuestion as { label: string; afterQuestionId?: string };
+        return `Add the question "${q.label}" to this form${q.afterQuestionId ? ", directly after an existing one" : ""}.`;
+      }
+      if (args.reorderQuestionIds) return "Change the order of the questions on this form.";
       if (args.updateQuestion) return "Change one question on this form.";
       return "Remove one question from this form.";
     },
     execute: async (ctx, args) => {
       const { patchFormServerSide } = await import("@/lib/server/forms-service");
-      const add = args.addQuestion as { label: string; type: string; required: boolean; placeholder: string; options: string[]; savesTo: string | null } | undefined;
+      const add = args.addQuestion as { label: string; type: string; required: boolean; placeholder: string; options: string[]; savesTo: string | null; afterQuestionId?: string } | undefined;
       const upd = args.updateQuestion as Record<string, unknown> | undefined;
       const res = await patchFormServerSide({
         subAccountId: ctx.subAccountId!,
@@ -8552,8 +9320,12 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
                 placeholder: add.placeholder,
                 options: add.options,
                 mapsTo: (add.savesTo ?? null) as never,
+                ...(add.afterQuestionId ? { afterFieldId: add.afterQuestionId } : {}),
               },
             }
+          : {}),
+        ...(Array.isArray(args.reorderQuestionIds) && (args.reorderQuestionIds as string[]).length
+          ? { reorderFieldIds: args.reorderQuestionIds as string[] }
           : {}),
         ...(upd ? { updateField: upd as never } : {}),
         ...(args.removeQuestionId ? { removeFieldId: args.removeQuestionId as string } : {}),

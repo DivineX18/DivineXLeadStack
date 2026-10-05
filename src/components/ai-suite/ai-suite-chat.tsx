@@ -35,7 +35,11 @@ interface AiSuiteChatProps {
    *  editor, the artifact + selected section travel with every message so Zeno
    *  reasons about the customer's ACTUAL draft rather than regenerating from a
    *  title. Re-resolved and ownership-checked server-side — never trusted. */
-  artifactRef?: { kind: "funnel"; id: string; sectionId?: string | null };
+  /** The asset on screen. `kind` is any Flow domain the server registry
+   *  knows; it is a HINT only, re-resolved and ownership-proved server-side
+   *  (see lib/ai-suite/flow-domains.ts), so an unknown kind resolves to
+   *  nothing rather than being trusted. */
+  artifactRef?: { kind: string; id: string; sectionId?: string | null };
   /** Pre-fills the input when another surface hands work over (a
    *  recommendation's "Fix with Zeno", say). SEEDS ONLY — never auto-sends,
    *  so the customer reads and chooses. Re-seeding with the same text is a
