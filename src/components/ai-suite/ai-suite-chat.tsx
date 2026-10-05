@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { describeZenoFailure } from "@/lib/ai-suite/failure-message";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -35,7 +36,11 @@ interface AiSuiteChatProps {
    *  editor, the artifact + selected section travel with every message so Zeno
    *  reasons about the customer's ACTUAL draft rather than regenerating from a
    *  title. Re-resolved and ownership-checked server-side — never trusted. */
-  artifactRef?: { kind: "funnel"; id: string; sectionId?: string | null };
+  /** The asset on screen. `kind` is any Flow domain the server registry
+   *  knows; it is a HINT only, re-resolved and ownership-proved server-side
+   *  (see lib/ai-suite/flow-domains.ts), so an unknown kind resolves to
+   *  nothing rather than being trusted. */
+  artifactRef?: { kind: string; id: string; sectionId?: string | null };
   /** Pre-fills the input when another surface hands work over (a
    *  recommendation's "Fix with Zeno", say). SEEDS ONLY — never auto-sends,
    *  so the customer reads and chooses. Re-seeding with the same text is a
@@ -349,8 +354,14 @@ export function AiSuiteChat({
         | { error?: string }
         | null;
       if (!res.ok || !data) {
+        // A chat turn reads and proposes; it never writes. So this can say
+        // plainly that nothing changed. See lib/ai-suite/failure-message.ts.
         throw new Error(
-          (data as { error?: string })?.error || `Request failed (${res.status})`,
+          describeZenoFailure({
+            status: res.status,
+            stage: "chat",
+            serverMessage: (data as { error?: string })?.error ?? null,
+          }),
         );
       }
 
@@ -388,7 +399,12 @@ export function AiSuiteChat({
         throw new Error("Unexpected response from the assistant.");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      // A thrown fetch never reached the server, so the turn did not run.
+      setError(
+        err instanceof Error && err.message.trim()
+          ? err.message
+          : "I couldn't reach the server. Check your connection and ask me again. Nothing was changed.",
+      );
     } finally {
       setLoading(false);
     }
@@ -423,7 +439,11 @@ export function AiSuiteChat({
         error?: string;
       } | null;
       if (!res.ok || !data?.ok) {
-        throw new Error(data?.error || `Action failed (${res.status})`);
+        // This one IS the write, so what it may claim about state depends on
+        // whether the change was refused or faulted part-way.
+        throw new Error(
+          describeZenoFailure({ status: res.status, stage: "confirm", serverMessage: data?.error ?? null }),
+        );
       }
       updateProposal(id, {
         status: "confirmed",
@@ -431,7 +451,12 @@ export function AiSuiteChat({
         resultRef: data.resultRef ?? null,
       });
     } catch (err) {
-      const m = err instanceof Error ? err.message : "The action failed.";
+      // A thrown fetch (offline, DNS, the tab losing the network) never
+      // reached the server, so nothing ran.
+      const m =
+        err instanceof Error && err.message.trim()
+          ? err.message
+          : "I couldn't reach the server, so that didn't run. Check your connection and try again. Nothing was changed.";
       updateProposal(id, { status: "failed", resultText: m });
     } finally {
       setConfirmingId(null);

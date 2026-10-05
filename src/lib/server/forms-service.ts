@@ -95,9 +95,21 @@ export async function patchFormServerSide(opts: {
   subAccountId: string;
   formId: string;
   rename?: string;
-  addField?: { type: FormField["type"]; label: string; required?: boolean; placeholder?: string; options?: string[]; mapsTo?: FormField["mapsTo"] };
+  addField?: {
+    type: FormField["type"]; label: string; required?: boolean; placeholder?: string;
+    options?: string[]; mapsTo?: FormField["mapsTo"];
+    /** Put the new question directly after this one. Omitted = at the end.
+     *  Order is what a visitor experiences, so "add a Company field after
+     *  Email" is a different request from "add a Company field", and only
+     *  one of them was previously expressible. */
+    afterFieldId?: string;
+  };
   updateField?: { fieldId: string; label?: string; required?: boolean; placeholder?: string; options?: string[] };
   removeFieldId?: string;
+  /** The complete new order, as field ids. Any id left out keeps its
+   *  relative place at the end, so a partial list cannot silently drop a
+   *  question the visitor still needs to answer. */
+  reorderFieldIds?: string[];
 }): Promise<FormPatchResult> {
   const db = getAdminDb();
   const ref = db.doc(`forms/${opts.formId}`);
@@ -130,9 +142,30 @@ export async function patchFormServerSide(opts: {
       options: opts.addField.options ?? [],
       mapsTo: opts.addField.mapsTo ?? null,
     };
-    fields.push(field);
+    const at = opts.addField.afterFieldId
+      ? fields.findIndex((f) => f.id === opts.addField!.afterFieldId)
+      : -1;
+    if (opts.addField.afterFieldId && at === -1) return { ok: false, reason: "no_field" };
+    if (at >= 0) fields.splice(at + 1, 0, field);
+    else fields.push(field);
     updates.fields = fields;
-    summary = `added the "${label}" question`;
+    summary =
+      at >= 0
+        ? `added the "${label}" question after "${fields[at].label}"`
+        : `added the "${label}" question`;
+  }
+
+  if (opts.reorderFieldIds?.length) {
+    const named = opts.reorderFieldIds
+      .map((id) => fields.find((f) => f.id === id))
+      .filter((f): f is FormField => !!f);
+    if (named.length === 0) return { ok: false, reason: "no_field" };
+    const rest = fields.filter((f) => !named.some((n) => n.id === f.id));
+    const ordered = [...named, ...rest];
+    fields.length = 0;
+    fields.push(...ordered);
+    updates.fields = fields;
+    summary = "reordered the questions";
   }
 
   if (opts.updateField) {

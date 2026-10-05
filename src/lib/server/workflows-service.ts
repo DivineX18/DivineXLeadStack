@@ -9,6 +9,7 @@ import type {
   WorkflowRunStatus,
   WorkflowStatus,
   WorkflowTrigger,
+  WorkflowTriggerType,
 } from "@/types/workflows";
 
 /** Admin-SDK CRUD for the Workflow Builder. All reads/writes are sub-account
@@ -431,6 +432,9 @@ export async function patchWorkflowEmailBodyServerSide(opts: {
   emailIndex: number;
   /** Given the current body, return the new one, or a reason it cannot. */
   edit: (body: string) => { ok: true; body: string } | { ok: false; reason: string };
+  /** Optional new subject. Omitted leaves the existing one alone, which is
+   *  what "make it warmer but keep the subject" has to mean. */
+  subject?: string;
 }): Promise<
   | { ok: true; workflowName: string; subject: string; status: WorkflowStatus; before: string; after: string }
   | { ok: false; reason: "missing" | "no_email" | "edit"; detail?: string; emailCount?: number }
@@ -457,13 +461,24 @@ export async function patchWorkflowEmailBodyServerSide(opts: {
 
   // Only this node, and within it only the body. Timing, branches and every
   // other key on the config are carried through as they were.
-  nodes[targetId] = { ...node, config: { ...config, body: result.body } };
+  nodes[targetId] = {
+    ...node,
+    config: {
+      ...config,
+      body: result.body,
+      ...(typeof opts.subject === "string" && opts.subject.trim()
+        ? { subject: opts.subject.trim().slice(0, 200) }
+        : {}),
+    },
+  };
   await ref.update({ nodes, updatedAt: FieldValue.serverTimestamp() });
 
   return {
     ok: true,
     workflowName: String(wf.name ?? "Untitled workflow"),
-    subject: String(config.subject ?? ""),
+    subject: String(
+      typeof opts.subject === "string" && opts.subject.trim() ? opts.subject.trim() : (config.subject ?? ""),
+    ),
     status: wf.status,
     before,
     after: result.body,
@@ -531,4 +546,228 @@ export async function deleteWorkflowServerSide(
   if (!snap.exists || snap.data()!.subAccountId !== subAccountId) return false;
   await ref.delete();
   return true;
+}
+
+/* ------------------- targeted step edits (Zeno, U2) --------------------- */
+
+/**
+ * Change ONE step of a workflow, in place.
+ *
+ * The only way to touch a sequence used to be applyWorkflowPlan, which
+ * REPLACES it. So "wait a day before email 2" had to rewrite emails 1, 2 and
+ * 3 to change a single delay, and any edit the customer had made to the
+ * others went with it. This changes the one node named and relinks its
+ * neighbours; every other node, its config, the trigger, the stats and the
+ * status are carried through untouched.
+ *
+ * Linear sequences only (`next`). A branch (`if_else`) has two outgoing
+ * edges and no single "after", so inserting into one is refused rather than
+ * guessed at — a step silently attached to the wrong arm of a branch is
+ * worse than being told to open the builder.
+ */
+export async function patchWorkflowStepsServerSide(opts: {
+  subAccountId: string;
+  workflowId: string;
+  op: "insert_email" | "insert_wait" | "set_wait" | "remove_step";
+  /** insert_*: the step the new one goes directly after. Omitted = first. */
+  afterStepId?: string;
+  /** set_wait, remove_step: the step being changed. */
+  stepId?: string;
+  /** insert_wait, set_wait. */
+  seconds?: number;
+  /** insert_email. */
+  subject?: string;
+  body?: string;
+}): Promise<
+  | { ok: true; workflowName: string; status: WorkflowStatus; stepId: string; summary: string; steps: string[] }
+  | { ok: false; reason: "missing" | "no_step" | "branch" | "invalid"; detail?: string }
+> {
+  const db = getAdminDb();
+  const ref = db.doc(`workflows/${opts.workflowId}`);
+  const snap = await ref.get();
+  // A workflow in another workspace is reported exactly as a missing one.
+  if (!snap.exists || snap.data()!.subAccountId !== opts.subAccountId) {
+    return { ok: false, reason: "missing" };
+  }
+  const wf = snap.data() as Omit<WorkflowDoc, "id">;
+  const nodes: Record<string, WorkflowNode> = { ...(wf.nodes ?? {}) };
+  let startNodeId = wf.startNodeId ?? null;
+
+  const newId = () => `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  const branchy = (id: string) => nodes[id]?.type === "if_else";
+
+  if (opts.op === "insert_email" || opts.op === "insert_wait") {
+    const after = opts.afterStepId;
+    if (after && !nodes[after]) return { ok: false, reason: "no_step" };
+    if (after && branchy(after)) return { ok: false, reason: "branch" };
+    // "An email one day after they download" is ONE request, not two. With
+    // one node per call, the delay was simply never created: the email was
+    // inserted immediately after the previous one and the customer's "one
+    // day" vanished. An insert_email carrying a delay therefore lays down
+    // the wait and the email together, in that order.
+    const chain: WorkflowNode[] = [];
+    const delay = Math.floor(opts.seconds ?? 0);
+    if (opts.op === "insert_email" && delay >= 60) {
+      chain.push({ id: newId(), type: "wait", config: { seconds: delay }, next: null });
+    }
+    chain.push(
+      opts.op === "insert_email"
+        ? { id: newId(), type: "send_email", config: { subject: opts.subject ?? "", body: opts.body ?? "" }, next: null }
+        : { id: newId(), type: "wait", config: { seconds: Math.max(60, delay || 86_400) }, next: null },
+    );
+    for (let i = 0; i < chain.length - 1; i++) chain[i].next = chain[i + 1].id;
+    const first = chain[0], last = chain[chain.length - 1];
+    if (after) {
+      last.next = nodes[after].next ?? null;
+      nodes[after] = { ...nodes[after], next: first.id };
+    } else {
+      last.next = startNodeId;
+      startNodeId = first.id;
+    }
+    for (const n of chain) nodes[n.id] = n;
+  } else if (opts.op === "set_wait") {
+    const id = opts.stepId ?? "";
+    if (!nodes[id]) return { ok: false, reason: "no_step" };
+    if (nodes[id].type !== "wait") {
+      return { ok: false, reason: "invalid", detail: "that step is not a wait" };
+    }
+    nodes[id] = {
+      ...nodes[id],
+      config: { ...(nodes[id].config ?? {}), seconds: Math.max(60, Math.floor(opts.seconds ?? 86_400)) },
+    };
+  } else {
+    const id = opts.stepId ?? "";
+    if (!nodes[id]) return { ok: false, reason: "no_step" };
+    if (branchy(id)) return { ok: false, reason: "branch" };
+    const follower = nodes[id].next ?? null;
+    // Re-point whoever pointed here, so removing a step closes the gap
+    // instead of stranding everything after it.
+    for (const [k, n] of Object.entries(nodes)) {
+      if (n.next === id) nodes[k] = { ...n, next: follower };
+    }
+    if (startNodeId === id) startNodeId = follower;
+    delete nodes[id];
+  }
+
+  await ref.update({ nodes, startNodeId, updatedAt: FieldValue.serverTimestamp() });
+
+  // Read the sequence back in run order so the caller reports what the
+  // customer will actually experience, not what was intended.
+  const order: string[] = [];
+  const seen = new Set<string>();
+  let cur = startNodeId;
+  while (cur && !seen.has(cur) && order.length < 60) {
+    seen.add(cur);
+    const n = nodes[cur];
+    if (!n) break;
+    const c = (n.config ?? {}) as Record<string, unknown>;
+    order.push(
+      n.type === "send_email"
+        ? `Email "${String(c.subject ?? "").slice(0, 80)}"`
+        : n.type === "wait"
+          ? `Wait ${Math.round(Number(c.seconds ?? 0) / 3600)} hour(s)`
+          : String(n.type).replace(/_/g, " "),
+    );
+    cur = n.next ?? null;
+  }
+
+  return {
+    ok: true,
+    workflowName: String(wf.name ?? "Untitled workflow"),
+    status: wf.status,
+    stepId: opts.stepId ?? Object.keys(nodes).find((k) => !Object.values(nodes).some((n) => n.next === k)) ?? "",
+    summary:
+      opts.op === "insert_email" ? (opts.seconds ?? 0) >= 60 ? "added a wait and an email after it" : "added an email step"
+      : opts.op === "insert_wait" ? "added a wait"
+      : opts.op === "set_wait" ? "changed how long it waits"
+      : "removed a step",
+    steps: order,
+  };
+}
+
+/**
+ * Change an automation's LOGIC: what starts it, and how a branch decides.
+ *
+ * The step tools change what happens; this changes when and for whom. Both
+ * were previously reachable only through applyWorkflowPlan, which replaces
+ * the whole graph, so "only send this to people who asked for a quote" meant
+ * rewriting every email to add one condition.
+ *
+ * Conditions are written whole, because a condition list is read as a unit
+ * ("all of these must be true") and patching one line of it in isolation is
+ * how you end up with a filter nobody can explain. The caller sends the list
+ * it wants; everything else on the workflow is untouched.
+ */
+export async function patchWorkflowLogicServerSide(opts: {
+  subAccountId: string;
+  workflowId: string;
+  op: "set_trigger" | "set_trigger_filters" | "set_branch_conditions";
+  triggerType?: WorkflowTriggerType;
+  formId?: string | null;
+  stepId?: string;
+  conditions?: { field: string; op: string; value?: string }[];
+}): Promise<
+  | { ok: true; workflowName: string; status: WorkflowStatus; summary: string; describes: string }
+  | { ok: false; reason: "missing" | "no_step" | "not_a_branch" | "invalid"; detail?: string }
+> {
+  const db = getAdminDb();
+  const ref = db.doc(`workflows/${opts.workflowId}`);
+  const snap = await ref.get();
+  if (!snap.exists || snap.data()!.subAccountId !== opts.subAccountId) {
+    return { ok: false, reason: "missing" };
+  }
+  const wf = snap.data() as Omit<WorkflowDoc, "id">;
+  const write: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
+  const conditions = (opts.conditions ?? []).map((c) => ({
+    field: String(c.field).slice(0, 80),
+    op: c.op as never,
+    ...(c.value !== undefined ? { value: String(c.value).slice(0, 200) } : {}),
+  }));
+  let summary = "";
+
+  if (opts.op === "set_trigger") {
+    const trigger = { ...(wf.trigger ?? { filters: { all: [] } }) } as WorkflowTrigger;
+    if (opts.triggerType) trigger.type = opts.triggerType;
+    // A form restriction only means anything on a form trigger, and leaving
+    // a stale one behind would silently narrow an unrelated trigger to a
+    // form nobody is thinking about.
+    if (trigger.type === "form.submitted") {
+      if (opts.formId !== undefined) trigger.formId = opts.formId;
+    } else {
+      trigger.formId = null;
+    }
+    write.trigger = trigger;
+    summary = `changed what starts it to ${String(trigger.type).replace(/[._]/g, " ")}`;
+  } else if (opts.op === "set_trigger_filters") {
+    write.trigger = { ...(wf.trigger ?? { type: "contact.created" }), filters: { all: conditions } };
+    summary = conditions.length
+      ? `set who it applies to (${conditions.length} condition${conditions.length === 1 ? "" : "s"})`
+      : "removed every condition, so it now applies to everyone";
+  } else {
+    const id = opts.stepId ?? "";
+    const nodes = { ...(wf.nodes ?? {}) };
+    if (!nodes[id]) return { ok: false, reason: "no_step" };
+    if (nodes[id].type !== "if_else") return { ok: false, reason: "not_a_branch" };
+    if (conditions.length === 0) {
+      // A branch with no conditions silently sends everyone down one arm,
+      // which looks like it is deciding something and is not.
+      return { ok: false, reason: "invalid", detail: "a branch with no conditions does not decide anything" };
+    }
+    nodes[id] = { ...nodes[id], config: { ...(nodes[id].config ?? {}), conditions: { all: conditions } } };
+    write.nodes = nodes;
+    summary = `changed how one branch decides (${conditions.length} condition${conditions.length === 1 ? "" : "s"})`;
+  }
+
+  await ref.update(write);
+  const t = (write.trigger ?? wf.trigger) as WorkflowTrigger | undefined;
+  return {
+    ok: true,
+    workflowName: String(wf.name ?? "Untitled workflow"),
+    status: wf.status,
+    summary,
+    describes:
+      `starts on ${String(t?.type ?? "unknown").replace(/[._]/g, " ")}` +
+      (t?.formId ? ` for one form` : "") +
+      (t?.filters?.all?.length ? `, for contacts where ${t.filters.all.map((c) => `${c.field} ${String(c.op).replace(/_/g, " ")} ${c.value ?? ""}`.trim()).join(" and ")}` : ""),
+  };
 }

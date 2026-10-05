@@ -111,6 +111,13 @@ export interface BookingPagePatch {
   status?: "draft" | "published";
   /** Replace ONE day's availability window, leaving the other days alone. */
   workingHour?: { dayOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6; startMinute: number; endMinute: number } | null;
+  /** The extra questions asked at booking time, edited one at a time so a
+   *  generated payload cannot erase the ones it did not mention. The editor
+   *  already configures these; this exposes the same field, not a new one. */
+  addIntakeField?: { label: string; type: "text" | "textarea" | "select"; required?: boolean; options?: string[]; afterFieldId?: string };
+  updateIntakeField?: { fieldId: string; label?: string; required?: boolean; options?: string[] };
+  removeIntakeFieldId?: string;
+  reorderIntakeFieldIds?: string[];
 }
 
 /**
@@ -191,6 +198,65 @@ export async function patchBookingPageServerSide(opts: {
     changed.push("availability");
   } else if (p.workingHour === null) {
     return { ok: false, reason: "invalid", error: "To close a day, send its hours as a zero-length window instead of null." };
+  }
+
+  // The intake questions, edited ONE at a time. The whole list is rewritten
+  // on save, so a generated payload that named only the question it cared
+  // about would otherwise erase the rest.
+  {
+    const fields = [...(current.intakeFields ?? [])];
+    if (p.addIntakeField) {
+      const label = p.addIntakeField.label.trim();
+      if (!label) return { ok: false, reason: "invalid", error: "A question needs its wording." };
+      if (fields.some((f) => f.label.trim().toLowerCase() === label.toLowerCase())) {
+        return { ok: false, reason: "invalid", error: "This booking page already asks that question." };
+      }
+      const field = {
+        id: `q_${Math.random().toString(36).slice(2, 10)}`,
+        label,
+        type: p.addIntakeField.type,
+        required: p.addIntakeField.required === true,
+        options: p.addIntakeField.type === "select" ? (p.addIntakeField.options ?? []) : null,
+      };
+      const at = p.addIntakeField.afterFieldId
+        ? fields.findIndex((f) => f.id === p.addIntakeField!.afterFieldId)
+        : -1;
+      if (p.addIntakeField.afterFieldId && at === -1) {
+        return { ok: false, reason: "invalid", error: "That question isn't on this booking page." };
+      }
+      if (at >= 0) fields.splice(at + 1, 0, field);
+      else fields.push(field);
+      next.intakeFields = fields;
+      changed.push("questions");
+    }
+    if (p.updateIntakeField) {
+      const i = fields.findIndex((f) => f.id === p.updateIntakeField!.fieldId);
+      if (i === -1) return { ok: false, reason: "invalid", error: "That question isn't on this booking page." };
+      fields[i] = {
+        ...fields[i],
+        ...(p.updateIntakeField.label !== undefined ? { label: p.updateIntakeField.label.trim() } : {}),
+        ...(p.updateIntakeField.required !== undefined ? { required: p.updateIntakeField.required } : {}),
+        ...(p.updateIntakeField.options !== undefined ? { options: p.updateIntakeField.options } : {}),
+      };
+      next.intakeFields = fields;
+      changed.push("questions");
+    }
+    if (p.removeIntakeFieldId) {
+      const i = fields.findIndex((f) => f.id === p.removeIntakeFieldId);
+      if (i === -1) return { ok: false, reason: "invalid", error: "That question isn't on this booking page." };
+      fields.splice(i, 1);
+      next.intakeFields = fields;
+      changed.push("questions");
+    }
+    if (p.reorderIntakeFieldIds?.length) {
+      const named = p.reorderIntakeFieldIds
+        .map((id) => fields.find((f) => f.id === id))
+        .filter((f): f is (typeof fields)[number] => !!f);
+      if (named.length === 0) return { ok: false, reason: "invalid", error: "None of those questions are on this booking page." };
+      // Anything left out keeps its place at the end rather than vanishing.
+      next.intakeFields = [...named, ...fields.filter((f) => !named.some((n) => n.id === f.id))];
+      changed.push("questions");
+    }
   }
 
   if (changed.length === 0) return { ok: false, reason: "nothing" };
