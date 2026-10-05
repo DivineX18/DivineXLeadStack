@@ -222,6 +222,19 @@ function stepLine(node: WorkflowNode, n: number, emailOrdinal?: number): string 
     }
     case "add_tag":
       return `${n}. Tag them "${cap(cfg.tag, 60)}" id=${node.id}`;
+    case "if_else": {
+      // A branch was invisible: the walk follows `next`, which a branch does
+      // not have, so a workflow that decides something read as if it did not.
+      const all = ((cfg.conditions as { all?: unknown[] } | undefined)?.all ?? []) as Record<string, unknown>[];
+      const br = (node as { branches?: { whenTrue?: string | null; whenFalse?: string | null } }).branches;
+      return (
+        `${n}. Branch id=${node.id}, continues only when ` +
+        (all.length
+          ? all.map((c) => `${cap(c.field, 60)} ${String(c.op ?? "").replace(/_/g, " ")} ${cap(c.value, 60)}`.trim()).join(" AND ")
+          : "NOTHING IS SET, so it does not actually decide anything") +
+        ` (yes -> ${br?.whenTrue ?? "stop"}, no -> ${br?.whenFalse ?? "stop"})`
+      );
+    }
     default:
       return `${n}. ${String(node.type).replace(/_/g, " ")} id=${node.id}`;
   }
@@ -249,19 +262,35 @@ const workflowDomain: FlowDomain<WorkflowDoc> = {
   load: (sa, id) => getWorkflow(sa, id),
   describe: (doc) => {
     const steps = workflowStepsInOrder(doc);
+    const reached = new Set(steps.map((x) => x.id));
+    // Everything hanging off a branch arm, which the linear walk by
+    // definition never reaches.
+    const offBranch = Object.values(doc.nodes ?? {}).filter((n) => !reached.has(n.id));
     const trig = (doc.trigger ?? {}) as unknown as Record<string, unknown>;
     return {
       id: doc.id,
       name: doc.name,
       state: doc.status === "active" ? "sending" : doc.status === "paused" ? "paused" : "draft",
       lines: [
-        `Starts when: ${cap(trig.type, 60).replace(/_/g, " ") || "unknown"}${trig.formId ? ` (form ${String(trig.formId)})` : ""}.`,
+        `Starts when: ${cap(trig.type, 60).replace(/[._]/g, " ") || "unknown"}${trig.formId ? ` (only form ${String(trig.formId)})` : ""}.`,
+        // Who it applies to is half of what an automation DOES, and it was
+        // not shown at all, so Zeno could not answer "who gets this?".
+        `Applies to: ${
+          (((trig.filters as { all?: Record<string, unknown>[] } | undefined)?.all ?? []).length)
+            ? ((trig.filters as { all: Record<string, unknown>[] }).all)
+                .map((c) => `${cap(c.field, 60)} ${String(c.op ?? "").replace(/_/g, " ")} ${cap(c.value, 60)}`.trim())
+                .join(" AND ")
+            : "everyone who matches the trigger, no conditions set"
+        }.`,
         ...(() => {
           let emails = 0;
           return steps.map((node, i) =>
             stepLine(node, i + 1, node.type === "send_email" ? ++emails : undefined),
           );
         })(),
+        ...(offBranch.length
+          ? [`Also on a branch arm: ${offBranch.map((n) => `${String(n.type).replace(/_/g, " ")} id=${n.id}`).join(", ")}.`]
+          : []),
       ],
       refs: { workflow_id: doc.id },
       edges: trig.formId
@@ -275,6 +304,7 @@ const workflowDomain: FlowDomain<WorkflowDoc> = {
     update: "revise_workflow_email",
     reorder: "apply_workflow_plan",
     configure: "edit_workflow_steps",
+    connect: "edit_workflow_logic",
   },
 };
 

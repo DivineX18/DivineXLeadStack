@@ -420,3 +420,79 @@ export async function finalizeDirectAudioAsset(opts: {
   });
   return { assetId: opts.assetId, url: `/d/${opts.assetId}` };
 }
+
+/* ------------------- the workspace media library (Zeno) ----------------- */
+
+/** One library item, as Zeno and the attach path need to see it. */
+export interface WorkspaceAsset {
+  assetId: string;
+  url: string;
+  kind: FunnelAssetKind;
+  filename: string;
+  title: string | null;
+  contentType: string;
+  sizeBytes: number;
+  createdAtMs: number;
+}
+
+function toWorkspaceAsset(a: Record<string, unknown>): WorkspaceAsset {
+  const created = a.createdAt as { toMillis?: () => number } | Date | undefined;
+  return {
+    assetId: String(a.id),
+    url: `/api/funnel-asset/${String(a.id)}`,
+    kind: a.kind as FunnelAssetKind,
+    filename: String(a.filename ?? ""),
+    title: typeof a.title === "string" && a.title ? a.title : null,
+    contentType: String(a.contentType ?? ""),
+    sizeBytes: Number(a.sizeBytes ?? 0),
+    createdAtMs:
+      created instanceof Date
+        ? created.getTime()
+        : typeof created?.toMillis === "function"
+          ? created.toMillis()
+          : 0,
+  };
+}
+
+/**
+ * The workspace's own uploaded media, newest first.
+ *
+ * Same store and same tenancy key as the media library the Create surfaces
+ * already read (see api/sub-accounts/[id]/media). Zeno gets a view of it
+ * rather than a second library, so "use the photo I uploaded yesterday"
+ * means the same file in chat as it does in the builder.
+ */
+export async function listWorkspaceAssets(
+  subAccountId: string,
+  opts: { kinds?: FunnelAssetKind[]; limit?: number } = {},
+): Promise<WorkspaceAsset[]> {
+  const snap = await getAdminDb()
+    .collection("funnelAssets")
+    .where("subAccountId", "==", subAccountId)
+    .limit(200)
+    .get();
+  const kinds = opts.kinds;
+  return snap.docs
+    .map((d) => toWorkspaceAsset(d.data() as Record<string, unknown>))
+    .filter((a) => !kinds || kinds.includes(a.kind))
+    .sort((x, y) => y.createdAtMs - x.createdAtMs)
+    .slice(0, opts.limit ?? 40);
+}
+
+/**
+ * One asset, ONLY if it belongs to this workspace.
+ *
+ * Null for a foreign asset and for one that does not exist, indistinguishably
+ * — an id from chat is a hint, never an authorization.
+ */
+export async function getWorkspaceAsset(
+  subAccountId: string,
+  assetId: string,
+): Promise<WorkspaceAsset | null> {
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(assetId)) return null;
+  const snap = await getAdminDb().doc(`funnelAssets/${assetId}`).get();
+  if (!snap.exists) return null;
+  const data = snap.data() as Record<string, unknown>;
+  if (data.subAccountId !== subAccountId) return null;
+  return toWorkspaceAsset({ ...data, id: snap.id });
+}

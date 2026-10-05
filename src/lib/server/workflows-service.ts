@@ -9,6 +9,7 @@ import type {
   WorkflowRunStatus,
   WorkflowStatus,
   WorkflowTrigger,
+  WorkflowTriggerType,
 } from "@/types/workflows";
 
 /** Admin-SDK CRUD for the Workflow Builder. All reads/writes are sub-account
@@ -681,5 +682,92 @@ export async function patchWorkflowStepsServerSide(opts: {
       : opts.op === "set_wait" ? "changed how long it waits"
       : "removed a step",
     steps: order,
+  };
+}
+
+/**
+ * Change an automation's LOGIC: what starts it, and how a branch decides.
+ *
+ * The step tools change what happens; this changes when and for whom. Both
+ * were previously reachable only through applyWorkflowPlan, which replaces
+ * the whole graph, so "only send this to people who asked for a quote" meant
+ * rewriting every email to add one condition.
+ *
+ * Conditions are written whole, because a condition list is read as a unit
+ * ("all of these must be true") and patching one line of it in isolation is
+ * how you end up with a filter nobody can explain. The caller sends the list
+ * it wants; everything else on the workflow is untouched.
+ */
+export async function patchWorkflowLogicServerSide(opts: {
+  subAccountId: string;
+  workflowId: string;
+  op: "set_trigger" | "set_trigger_filters" | "set_branch_conditions";
+  triggerType?: WorkflowTriggerType;
+  formId?: string | null;
+  stepId?: string;
+  conditions?: { field: string; op: string; value?: string }[];
+}): Promise<
+  | { ok: true; workflowName: string; status: WorkflowStatus; summary: string; describes: string }
+  | { ok: false; reason: "missing" | "no_step" | "not_a_branch" | "invalid"; detail?: string }
+> {
+  const db = getAdminDb();
+  const ref = db.doc(`workflows/${opts.workflowId}`);
+  const snap = await ref.get();
+  if (!snap.exists || snap.data()!.subAccountId !== opts.subAccountId) {
+    return { ok: false, reason: "missing" };
+  }
+  const wf = snap.data() as Omit<WorkflowDoc, "id">;
+  const write: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
+  const conditions = (opts.conditions ?? []).map((c) => ({
+    field: String(c.field).slice(0, 80),
+    op: c.op as never,
+    ...(c.value !== undefined ? { value: String(c.value).slice(0, 200) } : {}),
+  }));
+  let summary = "";
+
+  if (opts.op === "set_trigger") {
+    const trigger = { ...(wf.trigger ?? { filters: { all: [] } }) } as WorkflowTrigger;
+    if (opts.triggerType) trigger.type = opts.triggerType;
+    // A form restriction only means anything on a form trigger, and leaving
+    // a stale one behind would silently narrow an unrelated trigger to a
+    // form nobody is thinking about.
+    if (trigger.type === "form.submitted") {
+      if (opts.formId !== undefined) trigger.formId = opts.formId;
+    } else {
+      trigger.formId = null;
+    }
+    write.trigger = trigger;
+    summary = `changed what starts it to ${String(trigger.type).replace(/[._]/g, " ")}`;
+  } else if (opts.op === "set_trigger_filters") {
+    write.trigger = { ...(wf.trigger ?? { type: "contact.created" }), filters: { all: conditions } };
+    summary = conditions.length
+      ? `set who it applies to (${conditions.length} condition${conditions.length === 1 ? "" : "s"})`
+      : "removed every condition, so it now applies to everyone";
+  } else {
+    const id = opts.stepId ?? "";
+    const nodes = { ...(wf.nodes ?? {}) };
+    if (!nodes[id]) return { ok: false, reason: "no_step" };
+    if (nodes[id].type !== "if_else") return { ok: false, reason: "not_a_branch" };
+    if (conditions.length === 0) {
+      // A branch with no conditions silently sends everyone down one arm,
+      // which looks like it is deciding something and is not.
+      return { ok: false, reason: "invalid", detail: "a branch with no conditions does not decide anything" };
+    }
+    nodes[id] = { ...nodes[id], config: { ...(nodes[id].config ?? {}), conditions: { all: conditions } } };
+    write.nodes = nodes;
+    summary = `changed how one branch decides (${conditions.length} condition${conditions.length === 1 ? "" : "s"})`;
+  }
+
+  await ref.update(write);
+  const t = (write.trigger ?? wf.trigger) as WorkflowTrigger | undefined;
+  return {
+    ok: true,
+    workflowName: String(wf.name ?? "Untitled workflow"),
+    status: wf.status,
+    summary,
+    describes:
+      `starts on ${String(t?.type ?? "unknown").replace(/[._]/g, " ")}` +
+      (t?.formId ? ` for one form` : "") +
+      (t?.filters?.all?.length ? `, for contacts where ${t.filters.all.map((c) => `${c.field} ${String(c.op).replace(/_/g, " ")} ${c.value ?? ""}`.trim()).join(" and ")}` : ""),
   };
 }

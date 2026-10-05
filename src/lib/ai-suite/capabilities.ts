@@ -7617,6 +7617,56 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     },
   },
   {
+    name: "list_media_assets",
+    level: "sub-account",
+    requiredRole: "subAccountMember",
+    readonly: true,
+    menuLabel: "Look up the images and files the customer has uploaded",
+    description:
+      "LIST the media this workspace has already uploaded: images, PDFs, video and audio, newest first. " +
+      "Use it whenever the customer refers to something they already have, 'what images do I have?', 'use the photo I uploaded', 'put my logo on this page'. " +
+      "Never tell them to go and host an image somewhere else, and never invent a URL. If the library is empty, say so and offer the placeholder route instead. " +
+      "The asset_id values it returns are what attach_media needs.",
+    parameters: {
+      type: "object",
+      properties: {
+        only: {
+          type: "string",
+          enum: ["image", "pdf", "video", "audio"],
+          description: "Narrow to one kind. Omit for everything.",
+        },
+      },
+      additionalProperties: false,
+    },
+    validate: (rawIn) => {
+      const raw = aliasCamelKeysDeep(deepStripDebris({ ...((rawIn ?? {}) as Record<string, unknown>) }));
+      const only = str(raw, "only");
+      return { ok: true, args: only ? { only } : {} };
+    },
+    summarize: () => "Look up the images and files already uploaded to this workspace.",
+    execute: async (ctx, args) => {
+      const { listWorkspaceAssets } = await import("@/lib/funnels/assets");
+      const items = await listWorkspaceAssets(ctx.subAccountId!, {
+        ...(args.only ? { kinds: [args.only as "image" | "pdf" | "video" | "audio"] } : {}),
+      });
+      if (items.length === 0) {
+        return {
+          resultText:
+            "This workspace has no uploaded media yet. Do not invent an image or send them to an external host: " +
+            "either they upload one in the editor, or offer to mark the spot with a shot brief using edit_funnel_structure.",
+        };
+      }
+      return {
+        resultText:
+          `${items.length} uploaded file(s) in this workspace, newest first:\n` +
+          items
+            .map((a) => `- ${a.title ?? a.filename} (${a.kind}) asset_id="${a.assetId}"`)
+            .join("\n") +
+          `\nPass an asset_id to edit_funnel_structure with operation="attach_media" to put one on a page.`,
+      };
+    },
+  },
+  {
     name: "inspect_asset",
     level: "sub-account",
     requiredRole: "subAccountMember",
@@ -7727,13 +7777,15 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
     name: "edit_funnel_structure",
     level: "sub-account",
     requiredRole: "subAccountAdmin",
-    menuLabel: "Add, remove, move or brief a section on a landing page",
+    menuLabel: "Add, remove or move a section, put an uploaded image on one, or brief a photo",
     description:
       "CHANGE THE SHAPE of a landing page that already exists: add a section, remove one, move one, or mark the spot where a real photo belongs. " +
       "Use this when the customer wants something revise_funnel_copy cannot do: 'add a testimonials section after the benefits', 'move the pricing above the FAQ', 'drop the stats block', 'put a placeholder for a real clinic photo under the hero'. " +
       "Your page context lists every section in order with its id. Always target BY ID, never by position, because positions move. One operation per call. " +
       "NEVER invent testimonials, numbers or review counts. Quotes and stats must be the customer's own words, repeated verbatim. If you do not have them, ask for them instead of calling this. " +
-      "add_media_placeholder does not produce an image. It marks the slot, carries a shot brief the customer can act on, and shows up as outstanding media in their editor. Reach for it whenever a real photograph would carry more weight than anything generated. " +
+      "attach_media puts a file the customer ALREADY UPLOADED onto a section. Call list_media_assets first and use an asset_id from it: never a URL, never an invented id. " +
+      "add_media_placeholder is the other half, for when they have nothing to attach yet. It marks the slot and carries a shot brief, and shows up as outstanding media in their editor. " +
+      "So: if they have the image, attach it. If they do not, brief it. Never generate one and never send them to an external host. " +
       "This never publishes and never unpublishes: the page stays exactly as draft or live as it already was.",
     parameters: {
       type: "object",
@@ -7744,7 +7796,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         },
         operation: {
           type: "string",
-          enum: ["add_section", "remove_section", "move_section", "add_media_placeholder"],
+          enum: ["add_section", "remove_section", "move_section", "add_media_placeholder", "attach_media"],
           description: "What to do. One per call.",
         },
         section_type: {
@@ -7789,6 +7841,14 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           description:
             "cta_banner only: where the button goes. Omit to reuse the destination the page's existing buttons already point at.",
         },
+        asset_id: {
+          type: "string",
+          description: "attach_media: the id of an ALREADY UPLOADED file, from list_media_assets. Never a URL, never invented.",
+        },
+        alt_text: {
+          type: "string",
+          description: "attach_media: what the photograph shows, for a reader who cannot see it. Describe the image, do not repeat the headline.",
+        },
         brief: {
           type: "string",
           description:
@@ -7804,7 +7864,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const funnelId = str(raw, "funnel_id");
       const operation = str(raw, "operation");
       if (!funnelId) return { ok: false, error: "funnel_id is required, take it from the page context you were given." };
-      const OPS = ["add_section", "remove_section", "move_section", "add_media_placeholder"];
+      const OPS = ["add_section", "remove_section", "move_section", "add_media_placeholder", "attach_media"];
       if (!OPS.includes(operation)) return { ok: false, error: `operation must be one of: ${OPS.join(", ")}.` };
 
       const sectionId = str(raw, "section_id");
@@ -7870,6 +7930,11 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           return { ok: false, error: `A ${type.replace(/_/g, " ")} section needs a headline or body.` };
         }
         Object.assign(out, { sectionType: type, headline, body, items });
+      } else if (operation === "attach_media") {
+        const assetId = str(raw, "asset_id");
+        if (!assetId) return { ok: false, error: "asset_id is required. Call list_media_assets and use an id from it, never a URL." };
+        if (!sectionId) return { ok: false, error: "section_id is required: say which section the image goes on." };
+        Object.assign(out, { assetId, altText: fixLiteralNewlines(str(raw, "alt_text")).slice(0, 200) });
       } else if (operation === "add_media_placeholder") {
         const brief = fixLiteralNewlines(str(raw, "brief")).slice(0, 600);
         if (!brief) return { ok: false, error: "brief is required: say what the photo should show, where, and what it needs to prove." };
@@ -8010,6 +8075,77 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           nextSections.unshift(moved);
         }
         outcome = `Moved the ${moved.type.replace(/_/g, " ")} section${args.afterSectionId ? " further down the page" : " to the top of the page"}.`;
+      } else if (op === "attach_media") {
+        // The asset is re-read from storage and proved to belong to this
+        // workspace before its url ever reaches a page: an id arriving from
+        // chat is a hint, never an authorization.
+        const { getWorkspaceAsset } = await import("@/lib/funnels/assets");
+        const asset = await getWorkspaceAsset(subAccountId, args.assetId as string);
+        if (!asset) {
+          throw new CapabilityUserError(
+            "I couldn't find that file in this workspace's library. Let me list what's actually uploaded and we'll pick from that.",
+          );
+        }
+        if (asset.kind !== "image") {
+          throw new CapabilityUserError(
+            `That file is a ${asset.kind}, not an image, so it can't go in a picture slot. Attach it as the page's download instead, or pick an image.`,
+          );
+        }
+        const i = idx(args.sectionId as string);
+        if (i < 0) throw new CapabilityUserError(gone);
+        const target = sections[i];
+        const cfg = (target.config ?? {}) as Record<string, unknown>;
+        const alt = (args.altText as string) || asset.title || asset.filename;
+        // Each section type names its image slot differently. Writing the
+        // wrong key saves cleanly and renders nothing, which is the failure
+        // this whole system exists to prevent, so the types are matched
+        // explicitly and an unsupported one is refused.
+        const patched: Record<string, unknown> | null = (() => {
+          switch (target.type) {
+            case "hero":
+              return { ...cfg, mediaType: "image", mediaUrl: asset.url, mediaAlt: alt, mediaIsStock: false, mediaPlaceholderLabel: undefined, mediaPlaceholderBrief: undefined };
+            case "story":
+              return { ...cfg, photoUrl: asset.url, photoPlaceholderLabel: undefined, photoPlaceholderBrief: undefined };
+            case "photo_gallery":
+              return {
+                ...cfg,
+                images: [...((cfg.images as unknown[]) ?? []), { url: asset.url, caption: alt }],
+                placeholderLabel: undefined,
+                placeholderBrief: undefined,
+              };
+            case "image_text": {
+              const blocks = [...((cfg.blocks as Record<string, unknown>[]) ?? [])];
+              if (blocks.length === 0) return null;
+              blocks[0] = { ...blocks[0], imageUrl: asset.url, imageAlt: alt, imageIsStock: false };
+              return { ...cfg, blocks };
+            }
+            default:
+              return null;
+          }
+        })();
+        if (!patched) {
+          throw new CapabilityUserError(
+            `A ${target.type.replace(/_/g, " ")} section has no picture slot. I can add a photo section just below it instead, if you want.`,
+          );
+        }
+        nextSections = sections.map((x, n) => (n === i ? { ...x, config: patched } : x)) as typeof sections;
+        // Resolving a requirement is evidence, not decoration: a real upload
+        // is first-party and counts as authentic. A generated image never
+        // would, which is why provenance is recorded rather than assumed.
+        nextRequirements = (funnel.visualRequirements ?? []).map((r) =>
+          r.id === `vr_${target.id}_media` && !r.resolvedWith
+            ? {
+                ...r,
+                resolvedWith: {
+                  provenance: "first_party_upload" as const,
+                  url: asset.url,
+                  countsAsAuthenticEvidence: true,
+                  sourceClassification: null,
+                },
+              }
+            : r,
+        );
+        outcome = `Put "${asset.title ?? asset.filename}" on the ${target.type.replace(/_/g, " ")} section.`;
       } else {
         // A placeholder is a REQUIREMENT, not a picture. It is recorded in
         // visualRequirements, which the editor already surfaces as
@@ -8110,7 +8246,9 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           review: [
             op === "add_section"
               ? "It carries the words you approved. Open the page to see it styled and in place."
-              : op === "add_media_placeholder"
+              : op === "attach_media"
+                ? "Open the page to check it sits well in the layout and is not cropped awkwardly."
+                : op === "add_media_placeholder"
                 ? "The slot is marked and briefed. Upload the photo in the editor when you have it, and nothing on the page claims a photo that isn't there yet."
                 : "Open the page to check it reads right in its new position.",
             funnel.status === "published"
@@ -8118,6 +8256,147 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
               : "The page is still a draft, so nothing is public yet.",
           ],
           nextActions: [{ label: "Preview the page", kind: "preview" as const }],
+        },
+      };
+    },
+  },
+  {
+    name: "edit_workflow_logic",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Change what starts an automation, or who it applies to",
+    description:
+      "CHANGE AN AUTOMATION'S LOGIC: what starts it, who it applies to, or how one of its branches decides. " +
+      "edit_workflow_steps changes WHAT happens; this changes WHEN and FOR WHOM. " +
+      "Use it for 'only run this for people who asked for a quote', 'start this when someone books instead', 'this branch should check the company field, not the tag'. " +
+      "Read the automation first with inspect_asset: it lists the current trigger, the conditions, and each branch with its id. " +
+      "Conditions are sent WHOLE, as the full list you want to end up with, because they are read together as 'all of these must be true'. Send the existing ones back along with any you are adding. " +
+      "This never activates anything.",
+    parameters: {
+      type: "object",
+      properties: {
+        workflow_id: { type: "string", description: "The automation to change." },
+        operation: {
+          type: "string",
+          enum: ["set_trigger", "set_trigger_filters", "set_branch_conditions"],
+          description: "One per call. set_trigger changes what starts it. set_trigger_filters changes who it applies to. set_branch_conditions changes how one branch decides.",
+        },
+        trigger_type: {
+          type: "string",
+          enum: ["contact.created", "contact.tag.added", "form.submitted", "pipeline.stage.changed", "booking.created", "quote.accepted", "quote.paid"],
+          description: "set_trigger: what starts the automation.",
+        },
+        form_id: { type: "string", description: "set_trigger, with form.submitted: restrict it to ONE form. Send an empty string to let any form start it." },
+        step_id: { type: "string", description: "set_branch_conditions: the branch step's id, from reading the automation." },
+        conditions: {
+          type: "array",
+          description: "The COMPLETE list of conditions, all of which must be true. Send the existing ones back too, anything you leave out is removed.",
+          items: {
+            type: "object",
+            properties: {
+              field: { type: "string", description: "The contact field, e.g. email, company, source, or customFields.something. For has_tag and in_stage this is ignored, put the tag or stage in value." },
+              op: {
+                type: "string",
+                enum: ["equals", "not_equals", "contains", "is_set", "not_set", "has_tag", "in_stage", "source_is", "greater_than", "less_than"],
+              },
+              value: { type: "string", description: "What to compare against. Leave out for is_set and not_set." },
+            },
+            required: ["field", "op"],
+            additionalProperties: false,
+          },
+        },
+        why: { type: "string", description: "One short sentence on what this improves." },
+      },
+      required: ["workflow_id", "operation"],
+      additionalProperties: false,
+    },
+    validate: (rawIn) => {
+      const raw = aliasCamelKeysDeep(deepStripDebris({ ...((rawIn ?? {}) as Record<string, unknown>) }));
+      const workflowId = str(raw, "workflow_id");
+      const operation = str(raw, "operation");
+      if (!workflowId) return { ok: false, error: "workflow_id is required." };
+      const OPS = ["set_trigger", "set_trigger_filters", "set_branch_conditions"];
+      if (!OPS.includes(operation)) return { ok: false, error: `operation must be one of: ${OPS.join(", ")}.` };
+      const out: Record<string, unknown> = { workflowId, operation, why: str(raw, "why").slice(0, 200) };
+
+      const OPS_ALLOWED = ["equals", "not_equals", "contains", "is_set", "not_set", "has_tag", "in_stage", "source_is", "greater_than", "less_than"];
+      const conds = (Array.isArray(raw.conditions) ? raw.conditions : [])
+        .filter((c): c is Record<string, unknown> => !!c && typeof c === "object")
+        .slice(0, 10)
+        .map((c) => ({
+          field: String(c.field ?? "").trim().slice(0, 80),
+          op: String(c.op ?? "").trim(),
+          ...(c.value !== undefined && c.value !== null ? { value: String(c.value).slice(0, 200) } : {}),
+        }));
+      for (const c of conds) {
+        if (!OPS_ALLOWED.includes(c.op)) return { ok: false, error: `A condition's op must be one of: ${OPS_ALLOWED.join(", ")}.` };
+        if (!c.field) return { ok: false, error: "Every condition needs a field." };
+        if (!["is_set", "not_set"].includes(c.op) && !("value" in c)) {
+          return { ok: false, error: `The "${c.op}" condition needs a value to compare against.` };
+        }
+      }
+
+      if (operation === "set_trigger") {
+        const TYPES = ["contact.created", "contact.tag.added", "form.submitted", "pipeline.stage.changed", "booking.created", "quote.accepted", "quote.paid"];
+        const t = str(raw, "trigger_type");
+        if (!TYPES.includes(t)) return { ok: false, error: `trigger_type must be one of: ${TYPES.join(", ")}.` };
+        out.triggerType = t;
+        // An empty string is a deliberate "any form", distinct from not
+        // mentioning the form at all, which leaves it as it is.
+        const hasForm = raw.form_id !== undefined || raw.formId !== undefined;
+        if (hasForm) out.formId = str(raw, "form_id") || null;
+      } else if (operation === "set_branch_conditions") {
+        const stepId = str(raw, "step_id");
+        if (!stepId) return { ok: false, error: "step_id is required: read the automation to get the branch's id." };
+        if (conds.length === 0) return { ok: false, error: "A branch needs at least one condition, otherwise it does not decide anything." };
+        Object.assign(out, { stepId, conditions: conds });
+      } else {
+        out.conditions = conds;
+      }
+      return { ok: true, args: out };
+    },
+    summarize: (args) => {
+      const why = args.why ? `. ${args.why as string}` : "";
+      const n = ((args.conditions as unknown[]) ?? []).length;
+      switch (args.operation) {
+        case "set_trigger":
+          return `Start this automation on ${String(args.triggerType).replace(/[._]/g, " ")} instead${why}`;
+        case "set_branch_conditions":
+          return `Change how one branch decides, to ${n} condition${n === 1 ? "" : "s"}${why}`;
+        default:
+          return n
+            ? `Limit this automation to contacts matching ${n} condition${n === 1 ? "" : "s"}${why}`
+            : `Let this automation apply to everyone, with no conditions${why}`;
+      }
+    },
+    execute: async (ctx, args) => {
+      const { patchWorkflowLogicServerSide } = await import("@/lib/server/workflows-service");
+      const res = await patchWorkflowLogicServerSide({
+        subAccountId: ctx.subAccountId!,
+        workflowId: args.workflowId as string,
+        op: args.operation as "set_trigger" | "set_trigger_filters" | "set_branch_conditions",
+        ...(args.triggerType ? { triggerType: args.triggerType as never } : {}),
+        ...(args.formId !== undefined ? { formId: args.formId as string | null } : {}),
+        ...(args.stepId ? { stepId: args.stepId as string } : {}),
+        ...(args.conditions ? { conditions: args.conditions as { field: string; op: string; value?: string }[] } : {}),
+      });
+      if (!res.ok) {
+        if (res.reason === "missing") throw new CapabilityUserError("I couldn't find that automation in this workspace.");
+        if (res.reason === "no_step") throw new CapabilityUserError("That step isn't in the automation any more. Read it again and I'll work from what's there now.");
+        if (res.reason === "not_a_branch") throw new CapabilityUserError("That step isn't a branch, so there is nothing for it to decide. Branches are the steps shown as 'Branch' when you read the automation.");
+        throw new CapabilityUserError(res.detail ?? "That change isn't valid for this automation.");
+      }
+      return {
+        resultText: `Workflow ${args.workflowId}: ${res.summary}. It now ${res.describes}. Status unchanged: ${res.status}.`,
+        completion: {
+          outcome: `In "${res.workflowName}", I ${res.summary}.`,
+          review: [
+            `It now ${res.describes}.`,
+            res.status === "active"
+              ? "This automation is live, so the new rule applies to anyone who enrols from now on. People already in it keep going on the old path."
+              : "It is still a draft, so nothing sends until you turn it on.",
+          ],
+          nextActions: [{ label: "Review the automation", kind: "review" as const }],
         },
       };
     },
@@ -9418,6 +9697,33 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           enum: ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
           description: "The ONE day whose hours you are setting. Requires start_time and end_time.",
         },
+        add_question: {
+          type: "object",
+          description: "Add ONE question asked at booking time, on top of the name/email/phone every booking already collects.",
+          properties: {
+            label: { type: "string", description: "The question as the visitor reads it." },
+            type: { type: "string", enum: ["text", "textarea", "select"], description: "text for a short answer, textarea for a long one, select for a fixed list." },
+            required: { type: "boolean" },
+            options: { type: "array", items: { type: "string" }, description: "The choices, for a select." },
+            after_question_id: { type: "string", description: "Put it directly after this question. Omit for the end." },
+          },
+          required: ["label", "type"],
+          additionalProperties: false,
+        },
+        update_question: {
+          type: "object",
+          description: "Change ONE existing booking question.",
+          properties: {
+            question_id: { type: "string", description: "Its id, from reading the booking page first." },
+            label: { type: "string" },
+            required: { type: "boolean" },
+            options: { type: "array", items: { type: "string" } },
+          },
+          required: ["question_id"],
+          additionalProperties: false,
+        },
+        remove_question_id: { type: "string", description: "Remove ONE booking question, by id." },
+        reorder_question_ids: { type: "array", items: { type: "string" }, description: "The booking questions in their NEW order, by id. Any you leave out keep their place at the end." },
         start_time: { type: "string", description: "That day's start, as HH:MM (24 hour)." },
         end_time: { type: "string", description: "That day's end, as HH:MM (24 hour)." },
       },
@@ -9499,6 +9805,47 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         if (s0 === null || e0 === null) return { ok: false, error: "start_time and end_time must be HH:MM, 24 hour." };
         if (e0 <= s0) return { ok: false, error: "end_time must be after start_time." };
         args.workingHour = { dayOfWeek: idx, startMinute: s0, endMinute: e0 };
+      }
+      // The booking questions. Each is read under both its snake and camel
+      // name because confirm re-validates this function's own output.
+      {
+        const add = (r.add_question ?? r.addQuestion ?? r.addIntakeField) as Record<string, unknown> | undefined;
+        if (add) {
+          const label = typeof add.label === "string" ? add.label.trim() : "";
+          const type = typeof add.type === "string" ? add.type : "";
+          if (!label) return { ok: false, error: "add_question needs the wording of the question." };
+          if (!["text", "textarea", "select"].includes(type)) {
+            return { ok: false, error: "add_question type must be text, textarea or select." };
+          }
+          const options = Array.isArray(add.options) ? add.options.filter((o): o is string => typeof o === "string") : [];
+          if (type === "select" && options.length === 0) return { ok: false, error: "A select question needs at least one option." };
+          const after = add.after_question_id ?? add.afterQuestionId ?? add.afterFieldId;
+          args.addIntakeField = {
+            label,
+            type,
+            required: add.required === true,
+            options,
+            ...(typeof after === "string" && after ? { afterFieldId: after } : {}),
+          };
+        }
+        const upd = (r.update_question ?? r.updateQuestion ?? r.updateIntakeField) as Record<string, unknown> | undefined;
+        if (upd) {
+          const qid = String(upd.question_id ?? upd.questionId ?? upd.fieldId ?? "").trim();
+          if (!qid) return { ok: false, error: "update_question needs the question's id. Read the booking page first." };
+          const patch: Record<string, unknown> = { fieldId: qid };
+          if (typeof upd.label === "string") patch.label = upd.label.trim();
+          if (typeof upd.required === "boolean") patch.required = upd.required;
+          if (Array.isArray(upd.options)) patch.options = upd.options.filter((o): o is string => typeof o === "string");
+          if (Object.keys(patch).length === 1) return { ok: false, error: "update_question needs something to change." };
+          args.updateIntakeField = patch;
+        }
+        const rm = String(r.remove_question_id ?? r.removeQuestionId ?? r.removeIntakeFieldId ?? "").trim();
+        if (rm) args.removeIntakeFieldId = rm;
+        const order = (Array.isArray(r.reorder_question_ids) ? r.reorder_question_ids
+          : Array.isArray(r.reorderQuestionIds) ? r.reorderQuestionIds
+          : Array.isArray(r.reorderIntakeFieldIds) ? r.reorderIntakeFieldIds : []
+        ).filter((x): x is string => typeof x === "string" && !!x.trim());
+        if (order.length) args.reorderIntakeFieldIds = order;
       }
       // linkWorkspaceId is carried context, not a change the caller asked for.
       if (Object.keys(args).filter((k) => k !== "bookingPageId" && k !== "linkWorkspaceId").length === 0) {

@@ -110,7 +110,7 @@ console.log("\n-- a workflow step edit changes one step, not the sequence --");
   ck("inserting into a branch is refused rather than guessed",
     /reason: "branch"/.test(wfs) && /branchy\(after\)/.test(wfs));
   ck("the status is never written by a step edit",
-    !/update\(\{[^}]*status:/.test(wfs.slice(wfs.indexOf("patchWorkflowStepsServerSide"))));
+    /await ref\.update\(\{ nodes, startNodeId, updatedAt: FieldValue\.serverTimestamp\(\) \}\);/.test(wfs));
   ck("an email asked for \u201cone day after\u201d lays down the wait too, in one call",
     /opts\.op === "insert_email" && delay >= 60/.test(wfs),
     "one node per call silently dropped the customer's delay");
@@ -134,7 +134,24 @@ console.log("\n-- the structural funnel edit respects the page's own rules --");
   ck("quotes and numbers must come from the customer",
     /Ask the customer for them rather than writing them yourself/.test(blk));
   ck("a media placeholder is a brief, never a generated image",
-    /add_media_placeholder does not produce an image/.test(blk));
+    /add_media_placeholder is the other half/.test(blk) && /Never generate one and never send them to an external host/.test(blk));
+  // The model is given a MENU of what it can do alongside the tool schemas,
+  // and when the two disagreed it believed the menu: it told a customer
+  // "the attach-media capability isn't available in this workspace" while
+  // holding the tool that does it.
+  ck("the menu label admits every operation the tool actually supports",
+    /menuLabel: "Add, remove or move a section, put an uploaded image on one, or brief a photo"/.test(blk),
+    "the capability menu must not contradict the operation enum");
+  ck("attaching media uses a real uploaded asset, never a URL",
+    /never a URL, never an invented id/.test(blk));
+  ck("the asset is re-proved against the workspace before its url reaches a page",
+    /getWorkspaceAsset\(subAccountId, args\.assetId as string\)/.test(blk));
+  ck("a non-image is refused rather than written into a picture slot",
+    /not an image, so it can't go in a picture slot/.test(blk));
+  ck("a section with no picture slot is refused rather than silently saved",
+    /has no picture slot/.test(blk));
+  ck("a real upload counts as authentic evidence, a generated one never would",
+    /provenance: "first_party_upload" as const/.test(blk) && /countsAsAuthenticEvidence: true/.test(blk));
   ck("the placeholder is recorded where the editor already shows outstanding media",
     /visualRequirements/.test(blk));
   ck("asking twice re-briefs the slot instead of stacking duplicates",
@@ -160,6 +177,39 @@ console.log("\n-- the connections a form has are found exactly, not sampled --")
     /relatedAsync: \(doc, sa\) => workflowsForForm\(sa, doc\.id\)/.test(dom));
   ck("emails are numbered as EMAILS, so \u201cemail 2\u201d means the same thing to the edit tool",
     /Email \$\{emailOrdinal\}/.test(dom));
+}
+
+console.log("\n-- what the schema offers, validate must accept --");
+{
+  // The schema is what the model is allowed to send; validate is what the
+  // server will take. attach_media shipped in the enum and not in validate's
+  // own list, so the model could see the operation, send it, and be told it
+  // did not exist, in a message that read like a product limitation.
+  const { AI_SUITE_CAPABILITIES } = await import("../src/lib/ai-suite/capabilities");
+  const BASE: Record<string, Record<string, unknown>> = {
+    edit_funnel_structure: { operation: "add_section", funnel_id: "f1", section_id: "hero", after_section_id: "hero", asset_id: "a1", brief: "A real photo of the team on site, natural light.", headline: "H", body: "B", items: ["A | B"], section_type: "faq", cta_label: "Go", cta_href: "/x", solution_headline: "S", solution_body: "SB" },
+    edit_workflow_steps: { operation: "insert_email", workflow_id: "w1", step_id: "s1", after_step_id: "s1", days: 1, subject: "S", body: "B" },
+    edit_workflow_logic: { operation: "set_trigger", workflow_id: "w1", step_id: "b1", trigger_type: "form.submitted", conditions: [{ field: "tags", op: "has_tag", value: "x" }] },
+    inspect_asset: { kind: "funnel", id: "x1" },
+    trace_connected_system: { kind: "funnel", id: "x1" },
+  };
+  for (const [name, base] of Object.entries(BASE)) {
+    const cap = AI_SUITE_CAPABILITIES.find((c) => c.name === name);
+    if (!cap) { ck(`${name} exists`, false); continue; }
+    const props = (cap.parameters as { properties?: Record<string, { enum?: string[] }> }).properties ?? {};
+    for (const [field, spec] of Object.entries(props)) {
+      if (!Array.isArray(spec.enum)) continue;
+      for (const value of spec.enum) {
+        const r = cap.validate({ ...base, [field]: value });
+        // A refusal for a DIFFERENT reason is fine; a refusal that names the
+        // enum field itself means validate does not know about this value.
+        // Only a refusal that names THIS field means validate does not know
+        // the value; a refusal about some other field is unrelated.
+        const rejectedTheValue = !r.ok && new RegExp(field.replace(/_/g, "[_ ]?"), "i").test(r.error ?? "");
+        ck(`${name}.${field}="${value}" is accepted by validate`, !rejectedTheValue, r.ok ? "" : r.error);
+      }
+    }
+  }
 }
 
 console.log("\n-- validate must survive being fed its own output --");
@@ -197,6 +247,74 @@ console.log("\n-- validate must survive being fed its own output --");
         `${JSON.stringify(first.args)} vs ${JSON.stringify(second.args)}`);
     }
   }
+}
+
+console.log("\n-- booking questions, triggers and branches are reachable --");
+{
+  const booking = readFileSync("src/lib/server/booking-pages-service.ts", "utf8");
+  ck("booking questions are edited one at a time, not replaced wholesale",
+    /addIntakeField\?:/.test(booking) && /updateIntakeField\?:/.test(booking) && /removeIntakeFieldId\?:/.test(booking));
+  ck("a question added after a named one lands there",
+    /fields\.splice\(at \+ 1, 0, field\)/.test(booking));
+  ck("an unknown anchor is refused", /That question isn't on this booking page/.test(booking));
+  ck("a reorder that omits a question keeps it",
+    /fields\.filter\(\(f\) => !named\.some\(\(n\) => n\.id === f\.id\)\)/.test(booking));
+  ck("the merged page is validated by the SAME validator the editor uses",
+    /validateBookingPageFormData\(next\)/.test(booking));
+
+  ck("a branch is listed with its conditions and both arms",
+    /case "if_else"/.test(dom) && /yes -> /.test(dom));
+  ck("a branch with no conditions is called out as deciding nothing",
+    /NOTHING IS SET, so it does not actually decide anything/.test(dom));
+  ck("who an automation applies to is shown, not just what starts it",
+    /Applies to: /.test(dom));
+  ck("steps hanging off a branch arm are reported, not lost to the linear walk",
+    /Also on a branch arm/.test(dom));
+  ck("the trigger and branch tool exists", /name: "edit_workflow_logic"/.test(caps));
+  ck("conditions are sent whole, because they are read as one rule",
+    /Conditions are sent WHOLE/.test(caps));
+  ck("a form restriction is cleared when the trigger is no longer a form",
+    /trigger\.formId = null;/.test(wfs));
+  ck("a branch cannot be left with no conditions",
+    /a branch with no conditions does not decide anything/.test(wfs));
+  {
+    // The write object is the only thing that reaches Firestore. Reading
+    // wf.status to REPORT it is fine and expected; putting a status into
+    // the write is what would activate an automation nobody asked to run.
+    const logic = wfs.slice(wfs.indexOf("export async function patchWorkflowLogicServerSide"));
+    ck("no logic change writes a status", !/write\.status|write\[.status.\]/.test(logic));
+    ck("and it only ever writes the trigger or the nodes",
+      [...logic.matchAll(/write\.([a-zA-Z]+) =/g)].map((m) => m[1]).every((k) => ["trigger", "nodes"].includes(k)));
+  }
+}
+
+console.log("\n-- a customer never sees a bare status code --");
+{
+  const { describeZenoFailure } = await import("../src/lib/ai-suite/failure-message");
+  const chat = readFileSync("src/components/ai-suite/ai-suite-chat.tsx", "utf8");
+  ck("the chat no longer renders “Request failed (NNN)”", !/Request failed \(\$\{res\.status\}\)/.test(chat));
+  ck("nor “Action failed (NNN)”", !/Action failed \(\$\{res\.status\}\)/.test(chat));
+  ck("both failure paths go through the one describer",
+    (chat.match(/describeZenoFailure\(/g) ?? []).length === 2);
+
+  const up = describeZenoFailure({ status: 502, stage: "chat" });
+  ck("an upstream failure is explained in plain words", /intelligence service didn't respond/.test(up), up);
+  ck("it names no provider, model or status code", !/openrouter|anthropic|claude|502/i.test(up), up);
+  ck("a failed CHAT turn truthfully says nothing changed", /Nothing was changed\./.test(up), up);
+
+  // The claim that matters most: a write that faulted part-way must NOT be
+  // reported as having changed nothing.
+  const midWrite = describeZenoFailure({ status: 500, stage: "confirm" });
+  ck("a write that faulted does NOT claim nothing changed", !/Nothing was changed/.test(midWrite), midWrite);
+  ck("and it tells them to check before retrying", /check it before trying again/.test(midWrite), midWrite);
+
+  const refused = describeZenoFailure({ status: 403, stage: "confirm" });
+  ck("a write REFUSED before it ran does say nothing changed", /Nothing was changed\./.test(refused), refused);
+
+  const withServer = describeZenoFailure({ status: 400, stage: "confirm", serverMessage: "That section isn't on the page any more." });
+  ck("the server's own wording is preferred when it has some", /That section isn't on the page any more\./.test(withServer), withServer);
+  const echoed = describeZenoFailure({ status: 502, stage: "chat", serverMessage: "Request failed (502)" });
+  ck("a server message that is itself a bare code is not passed through", !/Request failed/.test(echoed), echoed);
 }
 
 console.log(`\n${fails === 0 ? "ALL PASS" : `${fails} FAILED`}`);

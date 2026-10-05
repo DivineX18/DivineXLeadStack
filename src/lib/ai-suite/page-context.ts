@@ -209,8 +209,13 @@ export async function resolveArtifact(
 
       const mediaUrl = str(cfg.mediaUrl ?? cfg.imageUrl ?? cfg.photoUrl ?? cfg.embedUrl, 120);
       const placeholder = str(cfg.mediaPlaceholderLabel ?? cfg.photoPlaceholderLabel, 160);
+      // Naming what the image SHOWS is what lets Zeno answer "what's on the
+      // hero?" with something useful. It could see that an image was there
+      // and had nothing to call it.
+      const mediaAlt = str(cfg.mediaAlt ?? cfg.imageAlt ?? cfg.caption, 120);
       const media = mediaUrl
-        ? (cfg.mediaIsStock === true ? "stock image in place" : "real image in place")
+        ? (cfg.mediaIsStock === true ? "stock image in place" : "real image in place") +
+          (mediaAlt ? `, showing: "${mediaAlt}"` : "")
         : placeholder
           ? `placeholder, no image yet: ${placeholder}`
           : "";

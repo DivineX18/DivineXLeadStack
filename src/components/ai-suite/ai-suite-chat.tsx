@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { describeZenoFailure } from "@/lib/ai-suite/failure-message";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -353,8 +354,14 @@ export function AiSuiteChat({
         | { error?: string }
         | null;
       if (!res.ok || !data) {
+        // A chat turn reads and proposes; it never writes. So this can say
+        // plainly that nothing changed. See lib/ai-suite/failure-message.ts.
         throw new Error(
-          (data as { error?: string })?.error || `Request failed (${res.status})`,
+          describeZenoFailure({
+            status: res.status,
+            stage: "chat",
+            serverMessage: (data as { error?: string })?.error ?? null,
+          }),
         );
       }
 
@@ -392,7 +399,12 @@ export function AiSuiteChat({
         throw new Error("Unexpected response from the assistant.");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      // A thrown fetch never reached the server, so the turn did not run.
+      setError(
+        err instanceof Error && err.message.trim()
+          ? err.message
+          : "I couldn't reach the server. Check your connection and ask me again. Nothing was changed.",
+      );
     } finally {
       setLoading(false);
     }
@@ -427,7 +439,11 @@ export function AiSuiteChat({
         error?: string;
       } | null;
       if (!res.ok || !data?.ok) {
-        throw new Error(data?.error || `Action failed (${res.status})`);
+        // This one IS the write, so what it may claim about state depends on
+        // whether the change was refused or faulted part-way.
+        throw new Error(
+          describeZenoFailure({ status: res.status, stage: "confirm", serverMessage: data?.error ?? null }),
+        );
       }
       updateProposal(id, {
         status: "confirmed",
@@ -435,7 +451,12 @@ export function AiSuiteChat({
         resultRef: data.resultRef ?? null,
       });
     } catch (err) {
-      const m = err instanceof Error ? err.message : "The action failed.";
+      // A thrown fetch (offline, DNS, the tab losing the network) never
+      // reached the server, so nothing ran.
+      const m =
+        err instanceof Error && err.message.trim()
+          ? err.message
+          : "I couldn't reach the server, so that didn't run. Check your connection and try again. Nothing was changed.";
       updateProposal(id, { status: "failed", resultText: m });
     } finally {
       setConfirmingId(null);

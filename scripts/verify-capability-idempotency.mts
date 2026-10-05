@@ -67,6 +67,22 @@ const EXAMPLES: Record<string, Record<string, unknown>[]> = {
     { form_id: "fm1", remove_question_id: "f1" },
   ],
   revise_workflow_email: [{ workflow_id: "w1", email_number: 2, body: "New body {{unsubscribeLink}}" }],
+  edit_workflow_logic: [
+    { workflow_id: "w1", operation: "set_trigger", trigger_type: "form.submitted", form_id: "fm1" },
+    { workflow_id: "w1", operation: "set_trigger", trigger_type: "contact.created" },
+    { workflow_id: "w1", operation: "set_trigger_filters", conditions: [{ field: "source", op: "source_is", value: "get-leads" }] },
+    { workflow_id: "w1", operation: "set_trigger_filters", conditions: [] },
+    { workflow_id: "w1", operation: "set_branch_conditions", step_id: "b1", conditions: [{ field: "tags", op: "has_tag", value: "quote" }] },
+  ],
+  update_booking_page: [
+    { booking_page_id: "consult", duration_minutes: 45, buffer_minutes: 15 },
+    { booking_page_id: "consult", add_question: { label: "What brings you in?", type: "textarea", required: true } },
+    { booking_page_id: "consult", add_question: { label: "Budget?", type: "select", options: ["Under 5k", "Over 5k"] } },
+    { booking_page_id: "consult", update_question: { question_id: "q_1", required: false } },
+    { booking_page_id: "consult", remove_question_id: "q_1" },
+    { booking_page_id: "consult", reorder_question_ids: ["q_1", "q_2"] },
+    { booking_page_id: "consult", day: "monday", start_time: "09:00", end_time: "17:00" },
+  ],
 };
 
 const unexercised: string[] = [];
