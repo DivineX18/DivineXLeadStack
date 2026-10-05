@@ -62,8 +62,8 @@ import type {
 } from "@/types/funnels";
 import { DESIGN_PACKS, type DesignPackId } from "@/lib/funnels/design-packs";
 import { isChainOnlySection, isChainStepFunnel } from "@/lib/funnels/commercial-structure";
-import { uploadFunnelAsset } from "@/lib/funnels/upload-client";
-import { MAX_ASSET_BYTES, MAX_AUDIO_BYTES } from "@/lib/funnels/asset-limits";
+import { uploadFunnelAsset, uploadFunnelAudioDirect } from "@/lib/funnels/upload-client";
+import { MAX_ASSET_BYTES, MAX_AUDIO_DIRECT_BYTES, AUDIO_MIME_TYPES } from "@/lib/funnels/asset-limits";
 import {
   VISUAL_ARCHETYPES,
   VISUAL_ARCHETYPE_IDS,
@@ -203,6 +203,8 @@ export function FunnelBuilder({
   // section media, and the lead-magnet PDF (auto-wired into the confirmation
   // email + the /thanks bridge page by the upload route).
   const [uploading, setUploading] = useState(false);
+  // Only the direct audio path reports progress; everything else is quick.
+  const [uploadPct, setUploadPct] = useState<number | null>(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [leadMagnetName, setLeadMagnetName] = useState<string | null>(null);
   // Thank-you/bridge page (multistep journey): what visitors see after
@@ -233,21 +235,21 @@ export function FunnelBuilder({
     // roughly 8.4MB and answers an HTML 502, so the route's own friendly
     // refusal cannot run. Without this the customer gets "Unexpected token
     // '<'" instead of being told the file is too big.
-    const isAudio = file.type.startsWith("audio/");
-    const ceiling = isAudio ? MAX_AUDIO_BYTES : MAX_ASSET_BYTES;
+    const isAudio = (AUDIO_MIME_TYPES as readonly string[]).includes(file.type);
+    const ceiling = isAudio ? MAX_AUDIO_DIRECT_BYTES : MAX_ASSET_BYTES;
     if (file.size > ceiling) {
       alert(
-        isAudio
-          ? `That audio file is ${(file.size / 1024 / 1024).toFixed(1)}MB. Keep it under ` +
-            `${Math.round(ceiling / 1024 / 1024)}MB, which is roughly 16 minutes at 64kbps or ` +
-            `8 minutes at 128kbps. Exporting spoken word as mono at a lower bitrate is usually enough.`
-          : `That file is ${(file.size / 1024 / 1024).toFixed(1)}MB. Keep it under ${Math.round(ceiling / 1024 / 1024)}MB.`,
+        `That file is ${(file.size / 1024 / 1024).toFixed(1)}MB. Keep it under ${Math.round(ceiling / 1024 / 1024)}MB.`,
       );
       return;
     }
     setUploading(true);
     try {
-      const json = await uploadFunnelAsset(saId, funnelId, file);
+      // Audio goes straight to storage: it is routinely larger than a
+      // request body is allowed to be, so it cannot come through here.
+      const json = isAudio
+        ? await uploadFunnelAudioDirect(saId, funnelId, file, (f) => setUploadPct(Math.round(f * 100)))
+        : await uploadFunnelAsset(saId, funnelId, file);
       // Audio is a deliverable like the PDF, not a page image to paste.
       if (json.kind === "pdf" || json.kind === "audio") setLeadMagnetName(file.name);
       else {
@@ -258,6 +260,7 @@ export function FunnelBuilder({
       alert(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setUploading(false);
+      setUploadPct(null);
     }
   }
   const [accentColor, setAccentColor] = useState("#2563eb");
@@ -515,7 +518,7 @@ export function FunnelBuilder({
       <div className="rounded-xl border bg-card p-4">
         <p className="text-[13px] font-semibold">Files &amp; delivery</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Upload an <b>image</b> (JPEG/PNG/WebP. Its URL is copied to your clipboard to paste into any Media/Image field) or your <b>lead magnet</b> as a PDF or audio file (MP3/M4A/WAV, up to 8MB). A lead magnet is delivered automatically in the confirmation email and on the thank-you page, with audio playing on its own branded page.
+          Upload an <b>image</b> (JPEG/PNG/WebP. Its URL is copied to your clipboard to paste into any Media/Image field) or your <b>lead magnet</b> as a PDF or audio file (MP3/M4A/WAV, up to 50MB). A lead magnet is delivered automatically in the confirmation email and on the thank-you page, with audio playing on its own branded page.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-black/[0.03] dark:hover:bg-white/[0.06]">
@@ -530,7 +533,7 @@ export function FunnelBuilder({
                 e.target.value = "";
               }}
             />
-            {uploading ? "Uploading…" : "Upload image, PDF or audio"}
+            {uploading ? (uploadPct === null ? "Uploading…" : `Uploading… ${uploadPct}%`) : "Upload image, PDF or audio"}
           </label>
           {leadMagnetName && (
             <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">

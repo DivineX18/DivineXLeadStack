@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getAdminDb, getAdminStorageBucket } from "@/lib/firebase/admin";
-import { MAX_ASSET_BYTES, MAX_AUDIO_BYTES } from "./asset-limits";
+import { MAX_ASSET_BYTES, MAX_AUDIO_BYTES, MAX_AUDIO_DIRECT_BYTES, AUDIO_MIME_TYPES } from "./asset-limits";
 
 export { MAX_ASSET_BYTES, MAX_AUDIO_BYTES };
 
@@ -325,4 +325,98 @@ export async function signedAudioUrl(meta: FunnelAssetMeta): Promise<string | nu
     console.error("[funnel-assets] signed audio URL failed", { id: meta.id, err });
     return null;
   }
+}
+
+
+/**
+ * A signed URL the browser can PUT one audio file to, and nothing else.
+ *
+ * The id is allocated here so the object path is decided by the server
+ * rather than the caller: a client cannot aim the upload at another
+ * workspace's prefix, or at an existing object, because it never chooses
+ * the path. Fifteen minutes is long enough for a slow connection to finish
+ * a 50MB file and short enough that a leaked URL is not a standing grant.
+ */
+export async function mintAudioUploadUrl(opts: {
+  subAccountId: string;
+  contentType: string;
+}): Promise<{ assetId: string; uploadUrl: string }> {
+  if (!(AUDIO_MIME_TYPES as readonly string[]).includes(opts.contentType)) {
+    throw new Error(`Unsupported audio type: ${opts.contentType}`);
+  }
+  const assetId = getAdminDb().collection("funnelAssets").doc().id;
+  const [uploadUrl] = await getAdminStorageBucket()
+    .file(`${AUDIO_PREFIX}/${opts.subAccountId}/${assetId}`)
+    .getSignedUrl({
+      version: "v4",
+      action: "write",
+      expires: Date.now() + 15 * 60 * 1000,
+      // Binds the URL to this type: a PUT sending anything else is rejected
+      // by Cloud Storage before it is stored.
+      contentType: opts.contentType,
+    });
+  return { assetId, uploadUrl };
+}
+
+/**
+ * Confirms what actually arrived, then registers it.
+ *
+ * Everything here is read back from Storage rather than taken from the
+ * caller, because the only thing standing between a signed PUT and an
+ * arbitrary file is this check. An object that is missing, oversized or not
+ * audio is deleted instead of registered, so a refused upload cannot sit in
+ * the bucket costing money or waiting to be referenced.
+ */
+export async function finalizeDirectAudioAsset(opts: {
+  assetId: string;
+  subAccountId: string;
+  agencyId: string;
+  funnelId: string;
+  createdByUid: string;
+  filename: string;
+  title?: string | null;
+}): Promise<{ assetId: string; url: string }> {
+  const storagePath = `${AUDIO_PREFIX}/${opts.subAccountId}/${opts.assetId}`;
+  const file = getAdminStorageBucket().file(storagePath);
+
+  const [exists] = await file.exists();
+  if (!exists) throw new Error("The upload didn't finish. Try again.");
+
+  const [meta] = await file.getMetadata();
+  const size = Number(meta.size ?? 0);
+  const contentType = String(meta.contentType ?? "");
+  const reject = async (message: string) => {
+    await file.delete().catch(() => {});
+    throw new Error(message);
+  };
+  if (size <= 0) await reject("That file arrived empty.");
+  if (size > MAX_AUDIO_DIRECT_BYTES) {
+    await reject(
+      `That file is ${(size / 1024 / 1024).toFixed(1)}MB, over the ` +
+        `${Math.round(MAX_AUDIO_DIRECT_BYTES / 1024 / 1024)}MB limit.`,
+    );
+  }
+  if (!(AUDIO_MIME_TYPES as readonly string[]).includes(contentType)) {
+    await reject("That file isn't audio.");
+  }
+
+  // Reusing the id the upload was minted against keeps one object to one
+  // document: a replay of this call overwrites the same doc rather than
+  // minting a second asset pointing at the same bytes.
+  await getAdminDb().doc(`funnelAssets/${opts.assetId}`).set({
+    id: opts.assetId,
+    subAccountId: opts.subAccountId,
+    agencyId: opts.agencyId,
+    funnelId: opts.funnelId,
+    kind: "audio",
+    contentType,
+    filename: opts.filename.slice(0, 200),
+    title: (opts.title ?? "").slice(0, 200) || null,
+    storagePath,
+    sizeBytes: size,
+    chunkCount: 0,
+    createdByUid: opts.createdByUid,
+    createdAt: new Date(),
+  });
+  return { assetId: opts.assetId, url: `/d/${opts.assetId}` };
 }

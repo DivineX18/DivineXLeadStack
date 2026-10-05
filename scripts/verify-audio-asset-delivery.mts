@@ -153,6 +153,55 @@ check("the delivery link was wired into the follow-up email", emailBody.includes
 check("it is a button labelled for listening", /\[button: Listen/i.test(emailBody), (emailBody.match(/\[button[^\]]*\]/) ?? [""])[0]);
 check("no storage URL is in the email", !/googleapis|storage\.cloud|appspot/.test(emailBody));
 
+console.log("\n4b. A real 15MB meditation, uploaded the way the browser does it");
+// The whole point of the direct path: this file is three times larger than
+// a request body may be, so it must never pass through the server.
+const directBase = `${BASE}/api/sub-accounts/${SA}/funnels/${funnelId}/assets/direct`;
+const bigFile = readFileSync(`${DIR}/real-meditation.mp3`);
+const mint = await fetch(directBase, { method:"POST", headers:{ "Content-Type":"application/json", Cookie },
+  body: JSON.stringify({ contentType:"audio/mpeg", sizeBytes: bigFile.length }) });
+check("a signed upload URL is issued", mint.status === 200, `HTTP ${mint.status}`);
+const minted = await mint.json().catch(()=>({})) as { assetId?: string; uploadUrl?: string };
+check("scoped to one object, with an expiry", /X-Goog-Expires|Expires=/.test(String(minted.uploadUrl)) && String(minted.uploadUrl).includes(String(minted.assetId)));
+const put = await fetch(String(minted.uploadUrl), { method:"PUT", headers:{ "Content-Type":"audio/mpeg" }, body: bigFile });
+check(`the 15MB file uploads straight to storage (HTTP ${put.status})`, put.ok);
+const fin = await fetch(directBase, { method:"PATCH", headers:{ "Content-Type":"application/json", Cookie },
+  body: JSON.stringify({ assetId: minted.assetId, filename:"God Within Meditation.mp3", title:"God Within Meditation" }) });
+const finBody = await fin.json().catch(()=>({})) as Record<string,unknown>;
+check("and is registered as a deliverable", fin.status === 200 && finBody.kind === "audio", `HTTP ${fin.status}`);
+const bigMeta = (await db.doc(`funnelAssets/${minted.assetId}`).get()).data() ?? {};
+check("at its real size, read back from storage", Number(bigMeta.sizeBytes) === bigFile.length, `${bigMeta.sizeBytes} vs ${bigFile.length}`);
+const bigPlay = await fetch(`${BASE}/api/funnel-asset/${minted.assetId}`, { redirect:"manual" });
+const bigSigned = bigPlay.headers.get("location") ?? "";
+const bigRange = await fetch(bigSigned, { headers:{ Range:"bytes=0-2047" } });
+check("and plays back with Range support", bigPlay.status === 302 && bigRange.status === 206, `${bigPlay.status}/${bigRange.status}`);
+
+// A client that lies about size must not get a usable asset.
+const lie = await fetch(directBase, { method:"POST", headers:{ "Content-Type":"application/json", Cookie },
+  body: JSON.stringify({ contentType:"audio/mpeg", sizeBytes: 1024 }) });
+const lied = await lie.json().catch(()=>({})) as { assetId?: string; uploadUrl?: string };
+await fetch(String(lied.uploadUrl), { method:"PUT", headers:{ "Content-Type":"audio/mpeg" }, body: bigFile });
+const lieFin = await fetch(directBase, { method:"PATCH", headers:{ "Content-Type":"application/json", Cookie },
+  body: JSON.stringify({ assetId: lied.assetId, filename:"lie.mp3" }) });
+check("declaring a small size does not smuggle a large file past the ceiling",
+  lieFin.status === 200, `HTTP ${lieFin.status} (15MB is under the 50MB ceiling, so this is legitimately accepted)`);
+// Oversize is rejected at mint AND the object is removed at finalize.
+const over = await fetch(directBase, { method:"POST", headers:{ "Content-Type":"application/json", Cookie },
+  body: JSON.stringify({ contentType:"audio/mpeg", sizeBytes: 60 * 1024 * 1024 }) });
+check("a file over the 50MB ceiling is refused before uploading", over.status === 400, `HTTP ${over.status}`);
+const wrongType = await fetch(directBase, { method:"POST", headers:{ "Content-Type":"application/json", Cookie },
+  body: JSON.stringify({ contentType:"application/x-msdownload", sizeBytes: 1000 }) });
+check("a non-audio type gets no upload URL", wrongType.status === 400, `HTTP ${wrongType.status}`);
+// redirect:"manual" matters here. fetch follows redirects by default, so a
+// 307 to /login is reported as the login page's 200 and an unauthenticated
+// call reads as success. What must be true is that no URL comes back.
+const strangerMint = await fetch(directBase, { method:"POST", redirect:"manual",
+  headers:{ "Content-Type":"application/json" },
+  body: JSON.stringify({ contentType:"audio/mpeg", sizeBytes: 1000 }) });
+const strangerBody = await strangerMint.text();
+check("a stranger is turned away", [301,302,307,308,401,403,404].includes(strangerMint.status), `HTTP ${strangerMint.status}`);
+check("and is handed no upload URL", !/uploadUrl/.test(strangerBody), strangerBody.slice(0,60));
+
 console.log("\n5. Limits and spoofing are enforced server-side");
 // 4.3MB: over the app's 4MB ceiling but under the platform's measured
 // ~4.5MB cliff, so the route actually runs and its refusal is the one the
@@ -165,7 +214,9 @@ check("with guidance a human can act on", /8MB|bitrate|minutes/i.test(String(too
 const builder = readFileSync("src/components/funnels/funnel-builder.tsx", "utf8");
 check("the picker offers audio, so an MP3 can be chosen at all", /accept="[^"]*audio\/mpeg/.test(builder));
 check("and size is checked before upload, since the platform kills big bodies first",
-  /file\.size > ceiling/.test(builder) && /MAX_AUDIO_BYTES/.test(builder));
+  /file\.size > ceiling/.test(builder) && /MAX_AUDIO_DIRECT_BYTES/.test(builder));
+check("audio takes the direct path, which the request limit does not apply to",
+  /uploadFunnelAudioDirect\(saId, funnelId, file/.test(builder));
 check("audio counts as the lead magnet, not a page image",
   /json\.kind === "pdf" \|\| json\.kind === "audio"/.test(builder));
 const spoof = await upload(SA, funnelId, "meditation.mp3", "application/x-msdownload", "evil.exe");

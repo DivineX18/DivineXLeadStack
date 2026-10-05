@@ -1,3 +1,9 @@
+import {
+  MAX_ASSET_BYTES,
+  MAX_AUDIO_DIRECT_BYTES,
+  AUDIO_MIME_TYPES,
+} from "./asset-limits";
+
 /**
  * Client-side asset upload: check before sending, and never parse an error
  * page as if it were the answer.
@@ -17,20 +23,33 @@
  * the visual-requirements panel) share exactly one implementation.
  */
 
-/** Mirrors ALLOWED_ASSET_TYPES / MAX_ASSET_BYTES in lib/funnels/assets.ts.
- *  Duplicated deliberately: that module is server-only (it imports the Admin
- *  SDK), and a client-side pre-flight is worth more than avoiding two
- *  constants. The server still enforces both, so a stale copy here can only
- *  ever be over-strict, never permissive. */
-export const UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
+/** The limits now live in lib/funnels/asset-limits.ts, which both sides
+ *  import. They used to be copied here because assets.ts is server-only,
+ *  and the copy went stale: it still said 5MB after the real ceiling was
+ *  measured at ~4.5MB, so the pre-flight passed files the platform refused.
+ *  One definition means the check the customer sees cannot drift from the
+ *  one that enforces. */
+export const UPLOAD_MAX_BYTES = MAX_ASSET_BYTES;
 export const UPLOAD_ACCEPT = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 
 export function describeUploadLimit(): string {
-  return `Images (JPEG, PNG, WebP) and PDFs up to ${Math.round(UPLOAD_MAX_BYTES / 1024 / 1024)}MB.`;
+  return (
+    `Images (JPEG, PNG, WebP) and PDFs up to ${Math.round(UPLOAD_MAX_BYTES / 1024 / 1024)}MB, ` +
+    `or audio (MP3, M4A, WAV) up to ${Math.round(MAX_AUDIO_DIRECT_BYTES / 1024 / 1024)}MB.`
+  );
 }
 
 /** A human-readable reason this file can't be uploaded, or null if it can. */
 export function checkUploadable(file: File): string | null {
+  // Audio has its own, much larger ceiling because it does not travel
+  // through the server. See uploadFunnelAudioDirect below.
+  if ((AUDIO_MIME_TYPES as readonly string[]).includes(file.type)) {
+    if (file.size === 0) return `${file.name} is empty.`;
+    if (file.size > MAX_AUDIO_DIRECT_BYTES) {
+      return `${file.name} is ${(file.size / 1024 / 1024).toFixed(1)}MB, over the ${Math.round(MAX_AUDIO_DIRECT_BYTES / 1024 / 1024)}MB limit for audio.`;
+    }
+    return null;
+  }
   if (!UPLOAD_ACCEPT.includes(file.type)) {
     return `${file.name} is a ${file.type || "file of unknown type"}. ${describeUploadLimit()}`;
   }
@@ -106,4 +125,62 @@ export async function uploadFunnelAsset(
     throw new Error(parsed.error ?? `Upload failed (${res.status}).`);
   }
   return { url: parsed.url, kind: parsed.kind, assetId: parsed.assetId };
+}
+
+
+/**
+ * Upload audio straight to storage, bypassing this app's request limit.
+ *
+ * Three steps, because the bytes must not pass through the server: ask for
+ * a signed URL, PUT the file to it, then tell the server what landed so it
+ * can verify and register it. The customer sees one "Uploading..." state.
+ */
+export async function uploadFunnelAudioDirect(
+  subAccountId: string,
+  funnelId: string,
+  file: File,
+  onProgress?: (fraction: number) => void,
+): Promise<UploadedAsset> {
+  const rejected = checkUploadable(file);
+  if (rejected) throw new Error(rejected);
+
+  const base = `/api/sub-accounts/${subAccountId}/funnels/${funnelId}/assets/direct`;
+  const readError = async (res: Response, fallback: string) => {
+    const text = await res.text();
+    try { return (JSON.parse(text) as { error?: string }).error ?? fallback; } catch { return fallback; }
+  };
+
+  const mintRes = await fetch(base, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contentType: file.type, sizeBytes: file.size }),
+  });
+  if (!mintRes.ok) throw new Error(await readError(mintRes, `Could not start the upload (${mintRes.status}).`));
+  const { assetId, uploadUrl } = (await mintRes.json()) as { assetId: string; uploadUrl: string };
+
+  // XHR rather than fetch: this is the one upload long enough that a
+  // progress bar matters, and fetch cannot report request progress.
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", uploadUrl, true);
+    xhr.setRequestHeader("Content-Type", file.type);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total);
+    };
+    xhr.onload = () =>
+      xhr.status >= 200 && xhr.status < 300
+        ? resolve()
+        : reject(new Error(`The upload was rejected by storage (${xhr.status}).`));
+    xhr.onerror = () => reject(new Error("The upload didn't reach storage. Check your connection and try again."));
+    xhr.send(file);
+  });
+
+  const doneRes = await fetch(base, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ assetId, filename: file.name, title: file.name.replace(/\.[^.]+$/, "") }),
+  });
+  if (!doneRes.ok) throw new Error(await readError(doneRes, `The upload could not be completed (${doneRes.status}).`));
+  const done = (await doneRes.json()) as { url: string; kind?: string; assetId?: string };
+  return { url: done.url, kind: done.kind, assetId: done.assetId };
 }

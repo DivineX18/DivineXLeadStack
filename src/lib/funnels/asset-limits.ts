@@ -41,3 +41,28 @@ export const MAX_ASSET_BYTES = 4 * 1024 * 1024;
  * across two buckets in two regions. That is a separate piece of work.
  */
 export const MAX_AUDIO_BYTES = 4 * 1024 * 1024;
+
+/**
+ * 50MB for audio uploaded DIRECTLY to storage.
+ *
+ * The 4MB ceilings above exist because the file is proxied through this
+ * server and the platform caps a request body at roughly 4.5MB. A direct
+ * upload never touches this server, so that cap does not apply and the
+ * limit becomes a judgement about cost instead: 50MB covers 30 minutes at
+ * 192kbps, which is more than a guided meditation needs, while staying far
+ * from anything that resembles video hosting.
+ *
+ * Storage is pennies; egress is the real cost and is bounded by how many
+ * people claim the lead magnet, not by this number.
+ */
+export const MAX_AUDIO_DIRECT_BYTES = 50 * 1024 * 1024;
+
+/** Audio this product accepts, shared by the picker and both upload paths. */
+export const AUDIO_MIME_TYPES = [
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/mp4",
+  "audio/x-m4a",
+  "audio/wav",
+  "audio/x-wav",
+] as const;
