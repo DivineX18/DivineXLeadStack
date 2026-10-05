@@ -1097,6 +1097,60 @@ Without these four set, the callback route returns a `not_configured` error redi
 
 Ascend's `api-server/src/lib/crmIntegration.ts` calls Flow's own **Public API v1** (`lsk_live_*` bearer key, `POST /api/v1/contacts` + `POST /api/v1/tasks` — see the Public API v1 section above) to sync qualified prospecting/audit leads into one specific, hardcoded Flow sub-account. Manual/on-demand only (triggered by an internal script, `sendLeadToCrm.ts`, not automatic on every scan), one-directional (Ascend → Flow), and uses zero SSO-bridge machinery — it's just an ordinary Public API v1 caller with its own key. Relevant precedent: it's a working, production example of an Ascend server calling Flow's API directly, which is the same shape a future Zeno execution bridge would need.
 
+## Zeno x Flow universal layer (read, understand, edit)
+
+Zeno operates the same Flow system the UI does. It is not a second builder and
+not a separate asset store: every read delegates to the domain service the UI
+already calls, and every write names an existing capability.
+
+**The registry** ([src/lib/ai-suite/flow-domains.ts](src/lib/ai-suite/flow-domains.ts)) is the one place a Flow domain
+declares how to load itself, how to describe itself, what it connects to, and
+which capability performs each operation. Adding a domain is a table entry, not
+a new conversational architecture. Domains today: `funnel`, `form`, `workflow`,
+`booking_page`, `campaign`, `website`, `email_template`.
+
+- **Context resolution** - `artifactRef` resolves for every asset route
+  (`/create/funnel(s)/[id]`, `/campaigns/funnel/[id]`, `/create/forms/[id]`,
+  `/launch/workflows/[id]`, `/create/booking/[slug]`, `/create/templates/[id]`).
+  The client's `kind` is a HINT: the server re-resolves it and proves workspace
+  ownership. A foreign asset and a nonexistent one are both `null`, so this
+  cannot be used to probe another tenant.
+- **Reads** - `inspect_asset` (any domain) and `trace_connected_system` (page to
+  form to automation to emails to booking). A link pointing at something deleted
+  is reported as the dead end it is, not swallowed.
+- **Writes** - `edit_funnel_structure` (add/remove/move a section, attach an
+  uploaded image, brief a photo), `edit_workflow_steps` (insert an email with its
+  delay, retime or remove a step), `edit_workflow_logic` (trigger, who it applies
+  to, branch conditions), `update_form` (positional insert + reorder),
+  `update_booking_page` (incl. intake questions), `list_media_assets`.
+- **Media** - the workspace library is the EXISTING `funnelAssets` store, shared
+  with the builder. Zeno attaches what the customer uploaded; it never generates
+  an image and never sends them to an external host. A real upload is recorded
+  as `first_party_upload` evidence; a generated one never would be.
+- **State safety** - no step, logic or structural edit writes a `status`. Drafts
+  stay drafts, sending automations keep sending, nothing publishes or activates.
+- **Failure messages** - [src/lib/ai-suite/failure-message.ts](src/lib/ai-suite/failure-message.ts) decides what a
+  customer is told, and what may be CLAIMED about state. A chat turn never
+  writes, so it can say nothing changed. A confirm IS the write: refused before
+  it ran means nothing changed; faulted part-way says so rather than guessing.
+
+**Two drift traps, both of which made a working tool look like a missing
+feature, both now covered by [scripts/verify-zeno-flow-domains.mts](scripts/verify-zeno-flow-domains.mts):**
+a schema `enum` value that `validate` does not accept, and a `menuLabel` that
+contradicts the operations the tool supports (the model believes the menu).
+[scripts/verify-capability-idempotency.mts](scripts/verify-capability-idempotency.mts) additionally NAMES every capability it
+could not exercise, because 28 sat silently unchecked and one of them shipped
+broken.
+
+### Deferred, by decision (roadmap gaps, not defects)
+
+Scoped and deliberately NOT built for the first release of this layer:
+publish/unpublish, activate/pause, delete, duplicate, funnel SEO and theme,
+campaign writes, contact tags and notes, conversations, products, quotes,
+orders. Publish and activate are the two that matter most and are also the
+highest-impact, which is why they wait for their own verification pass rather
+than riding along untested.
+
 ## Commands
 - `pnpm dev` — dev server (Turbopack)
 - `pnpm build` — production build
