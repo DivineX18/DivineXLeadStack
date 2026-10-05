@@ -317,5 +317,26 @@ console.log("\n-- a customer never sees a bare status code --");
   ck("a server message that is itself a bare code is not passed through", !/Request failed/.test(echoed), echoed);
 }
 
+console.log("\n-- a copy edit that would change nothing is refused, not reported --");
+{
+  // Found on production: the model sent {heading} for a hero, whose field is
+  // `headline`. The key was written, the renderer ignored it, and the
+  // customer was told their headline had changed. The read vocabulary (the
+  // page-context card says "heading") and the write vocabulary have to meet
+  // somewhere, and it cannot be a prompt.
+  const blk = caps.slice(caps.indexOf('name: "revise_funnel_copy"'), caps.indexOf('name: "update_task"'));
+  ck("a field the section already has is written as-is", /if \(key in config\) \{ resolved\[key\] = value; continue; \}/.test(blk));
+  ck("“heading” lands on whatever that section calls its heading",
+    /const HEADING_KEYS = \["headline", "problemHeadline", "solutionHeadline", "byline", "text"\]/.test(blk));
+  ck("a section with no matching field is REFUSED, never reported as changed",
+    /has no \$\{unmapped\.join\(" or "\)\} to change/.test(blk));
+  ck("and the refusal names what the section actually has",
+    /What it actually has is/.test(blk));
+  ck("the resolved fields are what gets written, not the raw ones",
+    /\.\.\.resolved \} \} : s,/.test(blk) && !/\.\.\.fields \} \} : s,/.test(blk));
+  ck("the page-context card's own word is one of the mapped aliases",
+    /heading: HEADING_KEYS/.test(blk) && /heading: string;/.test(ctx));
+}
+
 console.log(`\n${fails === 0 ? "ALL PASS" : `${fails} FAILED`}`);
 process.exit(fails ? 1 : 0);

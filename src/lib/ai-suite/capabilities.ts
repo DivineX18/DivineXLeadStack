@@ -8729,11 +8729,48 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       if (idx < 0) throw new CapabilityUserError("That section isn't on the page any more, reopen it and try again.");
 
       const fields = args.fields as Record<string, string>;
+      const config = (funnel.sections[idx].config ?? {}) as Record<string, unknown>;
+
+      // A FIELD NAME THAT ISN'T REAL IS A SILENT NO-OP, AND IT WAS BEING
+      // REPORTED AS SUCCESS. Found on production: the model sent
+      // {heading: "..."} for a hero, whose field is `headline`. The key was
+      // written, the renderer ignored it, and Zeno told the customer the
+      // headline had changed. "heading" is the generic word the page-context
+      // card uses, so the model is right to reach for it; the mapping belongs
+      // here rather than in a prompt nobody can enforce.
+      const HEADING_KEYS = ["headline", "problemHeadline", "solutionHeadline", "byline", "text"];
+      const ALIASES: Record<string, string[]> = {
+        heading: HEADING_KEYS,
+        subheading: ["subheadline", "subtext"],
+        subheadline: ["subheadline", "subtext"],
+        body: ["body", "bodyText", "text", "problemText", "solutionText"],
+        text: ["text", "body", "bodyText"],
+      };
+      const resolved: Record<string, string> = {};
+      const unmapped: string[] = [];
+      for (const [key, value] of Object.entries(fields)) {
+        // A key the section already carries is real by definition.
+        if (key in config) { resolved[key] = value; continue; }
+        const candidates = ALIASES[key] ?? [];
+        const landed = candidates.find((c) => c in config);
+        if (landed) resolved[landed] = value;
+        else if (key === "heading") resolved.headline = value;
+        else unmapped.push(key);
+      }
+      if (Object.keys(resolved).length === 0) {
+        // Refusing is the only honest answer: writing these would change
+        // nothing a visitor can see while reporting that it had.
+        throw new CapabilityUserError(
+          `This ${funnel.sections[idx].type.replace(/_/g, " ")} section has no ${unmapped.join(" or ")} to change. ` +
+            `What it actually has is: ${Object.keys(config).filter((k) => typeof config[k] === "string").join(", ") || "no text fields"}.`,
+        );
+      }
+
       // SPREAD, never rebuild: argumentRole, servesBelief and canvas travel
       // with the section, and every config key not named here is untouched -
       // so a human edit Zeno wasn't asked about survives.
       const next = funnel.sections.map((s, i) =>
-        i === idx ? { ...s, config: { ...(s.config as Record<string, unknown>), ...fields } } : s,
+        i === idx ? { ...s, config: { ...(s.config as Record<string, unknown>), ...resolved } } : s,
       ) as typeof funnel.sections;
 
       const ok = await updateFunnelServerSide({ subAccountId, funnelId: funnel.id, patch: { sections: next } });
