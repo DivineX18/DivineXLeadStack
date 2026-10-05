@@ -8163,7 +8163,10 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       if (!OPS.includes(op)) return { ok: false, error: `operation must be one of: ${OPS.join(", ")}.` };
       const out: Record<string, unknown> = {
         workflowId,
-        op,
+        // Named `operation`, not `op`: confirm re-validates these very args,
+        // and `op` has no alias back to the `operation` key read above, so
+        // the second pass saw no operation at all and refused every confirm.
+        operation: op,
         afterStepId: str(raw, "after_step_id"),
         stepId: str(raw, "step_id"),
         why: str(raw, "why").slice(0, 200),
@@ -8171,7 +8174,12 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       if (op === "insert_wait" || op === "set_wait") {
         const days = Number(raw.days ?? 0);
         const hours = Number(raw.hours ?? 0);
-        const seconds = days > 0 ? Math.round(days * 86_400) : Math.round(hours * 3_600);
+        // `seconds` is what the first pass produced; accept it back so the
+        // re-validation at confirm reaches the same answer.
+        const already = Number(raw.seconds ?? 0);
+        const seconds = already > 0 ? Math.round(already)
+          : days > 0 ? Math.round(days * 86_400)
+          : Math.round(hours * 3_600);
         if (!Number.isFinite(seconds) || seconds < 60) {
           return { ok: false, error: "Say how long to wait, in days or hours. The shortest supported wait is a minute." };
         }
@@ -8203,7 +8211,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           ? `${Number(args.seconds) / 86_400} day(s)`
           : `${Math.round(Number(args.seconds) / 3_600)} hour(s)`
         : "";
-      switch (args.op) {
+      switch (args.operation) {
         case "insert_email":
           return `Add an email to this automation: “${String(args.subject).slice(0, 80)}”${why}`;
         case "insert_wait":
@@ -8219,7 +8227,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       const res = await patchWorkflowStepsServerSide({
         subAccountId: ctx.subAccountId!,
         workflowId: args.workflowId as string,
-        op: args.op as "insert_email" | "insert_wait" | "set_wait" | "remove_step",
+        op: args.operation as "insert_email" | "insert_wait" | "set_wait" | "remove_step",
         ...(args.afterStepId ? { afterStepId: args.afterStepId as string } : {}),
         ...(args.stepId ? { stepId: args.stepId as string } : {}),
         ...(args.seconds ? { seconds: args.seconds as number } : {}),

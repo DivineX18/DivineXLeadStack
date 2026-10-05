@@ -86,6 +86,9 @@ interface FlowDomain<T> {
   label: string;
   load: (subAccountId: string, id: string) => Promise<T | null>;
   describe: (doc: T, subAccountId: string) => Omit<FlowAssetView, "kind" | "label" | "operations">;
+  /** Edges that need their own query. Resolved on every read, so the context
+   *  card and inspect_asset see the same connections the trace does. */
+  relatedAsync?: (doc: T, subAccountId: string) => Promise<FlowEdge[]>;
   operations: Partial<Record<FlowOperation, string>>;
 }
 
@@ -193,16 +196,20 @@ const formDomain: FlowDomain<LeadForm> = {
     refs: { form_id: doc.id },
     edges: [],
   }),
+  relatedAsync: (doc, sa) => workflowsForForm(sa, doc.id),
   operations: { read: "list_forms", create: "create_form", update: "update_form", reorder: "update_form" },
 };
 
 /* ------------------------------ workflow -------------------------------- */
 
-function stepLine(node: WorkflowNode, n: number): string {
+function stepLine(node: WorkflowNode, n: number, emailOrdinal?: number): string {
   const cfg = (node.config ?? {}) as Record<string, unknown>;
   switch (node.type) {
     case "send_email":
-      return `${n}. Email, subject "${cap(cfg.subject, 120)}" id=${node.id}`;
+      // The ordinal is the EMAIL's number, not the step's. revise_workflow_email
+      // counts emails, so a listing that numbered every step made "email 2"
+      // resolve to the third thing in the list and the edit was refused.
+      return `${n}. Email ${emailOrdinal}, subject "${cap(cfg.subject, 120)}" id=${node.id}`;
     case "send_sms":
       return `${n}. Text message id=${node.id}`;
     case "wait": {
@@ -249,7 +256,12 @@ const workflowDomain: FlowDomain<WorkflowDoc> = {
       state: doc.status === "active" ? "sending" : doc.status === "paused" ? "paused" : "draft",
       lines: [
         `Starts when: ${cap(trig.type, 60).replace(/_/g, " ") || "unknown"}${trig.formId ? ` (form ${String(trig.formId)})` : ""}.`,
-        ...steps.map((node, i) => stepLine(node, i + 1)),
+        ...(() => {
+          let emails = 0;
+          return steps.map((node, i) =>
+            stepLine(node, i + 1, node.type === "send_email" ? ++emails : undefined),
+          );
+        })(),
       ],
       refs: { workflow_id: doc.id },
       edges: trig.formId
@@ -446,23 +458,53 @@ export async function readFlowAsset(
     const doc = await domain.load(subAccountId, id);
     if (!doc) return null;
     const described = domain.describe(doc, subAccountId);
-    return { kind, label: domain.label, operations: domain.operations, ...described };
+    const extra = domain.relatedAsync ? await domain.relatedAsync(doc, subAccountId) : [];
+    return {
+      kind,
+      label: domain.label,
+      operations: domain.operations,
+      ...described,
+      edges: [...described.edges, ...extra],
+    };
   } catch {
     // A read failure must not leak a distinguishable outcome either.
     return null;
   }
 }
 
-/** Which workflows actually run off a given form, by reading their triggers. */
+/**
+ * Which automations actually run off a given form.
+ *
+ * This used to read the workspace's first 50 workflows and filter them in
+ * memory. In a workspace with 183 of them the right one simply was not in
+ * the window, so Zeno told the customer "there is no follow-up automation
+ * connected to this form" while looking straight at one. Both queries below
+ * are equality-only, which Firestore serves from single-field indexes, so
+ * this is exact without needing a composite index.
+ */
 async function workflowsForForm(subAccountId: string, formId: string): Promise<FlowEdge[]> {
-  const snap = await getAdminDb()
-    .collection("workflows")
-    .where("subAccountId", "==", subAccountId)
-    .limit(50)
-    .get();
-  return snap.docs
-    .filter((d) => (d.data() as { trigger?: { formId?: string } }).trigger?.formId === formId)
-    .map((d) => ({ relation: "triggers the follow-up", kind: "workflow" as const, id: d.id }));
+  const db = getAdminDb();
+  const [named, anyForm] = await Promise.all([
+    db.collection("workflows")
+      .where("subAccountId", "==", subAccountId)
+      .where("trigger.formId", "==", formId)
+      .get(),
+    // A form.submitted trigger with no formId fires for EVERY form in the
+    // workspace, so it is genuinely connected to this one.
+    db.collection("workflows")
+      .where("subAccountId", "==", subAccountId)
+      .where("trigger.type", "==", "form.submitted")
+      .get(),
+  ]);
+  const ids = new Set(named.docs.map((d) => d.id));
+  for (const d of anyForm.docs) {
+    if (!(d.data() as { trigger?: { formId?: string | null } }).trigger?.formId) ids.add(d.id);
+  }
+  return [...ids].slice(0, 10).map((id) => ({
+    relation: "triggers the follow-up",
+    kind: "workflow" as const,
+    id,
+  }));
 }
 
 export interface FlowTraceNode {
@@ -513,9 +555,7 @@ export async function traceFlowSystem(
       }
       nodes.push({ depth: item.depth, relation: item.relation, asset });
       if (item.depth >= maxDepth) continue;
-      const edges = [...asset.edges];
-      if (asset.kind === "form") edges.push(...(await workflowsForForm(subAccountId, asset.id)));
-      for (const e of edges) {
+      for (const e of asset.edges) {
         next.push({ kind: e.kind, id: e.id, depth: item.depth + 1, relation: e.relation });
       }
     }

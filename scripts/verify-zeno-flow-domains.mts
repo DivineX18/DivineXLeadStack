@@ -138,5 +138,59 @@ console.log("\n-- the structural funnel edit respects the page's own rules --");
     !/\bafterId\b/.test(blk) && /afterSectionId/.test(blk));
 }
 
+console.log("\n-- the connections a form has are found exactly, not sampled --");
+{
+  ck("the automation lookup is an exact query, not a window over the workspace",
+    /where\("trigger\.formId", "==", formId\)/.test(dom),
+    "reading the first N workflows and filtering in memory misses the right one in a busy workspace");
+  ck("it does not read an arbitrary slice of the workflow collection",
+    !/collection\("workflows"\)[\s\S]{0,160}\.limit\(/.test(dom));
+  ck("a trigger that fires for every form still counts as connected",
+    /where\("trigger\.type", "==", "form\.submitted"\)/.test(dom));
+  ck("both queries are scoped to the workspace",
+    (dom.match(/where\("subAccountId", "==", subAccountId\)/g) ?? []).length >= 2);
+  ck("a form carries its automations on every read, not only inside a trace",
+    /relatedAsync: \(doc, sa\) => workflowsForForm\(sa, doc\.id\)/.test(dom));
+  ck("emails are numbered as EMAILS, so \u201cemail 2\u201d means the same thing to the edit tool",
+    /Email \$\{emailOrdinal\}/.test(dom));
+}
+
+console.log("\n-- validate must survive being fed its own output --");
+{
+  // THE BUG THIS EXISTS FOR. The confirm route re-validates the args the
+  // proposal already produced. So a validate that READS `operation` but
+  // WRITES `op` passes the first time and refuses the second, and the
+  // customer sees "that request is missing something I need" on every
+  // confirm. Found live, in edit_workflow_steps. Cheap to assert, invisible
+  // to read for.
+  const { AI_SUITE_CAPABILITIES } = await import("../src/lib/ai-suite/capabilities");
+  const cases: [string, Record<string, unknown>][] = [
+    ["edit_workflow_steps", { workflow_id: "w1", operation: "set_wait", step_id: "s1", days: 1 }],
+    ["edit_workflow_steps", { workflow_id: "w1", operation: "insert_email", after_step_id: "s1", subject: "Hi", body: "Body" }],
+    ["edit_workflow_steps", { workflow_id: "w1", operation: "remove_step", step_id: "s1" }],
+    ["edit_funnel_structure", { funnel_id: "f1", operation: "add_media_placeholder", section_id: "hero", brief: "A real photo of the clinic team at work, natural light." }],
+    ["edit_funnel_structure", { funnel_id: "f1", operation: "add_section", section_type: "faq", items: ["How long? | About an hour."], after_section_id: "hero" }],
+    ["edit_funnel_structure", { funnel_id: "f1", operation: "move_section", section_id: "s2", after_section_id: "hero" }],
+    ["revise_workflow_email", { workflow_id: "w1", email_number: 2, body: "New body {{unsubscribeLink}}" }],
+    ["update_form", { form_id: "fm1", add_question: { label: "Company", type: "company", after_question_id: "f_email" } }],
+    ["update_form", { form_id: "fm1", reorder_question_ids: ["a", "b"] }],
+    ["inspect_asset", { kind: "workflow", id: "w1" }],
+    ["trace_connected_system", { kind: "funnel", id: "f1" }],
+  ];
+  for (const [name, args] of cases) {
+    const c = AI_SUITE_CAPABILITIES.find((x) => x.name === name);
+    if (!c) { ck(`${name} exists`, false); continue; }
+    const first = c.validate(args);
+    if (!first.ok) { ck(`${name} accepts ${String(args.operation ?? "its args")}`, false, first.error); continue; }
+    const second = c.validate(first.args);
+    ck(`${name} (${String(args.operation ?? Object.keys(args)[1])}) re-validates its own output`,
+      second.ok, second.ok ? "" : second.error);
+    if (second.ok) {
+      ck(`  and reaches the same args`, JSON.stringify(first.args) === JSON.stringify(second.args),
+        `${JSON.stringify(first.args)} vs ${JSON.stringify(second.args)}`);
+    }
+  }
+}
+
 console.log(`\n${fails === 0 ? "ALL PASS" : `${fails} FAILED`}`);
 process.exit(fails ? 1 : 0);
