@@ -111,6 +111,13 @@ console.log("\n-- a workflow step edit changes one step, not the sequence --");
     /reason: "branch"/.test(wfs) && /branchy\(after\)/.test(wfs));
   ck("the status is never written by a step edit",
     !/update\(\{[^}]*status:/.test(wfs.slice(wfs.indexOf("patchWorkflowStepsServerSide"))));
+  ck("an email asked for \u201cone day after\u201d lays down the wait too, in one call",
+    /opts\.op === "insert_email" && delay >= 60/.test(wfs),
+    "one node per call silently dropped the customer's delay");
+  ck("the wait goes BEFORE the email it delays",
+    /chain\.push\(\{ id: newId\(\), type: "wait"/.test(wfs) && wfs.indexOf('type: "wait", config: { seconds: delay }') < wfs.indexOf('type: "send_email", config: { subject: opts.subject'));
+  ck("an email with no delay is still allowed",
+    /if \(Number\.isFinite\(seconds\) && seconds >= 60\) out\.seconds = seconds;/.test(caps));
   ck("a new email cannot ship without an unsubscribe link",
     /body\.includes\("\{\{unsubscribeLink\}\}"\)/.test(caps));
 }

@@ -599,19 +599,31 @@ export async function patchWorkflowStepsServerSide(opts: {
     const after = opts.afterStepId;
     if (after && !nodes[after]) return { ok: false, reason: "no_step" };
     if (after && branchy(after)) return { ok: false, reason: "branch" };
-    const id = newId();
-    const node: WorkflowNode =
-      opts.op === "insert_email"
-        ? { id, type: "send_email", config: { subject: opts.subject ?? "", body: opts.body ?? "" }, next: null }
-        : { id, type: "wait", config: { seconds: Math.max(60, Math.floor(opts.seconds ?? 86_400)) }, next: null };
-    if (after) {
-      node.next = nodes[after].next ?? null;
-      nodes[after] = { ...nodes[after], next: id };
-    } else {
-      node.next = startNodeId;
-      startNodeId = id;
+    // "An email one day after they download" is ONE request, not two. With
+    // one node per call, the delay was simply never created: the email was
+    // inserted immediately after the previous one and the customer's "one
+    // day" vanished. An insert_email carrying a delay therefore lays down
+    // the wait and the email together, in that order.
+    const chain: WorkflowNode[] = [];
+    const delay = Math.floor(opts.seconds ?? 0);
+    if (opts.op === "insert_email" && delay >= 60) {
+      chain.push({ id: newId(), type: "wait", config: { seconds: delay }, next: null });
     }
-    nodes[id] = node;
+    chain.push(
+      opts.op === "insert_email"
+        ? { id: newId(), type: "send_email", config: { subject: opts.subject ?? "", body: opts.body ?? "" }, next: null }
+        : { id: newId(), type: "wait", config: { seconds: Math.max(60, delay || 86_400) }, next: null },
+    );
+    for (let i = 0; i < chain.length - 1; i++) chain[i].next = chain[i + 1].id;
+    const first = chain[0], last = chain[chain.length - 1];
+    if (after) {
+      last.next = nodes[after].next ?? null;
+      nodes[after] = { ...nodes[after], next: first.id };
+    } else {
+      last.next = startNodeId;
+      startNodeId = first.id;
+    }
+    for (const n of chain) nodes[n.id] = n;
   } else if (opts.op === "set_wait") {
     const id = opts.stepId ?? "";
     if (!nodes[id]) return { ok: false, reason: "no_step" };
@@ -664,7 +676,7 @@ export async function patchWorkflowStepsServerSide(opts: {
     status: wf.status,
     stepId: opts.stepId ?? Object.keys(nodes).find((k) => !Object.values(nodes).some((n) => n.next === k)) ?? "",
     summary:
-      opts.op === "insert_email" ? "added an email step"
+      opts.op === "insert_email" ? (opts.seconds ?? 0) >= 60 ? "added a wait and an email after it" : "added an email step"
       : opts.op === "insert_wait" ? "added a wait"
       : opts.op === "set_wait" ? "changed how long it waits"
       : "removed a step",

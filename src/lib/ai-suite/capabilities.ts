@@ -8145,8 +8145,8 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         },
         after_step_id: { type: "string", description: "insert_email and insert_wait: the step the new one goes directly after. Leave out to put it first, before everything else." },
         step_id: { type: "string", description: "set_wait and remove_step: the step being changed, by its id." },
-        days: { type: "number", description: "insert_wait and set_wait: how long to wait, in days. Use hours instead for anything under a day." },
-        hours: { type: "number", description: "insert_wait and set_wait: how long to wait, in hours. Ignored when days is given." },
+        days: { type: "number", description: "How long to wait, in days. On insert_email this is the delay BEFORE the new email, so \u201can email one day after they download\u201d is a single call with days=1. Use hours for anything under a day." },
+        hours: { type: "number", description: "How long to wait, in hours. Ignored when days is given." },
         subject: { type: "string", description: "insert_email: the subject line." },
         body: { type: "string", description: "insert_email: the full email. Include {{unsubscribeLink}} on its own line at the end, every marketing email legally needs it." },
         why: { type: "string", description: "One short sentence on what this improves, shown on the confirm card." },
@@ -8171,7 +8171,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         stepId: str(raw, "step_id"),
         why: str(raw, "why").slice(0, 200),
       };
-      if (op === "insert_wait" || op === "set_wait") {
+      if (op === "insert_wait" || op === "set_wait" || op === "insert_email") {
         const days = Number(raw.days ?? 0);
         const hours = Number(raw.hours ?? 0);
         // `seconds` is what the first pass produced; accept it back so the
@@ -8180,11 +8180,13 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         const seconds = already > 0 ? Math.round(already)
           : days > 0 ? Math.round(days * 86_400)
           : Math.round(hours * 3_600);
-        if (!Number.isFinite(seconds) || seconds < 60) {
+        if (op !== "insert_email" && (!Number.isFinite(seconds) || seconds < 60)) {
           return { ok: false, error: "Say how long to wait, in days or hours. The shortest supported wait is a minute." };
         }
         if (seconds > 365 * 86_400) return { ok: false, error: "A wait longer than a year is almost certainly a mistake." };
-        out.seconds = seconds;
+        // On insert_email a delay is optional: no delay means it follows the
+        // previous step immediately, which is a legitimate thing to want.
+        if (Number.isFinite(seconds) && seconds >= 60) out.seconds = seconds;
       }
       if (op === "set_wait" || op === "remove_step") {
         if (!out.stepId) return { ok: false, error: "step_id is required. Read the automation first so you have the real ids." };
