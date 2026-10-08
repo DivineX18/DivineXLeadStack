@@ -1,4 +1,5 @@
 import type { PlanProduct } from "@/types/billing";
+import { ParentCompanyLine } from "@/components/landing-custom/parent-company-line";
 import Link from "next/link";
 import type { ResolvedBrand } from "@/config/landing";
 import { BrandLogo } from "./brand-logo";
@@ -200,6 +201,12 @@ export function Footer({ brand, product }: { brand: ResolvedBrand; product: Plan
         <div className="mt-8 border-t pt-8 text-center text-sm text-muted-foreground">
           &copy; {new Date().getFullYear()} {brand.name}. All rights
           reserved.
+          {brand.parentCompany && brand.parentCompanyUrl ? (
+            <>
+              {" · "}
+              <ParentCompanyLine brand={brand} />
+            </>
+          ) : null}
         </div>
       </div>
     </footer>

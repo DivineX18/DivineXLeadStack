@@ -39,6 +39,18 @@ export interface CustomBrand {
   primaryDomain: string;
   /** Parent company, shown alongside the product name where extra context helps (e.g. PWA subtitle). Optional — omit if the product IS the company. */
   parentCompany?: string;
+  /**
+   * The parent company's own site. Optional, and only meaningful alongside
+   * `parentCompany`.
+   *
+   * Setting it turns the footer's parent-company line into a real link and
+   * puts a `url` on the Organization schema's parentOrganization, which is
+   * what connects this deployment to the company that runs it for search
+   * engines. Leaving it unset is the DEFAULT and the right choice for a
+   * white-label buyer: their customers should never be sent to someone
+   * else's company site from their own landing page.
+   */
+  parentCompanyUrl?: string;
   /** One-line product category, shown next to the name where extra context helps (e.g. page title: "Flow • Growth Operations Platform"). Optional. */
   productCategory?: string;
 }
@@ -58,6 +70,7 @@ export interface ResolvedBrand {
   supportEmail: string;
   primaryDomain: string;
   parentCompany?: string;
+  parentCompanyUrl?: string;
   productCategory?: string;
 }
 
@@ -89,6 +102,9 @@ export const CUSTOM_BRAND: CustomBrand = {
 
   /** Parent company — Flow is one product in the DivineX growth ecosystem (alongside Ascend, Zeno). */
   parentCompany: "DivineX",
+
+  /** The Flow product page on the parent company's own site. */
+  parentCompanyUrl: "https://divinex.io/flow/",
 
   /** Shown next to the name where extra context helps (page title, PWA name). */
   productCategory: "CRM & Customer Operations",

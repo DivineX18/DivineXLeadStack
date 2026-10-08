@@ -3,6 +3,7 @@ import Link from "next/link";
 import { LoginForm } from "@/components/auth/login-form";
 import { LogoMark } from "@/components/brand/logo-mark";
 import { resolveCustomBrand } from "@/lib/landing/resolve-brand";
+import { ParentCompanyLine } from "@/components/landing-custom/parent-company-line";
 
 export default async function LoginPage() {
   const brand = await resolveCustomBrand();
@@ -25,6 +26,10 @@ export default async function LoginPage() {
         <Suspense fallback={<div className="h-[420px] rounded-xl border bg-card" />}>
           <LoginForm />
         </Suspense>
+
+        <p className="text-center text-[11px] text-muted-foreground">
+          <ParentCompanyLine brand={brand} />
+        </p>
       </div>
     </div>
   );

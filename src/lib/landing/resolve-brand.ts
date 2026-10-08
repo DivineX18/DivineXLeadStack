@@ -64,6 +64,7 @@ async function resolveAgencyBrand(): Promise<ResolvedBrand> {
     supportEmail: CUSTOM_BRAND.supportEmail,
     primaryDomain: CUSTOM_BRAND.primaryDomain,
     parentCompany: CUSTOM_BRAND.parentCompany,
+    parentCompanyUrl: CUSTOM_BRAND.parentCompanyUrl,
     productCategory: CUSTOM_BRAND.productCategory,
   };
 
@@ -91,6 +92,7 @@ async function resolveAgencyBrand(): Promise<ResolvedBrand> {
       primaryDomain: agency.primaryDomain || fallback.primaryDomain,
       // No agency-doc override exists for these two — always CUSTOM_BRAND's.
       parentCompany: fallback.parentCompany,
+      parentCompanyUrl: fallback.parentCompanyUrl,
       productCategory: fallback.productCategory,
     };
   } catch {

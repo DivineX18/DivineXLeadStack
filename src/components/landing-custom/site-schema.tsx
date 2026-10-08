@@ -18,7 +18,18 @@ export function OrganizationSchema({ brand, baseUrl }: { brand: ResolvedBrand; b
     ...(brand.logoUrl ? { logo: brand.logoUrl } : {}),
     description: brand.shortDescription,
     email: brand.supportEmail,
-    ...(brand.parentCompany ? { parentOrganization: { "@type": "Organization", name: brand.parentCompany } } : {}),
+    ...(brand.parentCompany
+      ? {
+          parentOrganization: {
+            "@type": "Organization",
+            name: brand.parentCompany,
+            // The url is what actually ties this deployment to the company
+            // that runs it. Omitted when unset, so a white-label buyer who
+            // names no parent site publishes no claim about one.
+            ...(brand.parentCompanyUrl ? { url: brand.parentCompanyUrl } : {}),
+          },
+        }
+      : {}),
   };
   return (
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
