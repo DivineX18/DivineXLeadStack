@@ -45,7 +45,9 @@ export function Footer({ brand, product }: { brand: ResolvedBrand; product: Plan
               <p className="mt-4 text-xs text-muted-foreground/70">
                 Powered by{" "}
                 <a
-                  href="https://divinex.io"
+                  href="https://divinex.io/"
+                  target="_blank"
+                  rel="noopener"
                   aria-label={`DivineX, the parent company behind ${brand.name}`}
                   className="font-medium text-teal-500 transition-colors hover:text-teal-400 dark:text-teal-400 dark:hover:text-teal-300"
                 >
