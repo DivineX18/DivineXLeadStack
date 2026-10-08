@@ -51,6 +51,8 @@ export interface CustomBrand {
    * else's company site from their own landing page.
    */
   parentCompanyUrl?: string;
+  /** Overrides the default "<name> is part of <parent>" wording. */
+  parentCompanyPhrase?: string;
   /** One-line product category, shown next to the name where extra context helps (e.g. page title: "Flow • Growth Operations Platform"). Optional. */
   productCategory?: string;
 }
@@ -71,6 +73,10 @@ export interface ResolvedBrand {
   primaryDomain: string;
   parentCompany?: string;
   parentCompanyUrl?: string;
+  /** Overrides the default "<name> is part of <parent>" wording. Set per
+   *  product surface, not per deployment: the same build presents itself as
+   *  Flow on one hostname and Ascend on another. */
+  parentCompanyPhrase?: string;
   productCategory?: string;
 }
 

@@ -23,7 +23,7 @@ import type { PlanProduct } from "@/types/billing";
  * swapped: the logo, colours and every other branding field carry through, so
  * the DivineX mark stays exactly where it is.
  */
-export function brandForProduct<T extends { name: string; tagline?: string; shortDescription?: string; productCategory?: string; logoUrl?: string | null }>(
+export function brandForProduct<T extends { name: string; tagline?: string; shortDescription?: string; productCategory?: string; logoUrl?: string | null; parentCompanyUrl?: string; parentCompanyPhrase?: string }>(
   brand: T,
   product: PlanProduct,
 ): T {
@@ -35,6 +35,13 @@ export function brandForProduct<T extends { name: string; tagline?: string; shor
   return {
     ...brand,
     name: "Ascend",
+    // On this host the product IS Ascend, so the line that names the company
+    // behind it reads as a signature rather than as a statement about a
+    // sibling product nobody on this page has heard of. Points at the Ascend
+    // page on the company site for the same reason.
+    ...(brand.parentCompanyUrl !== undefined
+      ? { parentCompanyUrl: "https://divinex.io/ascend/", parentCompanyPhrase: "Ascend by DivineX" }
+      : {}),
     ...(brand.tagline !== undefined ? { tagline: "Find what's costing you leads. Then fix it." } : {}),
     ...(brand.shortDescription !== undefined
       ? {

@@ -28,7 +28,7 @@ export function ParentCompanyLine({
       rel="noopener"
       className={`transition-colors hover:text-foreground ${className}`}
     >
-      {brand.name} is part of {brand.parentCompany}
+      {brand.parentCompanyPhrase ?? `${brand.name} is part of ${brand.parentCompany}`}
     </a>
   );
 }
