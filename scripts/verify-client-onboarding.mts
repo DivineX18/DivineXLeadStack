@@ -225,7 +225,16 @@ console.log("\n-- the workspace is derived, never guessed --");
   const home = readFileSync("src/lib/onboarding/home-workspace.ts", "utf8");
   ck("it sorts by account number", /a\.accountNumber - b\.accountNumber/.test(home));
   ck("it does not match on name, which is ambiguous here", !/\.name/.test(home));
-  ck("no workspace id is hardcoded anywhere", !/MEYB8CbWlE5fxAn3TJOp/.test(home));
+  // The id IS named now, deliberately. What matters is that naming it cannot
+  // misroute contacts: the constant is proved against live data before use,
+  // and a stale one falls back to the derivation rather than winning.
+  ck("the configured id is verified against live data before it is trusted",
+    /snap\.exists && \(snap\.data\(\) as \{ agencyId\?: string \}\)\.agencyId === agencyId/.test(home));
+  ck("a stale configured id falls back to the derivation",
+    /falling back to the lowest account number/.test(home));
+  ck("and it is not hardcoded in the enrollment paths",
+    !/MEYB8CbWlE5fxAn3TJOp/.test(readFileSync("src/lib/server/client-onboarding-service.ts", "utf8")) &&
+      !/MEYB8CbWlE5fxAn3TJOp/.test(readFileSync("src/lib/onboarding/stripe-enrollment.ts", "utf8")));
   ck("an override stays available for testing", /override\?: string \| null/.test(home));
   ck("the admin route resolves rather than demanding an id",
     /resolveCrmWorkspaceId\(\{/.test(readFileSync("src/app/api/agency/onboarding/route.ts", "utf8")));
