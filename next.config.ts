@@ -25,6 +25,29 @@ const UNIFIED_SECTIONS = [
 ] as const;
 
 /**
+ * Sections whose prefix is ALSO owned by a public, token-credentialed page —
+ * so the generic `/{section}/:path*` wildcard below must not be generated for
+ * them, or it would swallow that page before the router ever sees it.
+ *
+ * Why this is needed at all: array-form `rewrites()` is applied after static
+ * files but BEFORE dynamic routes. A rewrite therefore cannot shadow a static
+ * route, but it absolutely can shadow a dynamic one. `/onboarding/[token]` is
+ * the public client-intake portal (the token IS the credential, like
+ * `/q/[token]` and `/pay/[token]`), and the `onboarding` section wildcard was
+ * rewriting it to `/app/onboarding/<token>`, which does not exist — so a
+ * perfectly valid invite link answered 404 while its API accepted the same
+ * token.
+ *
+ * For these sections we enumerate the shell's real subpaths instead of using a
+ * wildcard. `scripts/verify-client-onboarding.mts` asserts this list still
+ * covers every `src/app/app/{section}/*` page, so adding a shell page without
+ * listing it here fails the check rather than silently 404ing.
+ */
+const SECTION_SUBPATHS_INSTEAD_OF_WILDCARD: Record<string, string[]> = {
+  onboarding: ["reveal"],
+};
+
+/**
  * Friendlier customer URLs for surfaces whose physical route still sits under
  * an older internal grouping. /leads/contacts reads as the product; the
  * implementation is still /app/grow/contacts. Listed explicitly (not derived)
@@ -55,9 +78,12 @@ const nextConfig: NextConfig = {
    * the customer navigate /create, /leads, ... while the implementation stays
    * physically at /app/* — no directory migration, no second route tree.
    *
-   * Returned as a plain array (afterFiles): the filesystem is checked first,
-   * so nothing here can shadow a real route, and redirects() below has already
-   * run — which is what keeps the legacy /app/* redirects loop-free. A rewrite
+   * Returned as a plain array (afterFiles): STATIC files and routes are
+   * checked first, so nothing here can shadow one of those — but afterFiles
+   * still runs BEFORE dynamic routes, so a wildcard here CAN shadow a
+   * `[param]` route sharing its prefix. See
+   * SECTION_SUBPATHS_INSTEAD_OF_WILDCARD above, which is what stops that.
+   * redirects() below has already run — which is what keeps the legacy /app/* redirects loop-free. A rewrite
    * DESTINATION is resolved against the filesystem and never re-enters the
    * redirect phase, so /app/create -> /create -> (rewrite) /app/create
    * terminates.
@@ -70,10 +96,18 @@ const nextConfig: NextConfig = {
         { source: a.from, destination: a.to },
         { source: `${a.from}/:path*`, destination: `${a.to}/:path*` },
       ]),
-      ...UNIFIED_SECTIONS.flatMap((s) => [
-        { source: `/${s}`, destination: `/app/${s}` },
-        { source: `/${s}/:path*`, destination: `/app/${s}/:path*` },
-      ]),
+      ...UNIFIED_SECTIONS.flatMap((s) => {
+        const pinned = SECTION_SUBPATHS_INSTEAD_OF_WILDCARD[s];
+        return [
+          { source: `/${s}`, destination: `/app/${s}` },
+          // A wildcard here would also match a dynamic public route sharing
+          // this prefix, because array-form rewrites run before dynamic
+          // routes. Where that is the case, map only the known subpaths.
+          ...(pinned
+            ? pinned.map((sub) => ({ source: `/${s}/${sub}`, destination: `/app/${s}/${sub}` }))
+            : [{ source: `/${s}/:path*`, destination: `/app/${s}/:path*` }]),
+        ];
+      }),
     ];
   },
 

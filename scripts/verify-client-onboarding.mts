@@ -6,7 +6,7 @@
  *
  * Run: NODE_OPTIONS="--conditions=react-server" npx tsx scripts/verify-client-onboarding.mts
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 
 let fails = 0;
 const ck = (n: string, ok: boolean, d = "") => {
@@ -238,6 +238,40 @@ console.log("\n-- the workspace is derived, never guessed --");
   ck("an override stays available for testing", /override\?: string \| null/.test(home));
   ck("the admin route resolves rather than demanding an id",
     /resolveCrmWorkspaceId\(\{/.test(readFileSync("src/app/api/agency/onboarding/route.ts", "utf8")));
+}
+
+console.log("\n-- the public invite link is reachable --");
+{
+  // A `/{section}/:path*` rewrite runs before dynamic routes, so a wildcard on
+  // a section that also hosts a public `[token]` page swallows that page and a
+  // valid invite link answers 404. This asserts the pinning that prevents it,
+  // AND that the pinned list still covers every shell page under that section.
+  const cfg = readFileSync("next.config.ts", "utf8");
+  ck("the portal page exists where the invite link points",
+    existsSync("src/app/onboarding/[token]/page.tsx"));
+  ck("middleware treats it as public", /\^\\\/onboarding\\\/\[A-Za-z0-9_\.-\]\+\$/.test(
+    readFileSync("src/middleware.ts", "utf8")));
+  ck("the invite link is built against that same path",
+    /\$\{base\}\/onboarding\/\$\{result\.inviteToken\}/.test(
+      readFileSync("src/app/api/agency/onboarding/route.ts", "utf8")));
+
+  const pinned = /SECTION_SUBPATHS_INSTEAD_OF_WILDCARD[\s\S]*?\n\};/.exec(cfg)?.[0] ?? "";
+  ck("the onboarding section is pinned instead of wildcarded", /onboarding:\s*\[/.test(pinned));
+  ck("and the wildcard is skipped when a section is pinned",
+    /pinned\s*\?[\s\S]*?:\s*\[\{ source: `\/\$\{s\}\/:path\*`/.test(cfg));
+
+  // Every shell page under a pinned section must be listed, or its clean URL
+  // silently 404s — the same failure in the other direction.
+  for (const section of [...pinned.matchAll(/(\w+):\s*\[([^\]]*)\]/g)]) {
+    const [, name, listed] = section;
+    const dir = `src/app/app/${name}`;
+    if (!existsSync(dir)) continue;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isDirectory() || entry.name.startsWith("[")) continue;
+      ck(`/${name}/${entry.name} is listed, so its clean URL still resolves`,
+        listed.includes(`"${entry.name}"`));
+    }
+  }
 }
 
 console.log(`\n${fails === 0 ? "ALL PASS" : `${fails} FAILED`}`);
