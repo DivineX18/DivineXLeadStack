@@ -3,6 +3,24 @@ import "server-only";
 import { getAdminDb } from "@/lib/firebase/admin";
 
 /**
+ * The canonical DIVINEX internal workspace.
+ *
+ * Explicit because derivation, however sound, is a rule that can be
+ * invalidated by data: the lowest-numbered sub-account is only the agency's
+ * own while nobody ever creates one out of band or migrates an old record.
+ * Naming it removes that whole class of surprise for the deployment that
+ * matters, and the derivation below stays as the bootstrap path for a fresh
+ * agency that has no configured id yet.
+ *
+ * Account #1000, "DivineX". Corroborated independently by the booking URL the
+ * Ascend repo has hardcoded against this same workspace.
+ */
+const DIVINEX_HOME_WORKSPACE: Record<string, string> = {
+  // agencyId -> its own operating workspace
+  U5SBAHsB0nZ7ce552H9h: "MEYB8CbWlE5fxAn3TJOp",
+};
+
+/**
  * THE AGENCY'S OWN WORKSPACE.
  *
  * Onboarding creates a CRM contact before the client has a workspace of their
@@ -27,6 +45,22 @@ import { getAdminDb } from "@/lib/firebase/admin";
 export async function resolveAgencyHomeWorkspaceId(
   agencyId: string,
 ): Promise<string | null> {
+  // The configured id wins, but only if the workspace really exists and
+  // really belongs to this agency. A stale constant must fail over to the
+  // derivation rather than send every new client contact into a workspace
+  // that was deleted or moved.
+  const configured = DIVINEX_HOME_WORKSPACE[agencyId];
+  if (configured) {
+    const snap = await getAdminDb().doc(`subAccounts/${configured}`).get();
+    if (snap.exists && (snap.data() as { agencyId?: string }).agencyId === agencyId) {
+      return configured;
+    }
+    console.warn(
+      `[onboarding] configured home workspace ${configured} for agency ${agencyId} is ` +
+        `missing or belongs elsewhere; falling back to the lowest account number.`,
+    );
+  }
+
   const snap = await getAdminDb()
     .collection("subAccounts")
     .where("agencyId", "==", agencyId)
