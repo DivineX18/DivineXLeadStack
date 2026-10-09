@@ -15,6 +15,7 @@ export const TRIGGER_LABELS: Record<WorkflowTriggerType, string> = {
   "booking.created": "Booking created",
   "quote.accepted": "Quote accepted",
   "quote.paid": "Quote/invoice paid",
+  "onboarding.created": "Client onboarding started",
 };
 
 export const NODE_LABELS: Record<WorkflowNodeType, string> = {

@@ -800,6 +800,31 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ---------- Client Onboarding (DIVINEX managed services) ----------
+    // The whole pipeline is server-only. The client who is being onboarded
+    // has no account yet: they reach their record through a signed invite
+    // token and the API routes behind it, never through the client SDK. Staff
+    // read through owner-gated routes for the same reason, so there is no
+    // path here that a browser is allowed to take.
+    match /onboardingPackages/{packageId} {
+      allow read, write: if false;
+    }
+    match /clientOnboardings/{onboardingId} {
+      allow read, write: if false;
+      match /{sub=**} {
+        allow read, write: if false;
+      }
+    }
+    match /onboardingEvents/{eventId} {
+      allow read, write: if false;
+    }
+    // Persistent Stripe event ledger for the onboarding handler only. The
+    // existing, proven handlers keep their own per-handler dedupe; this is
+    // additive and does not refactor them.
+    match /onboardingStripeEvents/{eventId} {
+      allow read, write: if false;
+    }
+
     // ---------- SSO: Ascend -> Growth Operations (Version 1) ----------
     // Both fully server-only — written by the Admin SDK inside the SSO
     // callback/exchange routes, never read or written by a client. See

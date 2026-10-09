@@ -222,6 +222,12 @@ const PUBLIC_PATHS = [
  * verification inside the route, not from session auth.
  */
 const PUBLIC_PATH_PATTERNS: RegExp[] = [
+  // Client onboarding portal + its API. The invite token IS the credential,
+  // exactly like /q/[token] and /pay/[token]: the client being onboarded has
+  // no account yet, and requiring one before they can hand over a logo is how
+  // intake dies. Signature, current-hash and expiry are all checked inside.
+  /^\/onboarding\/[A-Za-z0-9_.-]+$/,
+  /^\/api\/onboarding\/[A-Za-z0-9_.-]+$/,
   // Bulk outbound-call step — QStash callback, signature-verified inside
   // the route (same security model as /api/broadcasts/email/step).
   /^\/api\/comms\/voice\/campaign\/step$/,

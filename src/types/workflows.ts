@@ -17,7 +17,17 @@ export type WorkflowTriggerType =
   | "pipeline.stage.changed"
   | "booking.created"
   | "quote.accepted"
-  | "quote.paid";
+  | "quote.paid"
+  /**
+   * A DIVINEX managed-services client was enrolled for onboarding.
+   *
+   * A FIRST-CLASS trigger rather than a reserved tag. A tag would have worked
+   * with no code at all, and that is exactly the problem: the coupling would
+   * live in a magic string that nothing validates, nothing documents, and a
+   * well-meaning operator could rename. The onboarding welcome sequence is a
+   * real lifecycle event, so it gets a real trigger.
+   */
+  | "onboarding.created";
 
 /* ------------------------------ Conditions ----------------------------- */
 
