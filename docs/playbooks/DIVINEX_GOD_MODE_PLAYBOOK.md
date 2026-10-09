@@ -203,6 +203,10 @@ Three layers. Use the deepest one that answers the question.
 | **Canon** | `DivineX App Frameworks/FLOW-CONVERSION-FRAMEWORKS.md` (23 frameworks) and `ASCEND-FRAMEWORK-LIBRARY.md` (7) | "What are the decision rules for this?" Each carries when NOT to use it, failure modes, and how to grade the output. |
 | **Source** | `DivineX App Frameworks/SOURCE-COPY-CORPUS.md` | "What did the original actually say?" The raw Google Docs text, cleaned. |
 
+**And one bar across all three:** `DIVINEX-BASELINE-STANDARDS.md` says what
+"done" looks like for landing pages, copy and emails, using the thresholds Flow
+already grades against. Build to it, self-score, then show the client.
+
 The Copywriting and Ads playbooks were built from the same source corpus and
 are the executed working specs. Use them to work. Use the corpus to check.
 
