@@ -83,10 +83,10 @@ const nextConfig: NextConfig = {
    * still runs BEFORE dynamic routes, so a wildcard here CAN shadow a
    * `[param]` route sharing its prefix. See
    * SECTION_SUBPATHS_INSTEAD_OF_WILDCARD above, which is what stops that.
-   * redirects() below has already run — which is what keeps the legacy /app/* redirects loop-free. A rewrite
-   * DESTINATION is resolved against the filesystem and never re-enters the
-   * redirect phase, so /app/create -> /create -> (rewrite) /app/create
-   * terminates.
+   * redirects() below has already run, which is what keeps the legacy /app/*
+   * redirects loop-free. A rewrite DESTINATION is resolved against the
+   * filesystem and never re-enters the redirect phase, so
+   * /app/create -> /create -> (rewrite) /app/create terminates.
    */
   async rewrites() {
     return [
