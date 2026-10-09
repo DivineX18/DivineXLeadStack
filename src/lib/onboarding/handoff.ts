@@ -10,6 +10,7 @@ import {
   listAccess,
   recordOnboardingEvent,
   setOnboardingStatus,
+  syncOnboardingTags,
 } from "@/lib/server/client-onboarding-service";
 import type { ClientOnboardingDoc } from "@/types/client-onboarding";
 
@@ -179,6 +180,8 @@ export async function handoffToProduction(opts: {
     readyForProductionAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });
+
+  await syncOnboardingTags(onboarding.id, opts.agencyId);
 
   await recordOnboardingEvent({
     onboardingId: onboarding.id,

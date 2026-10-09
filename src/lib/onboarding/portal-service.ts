@@ -9,6 +9,7 @@ import {
   listAccess,
   recordOnboardingEvent,
   refreshCompletion,
+  syncOnboardingTags,
 } from "@/lib/server/client-onboarding-service";
 import {
   CLIENT_SETTABLE_ACCESS_STATES,
@@ -221,6 +222,7 @@ export async function submitPortalIntake(
     lastClientActivityAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });
+  await syncOnboardingTags(onboarding.id, onboarding.agencyId);
   await recordOnboardingEvent({
     onboardingId: onboarding.id,
     agencyId: onboarding.agencyId,

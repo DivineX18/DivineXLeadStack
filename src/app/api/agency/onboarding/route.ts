@@ -8,6 +8,7 @@ import {
   reissueInvite,
 } from "@/lib/server/client-onboarding-service";
 import { notifyAccountOwner } from "@/lib/onboarding/staff-service";
+import { resolveCrmWorkspaceId } from "@/lib/onboarding/home-workspace";
 
 export const dynamic = "force-dynamic";
 
@@ -48,11 +49,16 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const str = (k: string) => (typeof body[k] === "string" ? (body[k] as string).trim() : "");
-  const crmSubAccountId = str("crmSubAccountId");
+  // Resolved from the agency, not asked for. An operator should never have to
+  // know a workspace id to enroll a client; the override is for testing.
+  const crmSubAccountId = await resolveCrmWorkspaceId({
+    agencyId: owner.agencyId,
+    override: str("crmSubAccountId") || null,
+  });
   if (!crmSubAccountId) {
     return NextResponse.json(
-      { error: "crmSubAccountId is required: the workspace the CRM contact is created in." },
-      { status: 400 },
+      { error: "This agency has no workspace yet, so there is nowhere to put the client's contact." },
+      { status: 409 },
     );
   }
 

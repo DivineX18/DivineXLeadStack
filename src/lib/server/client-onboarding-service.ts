@@ -378,6 +378,7 @@ export async function refreshCompletion(
   await getAdminDb()
     .doc(`${ONBOARDINGS}/${onboarding.id}`)
     .update({ completion, updatedAt: FieldValue.serverTimestamp() });
+  await syncOnboardingTags(onboarding.id, onboarding.agencyId);
   return completion;
 }
 
@@ -410,6 +411,8 @@ export async function setOnboardingStatus(opts: {
     ready_for_production: "onboarding.ready_for_production",
     completed: "onboarding.completed",
   };
+  await syncOnboardingTags(opts.onboardingId, opts.agencyId);
+
   const type = TYPE[opts.status];
   if (type) {
     await recordOnboardingEvent({
@@ -451,3 +454,62 @@ export async function reissueInvite(opts: {
 }
 
 export { defaultPlatformRequirements };
+
+/* ---------------------- lifecycle tags (reminder stops) ----------------- */
+
+/**
+ * The tags the reminder workflow reads.
+ *
+ * The workflow engine evaluates conditions against the CONTACT, and re-reads
+ * it fresh at every step, so a tag written now stops a reminder scheduled
+ * days ago. That is the whole mechanism: no special scheduling code, no
+ * cancellation API, no bookkeeping that can drift out of sync with reality.
+ */
+export const ONBOARDING_TAGS = {
+  intakeDone: "onboarding-intake-done",
+  requirementsDone: "onboarding-requirements-done",
+  complete: "onboarding-complete",
+  /** Paused, cancelled, completed or handed off. Stops everything. */
+  stopped: "onboarding-stopped",
+} as const;
+
+/**
+ * Make the contact's tags match the onboarding's real state.
+ *
+ * Called after every state change. Deliberately idempotent and derived
+ * entirely from live subdocuments rather than incremented, so a missed call
+ * self-heals on the next one and a double call changes nothing.
+ */
+export async function syncOnboardingTags(onboardingId: string, agencyId: string): Promise<void> {
+  try {
+    const onboarding = await getOnboarding(agencyId, onboardingId);
+    if (!onboarding) return;
+
+    const [assetKeys, access] = await Promise.all([
+      listAssetKeys(onboardingId),
+      listAccess(onboardingId),
+    ]);
+    const c = computeCompletion(onboarding, assetKeys, access);
+
+    const stopped =
+      onboarding.status === "paused" ||
+      onboarding.status === "cancelled" ||
+      onboarding.status === "completed" ||
+      onboarding.status === "ready_for_production";
+
+    const add: string[] = [];
+    const remove: string[] = [];
+    (c.intakePct >= 100 ? add : remove).push(ONBOARDING_TAGS.intakeDone);
+    (c.assetsPct >= 100 && c.accessPct >= 100 ? add : remove).push(ONBOARDING_TAGS.requirementsDone);
+    (c.overallPct >= 100 ? add : remove).push(ONBOARDING_TAGS.complete);
+    (stopped ? add : remove).push(ONBOARDING_TAGS.stopped);
+
+    const ref = getAdminDb().doc(`contacts/${onboarding.contactId}`);
+    if (add.length) await ref.update({ tags: FieldValue.arrayUnion(...add) });
+    if (remove.length) await ref.update({ tags: FieldValue.arrayRemove(...remove) });
+  } catch (err) {
+    // A tag that fails to write means a reminder the client did not need.
+    // Annoying, not dangerous, and never worth failing the real action for.
+    console.error("[onboarding] tag sync failed", err);
+  }
+}

@@ -43,6 +43,9 @@ export async function POST(request: Request) {
       case "checkout.session.completed":
         await handleCheckoutCompleted(
           event.data.object as Stripe.Checkout.Session,
+          // Passed so the onboarding branch can dedupe on the event id. Every
+          // other branch ignores it and is unchanged.
+          event,
         );
         break;
       case "customer.subscription.updated":

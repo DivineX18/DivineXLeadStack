@@ -27,6 +27,9 @@ import type { SubscriptionStatus } from "@/types";
 
 export async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session,
+  /** The whole event, needed for persistent per-event idempotency. Optional
+   *  so every existing caller keeps working unchanged. */
+  event?: Stripe.Event,
 ) {
   // Routed strictly by the metadata stamped at session-creation time — see
   // classifyCheckoutSession for why the amount is never allowed to decide.
@@ -61,6 +64,31 @@ export async function handleCheckoutCompleted(
     case "quoteInvoicePayment":
       await handleQuoteInvoiceCheckoutCompleted(session);
       return;
+
+    // DIVINEX managed services. Every safeguard lives in the handler; this
+    // switch only routes, exactly like every branch above it.
+    case "divinexOnboarding": {
+      // Without the event there is no id to dedupe on, and enrolling without
+      // idempotency is worse than not enrolling: a Stripe retry would start a
+      // second engagement. Refusing loudly is the safe direction.
+      if (!event) {
+        console.error(
+          `[onboarding/stripe] session ${session.id} routed to onboarding without its event; ` +
+            `cannot guarantee idempotency, so not enrolling.`,
+        );
+        return;
+      }
+      const { handleDivinexOnboardingCheckout } = await import(
+        "@/lib/onboarding/stripe-enrollment"
+      );
+      await handleDivinexOnboardingCheckout({
+        event,
+        session,
+        agencyId: routed.agencyId,
+        packageId: routed.packageId,
+      });
+      return;
+    }
 
     case "unroutable":
       console.error("No uid found in checkout session metadata");

@@ -150,5 +150,86 @@ console.log("\n-- failures never roll back the thing they describe --");
     /billing: \{ kind: "essential" \}/.test(staff));
 }
 
+
+console.log("\n-- Stripe routing: only the explicit kind can enroll --");
+{
+  const identity = readFileSync("src/lib/stripe/checkout-identity.ts", "utf8");
+  const enroll = readFileSync("src/lib/onboarding/stripe-enrollment.ts", "utf8");
+  const hook = readFileSync("src/lib/stripe/webhooks.ts", "utf8");
+
+  ck("routing is on metadata.kind alone",
+    /metadata\.kind === DIVINEX_ONBOARDING_KIND/.test(identity));
+  {
+    // Comments explaining that these do NOT decide are expected; CODE reading
+    // them is not. Strip comments before looking.
+    const code = identity
+      .slice(identity.indexOf("export function classifyCheckoutSession"))
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/[^\n]*/g, "");
+    ck("no amount, product or description decides the route",
+      !/amount_total|amount_subtotal|\bproduct\b|description/i.test(code));
+  }
+  ck("the existing routes are untouched",
+    ["founders", "subAccountPlan", "publicSelfServeSignup", "quoteInvoicePayment", "legacyUserSubscription"]
+      .every((r) => identity.includes(`"${r}"`)));
+
+  ck("1. event id is claimed persistently", /collection\(EVENTS\)\.doc\(eventId\)\.create/.test(enroll));
+  ck("   a collision means duplicate, not a crash", /code === 6\) return false/.test(enroll));
+  ck("   and any other error re-raises so Stripe retries", /throw err;/.test(enroll));
+  ck("2. an unpaid session does not enroll",
+    /session\.payment_status !== "paid"/.test(enroll) && /return "unpaid"/.test(enroll));
+  ck("3. a renewal does not enroll",
+    /billingReason !== "subscription_create"/.test(enroll) && /return "renewal"/.test(enroll));
+  ck("4. eligibility is the registered-price allowlist",
+    /packageForStripePrice\(agencyId, priceId\)/.test(enroll) && /return "no_package"/.test(enroll));
+  ck("   metadata disagreeing with the price is refused, not guessed",
+    /opts\.packageId !== pkg\.id/.test(enroll) && /return "invalid"/.test(enroll));
+  ck("5. the workspace is resolved, never hardcoded",
+    /resolveCrmWorkspaceId\(\{ agencyId \}\)/.test(enroll) && !/MEYB|x4NO/.test(enroll));
+  ck("6. it calls the SAME canonical service",
+    /enrollClient\(\{/.test(enroll) && /source: "stripe"/.test(enroll));
+  ck("   and creates no record of its own",
+    !/collection\("clientOnboardings"\)/.test(enroll) && !/createContactServerSide/.test(enroll));
+
+  ck("line items are fetched, since the webhook omits them",
+    /expand: \["line_items"\]/.test(enroll));
+  ck("no event means no enrollment, rather than one without idempotency",
+    /cannot guarantee idempotency, so not enrolling/.test(hook));
+  ck("the client invite is not emailed from the Stripe path",
+    /The invite link is NOT emailed from here/.test(enroll));
+}
+
+console.log("\n-- the reminder sequence stops on real state --");
+{
+  const wf = readFileSync("scripts/seed-onboarding-workflow.mts", "utf8");
+  ck("it is seeded as a draft", /status: existing\.empty \? "draft"/.test(wf));
+  ck("it triggers on onboarding.created", /type: "onboarding\.created"/.test(wf));
+  ck("every checkpoint checks stopped first",
+    (wf.match(/tag\(ONBOARDING_TAGS\.stopped\)/g) ?? []).length === 4);
+  ck("the day-2 reminder is gated on intake", /tag\(ONBOARDING_TAGS\.intakeDone\)/.test(wf));
+  ck("the day-4 reminder is gated on requirements", /tag\(ONBOARDING_TAGS\.requirementsDone\)/.test(wf));
+  ck("day 9 escalates internally, with no client email",
+    /type: "create_task"/.test(wf) && /recipient: "owner"/.test(wf));
+  ck("every client email carries the unsubscribe link",
+    (wf.match(/\{\{unsubscribeLink\}\}/g) ?? []).length >= 1 && /const SIGNOFF/.test(wf));
+  ck("no scheduling code of its own", !/setTimeout\(|publishJSON\(/.test(wf));
+
+  const svc2 = readFileSync("src/lib/server/client-onboarding-service.ts", "utf8");
+  ck("tags are derived from live state, not incremented",
+    /computeCompletion\(onboarding, assetKeys, access\)/.test(svc2.slice(svc2.indexOf("syncOnboardingTags"))));
+  ck("a tag failure never fails the real action", /tag sync failed/.test(svc2));
+}
+
+console.log("\n-- the workspace is derived, never guessed --");
+{
+  const home = readFileSync("src/lib/onboarding/home-workspace.ts", "utf8");
+  ck("it sorts by account number", /a\.accountNumber - b\.accountNumber/.test(home));
+  ck("it does not match on name, which is ambiguous here", !/\.name/.test(home));
+  ck("no workspace id is hardcoded anywhere", !/MEYB8CbWlE5fxAn3TJOp/.test(home));
+  ck("an override stays available for testing", /override\?: string \| null/.test(home));
+  ck("the admin route resolves rather than demanding an id",
+    /resolveCrmWorkspaceId\(\{/.test(readFileSync("src/app/api/agency/onboarding/route.ts", "utf8")));
+}
+
 console.log(`\n${fails === 0 ? "ALL PASS" : `${fails} FAILED`}`);
 process.exit(fails ? 1 : 0);
