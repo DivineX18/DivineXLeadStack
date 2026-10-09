@@ -260,6 +260,22 @@ console.log("\n-- the public invite link is reachable --");
   ck("and the wildcard is skipped when a section is pinned",
     /pinned\s*\?[\s\S]*?:\s*\[\{ source: `\/\$\{s\}\/:path\*`/.test(cfg));
 
+  // The general invariant, not just this one case: ANY unified section that
+  // also has a top-level dynamic child in src/app is a public page the
+  // wildcard would swallow, so it must be pinned. This is what catches the
+  // next feature that puts a [token] page under a section name.
+  for (const m of [...(/const UNIFIED_SECTIONS = \[([\s\S]*?)\] as const;/.exec(cfg)?.[1] ?? "")
+    .matchAll(/"([^"]+)"/g)]) {
+    const section = m[1];
+    const dir = `src/app/${section}`;
+    if (!existsSync(dir)) continue;
+    const dynamicChild = readdirSync(dir, { withFileTypes: true })
+      .find((e) => e.isDirectory() && e.name.startsWith("["));
+    if (!dynamicChild) continue;
+    ck(`/${section}/${dynamicChild.name} is a public dynamic route, so /${section} must be pinned`,
+      new RegExp(`${section}:\\s*\\[`).test(pinned));
+  }
+
   // Every shell page under a pinned section must be listed, or its clean URL
   // silently 404s — the same failure in the other direction.
   for (const section of [...pinned.matchAll(/(\w+):\s*\[([^\]]*)\]/g)]) {
