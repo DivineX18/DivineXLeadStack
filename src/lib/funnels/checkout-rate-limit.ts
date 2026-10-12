@@ -38,5 +38,19 @@ export function checkCheckoutRateLimit(ip: string): CheckoutRateLimitResult {
   }
   bucket.count += 1;
   ipBuckets.set(ip, bucket);
+
+  // Bound the map. Every unique IP adds an entry that outlives its own window,
+  // and this route is PUBLIC and unauthenticated — a crawler walking funnel
+  // pages grows this without limit, in a process that is expected to run for
+  // days. The three sibling limiters (lib/forms/rate-limit.ts,
+  // lib/public-contact-rate-limit.ts, lib/api/rate-limit.ts) all prune; this
+  // one was missed. Same threshold and same expired-only sweep as the others,
+  // deliberately copied rather than re-invented.
+  if (ipBuckets.size > 5000) {
+    for (const [k, v] of ipBuckets) {
+      if (now - v.windowStartedAt > PER_IP_WINDOW_MS) ipBuckets.delete(k);
+    }
+  }
+
   return { ok: true, retryAfterSec: 0 };
 }

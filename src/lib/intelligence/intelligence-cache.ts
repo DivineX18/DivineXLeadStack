@@ -39,8 +39,27 @@ export function readIntelligenceCache<T>(key: string): CacheReadResult<T> {
   return { hit: "miss" };
 }
 
+/** Above this many entries, a write first drops everything already past the
+ *  stale window. Low because the entries are whole intelligence payloads, not
+ *  counters — holding one costs far more than holding a rate-limit bucket. */
+const SWEEP_ABOVE = 100;
+
 export function writeIntelligenceCache<T>(key: string, value: T): void {
-  store.set(key, { value, fetchedAt: Date.now() });
+  const now = Date.now();
+
+  // Expiry is enforced on READ, which means a key written once and never read
+  // again keeps its payload for the lifetime of the process. That is a slow
+  // leak rather than a runaway one (keys are `resource:businessProfileId`, so
+  // the ceiling is workspaces × resources), but it is unbounded in TIME, and
+  // the set of resources grows as new intelligence reads are added. Sweeping
+  // on write gives the entries nobody re-reads a way out.
+  if (store.size > SWEEP_ABOVE) {
+    for (const [k, entry] of store) {
+      if (now - entry.fetchedAt > STALE_TTL_MS) store.delete(k);
+    }
+  }
+
+  store.set(key, { value, fetchedAt: now });
 }
 
 /** Test/diagnostic only — never called from application code paths. */
