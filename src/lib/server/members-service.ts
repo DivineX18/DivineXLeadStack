@@ -307,19 +307,34 @@ async function addExistingUserAsMember(params: {
     status?: string;
   };
 
-  // Can't silently re-add a removed/disabled account — they can't sign in
-  // until it's reactivated, so a membership row alone would be a dead entry.
-  if (existingUser.disabled || claims.status === "removed") {
-    throw new MemberAddBlockedError(
-      "This person's account was removed or disabled. Reactivate it before adding them to a workspace.",
-    );
-  }
   // Never add someone from a different agency. One agency per deployment in
   // v1, so this only matters for a future multi-agency setup — but it keeps
-  // the guard honest.
+  // the guard honest. Checked FIRST now, because the reactivation below is a
+  // privileged act and must not run for an account this agency has no claim
+  // on.
   if (claims.agencyId && claims.agencyId !== agencyId) {
     throw new MemberAddBlockedError(
       "This email belongs to a different agency and can't be added to this workspace.",
+    );
+  }
+
+  // Removing a member's LAST membership disables their auth account and marks
+  // claims.status = "removed" (see the members DELETE route). Re-inviting them
+  // used to be a dead end: the refusal told the admin to "reactivate" an
+  // account that nothing in this codebase could reactivate — no code path
+  // anywhere set `disabled: false` — so the only escape was the Firebase
+  // console. Inviting someone back IS the request to reactivate them, made by
+  // an admin of the workspace, so honour it instead of refusing.
+  //
+  // `claims.status === "removed"` is OUR OWN marker, written only by that
+  // removal route. An account disabled WITHOUT it was disabled out of band —
+  // a console action during a security incident, say — and silently undoing
+  // that would override a deliberate decision taken outside this app. That
+  // case still refuses, and now says where to go.
+  const wasRemovedByUs = claims.status === "removed";
+  if (existingUser.disabled && !wasRemovedByUs) {
+    throw new MemberAddBlockedError(
+      "This account was disabled outside the app. Re-enable it in Firebase Authentication before adding them to a workspace.",
     );
   }
 
@@ -352,6 +367,15 @@ async function addExistingUserAsMember(params: {
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
+  }else if (wasRemovedByUs) {
+    // The profile exists but still says "removed". Left alone, AuthContext
+    // force-signs them out on their next page load and the invite looks like
+    // it silently failed.
+    batch.set(
+      userDocRef,
+      { status: "active", updatedAt: FieldValue.serverTimestamp() },
+      { merge: true },
+    );
   }
 
   if (memberSnap.exists) {
@@ -390,6 +414,20 @@ async function addExistingUserAsMember(params: {
     name: subAccountName,
     addedAt: FieldValue.serverTimestamp(),
   });
+  if (wasRemovedByUs) {
+    // Deliberately before commit(). If re-enabling fails we must NOT leave a
+    // membership behind for an account that still cannot sign in — that is
+    // precisely the dead entry the original refusal existed to prevent.
+    const auth = getAdminAuth();
+    await auth.setCustomUserClaims(uid, {
+      ...claims,
+      status: "active",
+      // Claim the account for this agency when it carried no agency before.
+      agencyId: claims.agencyId ?? agencyId,
+    });
+    await auth.updateUser(uid, { disabled: false });
+  }
+
   await batch.commit();
 
   // Public-API webhook event — the direct-add counterpart to `member.invited`
