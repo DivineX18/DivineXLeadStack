@@ -5,6 +5,7 @@ import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import { requireSubAccountMember } from "@/lib/auth/require-tenancy";
 import {
   emitContactDeleted,
+  findContactBlockers,
   updateContactServerSide,
   type UpdateContactPatch,
 } from "@/lib/server/contacts-service";
@@ -223,71 +224,7 @@ export async function DELETE(
   return NextResponse.json({ ok: true, contactId: id });
 }
 
-interface ContactBlocker {
-  type: string;
-  /** Singular human label, e.g. "deal" → "2 deals". */
-  label: string;
-  count: number;
-}
-
-/**
- * Count every record that points at this contact across the resources a
- * delete must not orphan. Any non-zero count blocks the delete. Uses
- * count() aggregation so we never read the docs themselves.
- */
-async function findContactBlockers(
-  db: FirebaseFirestore.Firestore,
-  subAccountId: string,
-  contactId: string,
-): Promise<ContactBlocker[]> {
-  const inSub = (collection: string) =>
-    db
-      .collection(collection)
-      .where("subAccountId", "==", subAccountId)
-      .where("contactId", "==", contactId)
-      .count()
-      .get();
-
-  const [deals, tasks, events, quotes, submissions, webChats, voiceCalls] =
-    await Promise.all([
-      inSub("deals"),
-      inSub("tasks"),
-      inSub("events"),
-      inSub("quotes"),
-      // Form submissions live in forms/{id}/submissions — a collection-group
-      // query finds them across every form. contactId is a globally unique
-      // doc id, so no sub-account filter is needed.
-      db
-        .collectionGroup("submissions")
-        .where("contactId", "==", contactId)
-        .count()
-        .get(),
-      db
-        .collection("subAccounts")
-        .doc(subAccountId)
-        .collection("webChatSessions")
-        .where("contactId", "==", contactId)
-        .count()
-        .get(),
-      db
-        .collection("subAccounts")
-        .doc(subAccountId)
-        .collection("voiceCalls")
-        .where("contactId", "==", contactId)
-        .count()
-        .get(),
-    ]);
-
-  const out: ContactBlocker[] = [];
-  const add = (count: number, type: string, label: string) => {
-    if (count > 0) out.push({ type, label, count });
-  };
-  add(deals.data().count, "deals", "deal");
-  add(tasks.data().count, "tasks", "task");
-  add(events.data().count, "events", "calendar event / booking");
-  add(quotes.data().count, "quotes", "quote / invoice");
-  add(submissions.data().count, "form_submissions", "form submission");
-  add(webChats.data().count, "web_chat_sessions", "web-chat conversation");
-  add(voiceCalls.data().count, "voice_calls", "voice call");
-  return out;
-}
+/* findContactBlockers now lives in lib/server/contacts-service.ts so the
+   bulk-delete route runs the SAME guard. This app deliberately does not
+   cascade; a second, weaker copy of this check would silently orphan deals,
+   quotes and bookings at scale. */

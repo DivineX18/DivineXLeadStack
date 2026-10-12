@@ -9,14 +9,18 @@ import {
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
+  type RowSelectionState,
   type SortingState,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ArrowUp, ArrowDown, Mail, Phone, Building2 } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Mail, Phone, Building2, Trash2, X } from "lucide-react";
 import type { Contact } from "@/types/contacts";
 import type { TerritoryDoc } from "@/types";
 import { SourceBadge } from "@/components/contacts/source-badge";
 import { formatContactDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkDeleteContactsDialog } from "@/components/contacts/bulk-delete-contacts-dialog";
 import { useSubAccount } from "@/context/sub-account-context";
 
 interface Props {
@@ -31,11 +35,19 @@ interface Props {
 }
 
 export function ContactsTable({ contacts, search, territories = [] }: Props) {
-  const { subAccount, saPath } = useSubAccount();
+  const { subAccount, saPath, isAdmin } = useSubAccount();
   const showTerritoryCol = subAccount?.territoryScopingEnabled === true;
   const [sorting, setSorting] = useState<SortingState>([
     { id: "createdAt", desc: true },
   ]);
+  // Deleting is admin-only, matching the API. A collaborator never sees a
+  // checkbox, rather than seeing one and being refused at the end.
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  // Rows removed optimistically after a successful delete: Firestore's
+  // listener will drop them too, but not before the dialog closes, and a row
+  // reappearing for a beat after "Deleted 12 contacts" reads like a failure.
+  const [justDeleted, setJustDeleted] = useState<Set<string>>(new Set());
 
   const territoryById = useMemo(() => {
     const m = new Map<string, TerritoryDoc>();
@@ -45,6 +57,33 @@ export function ContactsTable({ contacts, search, territories = [] }: Props) {
 
   const columns = useMemo<ColumnDef<Contact>[]>(
     () => [
+      ...(isAdmin
+        ? [
+            {
+              id: "select",
+              // Header selects only what is currently FILTERED, not the whole
+              // collection — "select all" after a search must not quietly
+              // include rows the operator cannot see.
+              header: ({ table }) => (
+                <Checkbox
+                  checked={table.getIsAllRowsSelected()}
+                  indeterminate={table.getIsSomeRowsSelected()}
+                  onCheckedChange={(v) => table.toggleAllRowsSelected(!!v)}
+                  aria-label="Select all contacts shown"
+                />
+              ),
+              cell: ({ row }) => (
+                <Checkbox
+                  checked={row.getIsSelected()}
+                  onCheckedChange={(v) => row.toggleSelected(!!v)}
+                  aria-label={`Select ${row.original.name || "contact"}`}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ),
+              enableSorting: false,
+            } as ColumnDef<Contact>,
+          ]
+        : []),
       {
         accessorKey: "name",
         header: "Name",
@@ -144,26 +183,38 @@ export function ContactsTable({ contacts, search, territories = [] }: Props) {
         ),
       },
     ],
-    [saPath, showTerritoryCol, territoryById],
+    // isAdmin matters: memberships resolve asynchronously, so it flips false
+    // -> true after first paint. Without it here the select column would
+    // never appear for an admin who loaded the page before that resolved.
+    [saPath, showTerritoryCol, territoryById, isAdmin],
   );
 
   const filtered = useMemo(() => {
+    const visible = justDeleted.size
+      ? contacts.filter((c) => !justDeleted.has(c.id))
+      : contacts;
     const q = search.trim().toLowerCase();
-    if (!q) return contacts;
-    return contacts.filter((c) => {
+    if (!q) return visible;
+    return visible.filter((c) => {
       return (
         c.name?.toLowerCase().includes(q) ||
         c.email?.toLowerCase().includes(q) ||
         c.company?.toLowerCase().includes(q)
       );
     });
-  }, [contacts, search]);
+  }, [contacts, search, justDeleted]);
 
   const table = useReactTable({
     data: filtered,
     columns,
-    state: { sorting },
+    state: { sorting, rowSelection },
     onSortingChange: setSorting,
+    onRowSelectionChange: setRowSelection,
+    enableRowSelection: isAdmin,
+    // Without this, selection is keyed by row INDEX, so a re-sort or a live
+    // Firestore update would silently move the selection onto different
+    // contacts — and then delete them.
+    getRowId: (row) => row.id,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -183,8 +234,53 @@ export function ContactsTable({ contacts, search, territories = [] }: Props) {
     );
   }
 
+  const selectedIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
+
   return (
     <>
+      {/* Selection action bar — only appears once something is selected, so it
+          costs nothing visually until it is needed. */}
+      {isAdmin && selectedIds.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border bg-muted/40 px-4 py-3">
+          <span className="text-sm font-medium">
+            {selectedIds.length} selected
+          </span>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setConfirmOpen(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setRowSelection({})}
+          >
+            <X className="mr-2 h-4 w-4" />
+            Clear
+          </Button>
+        </div>
+      )}
+
+      <BulkDeleteContactsDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        contactIds={selectedIds}
+        onDeleted={(ids) => {
+          setJustDeleted((prev) => new Set([...prev, ...ids]));
+          // Drop only what actually went. Rows that were KEPT stay selected,
+          // so the operator can see which ones still need attention rather
+          // than having to find them again.
+          setRowSelection((prev) => {
+            const next = { ...prev };
+            for (const id of ids) delete next[id];
+            return next;
+          });
+        }}
+      />
+
       {/* Desktop table */}
       <div className="hidden overflow-hidden rounded-xl border bg-card md:block">
         <table className="w-full text-sm">

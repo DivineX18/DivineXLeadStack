@@ -265,3 +265,126 @@ export function emitContactDeleted(opts: {
     payload: { contact },
   });
 }
+
+/* ───────────────────────────── deletion ─────────────────────────────── */
+
+export interface ContactBlocker {
+  type: string;
+  /** Singular human label, e.g. "deal" → "2 deals". */
+  label: string;
+  count: number;
+}
+
+/**
+ * Count every record pointing at this contact across the resources a delete
+ * must not orphan. Any non-zero count blocks the delete.
+ *
+ * Extracted from the single-contact DELETE route so bulk deletion runs the
+ * SAME guard rather than a second copy of it. That matters more than the
+ * usual duplication argument: this app deliberately does not cascade, so a
+ * bulk path with its own weaker check would silently orphan deals, quotes and
+ * bookings at scale, which is exactly the damage the single-delete guard was
+ * written to prevent.
+ *
+ * Uses count() aggregation so the documents themselves are never read.
+ */
+export async function findContactBlockers(
+  db: FirebaseFirestore.Firestore,
+  subAccountId: string,
+  contactId: string,
+): Promise<ContactBlocker[]> {
+  const inSub = (collection: string) =>
+    db
+      .collection(collection)
+      .where("subAccountId", "==", subAccountId)
+      .where("contactId", "==", contactId)
+      .count()
+      .get();
+
+  const [deals, tasks, events, quotes, submissions, webChats, voiceCalls] =
+    await Promise.all([
+      inSub("deals"),
+      inSub("tasks"),
+      inSub("events"),
+      inSub("quotes"),
+      // Form submissions live in forms/{id}/submissions — a collection-group
+      // query finds them across every form. contactId is a globally unique
+      // doc id, so no sub-account filter is needed.
+      db.collectionGroup("submissions").where("contactId", "==", contactId).count().get(),
+      db
+        .collection("subAccounts")
+        .doc(subAccountId)
+        .collection("webChatSessions")
+        .where("contactId", "==", contactId)
+        .count()
+        .get(),
+      db
+        .collection("subAccounts")
+        .doc(subAccountId)
+        .collection("voiceCalls")
+        .where("contactId", "==", contactId)
+        .count()
+        .get(),
+    ]);
+
+  const out: ContactBlocker[] = [];
+  const add = (count: number, type: string, label: string) => {
+    if (count > 0) out.push({ type, label, count });
+  };
+  add(deals.data().count, "deals", "deal");
+  add(tasks.data().count, "tasks", "task");
+  add(events.data().count, "events", "calendar event / booking");
+  add(quotes.data().count, "quotes", "quote / invoice");
+  add(submissions.data().count, "form_submissions", "form submission");
+  add(webChats.data().count, "web_chat_sessions", "web-chat conversation");
+  add(voiceCalls.data().count, "voice_calls", "voice call");
+  return out;
+}
+
+export type DeleteContactOutcome =
+  | { contactId: string; status: "deleted" }
+  | { contactId: string; status: "blocked"; blockers: ContactBlocker[] }
+  | { contactId: string; status: "not_found" }
+  | { contactId: string; status: "wrong_workspace" };
+
+/**
+ * Delete ONE contact, honouring the no-cascade rule.
+ *
+ * `expectedSubAccountId` is the workspace the caller was authorized against.
+ * A contact whose own `subAccountId` differs is reported as
+ * `wrong_workspace` and left untouched — without that check, a bulk request
+ * carrying ids from another tenant would delete across workspace boundaries
+ * on a single authorization.
+ */
+export async function deleteContactServerSide(opts: {
+  contactId: string;
+  expectedSubAccountId: string;
+}): Promise<DeleteContactOutcome> {
+  const db = getAdminDb();
+  const ref = db.doc(`contacts/${opts.contactId}`);
+  const snap = await ref.get();
+  if (!snap.exists) return { contactId: opts.contactId, status: "not_found" };
+
+  const contact = snap.data() as { subAccountId?: string; agencyId?: string };
+  if (contact.subAccountId !== opts.expectedSubAccountId) {
+    return { contactId: opts.contactId, status: "wrong_workspace" };
+  }
+
+  const blockers = await findContactBlockers(db, opts.expectedSubAccountId, opts.contactId);
+  if (blockers.length > 0) {
+    return { contactId: opts.contactId, status: "blocked", blockers };
+  }
+
+  await db.recursiveDelete(ref);
+
+  // Fired from the PRE-delete snapshot: by the time subscribers react the doc
+  // is gone, so what we just read is the only record of what was deleted.
+  emitContactDeleted({
+    subAccountId: opts.expectedSubAccountId,
+    agencyId: contact.agencyId ?? "",
+    contactId: opts.contactId,
+    data: snap.data() as never,
+  });
+
+  return { contactId: opts.contactId, status: "deleted" };
+}
