@@ -42,6 +42,10 @@ export const isE164 = (v) =>
   /^\+[1-9]\d{6,14}$/.test(v)
     ? null
     : "should be E.164 format, e.g. +15551234567";
+export const endsWithGoogleClient = (v) =>
+  v.endsWith(".apps.googleusercontent.com")
+    ? null
+    : "should end with .apps.googleusercontent.com";
 export const isNumeric = (v) =>
   /^\d+$/.test(v) ? null : "expected to be all digits";
 
@@ -246,6 +250,34 @@ export const GROUPS = [
       ["META_APP_SECRET", "req"],
       ["META_WEBHOOK_VERIFY_TOKEN", "rec"],
     ],
+  },
+  {
+    title: "Google Analytics / Search Console / Ads (Growth Intelligence)",
+    tier: "feature",
+    off: "clients can't connect GA4, Search Console or Google Ads",
+    vars: [
+      ["GOOGLE_OAUTH_CLIENT_ID", "req", endsWithGoogleClient],
+      ["GOOGLE_OAUTH_CLIENT_SECRET", "req", startsWith("GOCSPX-")],
+      // Explicit rather than derived from NEXT_PUBLIC_APP_URL, which is
+      // crm.divinex.io while the people connecting are on app.divinex.io.
+      // Must match a redirect URI registered in the Google Cloud console
+      // byte-for-byte or every connect fails at the exchange.
+      ["GOOGLE_OAUTH_REDIRECT_URI", "rec", isUrl],
+      // Ads only. The `adwords` scope is necessary but NOT sufficient: the
+      // API refuses every request without a developer token, which is
+      // approved separately under a Google Ads manager account.
+      ["GOOGLE_ADS_DEVELOPER_TOKEN", "opt"],
+      ["GOOGLE_ADS_LOGIN_CUSTOMER_ID", "opt", isNumeric],
+    ],
+    deep(add, env) {
+      if (env.has("GOOGLE_ADS_LOGIN_CUSTOMER_ID") && !env.has("GOOGLE_ADS_DEVELOPER_TOKEN")) {
+        add("warn", "GOOGLE_ADS_LOGIN_CUSTOMER_ID is set but GOOGLE_ADS_DEVELOPER_TOKEN isn't — Ads calls will be refused");
+      }
+      const uri = env.val("GOOGLE_OAUTH_REDIRECT_URI");
+      if (uri && !uri.endsWith("/api/google/callback")) {
+        add("warn", `GOOGLE_OAUTH_REDIRECT_URI should end with /api/google/callback, got "${uri}"`);
+      }
+    },
   },
   {
     title: "Website builder (gitpage)",

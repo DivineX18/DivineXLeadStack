@@ -427,6 +427,9 @@ export interface SubAccountDoc {
    * `metaInboxEnabledByAgency` is on). See {@link MetaConfig}.
    */
   metaConfig?: MetaConfig | null;
+  /** The workspace's Google Analytics / Search Console / Ads connection.
+   *  Absent or null means never connected. See {@link GoogleConfig}. */
+  googleConfig?: GoogleConfig | null;
   bookingConfig: BookingConfig | null;
   sendWindow: SendWindow | null;
   /**
@@ -797,6 +800,68 @@ export interface MetaConfig {
   capabilities?: { inbox: boolean; publish: boolean };
   connectedByUid: string | null;
   connectedAt: Timestamp | FieldValue | null;
+}
+
+/** The three Google reporting surfaces one connection can cover. */
+export type GoogleService = "ga4" | "searchConsole" | "ads";
+
+/**
+ * ONE Google connection per workspace, powering GA4, Search Console and Ads
+ * reporting in Growth Intelligence. Deliberately shaped like {@link MetaConfig}
+ * so the two OAuth connections read the same way, with one difference that
+ * matters:
+ *
+ * `refreshTokenEncrypted` is ENCRYPTED (lib/crypto/secrets.ts), where
+ * `MetaConfig.pageAccessToken` is not. That is not inconsistency for its own
+ * sake. firestore.rules lets any ACTIVE MEMBER read the whole subAccounts doc
+ * client-side, and a Google refresh token is durable read access to a client's
+ * analytics, ads and search data. It gets the same treatment as the BYO-Stripe
+ * key and the GoHighLevel token, for the same reason.
+ *
+ * Access tokens are never stored: they last an hour and are minted per sync
+ * run from the refresh token.
+ */
+export interface GoogleConfig {
+  /** True once a connection completed and a refresh token was stored. */
+  connected: boolean;
+  /**
+   * AES-256-GCM ciphertext ("v1:<iv>:<tag>:<ct>") of the OAuth refresh token.
+   * Server-only — never returned to a client, never logged.
+   */
+  refreshTokenEncrypted: string;
+  /** Connected Google account, shown in the settings card so an operator can
+   *  tell WHICH account is linked before trusting the numbers. */
+  accountEmail: string | null;
+  /** Stable Google account id, so a silent re-connect under a different login
+   *  is detectable rather than overwriting the old one unnoticed. */
+  accountSub: string | null;
+  /** Exactly what Google granted, verbatim. The source for `capabilities`. */
+  grantedScopes: string[];
+  /** What this connection can actually do. See lib/google/capabilities.ts —
+   *  a client can grant GA4 and decline Ads in the same dialog. */
+  capabilities: GoogleCapabilitiesShape;
+  /** Which property/site/account the operator chose to report on. Null until
+   *  selected; a connection without a selection is connected but not yet
+   *  reporting, which the card states rather than implying zero traffic. */
+  ga4PropertyId: string | null;
+  gscSiteUrl: string | null;
+  adsCustomerId: string | null;
+  connectedByUid: string | null;
+  connectedAt: Timestamp | FieldValue | null;
+  /** Stamped when a sync last succeeded, so a stale dashboard can say so. */
+  lastSyncedAt: Timestamp | FieldValue | null;
+  /** Last sync failure reason, surfaced to the operator. Cleared on success.
+   *  `invalid_grant` here means the client revoked us or the 7-day Testing-mode
+   *  refresh token expired, and the fix is reconnecting, not retrying. */
+  lastSyncError: string | null;
+}
+
+/** Mirrors GoogleCapabilities in lib/google/capabilities.ts. Declared here so
+ *  the type layer does not depend on the lib layer. */
+export interface GoogleCapabilitiesShape {
+  ga4: boolean;
+  searchConsole: boolean;
+  ads: boolean;
 }
 
 export interface PayPalConfig {
