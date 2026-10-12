@@ -314,5 +314,73 @@ console.log("\n-- the privacy policy matches what the code does --");
     /does not offer\s*\{?"?\s*a read-only version of the Google Ads scope/.test(policy));
 }
 
+
+console.log("\n-- sync: read-only, cheap, and it cannot blank a working dashboard --");
+{
+  const api = readFileSync("src/lib/google/api.ts", "utf8");
+  const sync = readFileSync("src/lib/google/sync.ts", "utf8");
+  const cron = readFileSync("src/app/api/cron/google-sync/route.ts", "utf8");
+  const card = readFileSync("src/components/dashboard/google-metrics-card.tsx", "utf8");
+
+  // The privacy policy promises reporting reads only. For Ads there is no
+  // read-only scope, so that promise has to hold in the code.
+  ck("GA4 is read via runReport only", /:runReport/.test(api));
+  ck("Search Console is read via searchAnalytics/query only", /searchAnalytics\/query/.test(api));
+  ck("no write/mutate verbs anywhere in the client",
+    !/\b(DELETE|PUT|PATCH)\b/.test(api.replace(/\/\*[\s\S]*?\*\//g, "")));
+
+  ck("access tokens are minted per run, never stored",
+    /refreshAccessToken/.test(api) && !/set\([^)]*accessToken/.test(sync));
+  ck("the refresh token is decrypted, not read in clear", /decryptSecret/.test(api));
+
+  // A partial failure must keep the half that worked.
+  ck("one service failing still stores the other",
+    /errors\.push\(toError\("ga4"/.test(sync) && /errors\.push\(toError\("searchConsole"/.test(sync));
+  ck("a run is only 'failed' when NOTHING succeeded", /anySucceeded/.test(sync));
+  ck("a connected-but-unconfigured workspace is skipped, not failed",
+    /nothing_selected/.test(sync) && /status: "skipped"/.test(sync));
+  ck("an expired grant is recorded so the UI can say reconnect",
+    /markSyncError/.test(sync));
+
+  // Quota: the dashboard must never call Google.
+  ck("the dashboard reads the stored snapshot, not Google",
+    !/googleapis\.com/.test(card));
+  ck("the window ends yesterday, since today is always partial", /isoDaysAgo\(1\)/.test(sync));
+
+  ck("the cron route verifies the QStash signature", /verifyQStashSignature/.test(cron));
+  ck("one workspace at a time, so a fan-out cannot time out the run",
+    /for \(const id of ids\)/.test(cron));
+  ck("the daily schedule is registered",
+    /leadstack-google-sync/.test(readFileSync("src/lib/qstash/register-schedules.ts", "utf8")));
+  ck("and the route is a public path, since the signature is the credential",
+    /api\/cron\/google-sync/.test(readFileSync("src/middleware.ts", "utf8")));
+
+  const rules = readFileSync("firestore.rules", "utf8");
+  ck("snapshots are member-read, server-write only",
+    /match \/googleMetrics\/\{snapshotId\}[\s\S]{0,260}allow write: if false/.test(rules));
+}
+
+console.log("\n-- the UI tells the truth about what is connected --");
+{
+  const card = readFileSync("src/components/settings/sub-account-google-section.tsx", "utf8");
+  ck("the card is admin-only", /if \(!isAdmin/.test(card));
+  ck("badges read GRANTED capability, not what was requested", /googleCan\(config/.test(card));
+  ck("Ads is not offered, since the deployment has no developer token",
+    !/adwords/.test(card));
+  ck("a failed revoke is reported rather than claimed as success",
+    /didn't confirm the revoke/.test(card));
+  ck("a partial grant is surfaced", /partial:/.test(card));
+  ck("disconnect is confirmed first", /confirm\(/.test(card));
+
+  // Strip comments first: the route EXPLAINS that tokens and scopes are not
+  // patchable, and matching that prose would pass for the wrong reason.
+  const props = readFileSync("src/app/api/sub-accounts/[id]/google/properties/route.ts", "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/.*$/gm, "");
+  ck("only the two selections are patchable, never tokens or scopes",
+    !/refreshTokenEncrypted|grantedScopes|capabilities/.test(props));
+  ck("the property id is shape-checked", /\^\\d\{1,20\}\$/.test(props));
+}
+
 console.log(`\n${fails === 0 ? "ALL PASS" : `${fails} FAILED`}`);
 process.exit(fails ? 1 : 0);

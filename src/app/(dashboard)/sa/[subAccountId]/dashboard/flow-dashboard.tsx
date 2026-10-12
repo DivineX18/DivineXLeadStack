@@ -53,6 +53,7 @@ import type { AutomationDoc } from "@/types";
 import type { LeadForm } from "@/types/forms";
 import { Button } from "@/components/ui/button";
 import { NewDealDialog } from "@/components/pipeline/new-deal-dialog";
+import { GoogleMetricsCard } from "@/components/dashboard/google-metrics-card";
 
 export function FlowDashboard() {
   const { user } = useAuth();
@@ -300,6 +301,10 @@ export function FlowDashboard() {
           </div>
 
       <LeadsMap contacts={contacts} deals={deals} />
+
+      {/* Renders nothing until a Google connection has synced, so a workspace
+          not using it carries no empty card. */}
+      <GoogleMetricsCard />
 
       {isEmpty ? (
         <GettingStarted />

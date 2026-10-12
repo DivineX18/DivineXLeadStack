@@ -54,6 +54,17 @@ const SCHEDULES: ScheduleSpec[] = [
     description:
       "Daily sweep of expired apiRequestLogs / apiIdempotency / webhookEvents.",
   },
+  {
+    scheduleId: "leadstack-google-sync",
+    path: "/api/cron/google-sync",
+    // 05:00 UTC: after the other two, and late enough that yesterday's GA4
+    // and Search Console data has settled. Search Console in particular lags
+    // by a couple of days, which is why the window ends at yesterday rather
+    // than today.
+    cron: "0 5 * * *",
+    description:
+      "Daily GA4 + Search Console reporting pull for every connected workspace.",
+  },
 ];
 
 const MARKER_PATH = "system/scheduleRegistration";
