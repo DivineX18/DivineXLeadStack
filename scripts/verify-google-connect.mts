@@ -44,6 +44,90 @@ console.log("-- scopes: ask for the minimum, and only what was chosen --");
     GOOGLE_SCOPES.ads.endsWith("/adwords"));
 }
 
+console.log("\n-- nothing outside the six approved scopes is ever requested --");
+{
+  const { googleScopeList, GOOGLE_SCOPES } = await import("../src/lib/google/oauth.ts");
+
+  // The consent screen is configured with exactly these six. Requesting a
+  // seventh fails at Google; requesting a different one silently asks a client
+  // for access nobody approved.
+  const APPROVED = new Set([
+    "openid",
+    "email",
+    "profile",
+    "https://www.googleapis.com/auth/analytics.readonly",
+    "https://www.googleapis.com/auth/webmasters.readonly",
+    "https://www.googleapis.com/auth/adwords",
+  ]);
+
+  for (const combo of [
+    ["ga4"],
+    ["searchConsole"],
+    ["ads"],
+    ["ga4", "searchConsole"],
+    ["ga4", "searchConsole", "ads"],
+  ] as const) {
+    const scopes = googleScopeList([...combo]);
+    const extra = scopes.filter((s) => !APPROVED.has(s));
+    ck(`[${combo.join("+")}] requests nothing beyond the six approved scopes`,
+      extra.length === 0, extra.join(", "));
+  }
+
+  // The user-facing consequence of the Ads gate: losing Ads must never cost
+  // the client the two services that DO work.
+  const withoutAds = googleScopeList(["ga4", "searchConsole"]);
+  ck("dropping Ads still connects Analytics", withoutAds.includes(GOOGLE_SCOPES.ga4));
+  ck("dropping Ads still connects Search Console", withoutAds.includes(GOOGLE_SCOPES.searchConsole));
+  ck("and the dropped Ads scope is genuinely absent", !withoutAds.includes(GOOGLE_SCOPES.ads));
+  ck("the scopes left after dropping Ads are all on the consent screen",
+    withoutAds.every((s) => APPROVED.has(s)));
+
+  const connect = readFileSync("src/app/api/sub-accounts/[id]/google/connect/route.ts", "utf8");
+  ck("Ads is dropped, not the whole connect, when the token is missing",
+    /services = services\.filter\(\(s\) => s !== "ads"\)/.test(connect));
+  ck("only an Ads-ONLY request is refused outright, since nothing would remain",
+    /if \(services\.length === 0\) return stop\("ads_not_configured"\)/.test(connect));
+
+  const oauth = readFileSync("src/lib/google/oauth.ts", "utf8");
+  ck("the Ads gate is one named function, so changing it is one line",
+    (oauth.match(/export function googleAdsConfigured/g) ?? []).length === 1);
+}
+
+console.log("\n-- credentials never reach logs or responses --");
+{
+  for (const f of [
+    "src/app/api/google/callback/route.ts",
+    "src/app/api/sub-accounts/[id]/google/route.ts",
+    "src/app/api/sub-accounts/[id]/google/connect/route.ts",
+    "src/lib/google/oauth.ts",
+  ]) {
+    const src = readFileSync(f, "utf8");
+    const name = f.split("/").slice(-2).join("/");
+    ck(`${name}: no token in a log line`,
+      !/console\.\w+\([^)]*(refreshToken|accessToken|client_secret|CLIENT_SECRET)/.test(src));
+    ck(`${name}: no token in a response body`,
+      !/NextResponse\.json\(\{[^}]*(refreshToken|accessToken)/.test(src));
+    ck(`${name}: no customer id echoed back`,
+      !/NextResponse\.json\(\{[^}]*LOGIN_CUSTOMER_ID/.test(src));
+  }
+}
+
+console.log("\n-- the Ads manager id is validated, not assumed --");
+{
+  const cat = await import("../src/lib/setup/env-schema.mjs");
+  const v = cat.validateVar as (n: string, val: string) => string | null;
+  ck("a 10-digit id is accepted", v("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "9184814350") === null);
+  ck("the dashed display form is rejected", v("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "918-481-4350") !== null);
+  ck("a 9-digit id is rejected", v("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "123456789") !== null);
+  ck("an 11-digit id is rejected", v("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "12345678901") !== null);
+  ck("a non-numeric id is rejected", v("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "91848143a0") !== null);
+
+  // The value belongs in the environment, never in the repo.
+  for (const f of ["src/lib/google/oauth.ts", "src/app/api/google/callback/route.ts", "render.yaml"]) {
+    ck(`${f.split("/").pop()}: no customer id hardcoded`, !/918\s*-?\s*481\s*-?\s*4350|9184814350/.test(readFileSync(f, "utf8")));
+  }
+}
+
 console.log("\n-- signed state: the workspace cannot be forged or swapped --");
 {
   const { signGoogleState, verifyGoogleState } = await import("../src/lib/google/oauth.ts");

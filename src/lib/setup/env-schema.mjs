@@ -42,6 +42,15 @@ export const isE164 = (v) =>
   /^\+[1-9]\d{6,14}$/.test(v)
     ? null
     : "should be E.164 format, e.g. +15551234567";
+/** Google Ads manager customer id: exactly 10 digits, no dashes.
+ *  The console DISPLAYS it as 918-481-4350, and the `ocid`/`ascid` in an Ads
+ *  URL is a different, internal id — both are easy to paste by mistake and
+ *  both fail at request time with an unhelpful error, so reject them here. */
+export const isAdsCustomerId = (v) =>
+  /^\d{10}$/.test(v)
+    ? null
+    : "should be exactly 10 digits with no dashes (the console shows it as 918-481-4350; don't paste the ocid from an Ads URL)";
+
 export const endsWithGoogleClient = (v) =>
   v.endsWith(".apps.googleusercontent.com")
     ? null
@@ -267,7 +276,7 @@ export const GROUPS = [
       // API refuses every request without a developer token, which is
       // approved separately under a Google Ads manager account.
       ["GOOGLE_ADS_DEVELOPER_TOKEN", "opt"],
-      ["GOOGLE_ADS_LOGIN_CUSTOMER_ID", "opt", isNumeric],
+      ["GOOGLE_ADS_LOGIN_CUSTOMER_ID", "opt", isAdsCustomerId],
     ],
     deep(add, env) {
       if (env.has("GOOGLE_ADS_LOGIN_CUSTOMER_ID") && !env.has("GOOGLE_ADS_DEVELOPER_TOKEN")) {

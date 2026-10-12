@@ -73,7 +73,23 @@ export function googleRedirectUri(): string | null {
   return base ? `${base}/api/google/callback` : null;
 }
 
-/** True when Ads is usable: the scope alone is not enough, it needs a developer token. */
+/**
+ * THE ADS GATE. One function, deliberately — this is the single place that
+ * decides whether Ads is offered, and changing how Ads access is proven is a
+ * one-line change here rather than an edit across the connect route, the
+ * callback and the capability derivation.
+ *
+ * Today it tests for a developer token, because the Ads API refuses every
+ * request without one. That may stop being the right test: Google moved Ads
+ * API access management into the Cloud console with Test and Explorer tiers,
+ * and an approved Explorer project does not visibly issue a developer token.
+ * Until that resolves, the behaviour stays as-is and fails SAFE: with no
+ * token, Ads is dropped from the consent request entirely rather than asking
+ * a client for write-capable access the deployment cannot use.
+ *
+ * Dropping Ads never blocks Analytics or Search Console — see
+ * googleScopeList() and the connect route, which keep the remaining services.
+ */
 export function googleAdsConfigured(): boolean {
   return !!process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
 }
