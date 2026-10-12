@@ -168,5 +168,67 @@ console.log("\n-- the env catalog knows about Google --");
     v("GOOGLE_OAUTH_REDIRECT_URI", "https://app.divinex.io") === null); // shape-valid; the deep() check carries the path warning
 }
 
+console.log("\n-- disconnect actually disconnects --");
+{
+  const src = readFileSync("src/app/api/sub-accounts/[id]/google/route.ts", "utf8");
+  ck("a disconnect route exists at all", src.includes("export async function DELETE"));
+  ck("admin only", /requireSubAccountAdmin/.test(src));
+  ck("the grant is REVOKED at Google, not just forgotten locally",
+    /revokeRefreshToken/.test(src));
+
+  // Order is the whole point: clearing first destroys the only copy of the
+  // token and strands a live grant in the customer's Google account.
+  const iRevoke = src.indexOf("revokeRefreshToken(token)");
+  const iClear = src.indexOf("googleConfig: null");
+  ck("revoke happens BEFORE the local record is cleared",
+    iRevoke > -1 && iClear > -1 && iRevoke < iClear, `revoke@${iRevoke} clear@${iClear}`);
+
+  ck("a failed revoke still clears locally, so nobody is stuck connected",
+    /revokeError/.test(src) && iClear > src.indexOf("revokeError"));
+  ck("a failed revoke is reported rather than hidden", /revokeError: revoked \? null : revokeError/.test(src));
+  ck("disconnecting twice is a success, not a 404", /alreadyDisconnected/.test(src));
+
+  const oauth = readFileSync("src/lib/google/oauth.ts", "utf8");
+  ck("an already-invalid token counts as revoked", /invalid_token/.test(oauth));
+  ck("revocation never throws into the route", /catch \(err\)[\s\S]{0,160}revoked: false/.test(oauth));
+}
+
+console.log("\n-- the privacy policy matches what the code does --");
+{
+  // A reviewer reads this policy against a demo of the software. Every claim
+  // below is one the code has to keep true, so assert them together.
+  const policyRaw = readFileSync("src/app/(legal)/privacy/page.tsx", "utf8");
+  // JSX wraps prose across lines, so a phrase that reads as one sentence on
+  // the page is split by newlines and indentation in the source. Match against
+  // a whitespace-normalised copy or the assertions fail for layout reasons.
+  const policy = policyRaw.replace(/\s+/g, " ");
+
+  ck("a Google user data section exists", /Google User Data/.test(policy));
+  ck("the Limited Use sentence is present verbatim",
+    /will adhere to the\{" "\}[\s\S]{0,400}Google API Services User Data Policy[\s\S]{0,120}including the Limited Use requirements/.test(policy));
+
+  // The draft said "access tokens are stored encrypted". That is not what the
+  // code does, and the truth is stronger.
+  ck("it says the REFRESH token is encrypted", /refresh token[\s\S]{0,120}encrypted/i.test(policy));
+  ck("it says access tokens are never stored", /never stored at all/.test(policy));
+  ck("the code backs that up: no access token is persisted",
+    !/accessToken:\s*tokens\.accessToken/.test(readFileSync("src/app/api/google/callback/route.ts", "utf8")));
+
+  ck("it discloses the AI processing of Google data",
+    /Automated analysis/.test(policy) && /AI model provider/.test(policy));
+  ck("it promises disconnect from settings, which now exists",
+    /disconnect Google at any time/i.test(policy));
+  ck("it promises revocation on disconnect, which the route performs",
+    /revokes our access with Google/.test(policy));
+  ck("it points users at Google's own revocation page",
+    /myaccount\.google\.com\/permissions/.test(policy));
+  ck("it states scopes are only requested for selected services",
+    /never request a scope for a service you did not select/.test(policy));
+
+  // The Ads honesty point, which the verification justification depends on.
+  ck("it states plainly that Google offers no read-only Ads scope",
+    /does not offer\s*\{?"?\s*a read-only version of the Google Ads scope/.test(policy));
+}
+
 console.log(`\n${fails === 0 ? "ALL PASS" : `${fails} FAILED`}`);
 process.exit(fails ? 1 : 0);

@@ -219,6 +219,97 @@ export default async function PrivacyPage() {
           Policy first to describe what they collect before they go live.
         </p>
 
+        <h2>5a. Google User Data</h2>
+        <p>
+          You can connect your Google account so {brand.name} can read
+          reporting data from Google Analytics, Google Search Console and
+          Google Ads and show it in your own dashboard. Connecting is
+          optional, and nothing below applies unless you choose to connect.
+        </p>
+        <p>
+          <strong>What we access.</strong> With your permission we read your
+          Google Analytics reporting data (scope{" "}
+          <code>analytics.readonly</code>), your Search Console performance
+          data for sites you own (scope <code>webmasters.readonly</code>),
+          and your Google Ads reporting data (scope <code>adwords</code>).
+          We also receive your name, email address and profile information
+          (scopes <code>openid</code>, <code>email</code>,{" "}
+          <code>profile</code>) to identify the connected account. You choose
+          which of the three services to connect; we never request a scope
+          for a service you did not select.
+        </p>
+        <p>
+          <strong>How we use it.</strong> We use this data only to show you
+          reporting and recommendations inside your own {brand.name}{" "}
+          dashboard. We do not use it for any other purpose.
+        </p>
+        <p>
+          <strong>Read-only use of Google Ads.</strong> Google does not offer
+          a read-only version of the Google Ads scope. Although the
+          permission Google grants is broad enough to allow changes,{" "}
+          {brand.name} only ever issues reporting queries. We never create,
+          edit, pause or delete anything in your Google Ads, Analytics or
+          Search Console accounts.
+        </p>
+        <p>
+          <strong>Limited Use.</strong> DIVINEX Ascend&rsquo;s use and
+          transfer to any other app of information received from Google APIs
+          will adhere to the{" "}
+          <a
+            href="https://developers.google.com/terms/api-services-user-data-policy"
+            target="_blank"
+            rel="noopener"
+          >
+            Google API Services User Data Policy
+          </a>
+          , including the Limited Use requirements.
+        </p>
+        <p>
+          <strong>Automated analysis.</strong> Reporting data you connect is
+          used to generate written recommendations. To produce them, the
+          relevant figures are sent to the AI model provider listed in
+          Section 8, which processes them to return the analysis and does not
+          use them to train its models. This is disclosed because it is a
+          transfer of Google user data to a service provider, and it is the
+          only one beyond the hosting and infrastructure providers in that
+          same section.
+        </p>
+        <p>
+          <strong>What we do not do.</strong> We do not sell Google user
+          data. We do not use it for advertising, including retargeting or
+          interest-based advertising. We do not share it with data brokers or
+          information resellers. We do not use it to develop, improve or
+          train generalized AI or machine learning models. We do not allow
+          humans to read it, except where you ask us to in order to support
+          you, where it is necessary for security or abuse investigation, or
+          where the law requires it.
+        </p>
+        <p>
+          <strong>Storage and security.</strong> The long-lived refresh token
+          that lets us read your data is encrypted before it is stored
+          (AES-256-GCM). Short-lived access tokens are{" "}
+          <strong>never stored at all</strong> &mdash; they are requested
+          when a report is refreshed and discarded afterwards. All
+          transmission is over TLS.
+        </p>
+        <p>
+          <strong>Disconnecting and deletion.</strong> You can disconnect
+          Google at any time from your workspace settings. Disconnecting
+          revokes our access with Google and deletes the stored token
+          immediately, along with the reporting data we hold from that
+          connection. You can also revoke access directly at{" "}
+          <a
+            href="https://myaccount.google.com/permissions"
+            target="_blank"
+            rel="noopener"
+          >
+            myaccount.google.com/permissions
+          </a>
+          . If you close your account, this data is deleted as part of the
+          process described in Section 9. To request earlier deletion, email{" "}
+          <a href={supportMailto}>{brand.supportEmail}</a>.
+        </p>
+
         <h2>6. Payment Processing</h2>
         <p>
           {brand.name}&rsquo;s own subscription billing (what you pay

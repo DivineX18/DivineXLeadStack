@@ -219,6 +219,35 @@ export async function refreshAccessToken(refreshToken: string): Promise<GoogleTo
   });
 }
 
+/**
+ * Revoke a refresh token at Google.
+ *
+ * Deleting our copy is NOT a disconnect: the grant keeps living in the
+ * customer's Google account, where it shows as an app with standing access to
+ * their analytics. Telling someone they have disconnected while that remains
+ * true would make the privacy policy's disconnect promise false.
+ *
+ * Best-effort by design. An already-revoked or expired token returns 400 from
+ * Google, which is the desired end state, not a failure — so the caller must
+ * still clear local state whatever happens here.
+ */
+export async function revokeRefreshToken(refreshToken: string): Promise<{ revoked: boolean; reason: string | null }> {
+  try {
+    const res = await fetch("https://oauth2.googleapis.com/revoke", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ token: refreshToken }).toString(),
+    });
+    if (res.ok) return { revoked: true, reason: null };
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    // Already invalid means the grant is gone, which is what we wanted.
+    if (body.error === "invalid_token") return { revoked: true, reason: "already_invalid" };
+    return { revoked: false, reason: body.error ?? `http_${res.status}` };
+  } catch (err) {
+    return { revoked: false, reason: err instanceof Error ? err.name : "network_error" };
+  }
+}
+
 /** The connected Google account's email, for display in the settings card. */
 export async function fetchGoogleUserInfo(
   accessToken: string,
