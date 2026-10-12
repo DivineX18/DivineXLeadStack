@@ -2,7 +2,23 @@ services:
   - type: web
     name: ascend-crm
     runtime: node
-    plan: starter
+    # 1 CPU / 2 GB. This service was on `starter` (0.5 CPU / 512 MB) and the
+    # process was being OOM-killed roughly every 2.5 hours: two unexplained
+    # restarts on an unchanged commit (2026-10-11 22:36:59 and 2026-10-12
+    # 01:07:55 UTC), each surfacing to users as a Cloudflare 502 and, mid-
+    # navigation, as "Application error: a client-side exception" when a JS
+    # chunk request landed in the restart window.
+    #
+    # 512 MB was never enough for this app: a 385 MB build with 283 API routes
+    # and 191 pages, where Next loads route modules lazily and keeps them, so
+    # RSS climbs as the app is used until the container ceiling is hit.
+    #
+    # This service is Blueprint managed, so THIS LINE is the source of truth —
+    # changing the plan only in the Render dashboard gets reverted on the next
+    # blueprint sync. Values are Render's compute-plan identifiers (see the
+    # Compute section of the service page); `starter` is the legacy name for
+    # 0.5c-512mb.
+    plan: 1c-2g
     branch: main
     buildCommand: pnpm install && pnpm build
     startCommand: pnpm start
