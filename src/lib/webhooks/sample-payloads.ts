@@ -304,6 +304,17 @@ export const SAMPLE_PAYLOADS: Record<WebhookEventType, () => unknown> = {
       added_at: new Date().toISOString(),
     },
   }),
+  "member.reactivated": () => ({
+    member: {
+      uid: "user_test_xxx",
+      object: "member",
+      email: "returningteammate@example.com",
+      // Who performed the override, not merely that one happened — the point
+      // of auditing a reactivation is attribution.
+      reactivated_by_uid: "user_test_owner",
+      reactivated_at: new Date().toISOString(),
+    },
+  }),
   "automation.completed": () => ({
     execution: {
       id: sampleId("exec"),

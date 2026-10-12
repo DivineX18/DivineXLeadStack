@@ -72,6 +72,10 @@ export const WEBHOOK_EVENT_TYPES = [
   // brand-new invitees who still have to sign up. Together they cover both
   // ways a person can join a workspace.
   "member.added",
+  // An agency owner re-enabled a disabled account from the members UI. Audit
+  // first and foremost: reactivation overrides a prior disable, so it must be
+  // visible to anyone watching the workspace rather than a silent flag flip.
+  "member.reactivated",
   "automation.completed",
   // Conversations (PWA v1). Emitted from the unified-inbox index write
   // (message.received — every inbound SMS/WhatsApp/Messenger/Instagram)

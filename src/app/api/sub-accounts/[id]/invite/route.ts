@@ -88,7 +88,12 @@ export async function POST(
     });
   } catch (err) {
     if (err instanceof MemberAddBlockedError) {
-      return NextResponse.json({ error: err.message }, { status: 409 });
+      // `code` + `uid` let the UI offer the remedy (an owner-only
+      // reactivation) rather than printing prose the admin cannot act on.
+      return NextResponse.json(
+        { error: err.message, code: err.code, uid: err.uid },
+        { status: 409 },
+      );
     }
     if (err instanceof InviteSubAccountNotFoundError) {
       return NextResponse.json(

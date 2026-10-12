@@ -3,12 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { describeError } from "@/lib/errors/describe";
-import {
-  collection,
-  onSnapshot,
-  query,
-  where,
-} from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { Mail, Shield, UserPlus, Users } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubAccount } from "@/context/sub-account-context";
@@ -45,7 +40,7 @@ function toMillis(v: unknown): number {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function SubAccountMembersSection() {
-  const { user } = useAuth();
+  const { user, agencyRole } = useAuth();
   const { subAccountId, subAccount, isAdmin } = useSubAccount();
   const scopingOn = subAccount?.territoryScopingEnabled === true;
 
@@ -54,7 +49,7 @@ export function SubAccountMembersSection() {
   const [territories, setTerritories] = useState<TerritoryDoc[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "collaborator">(
-    "collaborator",
+    "collaborator"
   );
   const [inviteTerritoryIds, setInviteTerritoryIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -71,26 +66,26 @@ export function SubAccountMembersSection() {
         setMembers(
           snap.docs
             .map((d) => d.data() as SubAccountMemberDoc)
-            .filter((m) => m.status === "active"),
+            .filter((m) => m.status === "active")
         );
-      },
+      }
     );
     const unsubInvites = onSnapshot(
       query(
         collection(db, "invites"),
         where("subAccountId", "==", subAccountId),
         where("acceptedByUid", "==", null),
-        where("revokedAt", "==", null),
+        where("revokedAt", "==", null)
       ),
       (snap) => {
         setInvites(
           snap.docs.map((d) => {
             const data = d.data() as InviteDocV2;
             return { ...data, id: d.id };
-          }),
+          })
         );
       },
-      () => setInvites([]),
+      () => setInvites([])
     );
     return () => {
       unsubMembers();
@@ -106,9 +101,8 @@ export function SubAccountMembersSection() {
       setTerritories([]);
       return;
     }
-    const unsub = subscribeToTerritories(
-      subAccountId,
-      (list) => setTerritories(list),
+    const unsub = subscribeToTerritories(subAccountId, (list) =>
+      setTerritories(list)
     );
     return () => unsub();
   }, [subAccountId, isAdmin, scopingOn]);
@@ -121,6 +115,49 @@ export function SubAccountMembersSection() {
     .sort((a, b) => toMillis(b.addedAt) - toMillis(a.addedAt))
     .slice(0, PREVIEW_COUNT);
 
+  /**
+   * Owner-only escape from a disabled account, without leaving the app.
+   *
+   * Two steps on purpose: reactivating the ACCOUNT grants no workspace access,
+   * so the invite that follows still applies the normal role, territory and
+   * seat checks rather than inheriting whatever membership existed before.
+   */
+  async function reactivateThenInvite(
+    targetUid: string,
+    email: string,
+    retryInvite: () => Promise<Response>
+  ) {
+    setSubmitting(true);
+    try {
+      const res = await fetch(
+        `/api/sub-accounts/${subAccountId}/members/${targetUid}/reactivate`,
+        { method: "POST" }
+      );
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok)
+        throw new Error(data.error ?? "Could not reactivate that account.");
+
+      const again = await retryInvite();
+      const payload = (await again.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      if (!again.ok) {
+        // The account IS reactivated even though the add failed, so say that
+        // rather than implying nothing happened.
+        throw new Error(
+          `${email} was reactivated, but adding them failed: ${payload.error ?? "unknown error"}`
+        );
+      }
+      toast.success(`Reactivated ${email} and added them to this workspace.`);
+      setInviteEmail("");
+      setInviteTerritoryIds([]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not reactivate.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function handleInvite(e: FormEvent) {
     e.preventDefault();
     const email = inviteEmail.trim().toLowerCase();
@@ -129,8 +166,8 @@ export function SubAccountMembersSection() {
       return;
     }
     setSubmitting(true);
-    try {
-      const res = await fetch(`/api/sub-accounts/${subAccountId}/invite`, {
+    const sendInvite = () =>
+      fetch(`/api/sub-accounts/${subAccountId}/invite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -143,6 +180,8 @@ export function SubAccountMembersSection() {
               : [],
         }),
       });
+    try {
+      const res = await sendInvite();
       const payload = (await res.json().catch(() => ({}))) as {
         error?: string;
         mailed?: boolean;
@@ -150,7 +189,33 @@ export function SubAccountMembersSection() {
         added?: boolean;
         alreadyMember?: boolean;
         role?: "admin" | "collaborator";
+        code?: string;
+        uid?: string | null;
       };
+
+      // The account exists but is disabled. Rather than printing prose the
+      // admin cannot act on, offer the remedy — but only to the agency owner,
+      // who is the only one allowed to override a disable.
+      if (!res.ok && payload.code === "account_disabled" && payload.uid) {
+        const targetUid = payload.uid;
+        if (agencyRole === "owner") {
+          toast.error(payload.error ?? "That account is disabled.", {
+            duration: 12000,
+            action: {
+              label: "Reactivate & add",
+              onClick: () => {
+                void reactivateThenInvite(targetUid, email, sendInvite);
+              },
+            },
+          });
+        } else {
+          toast.error(
+            "That account is disabled. Ask your agency owner to reactivate it."
+          );
+        }
+        return;
+      }
+
       if (!res.ok) throw new Error(payload.error ?? "Could not invite");
 
       const roleLabel = payload.role === "admin" ? "admin" : "collaborator";
@@ -160,13 +225,13 @@ export function SubAccountMembersSection() {
         // no pending invite / signup step.
         if (payload.alreadyMember) {
           toast.success(
-            `${email} is already a member, role set to ${roleLabel}`,
+            `${email} is already a member, role set to ${roleLabel}`
           );
         } else {
           toast.success(
             `Added ${email} as ${roleLabel}${
               payload.mailed ? ", they've been notified by email" : ""
-            }`,
+            }`
           );
         }
       } else if (payload.mailed) {
@@ -177,11 +242,11 @@ export function SubAccountMembersSection() {
         try {
           await navigator.clipboard.writeText(payload.inviteUrl);
           toast.success(
-            `Invite created, link copied (set RESEND_API_KEY to email automatically)`,
+            `Invite created, link copied (set RESEND_API_KEY to email automatically)`
           );
         } catch {
           toast.success(
-            `Invite created. Copy the link from "Pending invites" below`,
+            `Invite created. Copy the link from "Pending invites" below`
           );
         }
       } else {
@@ -190,22 +255,26 @@ export function SubAccountMembersSection() {
       setInviteEmail("");
       setInviteTerritoryIds([]);
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Could not invite.",
-      );
+      toast.error(err instanceof Error ? err.message : "Could not invite.");
     } finally {
       setSubmitting(false);
     }
   }
 
   async function copyInviteLink(email: string) {
-    const origin =
-      typeof window !== "undefined" ? window.location.origin : "";
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
     const url = `${origin}/signup?email=${encodeURIComponent(email)}`;
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Invite link copied");
-    } catch (err) { toast.error(describeError(err, "Could not copy, your browser blocked clipboard access"), { duration: 12_000 });
+    } catch (err) {
+      toast.error(
+        describeError(
+          err,
+          "Could not copy, your browser blocked clipboard access"
+        ),
+        { duration: 12_000 }
+      );
     }
   }
 
@@ -215,7 +284,7 @@ export function SubAccountMembersSection() {
     try {
       const res = await fetch(
         `/api/sub-accounts/${subAccountId}/invite/${inviteId}`,
-        { method: "DELETE" },
+        { method: "DELETE" }
       );
       if (!res.ok) {
         const payload = (await res.json().catch(() => ({}))) as {
@@ -226,17 +295,14 @@ export function SubAccountMembersSection() {
       toast.success(`Invite for ${email} cancelled`);
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Could not cancel invite.",
+        err instanceof Error ? err.message : "Could not cancel invite."
       );
     } finally {
       setBusyInviteId(null);
     }
   }
 
-  async function handleRoleChange(
-    uid: string,
-    role: "admin" | "collaborator",
-  ) {
+  async function handleRoleChange(uid: string, role: "admin" | "collaborator") {
     setBusyUid(uid);
     try {
       const res = await fetch(
@@ -245,7 +311,7 @@ export function SubAccountMembersSection() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ role }),
-        },
+        }
       );
       if (!res.ok) {
         const payload = (await res.json().catch(() => ({}))) as {
@@ -270,7 +336,7 @@ export function SubAccountMembersSection() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ assignedTerritoryIds: next }),
-        },
+        }
       );
       if (!res.ok) {
         const payload = (await res.json().catch(() => ({}))) as {
@@ -292,7 +358,7 @@ export function SubAccountMembersSection() {
     try {
       const res = await fetch(
         `/api/sub-accounts/${subAccountId}/members/${uid}`,
-        { method: "DELETE" },
+        { method: "DELETE" }
       );
       if (!res.ok) {
         const payload = (await res.json().catch(() => ({}))) as {
@@ -309,14 +375,14 @@ export function SubAccountMembersSection() {
   }
 
   return (
-    <section className="rounded-2xl border bg-card p-5">
+    <section className="bg-card rounded-2xl border p-5">
       <div className="mb-4 flex items-center gap-2">
         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
           <Users className="h-4 w-4" />
         </span>
         <div>
           <h2 className="text-sm font-semibold">Members</h2>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Invite teammates to this sub-account.
           </p>
         </div>
@@ -324,14 +390,14 @@ export function SubAccountMembersSection() {
 
       <form
         onSubmit={handleInvite}
-        className="mb-5 flex flex-wrap items-end gap-2 rounded-lg border bg-background p-3"
+        className="bg-background mb-5 flex flex-wrap items-end gap-2 rounded-lg border p-3"
       >
         <div className="min-w-[200px] flex-1 space-y-1.5">
           <Label htmlFor="invite-email" className="text-xs">
             Invite by email
           </Label>
           <div className="relative">
-            <Mail className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Mail className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
             <Input
               id="invite-email"
               type="email"
@@ -356,7 +422,7 @@ export function SubAccountMembersSection() {
               // send stale ids the server would ignore anyway.
               if (next === "admin") setInviteTerritoryIds([]);
             }}
-            className="h-9 w-52 rounded-md border border-input bg-background py-0 pl-3 pr-8 text-sm"
+            className="border-input bg-background h-9 w-52 rounded-md border py-0 pr-8 pl-3 text-sm"
           >
             <option value="collaborator">Workspace Collaborator</option>
             <option value="admin">Workspace Admin</option>
@@ -379,7 +445,7 @@ export function SubAccountMembersSection() {
         </Button>
       </form>
       {scopingOn && inviteRole === "collaborator" && (
-        <p className="-mt-3 mb-5 text-[11px] text-muted-foreground">
+        <p className="text-muted-foreground -mt-3 mb-5 text-[11px]">
           Leave territories empty to default this collaborator to{" "}
           <strong className="text-foreground">Global</strong> (sees everything
           until you narrow them down). You can change this later in Manage
@@ -389,10 +455,10 @@ export function SubAccountMembersSection() {
 
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
             Active members
           </p>
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-muted-foreground text-[11px]">
             {members.length === 0
               ? "None yet"
               : `Showing ${Math.min(PREVIEW_COUNT, members.length)} of ${members.length}`}
@@ -400,7 +466,7 @@ export function SubAccountMembersSection() {
         </div>
 
         {members.length === 0 ? (
-          <p className="rounded-lg border border-dashed py-4 text-center text-xs text-muted-foreground">
+          <p className="text-muted-foreground rounded-lg border border-dashed py-4 text-center text-xs">
             No active members.
           </p>
         ) : (
@@ -410,22 +476,22 @@ export function SubAccountMembersSection() {
               return (
                 <li
                   key={m.uid}
-                  className="flex items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2 text-sm"
+                  className="bg-background flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">
                       {m.displayName || m.email}
                       {isMe && (
-                        <span className="ml-2 text-[10px] font-normal text-muted-foreground">
+                        <span className="text-muted-foreground ml-2 text-[10px] font-normal">
                           (you)
                         </span>
                       )}
                     </p>
-                    <p className="truncate text-xs text-muted-foreground">
+                    <p className="text-muted-foreground truncate text-xs">
                       {m.email}
                     </p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium capitalize text-muted-foreground">
+                  <span className="bg-muted text-muted-foreground shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium capitalize">
                     {m.role}
                   </span>
                 </li>
@@ -445,18 +511,18 @@ export function SubAccountMembersSection() {
             Manage members
           </Button>
           {invites.length > 0 && (
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-muted-foreground text-[11px]">
               {invites.length} pending invite{invites.length === 1 ? "" : "s"}
             </span>
           )}
         </div>
 
-        <p className="pt-1 text-[11px] text-muted-foreground">
+        <p className="text-muted-foreground pt-1 text-[11px]">
           <Shield className="mr-1 inline h-3 w-3" />
-          Both roles are scoped to this workspace only. They can&apos;t
-          see or touch other sub-accounts.{" "}
-          <strong className="text-foreground">Workspace Admins</strong>{" "}
-          can invite, change roles, and remove members.{" "}
+          Both roles are scoped to this workspace only. They can&apos;t see or
+          touch other sub-accounts.{" "}
+          <strong className="text-foreground">Workspace Admins</strong> can
+          invite, change roles, and remove members.{" "}
           <strong className="text-foreground">Workspace Collaborators</strong>{" "}
           can read and edit data.
         </p>

@@ -27,9 +27,22 @@ import { resolveBrandName } from "@/lib/landing/resolve-brand";
  * {@link createInviteServerSide}.
  */
 export class MemberAddBlockedError extends Error {
-  constructor(message: string) {
+  /**
+   * Machine-readable reason, so the UI can offer the right remedy instead of
+   * only printing prose. `account_disabled` is the one that matters: it means
+   * the fix is a reactivation an agency owner can perform in-app, and `uid`
+   * carries who to reactivate.
+   */
+  readonly code: "account_disabled" | "other_agency" | "generic";
+  readonly uid: string | null;
+  constructor(
+    message: string,
+    opts: { code?: MemberAddBlockedError["code"]; uid?: string | null } = {},
+  ) {
     super(message);
     this.name = "MemberAddBlockedError";
+    this.code = opts.code ?? "generic";
+    this.uid = opts.uid ?? null;
   }
 }
 
@@ -315,6 +328,7 @@ async function addExistingUserAsMember(params: {
   if (claims.agencyId && claims.agencyId !== agencyId) {
     throw new MemberAddBlockedError(
       "This email belongs to a different agency and can't be added to this workspace.",
+      { code: "other_agency" },
     );
   }
 
@@ -334,7 +348,8 @@ async function addExistingUserAsMember(params: {
   const wasRemovedByUs = claims.status === "removed";
   if (existingUser.disabled && !wasRemovedByUs) {
     throw new MemberAddBlockedError(
-      "This account was disabled outside the app. Re-enable it in Firebase Authentication before adding them to a workspace.",
+      "This account is disabled. An agency owner can reactivate it, then add them.",
+      { code: "account_disabled", uid },
     );
   }
 
