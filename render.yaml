@@ -138,3 +138,36 @@ services:
         value: https://divinex-business-intelligence.onrender.com/api/sso/operations/exchange
       - key: ASCEND_INTELLIGENCE_API_SECRET
         sync: false
+      # Google Analytics / Search Console connection (Growth Intelligence).
+      #
+      # DECLARED HERE because this service is Blueprint managed: render.yaml
+      # is the source of truth for its environment, and keys set only in the
+      # dashboard are at the mercy of the next sync. Losing these would break
+      # every customer's Google connection in a way that looks like Google's
+      # fault, not ours.
+      #
+      # `sync: false` on all three: Render keeps the dashboard value and the
+      # blueprint stops competing for it. The client SECRET must never be in
+      # the repo, and the other two are deployment-specific, so none of their
+      # values belong in version control either.
+      #
+      # Expected values, for whoever sets them:
+      #   GOOGLE_OAUTH_CLIENT_ID     <id>.apps.googleusercontent.com
+      #   GOOGLE_OAUTH_CLIENT_SECRET GOCSPX-…
+      #   GOOGLE_OAUTH_REDIRECT_URI  https://app.divinex.io/api/google/callback
+      #     — explicit, NOT derived from NEXT_PUBLIC_APP_URL, which is
+      #       crm.divinex.io while customers connect from app.divinex.io, and
+      #       it must match a redirect URI registered in Google Cloud exactly.
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_OAUTH_REDIRECT_URI
+        sync: false
+      # Google Ads, optional and currently unset. Without the developer token
+      # the connect route DROPS Ads from the consent request rather than
+      # asking a customer for write-capable access this deployment cannot use.
+      - key: GOOGLE_ADS_DEVELOPER_TOKEN
+        sync: false
+      - key: GOOGLE_ADS_LOGIN_CUSTOMER_ID
+        sync: false

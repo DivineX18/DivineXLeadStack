@@ -70,13 +70,28 @@ export async function DELETE(request: Request, ctx: { params: Promise<{ id: stri
     updatedAt: FieldValue.serverTimestamp(),
   });
 
-  // NOTE: synced metrics live in Ascend, keyed by business profile, and are
-  // not written yet (that lands with the sync phase). When they do, deleting
-  // them belongs HERE, so that one action satisfies the whole deletion promise
-  // in the privacy policy rather than leaving data behind in the other system.
+  // Delete the synced metrics too. The privacy policy tells customers that
+  // disconnecting "deletes the stored token, along with the reporting data we
+  // hold from that connection" — a reviewer follows that claim through the
+  // demo, so it has to be true. It also fixes a real misreading: the card
+  // renders from the stored snapshot, so a disconnected workspace kept showing
+  // yesterday's numbers as though it were still connected.
+  //
+  // After the config is cleared, so a failure here cannot leave the workspace
+  // stuck connected; and best-effort, because failing to delete a cache must
+  // not block the disconnect the customer asked for. A later reconnect
+  // overwrites it on the first sync regardless.
+  let metricsDeleted = false;
+  try {
+    await db.doc(`subAccounts/${id}/googleMetrics/latest`).delete();
+    metricsDeleted = true;
+  } catch (err) {
+    console.warn(`[google/disconnect] could not delete stored metrics sa=${id}`, err);
+  }
   return NextResponse.json({
     ok: true,
     revokedAtGoogle: revoked,
+    metricsDeleted,
     // Surfaced so the settings card can tell the operator to revoke by hand
     // instead of quietly leaving a live grant in the client's Google account.
     revokeError: revoked ? null : revokeError,

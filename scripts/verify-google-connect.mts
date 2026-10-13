@@ -112,6 +112,51 @@ console.log("\n-- credentials never reach logs or responses --");
   }
 }
 
+console.log("\n-- the credentials survive a blueprint sync, and stay out of the repo --");
+{
+  const yml = readFileSync("render.yaml", "utf8");
+  // This service is Blueprint managed, so render.yaml is the source of truth
+  // for its environment. Keys set only in the dashboard are at the mercy of
+  // the next sync, and losing these breaks every customer's Google connection
+  // in a way that looks like Google's fault.
+  for (const k of [
+    "GOOGLE_OAUTH_CLIENT_ID",
+    "GOOGLE_OAUTH_CLIENT_SECRET",
+    "GOOGLE_OAUTH_REDIRECT_URI",
+  ]) {
+    ck(`${k} is declared in the blueprint`, new RegExp(`key: ${k}`).test(yml));
+    ck(`${k} is dashboard-managed (sync: false)`,
+      new RegExp(`key: ${k}\\s*\\n\\s*sync: false`).test(yml));
+  }
+  // The secret must never be committed; the other two are deployment-specific
+  // and have no business in version control either.
+  // Comments are stripped from BOTH halves: the block above documents the
+  // expected shapes (including the GOCSPX- prefix) on purpose, and matching
+  // documentation would fail for the wrong reason. What must not appear is a
+  // real value on a `value:` line.
+  const ymlCode = yml.replace(/#.*$/gm, "");
+  ck("no Google credential VALUE is committed",
+    !/GOCSPX-/.test(ymlCode) && !/apps\.googleusercontent\.com/.test(ymlCode));
+}
+
+console.log("\n-- disconnecting deletes the data, as the policy promises --");
+{
+  const route = readFileSync("src/app/api/sub-accounts/[id]/google/route.ts", "utf8");
+  ck("the stored metrics snapshot is deleted", /googleMetrics\/latest`\)\.delete\(\)/.test(route));
+  // Order: config first. A failure deleting a cache must not strand a
+  // workspace in a connected state it asked to leave.
+  const iClear = route.indexOf("googleConfig: null");
+  const iDel = route.indexOf("googleMetrics/latest");
+  ck("deleted AFTER the connection is cleared, so a failure cannot strand it",
+    iClear > -1 && iDel > -1 && iClear < iDel, `clear@${iClear} del@${iDel}`);
+  ck("a delete failure does not block the disconnect", /catch \(err\)[\s\S]{0,160}could not delete stored metrics/.test(route));
+  ck("the outcome is reported", /metricsDeleted/.test(route));
+
+  const policy = readFileSync("src/app/(legal)/privacy/page.tsx", "utf8").replace(/\s+/g, " ");
+  ck("and the policy's deletion promise is now true",
+    /deletes the stored token immediately, along with the reporting data/.test(policy));
+}
+
 console.log("\n-- the Ads manager id is validated, not assumed --");
 {
   const cat = await import("../src/lib/setup/env-schema.mjs");
