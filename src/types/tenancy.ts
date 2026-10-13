@@ -449,6 +449,26 @@ export interface SubAccountDoc {
    */
   replyToEmail: string | null;
   /**
+   * DISPLAY NAME on mail this workspace sends — the "From: ___" a recipient
+   * reads. Null falls back to the workspace `name`, which is the behaviour
+   * every workspace had before this field existed.
+   *
+   * Separate from `name` on purpose. The workspace name is an operating
+   * label used across the switcher, the agency list and every internal
+   * surface; the sender name is how a person signs mail. A founder sending
+   * nurture under their own name should not have to rename their workspace
+   * to do it, and renaming the workspace to change a From header would move
+   * a label that dozens of unrelated surfaces read.
+   *
+   * Applies ONLY where the workspace is speaking: broadcasts, workflow
+   * emails and booking mail, all of which go through `workspaceSender()`.
+   * Platform/system mail (member invites, billing, onboarding notices) sends
+   * from the deployment's own EMAIL_FROM and is deliberately unaffected —
+   * nobody is "speaking" in a seat-invite, and signing one with a person's
+   * name would misrepresent who sent it.
+   */
+  senderDisplayName?: string | null;
+  /**
    * Sub-account-level kill switch for the automation engine. When true:
    *   - fireTriggers() returns early without creating any execution docs
    *   - in-flight executions short-circuit at their next step with

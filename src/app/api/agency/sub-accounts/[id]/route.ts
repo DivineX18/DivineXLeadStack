@@ -21,6 +21,7 @@ interface PatchBody {
   sendWindow?: SendWindow | null;
   bookingLink?: string | null;
   replyToEmail?: string | null;
+  senderDisplayName?: string | null;
   automationsPaused?: boolean;
   accountContact?: {
     name?: string | null;
@@ -130,6 +131,38 @@ export async function PATCH(
         );
       }
       update.bookingLink = trimmed;
+    }
+  }
+
+  if (body.senderDisplayName !== undefined) {
+    if (body.senderDisplayName === null || body.senderDisplayName === "") {
+      // Empty means "fall back to the workspace name", not "send with no
+      // name" — a From header with an empty display name looks broken.
+      update.senderDisplayName = null;
+    } else if (typeof body.senderDisplayName !== "string") {
+      return NextResponse.json(
+        { error: "Sender name must be a string or null." },
+        { status: 400 },
+      );
+    } else {
+      const trimmed = body.senderDisplayName.trim();
+      // Shape-checked here AND allowlist-sanitised again at send time in
+      // workspaceSender(). Two layers because this value goes straight into
+      // an email header: this one gives the operator a clear error, that one
+      // guarantees nothing malformed reaches the wire whatever wrote the doc.
+      if (trimmed.length < 2 || trimmed.length > 64) {
+        return NextResponse.json(
+          { error: "Sender name must be between 2 and 64 characters." },
+          { status: 400 },
+        );
+      }
+      if (/[<>@"\n\r,;]/.test(trimmed)) {
+        return NextResponse.json(
+          { error: "Sender name can't contain < > @ \" or line breaks." },
+          { status: 400 },
+        );
+      }
+      update.senderDisplayName = trimmed;
     }
   }
 

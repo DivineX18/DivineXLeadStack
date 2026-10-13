@@ -42,6 +42,7 @@ export function SubAccountSendingPreferencesSection() {
 
   const [replyTo, setReplyTo] = useState("");
   const [windowEnabled, setWindowEnabled] = useState(false);
+  const [senderName, setSenderName] = useState("");
   const [startHour, setStartHour] = useState(8);
   const [endHour, setEndHour] = useState(20);
   const [timezone, setTimezone] = useState("");
@@ -52,6 +53,7 @@ export function SubAccountSendingPreferencesSection() {
   // workspace changes — but not on every keystroke-triggered re-render.
   useEffect(() => {
     setReplyTo(subAccount?.replyToEmail ?? "");
+    setSenderName(subAccount?.senderDisplayName ?? "");
     const w = subAccount?.sendWindow ?? null;
     setWindowEnabled(!!w);
     setStartHour(w?.startHour ?? 8);
@@ -84,6 +86,7 @@ export function SubAccountSendingPreferencesSection() {
     try {
       await patch({
         replyToEmail: replyTo.trim() || null,
+        senderDisplayName: senderName.trim() || null,
         sendWindow: windowEnabled
           ? { startHour, endHour, timezone: timezone.trim() || "UTC" }
           : null,
@@ -128,6 +131,27 @@ export function SubAccountSendingPreferencesSection() {
       </header>
 
       <form onSubmit={handleSave} className="space-y-4">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            Sender name
+          </label>
+          <Input
+            value={senderName}
+            onChange={(e) => setSenderName(e.target.value)}
+            placeholder={subAccount?.name ?? "Your workspace name"}
+            disabled={saving}
+            className="max-w-md"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            The name recipients see in their inbox on broadcasts, workflow
+            emails and booking mail &mdash; use a person&rsquo;s name if you
+            want nurture to read as coming from them. Leave blank to use the
+            workspace name ({subAccount?.name ?? "unnamed"}). The sending
+            address is unchanged, and platform mail like seat invites and
+            billing is unaffected.
+          </p>
+        </div>
+
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">
             Reply-To email

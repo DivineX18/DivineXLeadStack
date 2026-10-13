@@ -103,6 +103,8 @@ export interface WorkspaceSender {
 export function workspaceSender(
   sub?: {
     name?: string | null;
+    /** Overrides the workspace name in the From header. See SubAccountDoc. */
+    senderDisplayName?: string | null;
     replyToEmail?: string | null;
     resendConfig?: ResendConfig | null;
     emailDomainEnabledByAgency?: boolean;
@@ -114,7 +116,10 @@ export function workspaceSender(
   const platform = process.env.EMAIL_FROM ?? "";
   const base = dedicated || platform;
 
-  const display = sanitizeDisplayName(sub?.name);
+  // An explicit sender name wins over the workspace name; both go through the
+  // same allowlist, so an override cannot smuggle header characters the
+  // workspace name could not.
+  const display = sanitizeDisplayName(sub?.senderDisplayName) ?? sanitizeDisplayName(sub?.name);
   // No trustworthy business name: keep the platform sender exactly as
   // configured rather than inventing a brand for them.
   const from = display && !dedicated ? `${display} <${addressOnly(platform)}>` : base;
