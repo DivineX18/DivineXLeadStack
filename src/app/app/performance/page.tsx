@@ -7,6 +7,7 @@ import { formatCents } from "@/components/ascend/metric-card";
 import { PageHeader, Panel } from "@/components/divinex/ui";
 import { FunnelPerformancePanel } from "@/components/divinex/funnel-performance-panel";
 import { GoogleMetricsCard } from "@/components/dashboard/google-metrics-card";
+import { SubAccountProvider } from "@/context/sub-account-context";
 
 export const dynamic = "force-dynamic";
 
@@ -59,8 +60,15 @@ export default async function PerformancePage() {
 
       {/* Traffic and search performance from the workspace's connected Google
           account. Renders nothing until a connection has synced, so a
-          workspace not using it sees no empty card. */}
-      <GoogleMetricsCard variant="ascend" />
+          workspace not using it sees no empty card.
+          The provider is REQUIRED: the card reads the active workspace via
+          useSubAccount(), which THROWS when no provider is mounted — and a
+          throw in a client component takes the whole page to the error
+          boundary, which is exactly what it did. Same wrapper /app/settings
+          uses for the same reason. */}
+      <SubAccountProvider subAccountId={saId} inAscendShell>
+        <GoogleMetricsCard variant="ascend" />
+      </SubAccountProvider>
 
       <Panel className="mt-8">
         <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--dx-text-muted)" }}>

@@ -356,6 +356,27 @@ console.log("\n-- sync: read-only, cheap, and it cannot blank a working dashboar
     /variant\?: "flow" \| "ascend"/.test(card));
   ck("Performance no longer claims it excludes traffic",
     !/not the traffic/.test(readFileSync("src/app/app/performance/page.tsx", "utf8")));
+
+  // The card reads the active workspace through useSubAccount(), which THROWS
+  // when no provider is mounted — and a throw in a client component takes the
+  // whole page to the error boundary. Mounting it on a page without the
+  // provider broke Ascend Performance in production, so assert the pairing
+  // everywhere rather than trusting it to be remembered.
+  ck("the card depends on the workspace context", /useSubAccount\(\)/.test(card));
+  for (const page of [
+    "src/app/app/performance/page.tsx",
+    "src/app/(dashboard)/sa/[subAccountId]/dashboard/flow-dashboard.tsx",
+  ]) {
+    const src = readFileSync(page, "utf8");
+    if (!/GoogleMetricsCard/.test(src)) continue;
+    // A page under /sa/[subAccountId] is already inside the provider via its
+    // layout; anything else has to mount one itself.
+    const insideSaLayout = page.includes("/sa/[subAccountId]/");
+    ck(`${page.split("/").pop()} has the workspace provider the card needs`,
+      // The TAG, not the import — removing the wrapper leaves the import
+      // behind, and matching that passed the mutation that broke production.
+      insideSaLayout || /<SubAccountProvider/.test(src));
+  }
   ck("the window ends yesterday, since today is always partial", /isoDaysAgo\(1\)/.test(sync));
 
   ck("the cron route verifies the QStash signature", /verifyQStashSignature/.test(cron));
