@@ -40,8 +40,16 @@ interface Snapshot {
   errors?: { service: string; message: string }[];
 }
 
-export function GoogleMetricsCard() {
+/**
+ * `flow`   — the Tailwind card styling the Flow dashboard uses.
+ * `ascend` — the DivineX design tokens the Ascend shell uses.
+ * One component either way: the data logic, the quota guarantee and the
+ * partial-failure handling are the substance here, and duplicating them to
+ * restyle a wrapper is how two copies start to disagree.
+ */
+export function GoogleMetricsCard({ variant = "flow" }: { variant?: "flow" | "ascend" } = {}) {
   const { subAccount, saPath } = useSubAccount();
+  const ascend = variant === "ascend";
   const subAccountId = subAccount?.id ?? null;
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -68,11 +76,21 @@ export function GoogleMetricsCard() {
   const fetched = snap.fetchedAt?.toDate?.();
 
   return (
-    <section className="rounded-xl border bg-card p-6">
+    <section
+      className={ascend ? "mt-8 rounded-[var(--dx-radius)] border p-5" : "rounded-xl border bg-card p-6"}
+      style={
+        ascend
+          ? { backgroundColor: "var(--dx-surface-2)", borderColor: "var(--dx-border-subtle)" }
+          : undefined
+      }
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <TrendingUp className="h-5 w-5" />
+          <h2
+            className={ascend ? "flex items-center gap-2 text-xs font-semibold uppercase tracking-wider" : "flex items-center gap-2 text-lg font-semibold"}
+            style={ascend ? { color: "var(--dx-text-muted)" } : undefined}
+          >
+            <TrendingUp className={ascend ? "h-3.5 w-3.5" : "h-5 w-5"} />
             Search &amp; traffic
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">

@@ -6,6 +6,7 @@ import { composeBusinessHealthSummary } from "@/lib/intelligence/compose-busines
 import { formatCents } from "@/components/ascend/metric-card";
 import { PageHeader, Panel } from "@/components/divinex/ui";
 import { FunnelPerformancePanel } from "@/components/divinex/funnel-performance-panel";
+import { GoogleMetricsCard } from "@/components/dashboard/google-metrics-card";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ export default async function PerformancePage() {
     <div className="mx-auto w-full max-w-6xl">
       <PageHeader
         title="Performance"
-        description="What's actually happening in the business, the outcomes, not the traffic."
+        description="What's actually happening in the business: the outcomes, and the traffic behind them."
       />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {metrics.map((m) => (
@@ -55,6 +56,11 @@ export default async function PerformancePage() {
       </div>
 
       <FunnelPerformancePanel subAccountId={saId} />
+
+      {/* Traffic and search performance from the workspace's connected Google
+          account. Renders nothing until a connection has synced, so a
+          workspace not using it sees no empty card. */}
+      <GoogleMetricsCard variant="ascend" />
 
       <Panel className="mt-8">
         <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--dx-text-muted)" }}>

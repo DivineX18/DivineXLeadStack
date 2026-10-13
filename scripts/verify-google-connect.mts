@@ -345,6 +345,17 @@ console.log("\n-- sync: read-only, cheap, and it cannot blank a working dashboar
   // Quota: the dashboard must never call Google.
   ck("the dashboard reads the stored snapshot, not Google",
     !/googleapis\.com/.test(card));
+
+  // Surfaced in BOTH shells. It was only on the Flow dashboard, so an Ascend
+  // operator on Performance could not see the traffic they had connected.
+  ck("it is mounted on the Ascend Performance page",
+    /GoogleMetricsCard/.test(readFileSync("src/app/app/performance/page.tsx", "utf8")));
+  ck("and on the Flow dashboard",
+    /GoogleMetricsCard/.test(readFileSync("src/app/(dashboard)/sa/[subAccountId]/dashboard/flow-dashboard.tsx", "utf8")));
+  ck("one component serves both, styled by variant rather than copied",
+    /variant\?: "flow" \| "ascend"/.test(card));
+  ck("Performance no longer claims it excludes traffic",
+    !/not the traffic/.test(readFileSync("src/app/app/performance/page.tsx", "utf8")));
   ck("the window ends yesterday, since today is always partial", /isoDaysAgo\(1\)/.test(sync));
 
   ck("the cron route verifies the QStash signature", /verifyQStashSignature/.test(cron));
