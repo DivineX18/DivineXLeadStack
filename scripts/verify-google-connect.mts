@@ -382,5 +382,50 @@ console.log("\n-- the UI tells the truth about what is connected --");
   ck("the property id is shape-checked", /\^\\d\{1,20\}\$/.test(props));
 }
 
+
+console.log("\n-- the OAuth round trip does not move you between hosts --");
+{
+  const { returnOrigin } = await import("../src/lib/google/return-host.ts");
+  const prevApp = process.env.NEXT_PUBLIC_APP_URL;
+  const prevSafe = process.env.SAFE_APP_HOSTNAMES;
+  process.env.NEXT_PUBLIC_APP_URL = "https://crm.divinex.io";
+  process.env.SAFE_APP_HOSTNAMES = "app.divinex.io";
+  const at = (u: string) => returnOrigin(new Request(u));
+
+  // The reported bug: connecting from Ascend dumped the operator on Flow,
+  // where a separate session made it look like being logged out.
+  ck("a connect started on app.divinex.io returns to app.divinex.io",
+    at("https://app.divinex.io/api/google/callback?code=x") === "https://app.divinex.io");
+  ck("a connect started on crm.divinex.io stays on crm.divinex.io",
+    at("https://crm.divinex.io/api/google/callback?code=x") === "https://crm.divinex.io");
+  // Host is attacker-controllable, and this runs at the END of an OAuth flow.
+  ck("an unknown host is never reflected back",
+    at("https://evil.example.com/api/google/callback") === "https://crm.divinex.io");
+  ck("a lookalike subdomain is not trusted",
+    at("https://app.divinex.io.evil.com/api/google/callback") === "https://crm.divinex.io");
+
+  process.env.NEXT_PUBLIC_APP_URL = prevApp;
+  process.env.SAFE_APP_HOSTNAMES = prevSafe;
+
+  for (const f of ["src/app/api/google/callback/route.ts", "src/app/api/sub-accounts/[id]/google/connect/route.ts"]) {
+    ck(`${f.split("/").slice(-2).join("/")} builds its redirect from the request host`,
+      /returnOrigin\(request\)/.test(readFileSync(f, "utf8")));
+  }
+}
+
+console.log("\n-- an empty picker says WHY it is empty --");
+{
+  const route = readFileSync("src/app/api/sub-accounts/[id]/google/properties/route.ts", "utf8");
+  ck("listing failures are returned, not swallowed", /errors: \{/.test(route));
+  ck("the common cause is named precisely", /Admin API isn't enabled/.test(route));
+  ck("a permission failure is distinguished from an empty account",
+    /PERMISSION_DENIED/.test(route));
+
+  const card = readFileSync("src/components/settings/sub-account-google-section.tsx", "utf8");
+  ck("the card shows the reason", /pickerErrors/.test(card));
+  ck("and stops claiming 'nothing available' when something refused",
+    /Couldn't load/.test(card));
+}
+
 console.log(`\n${fails === 0 ? "ALL PASS" : `${fails} FAILED`}`);
 process.exit(fails ? 1 : 0);

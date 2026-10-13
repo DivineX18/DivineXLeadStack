@@ -4,7 +4,12 @@ import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { requireSubAccountAdmin } from "@/lib/auth/require-tenancy";
-import { accessTokenForConfig, listGa4Properties, listSearchConsoleSites } from "@/lib/google/api";
+import {
+  accessTokenForConfig,
+  GoogleApiError,
+  listGa4Properties,
+  listSearchConsoleSites,
+} from "@/lib/google/api";
 import type { SubAccountDoc } from "@/types";
 
 /**
@@ -45,12 +50,44 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
     );
   }
 
-  // One service failing must not blank the other's picker.
+  // One service failing must not blank the other's picker — but it must not
+  // be SILENT either. Swallowing the error rendered "Nothing available on
+  // this account", which reads as "you have no properties" when the real
+  // cause is usually that the Google Analytics Admin API is not enabled on
+  // the Cloud project. That sent the operator looking in the wrong place.
   const [ga4, sites] = await Promise.all([
-    listGa4Properties(token).catch(() => []),
-    listSearchConsoleSites(token).catch(() => []),
+    listGa4Properties(token).then(
+      (v) => ({ ok: true as const, v }),
+      (e: unknown) => ({ ok: false as const, e }),
+    ),
+    listSearchConsoleSites(token).then(
+      (v) => ({ ok: true as const, v }),
+      (e: unknown) => ({ ok: false as const, e }),
+    ),
   ]);
-  return NextResponse.json({ ga4, sites });
+
+  const describe = (e: unknown): string => {
+    const code = e instanceof GoogleApiError ? e.code : "";
+    const msg = e instanceof Error ? e.message : String(e);
+    // The one failure worth naming precisely, because the fix is a single
+    // click in a console the operator has open anyway.
+    if (/SERVICE_DISABLED|has not been used in project|is disabled/i.test(msg)) {
+      return "The Google Analytics Admin API isn't enabled on this Cloud project. Enable it, then reload.";
+    }
+    if (code === "PERMISSION_DENIED") {
+      return "This Google account can't list properties. Connect an account with access.";
+    }
+    return msg.slice(0, 300);
+  };
+
+  return NextResponse.json({
+    ga4: ga4.ok ? ga4.v : [],
+    sites: sites.ok ? sites.v : [],
+    errors: {
+      ga4: ga4.ok ? null : describe(ga4.e),
+      searchConsole: sites.ok ? null : describe(sites.e),
+    },
+  });
 }
 
 export async function PATCH(request: Request, ctx: { params: Promise<{ id: string }> }) {

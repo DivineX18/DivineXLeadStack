@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { requireSubAccountAdmin } from "@/lib/auth/require-tenancy";
+import { returnOrigin } from "@/lib/google/return-host";
 import { getMappingBySubAccountId } from "@/lib/workspace/workspace-mappings-service";
 import { tenantSecretsConfigured } from "@/lib/crypto/secrets";
 import {
@@ -31,8 +32,11 @@ import {
  * at the dialog.
  */
 
+/** Return to the host the operator is actually on — see returnOrigin.
+ *  NEXT_PUBLIC_APP_URL is crm.divinex.io while people connect from
+ *  app.divinex.io, and bouncing between them looks like being logged out. */
 function appBase(request: Request): string {
-  return (process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin).replace(/\/$/, "");
+  return returnOrigin(request);
 }
 
 function parseServices(raw: string | null): GoogleService[] {

@@ -41,6 +41,13 @@ export function SubAccountGoogleSection() {
   const [wantGsc, setWantGsc] = useState(true);
   const [ga4Options, setGa4Options] = useState<PropertyOption[] | null>(null);
   const [gscOptions, setGscOptions] = useState<PropertyOption[] | null>(null);
+  // Why a picker is empty. "Nothing available" is a legitimate answer; an API
+  // that refused is not, and conflating them sends the operator hunting in
+  // their Analytics account for a problem that is in the Cloud console.
+  const [pickerErrors, setPickerErrors] = useState<{ ga4: string | null; searchConsole: string | null }>({
+    ga4: null,
+    searchConsole: null,
+  });
 
   // Live, so the card updates the moment the OAuth callback writes the
   // connection — the admin returns from Google to a card that already
@@ -96,9 +103,11 @@ export function SubAccountGoogleSection() {
         const d = (await res.json()) as {
           ga4?: { propertyId: string; displayName: string; account: string }[];
           sites?: { siteUrl: string; permissionLevel: string }[];
+          errors?: { ga4: string | null; searchConsole: string | null };
         };
         setGa4Options((d.ga4 ?? []).map((p) => ({ value: p.propertyId, label: p.displayName, sub: p.account })));
         setGscOptions((d.sites ?? []).map((s) => ({ value: s.siteUrl, label: s.siteUrl })));
+        setPickerErrors({ ga4: d.errors?.ga4 ?? null, searchConsole: d.errors?.searchConsole ?? null });
       } catch {
         // The card still works without pickers; the selects just stay empty.
       }
@@ -246,6 +255,7 @@ export function SubAccountGoogleSection() {
             value={config?.ga4PropertyId ?? ""}
             onChange={(v) => saveSelection({ ga4PropertyId: v || null })}
             disabled={busy}
+            error={pickerErrors.ga4}
           />
           <Picker
             icon={<Search className="h-4 w-4" />}
@@ -255,6 +265,7 @@ export function SubAccountGoogleSection() {
             value={config?.gscSiteUrl ?? ""}
             onChange={(v) => saveSelection({ gscSiteUrl: v || null })}
             disabled={busy}
+            error={pickerErrors.searchConsole}
           />
 
           <div className="flex flex-wrap gap-2 pt-1">
@@ -295,7 +306,7 @@ function Badge({ on, label }: { on: boolean; label: string }) {
 }
 
 function Picker({
-  icon, label, enabled, options, value, onChange, disabled,
+  icon, label, enabled, options, value, onChange, disabled, error,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -304,6 +315,8 @@ function Picker({
   value: string;
   onChange: (v: string) => void;
   disabled: boolean;
+  /** Why the list is empty, when it is empty because something refused. */
+  error?: string | null;
 }) {
   if (!enabled) return null;
   return (
@@ -319,7 +332,13 @@ function Picker({
         disabled={disabled || options === null}
       >
         <option value="">
-          {options === null ? "Loading…" : options.length === 0 ? "Nothing available on this account" : "Not selected"}
+          {options === null
+            ? "Loading…"
+            : error
+              ? "Couldn't load — see below"
+              : options.length === 0
+                ? "Nothing available on this account"
+                : "Not selected"}
         </option>
         {(options ?? []).map((o) => (
           <option key={o.value} value={o.value}>
@@ -328,7 +347,8 @@ function Picker({
           </option>
         ))}
       </select>
-      {value === "" && options !== null && options.length > 0 && (
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      {!error && value === "" && options !== null && options.length > 0 && (
         <p className="text-xs text-muted-foreground">
           Pick one, or nothing will sync for this service.
         </p>

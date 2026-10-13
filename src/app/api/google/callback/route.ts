@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { requireSubAccountAdmin } from "@/lib/auth/require-tenancy";
+import { returnOrigin } from "@/lib/google/return-host";
 import { encryptSecret, tenantSecretsConfigured } from "@/lib/crypto/secrets";
 import { deriveGoogleCapabilities } from "@/lib/google/capabilities";
 import {
@@ -33,8 +34,11 @@ import type { GoogleConfig, SubAccountDoc } from "@/types";
  * round would let an attacker's `state` choose which workspace to write.
  */
 
+/** Return to the host the operator is actually on — see returnOrigin.
+ *  NEXT_PUBLIC_APP_URL is crm.divinex.io while people connect from
+ *  app.divinex.io, and bouncing between them looks like being logged out. */
 function appBase(request: Request): string {
-  return (process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin).replace(/\/$/, "");
+  return returnOrigin(request);
 }
 
 export async function GET(request: Request) {
