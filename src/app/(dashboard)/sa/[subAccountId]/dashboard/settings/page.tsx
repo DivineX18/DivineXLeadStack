@@ -219,6 +219,10 @@ export default function SettingsPage() {
 
           {/* Calendar sync — per-sub-account .ics subscription URL. */}
           <SubAccountCalendarSyncSection />
+          {/* Analytics is not messaging. It sits with the other integrations
+              in Admin — beside Calendar Sync, the other Google connection —
+              because that is where someone looks for it. */}
+          <SubAccountGoogleSection />
 
           {/* Your subscription — Client Billing v1. Self-gating: only renders
               when this workspace is billed through the platform by the agency
@@ -294,7 +298,6 @@ export default function SettingsPage() {
           {/* Facebook + Instagram inbox (beta) — self-gates: renders only when
               the agency flipped metaInboxEnabledByAgency on for this sub-account. */}
           <SubAccountMetaSection />
-          <SubAccountGoogleSection />
 
           {/* Sending preferences — Reply-To, send window, pause-all-workflows.
               Rehomed from the deleted legacy Automations → Settings page; MUST
