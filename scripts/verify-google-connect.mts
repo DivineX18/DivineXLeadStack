@@ -383,32 +383,61 @@ console.log("\n-- the UI tells the truth about what is connected --");
 }
 
 
-console.log("\n-- the OAuth round trip does not move you between hosts --");
+console.log("\n-- the OAuth round trip lands on the host you started from --");
 {
   const { returnOrigin } = await import("../src/lib/google/return-host.ts");
   const prevApp = process.env.NEXT_PUBLIC_APP_URL;
   const prevSafe = process.env.SAFE_APP_HOSTNAMES;
+  const prevNode = process.env.NODE_ENV;
   process.env.NEXT_PUBLIC_APP_URL = "https://crm.divinex.io";
   process.env.SAFE_APP_HOSTNAMES = "app.divinex.io";
-  const at = (u: string) => returnOrigin(new Request(u));
+  process.env.NODE_ENV = "production";
 
-  // The reported bug: connecting from Ascend dumped the operator on Flow,
-  // where a separate session made it look like being logged out.
-  ck("a connect started on app.divinex.io returns to app.divinex.io",
-    at("https://app.divinex.io/api/google/callback?code=x") === "https://app.divinex.io");
-  ck("a connect started on crm.divinex.io stays on crm.divinex.io",
-    at("https://crm.divinex.io/api/google/callback?code=x") === "https://crm.divinex.io");
-  // Host is attacker-controllable, and this runs at the END of an OAuth flow.
-  ck("an unknown host is never reflected back",
-    at("https://evil.example.com/api/google/callback") === "https://crm.divinex.io");
+  // Behind Render's proxy, request.url is the INTERNAL bind address. Reading
+  // the origin from it sent real users to http://localhost:10000 AFTER a
+  // successful OAuth exchange — connection saved, operator on a dead page.
+  const proxied = (fwd: string) =>
+    new Request("http://localhost:10000/api/google/callback?code=x", {
+      headers: { host: "localhost:10000", "x-forwarded-host": fwd, "x-forwarded-proto": "https" },
+    });
+
+  ck("returns the PUBLIC host, never the container's own address",
+    returnOrigin(proxied("app.divinex.io")) === "https://app.divinex.io",
+    returnOrigin(proxied("app.divinex.io")));
+  ck("a connect started on crm.divinex.io stays there",
+    returnOrigin(proxied("crm.divinex.io")) === "https://crm.divinex.io");
+  ck("localhost is never a production destination",
+    returnOrigin(new Request("http://localhost:10000/x", { headers: { host: "localhost:10000" } }))
+      === "https://crm.divinex.io");
+
+  // Forwarded headers are attacker-controllable, and this runs at the END of
+  // an OAuth flow.
+  ck("an unknown forwarded host is never reflected",
+    returnOrigin(proxied("evil.example.com")) === "https://crm.divinex.io");
   ck("a lookalike subdomain is not trusted",
-    at("https://app.divinex.io.evil.com/api/google/callback") === "https://crm.divinex.io");
+    returnOrigin(proxied("app.divinex.io.evil.com")) === "https://crm.divinex.io");
+  ck("a proxy chain uses the client-facing entry",
+    returnOrigin(proxied("app.divinex.io, internal.local")) === "https://app.divinex.io");
+
+  process.env.NODE_ENV = "development";
+  ck("localhost still works in dev",
+    returnOrigin(new Request("http://localhost:3000/x", { headers: { host: "localhost:3000" } }))
+      === "http://localhost:3000");
 
   process.env.NEXT_PUBLIC_APP_URL = prevApp;
   process.env.SAFE_APP_HOSTNAMES = prevSafe;
+  process.env.NODE_ENV = prevNode;
+
+  // Comments stripped: the file EXPLAINS why request.url is wrong here, and
+  // matching that prose would fail for the wrong reason.
+  const src = readFileSync("src/lib/google/return-host.ts", "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/.*$/gm, "");
+  ck("the host comes from the forwarded header, not request.url",
+    /x-forwarded-host/.test(src) && !/new URL\(request\.url\)/.test(src));
 
   for (const f of ["src/app/api/google/callback/route.ts", "src/app/api/sub-accounts/[id]/google/connect/route.ts"]) {
-    ck(`${f.split("/").slice(-2).join("/")} builds its redirect from the request host`,
+    ck(`${f.split("/").slice(-2).join("/")} builds its redirect through returnOrigin`,
       /returnOrigin\(request\)/.test(readFileSync(f, "utf8")));
   }
 }
