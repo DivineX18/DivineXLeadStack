@@ -129,6 +129,10 @@ export function SendEmailDialog({
               onChange={(e) => setBody(e.target.value)}
               placeholder="Hi there,&#10;&#10;Thanks for chatting today…"
               rows={8}
+              // The Textarea primitive uses field-sizing-content, so it grows
+              // with the message. Capped here so a long email scrolls inside
+              // the box instead of pushing the Send button down the page.
+              className="max-h-[45vh]"
               aria-invalid={!!errors.body}
             />
             {errors.body && (

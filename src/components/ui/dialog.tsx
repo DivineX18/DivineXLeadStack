@@ -52,8 +52,21 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
+          // A dialog is centred with -translate-y-1/2, so content taller than the
+          // viewport grows off BOTH edges at once and the footer becomes
+          // unreachable — there is no scroll container to get to it. That is how
+          // the Send button on the contact email dialog became impossible to
+          // click once a message ran long. Capping height here and scrolling
+          // fixes every dialog at once; nine of them had already hand-patched
+          // the same two classes locally, which is the tell that it belonged in
+          // the primitive. Those overrides still win, since `className` is
+          // merged last.
+          //
+          // `dvh`, not `vh`: on mobile browsers the visible viewport shrinks when
+          // the keyboard opens, which is exactly when someone is typing a long
+          // message into a dialog.
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-background p-4 text-sm ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl bg-background p-4 text-sm ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}
