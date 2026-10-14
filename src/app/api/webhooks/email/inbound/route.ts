@@ -193,9 +193,24 @@ export async function POST(request: Request) {
         .collection("emailMessages")
         .doc();
 
+  /**
+   * Claim the message in a transaction, and report whether this call is the
+   * one that created it.
+   *
+   * Providers retry on any non-2xx or timeout, so a redelivery is routine
+   * rather than exceptional. Deduping only the message row is not enough:
+   * an e2e redelivery test showed the row correctly staying at one while the
+   * conversation's unread count went to 2 and the contact timeline grew a
+   * second identical "Email reply" entry. Both are visible to the operator,
+   * so the side effects below have to be gated on this flag, not just the
+   * write.
+   */
+  let isNew: boolean;
   try {
-    await messageRef.set(
-      {
+    isNew = await db.runTransaction(async (tx) => {
+      const existing = await tx.get(messageRef);
+      if (existing.exists) return false;
+      tx.set(messageRef, {
         direction: "inbound",
         subject: mail.subject,
         body,
@@ -206,13 +221,23 @@ export async function POST(request: Request) {
         contactId: routed.contactId,
         createdAt: FieldValue.serverTimestamp(),
         readAt: null,
-      },
-      { merge: true },
-    );
+      });
+      return true;
+    });
   } catch (err) {
     // A storage failure IS worth a retry — the reply would otherwise be lost.
     console.error("[webhooks/email/inbound] message write failed", err);
     return NextResponse.json({ error: "Storage failed" }, { status: 500 });
+  }
+
+  if (!isNew) {
+    // Already filed. Acknowledge so the provider stops retrying, and touch
+    // nothing else.
+    return NextResponse.json({
+      ok: true,
+      contactId: routed.contactId,
+      duplicate: true,
+    });
   }
 
   const contactSnap = await db.collection("contacts").doc(routed.contactId).get();

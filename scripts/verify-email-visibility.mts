@@ -174,6 +174,31 @@ ck(
   "inbound: a storage failure returns 500 so the provider retries",
   /message write failed[\s\S]{0,200}status: 500/.test(iCode),
 );
+// A redelivery is routine, not exceptional: any non-2xx or timeout triggers
+// one. An e2e test caught the message row correctly deduping while the
+// conversation's unread count went to 2 and the timeline grew a second
+// identical entry — both operator-visible. The side effects have to be gated
+// on "did this call create the row", not merely on the write being a merge.
+ck(
+  "inbound: the message is claimed in a transaction that reports if it is new",
+  /runTransaction/.test(iCode) && /existing\.exists\) return false/.test(iCode),
+);
+ck(
+  "inbound: a redelivery touches nothing else and reports duplicate",
+  /if \(!isNew\)/.test(iCode) && /duplicate: true/.test(iCode),
+);
+// Order matters: the unread increment and the activity write must both sit
+// AFTER the duplicate guard.
+{
+  const guard = iCode.indexOf("if (!isNew)");
+  ck(
+    "inbound: the unread + timeline writes are after the duplicate guard",
+    guard !== -1 &&
+      // Match the CALL, not the import at the top of the file.
+      iCode.indexOf("await upsertConversationForMessage({") > guard &&
+      iCode.indexOf('type: "email_received"') > guard,
+  );
+}
 ck(
   "inbound: unauthenticated requests are rejected",
   /status: 401/.test(iCode) && /authorize\(request, rawBody\)/.test(iCode),
