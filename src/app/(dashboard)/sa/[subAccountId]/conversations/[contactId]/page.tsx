@@ -15,6 +15,7 @@ import { useSubAccount } from "@/context/sub-account-context";
 import { useConversationTheme } from "@/hooks/use-conversation-theme";
 import { cn } from "@/lib/utils";
 import { subscribeToContact } from "@/lib/firestore/contacts";
+import { subscribeToLastEmailSubject } from "@/lib/firestore/email-messages";
 import {
   markConversationRead,
   subscribeToConversation,
@@ -77,6 +78,14 @@ export default function ConversationDetailPage() {
     };
   }, [contactId, user, authLoading]);
 
+  // Prefill the reply subject from the newest email on this thread, so
+  // answering is one keystroke instead of retyping a subject every time.
+  const [lastEmailSubject, setLastEmailSubject] = useState<string | undefined>();
+  useEffect(() => {
+    if (!contactId) return;
+    return subscribeToLastEmailSubject(contactId, setLastEmailSubject);
+  }, [contactId]);
+
   // Reset the unread counter as soon as the operator opens the thread.
   useEffect(() => {
     if (contactId) void markConversationRead(contactId);
@@ -108,7 +117,14 @@ export default function ConversationDetailPage() {
     }
   }
 
-  const title = contact?.name || contact?.phone || "Conversation";
+  // Email needs no per-workspace provisioning the way SMS and WhatsApp do —
+  // sending runs on the shared Resend sender every deployment already has. So
+  // the only requirement is that the contact HAS an address. Replies route
+  // back into this thread when the deployment has an inbound domain set up;
+  // without one they go to the sender's own mailbox, and sending still works.
+  if (contact?.email) availableChannels.push("email");
+
+  const title = contact?.name || contact?.email || contact?.phone || "Conversation";
 
   return (
     <div
@@ -210,7 +226,13 @@ export default function ConversationDetailPage() {
           <ConversationComposer
             contact={contact}
             availableChannels={availableChannels}
-            defaultChannel={conversation?.lastChannel ?? "sms"}
+            lastEmailSubject={lastEmailSubject}
+            defaultChannel={
+              conversation?.lastChannel ??
+              // A contact with only an email should not land on an SMS
+              // composer they cannot send from.
+              (availableChannels.includes("sms") ? "sms" : availableChannels[0])
+            }
           />
         </>
       )}

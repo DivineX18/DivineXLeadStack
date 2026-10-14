@@ -11,6 +11,7 @@ const CHANNEL_LABEL: Record<ConversationChannel, string> = {
   whatsapp: "WhatsApp",
   messenger: "Messenger",
   instagram: "Instagram",
+  email: "Email",
 };
 
 const CHANNEL_BADGE: Record<ConversationChannel, string> = {
@@ -18,6 +19,7 @@ const CHANNEL_BADGE: Record<ConversationChannel, string> = {
   whatsapp: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
   messenger: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
   instagram: "bg-pink-500/10 text-pink-700 dark:text-pink-400",
+  email: "bg-sky-500/10 text-sky-700 dark:text-sky-400",
 };
 
 export function ConversationList({
@@ -37,7 +39,7 @@ export function ConversationList({
         </div>
         <h3 className="text-base font-semibold">No conversations yet</h3>
         <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-          Inbound and outbound SMS / WhatsApp messages land here, one thread per
+          Inbound and outbound SMS, WhatsApp and email land here, one thread per
           contact. Send a message or wait for a customer to reply.
         </p>
       </div>

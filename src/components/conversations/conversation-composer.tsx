@@ -17,6 +17,7 @@ const LABEL: Record<ConversationChannel, string> = {
   whatsapp: "WhatsApp",
   messenger: "Messenger",
   instagram: "Instagram",
+  email: "Email",
 };
 
 /**
@@ -29,10 +30,14 @@ export function ConversationComposer({
   contact,
   availableChannels,
   defaultChannel,
+  lastEmailSubject,
 }: {
   contact: Contact;
   availableChannels: ConversationChannel[];
   defaultChannel: ConversationChannel;
+  /** Subject of the most recent email on this thread, used to prefill the
+   *  reply subject. Undefined when the thread has no email yet. */
+  lastEmailSubject?: string;
 }) {
   const { subAccount } = useSubAccount();
   const initial = availableChannels.includes(defaultChannel)
@@ -40,6 +45,8 @@ export function ConversationComposer({
     : (availableChannels[0] ?? "sms");
   const [channel, setChannel] = useState<ConversationChannel>(initial);
   const [body, setBody] = useState("");
+  /** Email only — the other channels have no subject line. */
+  const [subject, setSubject] = useState("");
   const [sending, setSending] = useState(false);
 
   // "Ask for review" — only when a review link is configured. Inserts the
@@ -73,17 +80,28 @@ export function ConversationComposer({
   // Meta (Messenger / Instagram) replies post to a different route, identify
   // the recipient by `metaUserId` (not phone), and have no STOP-style opt-out.
   const isMeta = channel === "messenger" || channel === "instagram";
+  // Email is identified by address, honours its own opt-out flag, and is the
+  // one channel that carries a subject.
+  const isEmail = channel === "email";
   const optedOut = isMeta
     ? false
-    : channel === "sms"
-      ? !!contact.smsOptedOut
-      : !!contact.whatsappOptedOut;
+    : isEmail
+      ? !!contact.emailOptedOut
+      : channel === "sms"
+        ? !!contact.smsOptedOut
+        : !!contact.whatsappOptedOut;
   const endpoint = isMeta
     ? "/api/comms/meta/send"
-    : channel === "sms"
-      ? "/api/comms/sms/send"
-      : "/api/comms/whatsapp/send";
-  const hasIdentity = isMeta ? !!contact.metaUserId : !!contact.phone;
+    : isEmail
+      ? "/api/comms/email/send"
+      : channel === "sms"
+        ? "/api/comms/sms/send"
+        : "/api/comms/whatsapp/send";
+  const hasIdentity = isMeta
+    ? !!contact.metaUserId
+    : isEmail
+      ? !!contact.email
+      : !!contact.phone;
   const disabled = optedOut || sending || !hasIdentity;
 
   async function handleSubmit(e: FormEvent) {
@@ -94,7 +112,9 @@ export function ConversationComposer({
       toast.error(
         isMeta
           ? "This contact hasn't messaged via Facebook/Instagram."
-          : "This contact has no phone number.",
+          : isEmail
+            ? "This contact has no email address."
+            : "This contact has no phone number.",
       );
       return;
     }
@@ -111,6 +131,11 @@ export function ConversationComposer({
           contactId: contact.id,
           body: trimmed,
           ...(isMeta ? { channel } : {}),
+          // The send route requires a subject. Default to a reply subject
+          // rather than refusing, so answering a thread is one keystroke.
+          ...(isEmail
+            ? { subject: subject.trim() || `Re: ${lastEmailSubject || "your enquiry"}` }
+            : {}),
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -121,6 +146,7 @@ export function ConversationComposer({
         throw new Error(data.error ?? "Couldn't send.");
       }
       setBody("");
+      setSubject("");
       // Snapshot listener appends the row.
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't send.");
@@ -131,6 +157,15 @@ export function ConversationComposer({
 
   return (
     <form onSubmit={handleSubmit} className="border-t px-4 py-3">
+      {isEmail && (
+        <input
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          placeholder={`Re: ${lastEmailSubject || "your enquiry"}`}
+          className="mb-2 w-full rounded-md border bg-transparent px-2.5 py-1.5 text-xs outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          aria-label="Email subject"
+        />
+      )}
       {availableChannels.length > 1 && (
         <div className="mb-2 flex gap-1">
           {availableChannels.map((ch) => (

@@ -1,5 +1,7 @@
-import { checkPlanLimit, recordPlanUsage } from "@/lib/billing/plan-limits";
 import "server-only";
+
+import { checkPlanLimit, recordPlanUsage } from "@/lib/billing/plan-limits";
+import type { EmailSource as EmailLogSource } from "@/types/email-events";
 
 import { Resend } from "resend";
 
@@ -170,6 +172,7 @@ export async function sendEmail({
   replyTo,
   from,
   billing,
+  log,
 }: {
   to: string;
   subject: string;
@@ -187,6 +190,28 @@ export async function sendEmail({
   from?: string;
   /** See EmailBilling. Required so no send path can be unclassified. */
   billing: EmailBilling;
+  /**
+   * Record this send in the email log (`emailEvents`), which is what the
+   * Email log page reads and what the provider's open/click webhook updates.
+   *
+   * Recorded HERE, at the one point every send passes through, rather than at
+   * each of the two dozen call sites — so a new send path cannot quietly skip
+   * the log, and the write cannot drift between paths.
+   *
+   * Optional because the fields it needs (which contact, which teammate) only
+   * exist on contact-facing sends. Platform mail — a billing notice, a
+   * password link — has no contact and does not belong in a workspace's
+   * outreach log, so it passes nothing and is not recorded.
+   */
+  log?: {
+    agencyId: string;
+    subAccountId: string;
+    contactId: string | null;
+    source: EmailLogSource;
+    sentByUid?: string | null;
+    sentByEmail?: string | null;
+    sourceId?: string | null;
+  };
 }): Promise<{ id: string }> {
   if (billing.kind === "customer" && billing.subAccountId) {
     const allowance = await checkPlanLimit({
@@ -228,5 +253,27 @@ export async function sendEmail({
   if (billing.kind === "customer" && billing.subAccountId) {
     void recordPlanUsage(billing.subAccountId, "emails", 1);
   }
+
+  if (log) {
+    // Imported lazily so this module stays usable from contexts that have no
+    // Admin SDK available, and so a logging failure cannot break sending.
+    const { recordEmailSent } = await import(
+      "@/lib/server/email-events-service"
+    );
+    await recordEmailSent({
+      messageId: result.data.id,
+      agencyId: log.agencyId,
+      subAccountId: log.subAccountId,
+      contactId: log.contactId,
+      toEmail: to,
+      subject,
+      sentByUid: log.sentByUid ?? null,
+      sentByEmail: log.sentByEmail ?? null,
+      source: log.source,
+      sourceId: log.sourceId ?? null,
+      replyTo: replyTo ?? null,
+    });
+  }
+
   return { id: result.data.id };
 }

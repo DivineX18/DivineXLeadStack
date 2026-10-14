@@ -196,6 +196,15 @@ const execSendEmail: NodeExecutor = async (ctx) => {
       // The lead opted in to this business, so the business is who the mail
       // comes from and who a reply reaches. See workspaceSender.
       ...workspaceSender(ctx.subAccount),
+      log: {
+        agencyId: ctx.agencyId,
+        subAccountId: ctx.subAccountId,
+        contactId: ctx.contact.id,
+        source: "workflow",
+        // No sender: a workflow step is not a person, and attributing it to
+        // the workflow's author would inflate their outreach numbers.
+        sourceId: ctx.workflowId,
+      },
     });
     return { result: { kind: "next" }, log: "ok" };
   } catch (err) {

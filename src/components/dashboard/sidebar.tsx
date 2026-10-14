@@ -25,6 +25,7 @@ import {
   Lock,
   Send,
   Bot,
+  MailOpen,
   Package,
   ScrollText,
   MessagesSquare,
@@ -103,6 +104,9 @@ const SUB_ACCOUNT_NAV: NavItem[] = [
   { href: "/workflows", label: "Workflows", icon: Workflow, enabled: true },
   { href: "/ai-agents", label: "AI Agents", icon: Bot, enabled: true },
   { href: "/broadcasts", label: "Broadcasts", icon: Send, enabled: true },
+  // Sits next to Broadcasts deliberately: that is where operators looked for
+  // sent-email history and found nothing.
+  { href: "/email-log", label: "Email log", icon: MailOpen, enabled: true },
   { href: "/templates", label: "Templates", icon: FileText, enabled: true },
   { href: "/social", label: "Social Planner", icon: Share2, enabled: true },
   {

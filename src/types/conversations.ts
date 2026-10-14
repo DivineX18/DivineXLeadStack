@@ -26,7 +26,18 @@ import type { Timestamp, FieldValue } from "firebase/firestore";
  * `messenger` + `instagram` are the BETA Meta channels — gated by the agency
  * `metaInboxEnabledByAgency` flag, so they only ever appear once that's on.
  */
-export type ConversationChannel = "sms" | "whatsapp" | "messenger" | "instagram";
+export type ConversationChannel =
+  | "sms"
+  | "whatsapp"
+  | "messenger"
+  | "instagram"
+  /**
+   * Email. Unlike the others this channel has an outbound-only mode: a
+   * workspace can send email long before inbound is configured, so an email
+   * conversation may exist with no inbound message on it. Messages live in
+   * `contacts/{id}/emailMessages`.
+   */
+  | "email";
 
 export type ConversationStatus = "open" | "closed" | "snoozed";
 

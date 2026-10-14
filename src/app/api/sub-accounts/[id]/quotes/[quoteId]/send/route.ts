@@ -198,6 +198,15 @@ export async function POST(
       html: email.html,
       replyTo: access.email || undefined,
       from: tenantFrom(sub),
+      log: {
+        agencyId: quote.agencyId,
+        subAccountId,
+        contactId: quote.contactId,
+        source: "transactional",
+        sentByUid: access.uid,
+        sentByEmail: access.email || null,
+        sourceId: quoteId,
+      },
     });
   } catch (err) {
     console.error("[quotes/send] Resend send failed", err);

@@ -11,6 +11,7 @@ import {
   FileText,
   FileSignature,
   Mail,
+  MailOpen,
   MessageSquare,
   MessagesSquare,
   PhoneMissed,
@@ -231,6 +232,13 @@ function activityVisuals(type: ActivityType): {
       return {
         icon: <Mail className="h-3 w-3 text-blue-500" />,
         label: "Email sent",
+      };
+    // Inbound gets its own colour: scanning a timeline, the one thing an
+    // operator is looking for is whether the prospect wrote back.
+    case "email_received":
+      return {
+        icon: <MailOpen className="h-3 w-3 text-emerald-500" />,
+        label: "Email reply",
       };
     case "sms_sent":
       return {

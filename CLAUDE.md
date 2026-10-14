@@ -320,6 +320,9 @@ firebase.json            Deploys firestore.rules only
 | `contacts/{id}/messages/{id}` | sub-account read; server-only create/delete; client `readAt`-only update | SMS chat thread when the sub-account has dedicated Twilio enabled. Doc id = Twilio MessageSid for natural dedupe on retries. |
 | `contacts/{id}/whatsappMessages/{id}` | sub-account read; server-only create/delete; client `readAt`-only update | WhatsApp chat thread (same model as `messages`). Populated by the WhatsApp inbound webhook + `/api/comms/whatsapp/send` + `/api/comms/whatsapp/send-template`. Doc id = Twilio MessageSid. |
 | `subAccounts/{id}/whatsappTemplates/{id}` | members read; server-only write | WhatsApp message templates (v2). Carries the body + positional variables, Twilio `contentSid`, and the Meta approval `status`. Written by the `whatsapp-templates/*` Admin-SDK routes; status synced live by the QStash approval poll. |
+| `emailEvents/{messageId}` | sub-account read; server-only write | One row per email sent — the queryable mirror of the per-contact `email_sent` activity, and what the Email log page reads. Doc id = Resend message id, so the delivery webhook finds it without a query and a retried send cannot double-count. Carries tenancy, `contactId`, `toEmail`, `subject`, `sentByUid`/`sentByEmail` (null for automated sends), `source` + `sourceId`, `replyTo`, `status`, first-occurrence open/click/bounce/complaint stamps, and `openCount`/`clickCount`. Client writes refused — a client that could write these could fabricate its own open rates. See "Email visibility v1" |
+| `emailReplyTokens/{token}` | server-only (read AND write) | Routing credential for inbound email: maps a 128-bit random lowercase-hex token to one contact + its tenancy. Doc id IS the token, and appears in the public Reply-To address. Unreadable to clients by design — a readable collection would enumerate every contact's reply address, and a writable one would let a workspace point another's address at its own contact |
+| `contacts/{id}/emailMessages/{id}` | sub-account read; server-only create/delete; client `readAt`-only update | Email thread, same model as `messages` / `whatsappMessages` / `metaMessages`. Outbound rows written by `/api/comms/email/send`, inbound by `/api/webhooks/email/inbound`. Doc id = the provider message id where there is one, for natural dedupe on redelivery. Unlike the other channels this one carries a `subject` |
 | `broadcasts/{id}` | sub-account read; server-only write | Bulk-email batch metadata (template, audience filter, totals, status). One per "Send bulk email" action. |
 | `broadcasts/{id}/sends/{contactId}` | sub-account read; server-only write | Per-recipient delivery row. Doc id = contactId for natural dedup. Status: queued/sent/skipped/failed. Carries Resend message id + error string. |
 | `subAccounts/{id}/aiAgent/profile` | sub-account read; server-only write | Shared AI Agent identity. `systemPrompt`, `businessName`, `hoursStart/End`, `timezone`, `escalationKeywords`, `escalationNotifyEmail`, plus optional `websiteUrl` + `websiteKb` (Firecrawl snapshot, ≤6000 chars) + `websiteKbFetchedAt`. One per sub-account. |
@@ -376,6 +379,144 @@ The contacts page exposes a **Send bulk email** action that fans out a chosen em
 - **List + detail pages**: `/sa/[id]/broadcasts` and `/sa/[id]/broadcasts/[broadcastId]` — onSnapshot-driven, so totals and per-recipient status update live as the fan-out drains.
 - **Compliance**: every bulk email goes through the same `validateEmailBody` check that requires `{{unsubscribeLink}}` (CAN-SPAM). Per-recipient unsubscribe links resolve at `/u/[token]`, HMAC-signed with `AUTOMATIONS_TOKEN_SECRET`, flip `contact.emailOptedOut` on click. Pre-flight + live opt-out checks ensure opted-out contacts are never sent.
 - **No SMS broadcasts in v1** — bulk SMS needs A2P 10DLC throughput awareness, consent-source audit fields, and TCPA-grade safeguards that are explicitly deferred to Phase 2.
+
+## Email visibility v1 (sent log, engagement, reply routing, inbound)
+
+Before this, email was outbound-only and effectively invisible. A send wrote one
+`email_sent` row on the contact's activity timeline and nothing else: there was no
+way to see what a team had sent, whether anything was opened, or how one rep
+compared to another — and because Reply-To pointed at whoever clicked Send, the
+prospect's reply landed in that person's personal mailbox and never reached the
+product at all. Operators looked under Broadcasts and Performance, found nothing,
+and reasonably concluded the sends had not happened.
+
+Four parts, all additive. The activity row stays — the contact timeline is still
+the right place to read one conversation.
+
+### `emailEvents/{messageId}` — the queryable mirror
+
+Top-level collection, doc id = the Resend message id (so a webhook delivered
+twice updates one row, and a replayed send cannot double-count). Carries tenancy
+(`agencyId`/`subAccountId`), `contactId`, `toEmail`, `subject`, `sentByUid` /
+`sentByEmail` (null for automated sends — attributing a workflow to its author
+would inflate their numbers), `source` (`manual` | `broadcast` | `workflow` |
+`transactional`) + `sourceId`, `replyTo`, `status`, first-occurrence timestamps
+for open/click/bounce/complaint, and `openCount`/`clickCount`.
+
+Activities could not serve this: they carry no tenancy field, so a
+`collectionGroup` query over them cannot be scoped to a workspace safely.
+
+**Status is forward-only** via `EMAIL_STATUS_RANK` (`types/email-events.ts`).
+Providers do not order their webhooks, so a late `delivered` must not erase a
+recorded open, and engagement must never downgrade a bounce or complaint — those
+are the states an operator has to act on. Events apply in a transaction; the send
+record is written with `{ merge: true }` because a fast open can beat it.
+
+**Written once, centrally, inside `sendEmail()`** via its optional `log`
+parameter — not at each of the two dozen call sites, so a new send path cannot
+quietly skip the log. Wired today: the one-to-one route, broadcasts, workflow
+emails, and quote sends. Platform mail (billing notices, password links) passes
+no `log` and is deliberately absent: it has no contact and does not belong in a
+workspace's outreach log. The workflow *notify* step is also excluded — it emails
+the owner, not a prospect.
+
+### Open / click tracking — `POST /api/webhooks/resend`
+
+Public route, Svix-format signature over the **raw** body (re-serialising parsed
+JSON changes it and the signature stops matching) with a 5-minute replay window,
+verified by `lib/comms/webhook-signature.ts` against `RESEND_WEBHOOK_SECRET`.
+Implemented without the `svix` package — one HMAC over a documented string, and a
+dependency is a supply-chain decision for a repo buyers self-host. Always 200s
+once the signature checks out, including for a message the log has never heard
+of; a non-2xx would have the provider retry mail sent before this existed.
+
+**Two-part setup, and the second part is the one people miss:** the webhook
+endpoint AND per-domain open/click tracking under Resend → Domains. Without the
+latter Resend never emits the events, so `pnpm doctor` warns about it explicitly.
+
+### Reply routing — per send, not per workspace
+
+`/api/comms/email/send` picks Reply-To in this order, and the order is the point:
+
+1. **An address we own and route** (`reply+<token>@EMAIL_INBOUND_DOMAIN`), so the
+   reply lands on the contact's CRM thread where the whole team can read it and
+   the conversation survives the sender leaving.
+2. **The teammate who clicked Send**, when inbound is not configured. A rep
+   chasing a booking needs the answer themselves.
+3. The workspace's `replyToEmail`, last.
+
+An earlier revision put the workspace address first, intending "one inbox per
+client". That is right for bulk and wrong for one-to-one: it left a rep unable to
+see replies to their own outreach. Bulk is unaffected — broadcasts, workflow
+steps and transactional mail go through `workspaceSender()` and still reply to
+the workspace, because nobody wants 2,000 auto-replies in a personal inbox.
+
+### Inbound email — `POST /api/webhooks/email/inbound`
+
+`lib/comms/email-threading.ts` mints **one stable reply address per contact**
+(not per send, so a reply to last week's message still routes) backed by
+`emailReplyTokens/{token}`, a 128-bit random lowercase-hex doc id.
+
+**Why a stored token and not a signed, self-describing address.** The first
+implementation encoded the contact id in the address and HMAC-signed it, needing
+no lookup. Two hard constraints killed it: mail systems treat local parts as
+case-insensitive and routinely deliver them down-cased, but Firestore ids are
+case-**sensitive**, so neither the id nor a signature over it survives the round
+trip; and RFC 5321 caps the local part at 64 octets, which hex-encoding a
+20-character id to dodge the case problem blew past at 80. The token costs one
+indexed read on a low-volume path and is revocable, which a signed address is not.
+
+**Why it is safe.** The address is public the moment the first email goes out and
+anyone can send mail to it. The token carries no structure, so an unknown one is
+simply rejected — there is nothing to forge. Without that gate,
+`reply+<any contact id>@…` would let a stranger inject a fake "reply" onto any
+contact in any workspace. Tenancy is read from the token document, **never** from
+the address or the message body. Rules make `emailReplyTokens` unreadable to
+clients: it is a routing credential, and a readable collection would enumerate
+every contact's reply address.
+
+Accepts two payload shapes (Svix-signed provider webhook, or a bearer-token POST
+from a forwarder such as a Cloudflare Email Worker) and normalises both, so
+swapping providers touches nothing downstream. Quoted history is trimmed so the
+inbox preview shows the actual reply. An unroutable message — a bounce notice,
+spam, address-guessing — is accepted and dropped; a **storage** failure returns
+500, because that reply would otherwise be lost.
+
+### `email` as an inbox channel
+
+`ConversationChannel` gains `"email"`, messages live in
+`contacts/{id}/emailMessages` (member-read / `readAt`-only-update /
+server-only-create, same shape as `messages` and `whatsappMessages`), and
+`ConversationThread` merges them alongside SMS/WhatsApp/Meta. The composer can
+send email and is the only channel with a subject field, prefilled from the
+newest message on the thread via a `limit(1)` listener so replies are one
+keystroke. Email is offered whenever the contact **has an address** — unlike SMS
+and WhatsApp it needs no per-workspace provisioning, since it rides the shared
+Resend sender every deployment already has.
+
+### Operator surface
+
+**Sidebar → Email log** (`/sa/[id]/email-log`), next to Broadcasts deliberately,
+because that is where people looked. Date range, type and sender filters, KPI
+tiles, a per-sender roll-up answering "how is my team doing", and a send list
+with per-row status. Reads `emailEvents` directly — rows are member-readable, so
+an API layer would add only latency and a second place for the tenancy filter to
+be written wrongly. Writes stay server-only: a client that could write these
+could fabricate its own open rates.
+
+**It distinguishes "nobody opened it" from "tracking was never configured."**
+Those look identical in the data and only one of them is a reason to change how
+you write emails, so when no engagement has ever arrived the tiles show `—` and
+the page names the missing webhook.
+
+### Setup contract
+
+`RESEND_WEBHOOK_SECRET` (engagement) and `EMAIL_INBOUND_DOMAIN` +
+`EMAIL_INBOUND_WEBHOOK_SECRET` (inbound) — all **optional**. Unset, sends are
+still logged and replies still reach the sender's own mailbox, exactly as before.
+Run `firebase deploy --only firestore:rules,firestore:indexes` after pulling
+this: three new rule blocks and three `emailEvents` composite indexes. Regression
+coverage: `scripts/verify-email-visibility.mts` (44 checks, mutation-tested).
 
 ## AI Agents (Web Chat + SMS) v1
 

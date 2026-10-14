@@ -80,6 +80,18 @@ const PUBLIC_PATHS = [
   // Security: X-Hub-Signature-256 (HMAC of the raw body with the app secret)
   // verified inside the route; per-sub-account routing by Page / IG id.
   "/api/webhooks/meta",
+  // Resend delivery events (opened / clicked / bounced / complained) feeding
+  // the sent-email log. Public from the Resend cloud. Security: Svix-format
+  // signature over the raw body, verified in the route against
+  // RESEND_WEBHOOK_SECRET, with a 5-minute timestamp window against replay.
+  "/api/webhooks/resend",
+  // Inbound email — a prospect's reply, routed back onto their CRM thread.
+  // Public from the inbound mail provider (or a forwarder). Security: Svix
+  // signature or a constant-time bearer check against
+  // EMAIL_INBOUND_WEBHOOK_SECRET, then the recipient address must carry a
+  // reply token we actually minted. Tenancy comes from the token document,
+  // never from the message.
+  "/api/webhooks/email/inbound",
   // Post-payment GitHub-invite endpoint. Public POST from the buyer's
   // browser on the /thank-you page. Security: 256-bit claim token in
   // the request body must hash-match the value stored on

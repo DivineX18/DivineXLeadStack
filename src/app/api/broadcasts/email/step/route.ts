@@ -218,6 +218,13 @@ export async function POST(request: Request) {
       text,
       html,
       ...workspaceSender(subAccount),
+      log: {
+        agencyId: broadcast.agencyId,
+        subAccountId: broadcast.subAccountId,
+        contactId,
+        source: "broadcast",
+        sourceId: broadcastId,
+      },
     });
     resendMessageId = result.id;
   } catch (err) {

@@ -190,6 +190,8 @@ export type ActivityType =
   | "task_completed"
   | "form_submitted"
   | "email_sent"
+  /** A prospect replied by email. Written by the inbound webhook. */
+  | "email_received"
   | "sms_sent"
   | "whatsapp_sent"
   // Operator replied on the BETA Facebook Messenger / Instagram DM inbox.

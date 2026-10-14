@@ -11,7 +11,7 @@ import { CheckCheck } from "lucide-react";
 import { getFirebaseDb } from "@/lib/firebase/client";
 import { toDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { MessageDoc } from "@/types/messages";
+import type { MessageDoc, MessageDirection } from "@/types/messages";
 import type { ConversationChannel } from "@/types/conversations";
 import type { ConversationTheme } from "@/hooks/use-conversation-theme";
 
@@ -22,6 +22,7 @@ const CHANNEL_LABEL: Record<ConversationChannel, string> = {
   whatsapp: "WhatsApp",
   messenger: "Messenger",
   instagram: "Instagram",
+  email: "Email",
 };
 
 const CHANNEL_CHIP: Record<ConversationChannel, string> = {
@@ -29,10 +30,21 @@ const CHANNEL_CHIP: Record<ConversationChannel, string> = {
   whatsapp: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
   messenger: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
   instagram: "bg-pink-500/10 text-pink-700 dark:text-pink-400",
+  email: "bg-sky-500/10 text-sky-700 dark:text-sky-400",
 };
 
 /** Meta rows carry their own channel discriminator on the doc. */
 type MetaMessageDoc = MessageDoc & { channel?: ConversationChannel };
+
+/** Email rows carry a subject line, which no other channel has. Partial
+ *  because inbound mail is written by the webhook from whatever the provider
+ *  sent, not by a route that controls every field. */
+type EmailMessageDoc = Partial<MessageDoc> & {
+  id: string;
+  subject?: string;
+  body?: string;
+  direction?: MessageDirection;
+};
 
 /**
  * The merged conversation timeline. Subscribes to the contact's SMS
@@ -51,9 +63,11 @@ export function ConversationThread({
   const [sms, setSms] = useState<MessageDoc[]>([]);
   const [wa, setWa] = useState<MessageDoc[]>([]);
   const [meta, setMeta] = useState<MetaMessageDoc[]>([]);
+  const [email, setEmail] = useState<EmailMessageDoc[]>([]);
   const [smsReady, setSmsReady] = useState(false);
   const [waReady, setWaReady] = useState(false);
   const [metaReady, setMetaReady] = useState(false);
+  const [emailReady, setEmailReady] = useState(false);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -94,10 +108,24 @@ export function ConversationThread({
       },
       () => setMetaReady(true),
     );
+    const unsubEmail = onSnapshot(
+      query(
+        collection(db, `contacts/${contactId}/emailMessages`),
+        orderBy("createdAt", "asc"),
+      ),
+      (snap) => {
+        setEmail(
+          snap.docs.map((d) => ({ id: d.id, ...d.data() }) as EmailMessageDoc),
+        );
+        setEmailReady(true);
+      },
+      () => setEmailReady(true),
+    );
     return () => {
       unsubSms();
       unsubWa();
       unsubMeta();
+      unsubEmail();
     };
   }, [contactId]);
 
@@ -109,12 +137,19 @@ export function ConversationThread({
         ...m,
         channel: (m.channel ?? "messenger") as ConversationChannel,
       })),
+      ...email.map((m) => ({
+        ...(m as MessageDoc),
+        // The bubble renders `body`; an email with only a subject (rare, but
+        // real) would otherwise show as an empty bubble.
+        body: m.subject ? `${m.subject}\n\n${m.body ?? ""}`.trim() : (m.body ?? ""),
+        channel: "email" as const,
+      })),
     ];
     all.sort((a, b) => toMillis(a.createdAt) - toMillis(b.createdAt));
     return all;
-  }, [sms, wa, meta]);
+  }, [sms, wa, meta, email]);
 
-  const hydrated = smsReady && waReady && metaReady;
+  const hydrated = smsReady && waReady && metaReady && emailReady;
 
   useEffect(() => {
     if (scrollerRef.current) {

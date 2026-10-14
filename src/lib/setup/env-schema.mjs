@@ -208,6 +208,50 @@ export const GROUPS = [
     },
   },
   {
+    title: "Email open + click tracking (Resend webhook)",
+    tier: "feature",
+    off: "the Email log records every send but cannot show opens or clicks",
+    vars: [["RESEND_WEBHOOK_SECRET", "req", startsWith("whsec_")]],
+    deep(add, env) {
+      // The secret alone is not enough: Resend only emits open/click events
+      // for a domain where that tracking is switched on, which is a dashboard
+      // setting this app cannot read. Worth saying, because the symptom is a
+      // believable-looking 0% open rate.
+      if (env.has("RESEND_WEBHOOK_SECRET"))
+        add(
+          "warn",
+          "also enable open + click tracking per domain under Resend -> Domains, or no open/click events are ever sent",
+        );
+    },
+  },
+  {
+    title: "Inbound email (replies into the CRM)",
+    tier: "feature",
+    off: "replies go to whoever clicked Send, not into Conversations",
+    vars: [
+      ["EMAIL_INBOUND_DOMAIN", "req", (v) =>
+        v.includes("@") || v.includes("/")
+          ? "should be a bare subdomain, e.g. inbound.yourdomain.com"
+          : v.includes(".")
+            ? null
+            : "should be a full subdomain, e.g. inbound.yourdomain.com"],
+      ["EMAIL_INBOUND_WEBHOOK_SECRET", "req"],
+    ],
+    deep(add, env) {
+      // Sending and receiving on the same hostname is legal but a common way
+      // to disturb a working SPF/DKIM/DMARC setup, so flag the overlap.
+      if (
+        env.has("EMAIL_INBOUND_DOMAIN") &&
+        env.has("EMAIL_FROM") &&
+        env.val("EMAIL_FROM").includes(env.val("EMAIL_INBOUND_DOMAIN"))
+      )
+        add(
+          "warn",
+          "EMAIL_INBOUND_DOMAIN is the same host you send from; a separate subdomain keeps inbound MX records away from your sending DNS",
+        );
+    },
+  },
+  {
     title: "SMS (Twilio)",
     tier: "feature",
     off: "SMS send + STOP/START opt-out disabled",

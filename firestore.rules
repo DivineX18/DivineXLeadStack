@@ -946,6 +946,41 @@ service cloud.firestore {
         ) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt']);
         allow create, delete: if false;
       }
+      // Email thread — same model as the SMS / WhatsApp / Meta threads above.
+      // Outbound rows are written by /api/comms/email/send, inbound by the
+      // /api/webhooks/email/inbound webhook. Reads are member-scoped; creates
+      // and deletes are server-only; the only client mutation is `readAt`.
+      match /emailMessages/{messageId} {
+        allow read: if canAccessSub(
+          get(/databases/$(database)/documents/contacts/$(contactId)).data.subAccountId,
+          get(/databases/$(database)/documents/contacts/$(contactId)).data.agencyId
+        );
+        allow update: if canAccessSub(
+          get(/databases/$(database)/documents/contacts/$(contactId)).data.subAccountId,
+          get(/databases/$(database)/documents/contacts/$(contactId)).data.agencyId
+        ) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt']);
+        allow create, delete: if false;
+      }
+    }
+
+    // Sent-email log. Members of the workspace can READ their own workspace's
+    // rows (the log page queries by subAccountId); every write is server-side,
+    // from the send routes and the provider event webhook. Client writes are
+    // refused outright because open and click counts are the basis of how a
+    // teammate's work gets judged — a client that could write them could
+    // fabricate its own engagement numbers.
+    match /emailEvents/{eventId} {
+      allow read: if canAccessSub(resource.data.subAccountId, resource.data.agencyId);
+      allow create, update, delete: if false;
+    }
+
+    // Inbound reply-address tokens. Server-only in BOTH directions: the token
+    // is the routing credential for inbound mail, so a client that could read
+    // the collection could enumerate every contact's reply address, and one
+    // that could write it could point another workspace's address at a contact
+    // of its own. Nothing in the UI needs these.
+    match /emailReplyTokens/{token} {
+      allow read, write: if false;
     }
 
     match /deals/{dealId} {
