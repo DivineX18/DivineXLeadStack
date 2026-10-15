@@ -419,10 +419,15 @@ ck(
     readFileSync("src/lib/shell/ascend-shell-paths.ts", "utf8"),
   ),
 );
-// A workspace that has never sent email should see no card at all.
+// Rendering nothing is indistinguishable from the feature being broken, and
+// was read exactly that way the first time ("I don't see the emails"). The
+// panel must say what it is waiting for, AND that history predating it was
+// never captured, so nobody hunts for emails that were never recorded.
 ck(
-  "ascend: the summary renders nothing before the first send",
-  /rows\.length === 0\) return null/.test(summary),
+  "ascend: the summary explains itself before the first send",
+  !/rows\.length === 0\) return null/.test(summary) &&
+    /No email sent from this workspace yet/.test(summary) &&
+    /before this was switched on were never recorded/.test(summary),
 );
 // Same honesty requirement as the full page.
 ck(

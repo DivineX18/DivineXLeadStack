@@ -56,7 +56,7 @@ export function EmailActivitySummary() {
       (r) => !r.openedAt && !r.clickedAt && !r.bouncedAt && !r.complainedAt,
     );
 
-  if (!loaded || rows.length === 0) return null;
+  if (!loaded) return null;
 
   const recent = rows.slice(0, 5);
 
@@ -78,6 +78,26 @@ export function EmailActivitySummary() {
         </Link>
       </div>
 
+      {rows.length === 0 ? (
+        /**
+         * Rendering nothing here is indistinguishable from the feature being
+         * broken, which is exactly how it was read the first time: the panel
+         * was built to stay invisible until a workspace had sent something,
+         * and the operator reasonably reported "I don't see the emails".
+         *
+         * The second sentence is the one that matters. Sends are only
+         * recorded from the day this shipped, so email the team sent last
+         * week is genuinely absent rather than missing, and saying so stops
+         * someone hunting for history that was never captured.
+         */
+        <p className="mt-3 text-xs leading-relaxed" style={{ color: "var(--dx-text-muted)" }}>
+          No email sent from this workspace yet. Every send from the CRM shows
+          up here with who sent it and whether it was opened. Emails sent
+          before this was switched on were never recorded, so they will not
+          appear.
+        </p>
+      ) : (
+      <>
       <div className="mt-4 grid grid-cols-3 gap-3">
         <Figure label="Sent" value={String(stats.sent)} />
         <Figure
@@ -119,6 +139,8 @@ export function EmailActivitySummary() {
         <p className="mt-3 text-[11px]" style={{ color: "var(--dx-text-muted)" }}>
           Open tracking is not reporting yet, so these show as sent only.
         </p>
+      )}
+      </>
       )}
     </Panel>
   );
