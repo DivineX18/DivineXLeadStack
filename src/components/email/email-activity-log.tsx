@@ -116,10 +116,27 @@ export function EmailActivityLog({
 
   const stats = useMemo(() => {
     const sent = filtered.length;
-    const opened = filtered.filter((r) => r.openedAt).length;
-    const clicked = filtered.filter((r) => r.clickedAt).length;
-    const failed = filtered.filter((r) => r.bouncedAt || r.complainedAt).length;
-    return { sent, opened, clicked, failed };
+    /**
+     * Engagement rates are computed over TRACKED rows only.
+     *
+     * Rows recovered from older records (see `backfilled`) were sent when
+     * nothing was watching, so their opens are unknown rather than zero.
+     * Counting them in the denominator would drag every rate towards zero and
+     * make the team look worse the more history we recovered, which is the
+     * opposite of what recovering it is for.
+     */
+    const tracked = filtered.filter((r) => !r.backfilled);
+    const opened = tracked.filter((r) => r.openedAt).length;
+    const clicked = tracked.filter((r) => r.clickedAt).length;
+    const failed = tracked.filter((r) => r.bouncedAt || r.complainedAt).length;
+    return {
+      sent,
+      tracked: tracked.length,
+      recovered: sent - tracked.length,
+      opened,
+      clicked,
+      failed,
+    };
   }, [filtered]);
 
   /**
@@ -129,20 +146,28 @@ export function EmailActivityLog({
    * instead of implying the former.
    */
   const trackingUnproven =
-    rows.length > 0 &&
-    rows.every((r) => !r.openedAt && !r.clickedAt && !r.bouncedAt && !r.complainedAt);
+    // Only rows that could have carried engagement count towards this: a log
+    // made entirely of recovered history proves nothing about whether
+    // tracking works today.
+    rows.some((r) => !r.backfilled) &&
+    rows
+      .filter((r) => !r.backfilled)
+      .every((r) => !r.openedAt && !r.clickedAt && !r.bouncedAt && !r.complainedAt);
 
   /** Per-sender roll-up: the "how is my team doing" question. */
   const leaderboard = useMemo(() => {
     const by = new Map<
       string,
-      { label: string; sent: number; opened: number; clicked: number }
+      { label: string; sent: number; tracked: number; opened: number; clicked: number }
     >();
     for (const r of filtered) {
       const key = r.sentByUid ?? "automated";
       const label = r.sentByUid ? r.sentByEmail || r.sentByUid : "Automated";
-      const cur = by.get(key) ?? { label, sent: 0, opened: 0, clicked: 0 };
+      const cur = by.get(key) ?? { label, sent: 0, tracked: 0, opened: 0, clicked: 0 };
       cur.sent += 1;
+      // Same rule as the headline figures: an untracked send cannot count
+      // against the person who sent it.
+      if (!r.backfilled) cur.tracked += 1;
       if (r.openedAt) cur.opened += 1;
       if (r.clickedAt) cur.clicked += 1;
       by.set(key, cur);
@@ -210,14 +235,14 @@ export function EmailActivityLog({
           icon={<MailOpen className="h-4 w-4" />}
           label="Opened"
           value={stats.opened}
-          pct={stats.sent ? stats.opened / stats.sent : null}
+          pct={stats.tracked ? stats.opened / stats.tracked : null}
           unknown={trackingUnproven}
         />
         <Stat
           icon={<MousePointerClick className="h-4 w-4" />}
           label="Clicked"
           value={stats.clicked}
-          pct={stats.sent ? stats.clicked / stats.sent : null}
+          pct={stats.tracked ? stats.clicked / stats.tracked : null}
           unknown={trackingUnproven}
         />
         <Stat
@@ -252,8 +277,10 @@ export function EmailActivityLog({
                   {!trackingUnproven && (
                     <>
                       {" · "}
-                      {row.sent ? Math.round((row.opened / row.sent) * 100) : 0}%
-                      opened
+                      {row.tracked
+                        ? Math.round((row.opened / row.tracked) * 100)
+                        : 0}
+                      % opened
                     </>
                   )}
                 </span>
@@ -261,6 +288,16 @@ export function EmailActivityLog({
             ))}
           </div>
         </section>
+      )}
+
+      {stats.recovered > 0 && (
+        <p className="rounded-lg border border-dashed bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
+          {stats.recovered} of these were recovered from records kept before
+          this log existed. They show who they went to and when, but not
+          whether they were opened, because nothing was tracking that at the
+          time. They are left out of the open and click rates above rather
+          than counted as unopened.
+        </p>
       )}
 
       <section className="overflow-hidden rounded-xl border bg-card">
@@ -386,6 +423,19 @@ function Stat({
 }
 
 function StatusBadge({ row }: { row: EmailEventDoc }) {
+  // A recovered row has no engagement data and never will. Showing it as
+  // "Sent" alongside tracked sends invites reading it as "sent, not opened",
+  // so it says plainly that nothing was watching.
+  if (row.backfilled) {
+    return (
+      <span
+        className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+        title="Sent before open tracking was switched on, so whether it was opened is unknown."
+      >
+        Sent · not tracked
+      </span>
+    );
+  }
   const spec = row.complainedAt
     ? { label: "Complained", cls: "bg-destructive/10 text-destructive" }
     : row.bouncedAt

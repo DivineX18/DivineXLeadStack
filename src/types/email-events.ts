@@ -61,6 +61,23 @@ export interface EmailEventDoc {
   /** Bounce or complaint detail from the provider, for the one case where an
    *  operator needs to know WHY a send failed. */
   failureDetail: string | null;
+
+  /**
+   * True when this row was RECOVERED from an older record (a contact's
+   * `email_sent` activity, or a broadcast send row) rather than written at
+   * send time.
+   *
+   * It exists to stop the log lying. Nothing was watching those sends, so
+   * their engagement is UNKNOWN, not zero — and a row with `openedAt: null`
+   * is otherwise indistinguishable from one that was tracked and genuinely
+   * never opened. Without this flag a backfill would quietly drag every open
+   * rate towards zero and make a team look worse than it is.
+   *
+   * Absent on rows written at send time, which read as false.
+   */
+  backfilled?: boolean;
+  /** Where a recovered row came from, for anyone auditing the backfill. */
+  backfillSource?: "activity" | "broadcast";
 }
 
 export const EMAIL_SOURCES = [

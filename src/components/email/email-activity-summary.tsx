@@ -39,9 +39,13 @@ export function EmailActivitySummary() {
   }, [subAccountId]);
 
   const stats = useMemo(() => {
-    const opened = rows.filter((r) => r.openedAt).length;
-    const failed = rows.filter((r) => r.bouncedAt || r.complainedAt).length;
-    return { sent: rows.length, opened, failed };
+    // Rows recovered from before this log existed carry no engagement data,
+    // so they are counted as sends but excluded from the rate. Including them
+    // would drag the open rate towards zero the more history we recovered.
+    const tracked = rows.filter((r) => !r.backfilled);
+    const opened = tracked.filter((r) => r.openedAt).length;
+    const failed = tracked.filter((r) => r.bouncedAt || r.complainedAt).length;
+    return { sent: rows.length, tracked: tracked.length, opened, failed };
   }, [rows]);
 
   /**
@@ -51,10 +55,12 @@ export function EmailActivitySummary() {
    * signal at all, show no percentage rather than a confident zero.
    */
   const trackingUnproven =
-    rows.length > 0 &&
-    rows.every(
-      (r) => !r.openedAt && !r.clickedAt && !r.bouncedAt && !r.complainedAt,
-    );
+    rows.some((r) => !r.backfilled) &&
+    rows
+      .filter((r) => !r.backfilled)
+      .every(
+        (r) => !r.openedAt && !r.clickedAt && !r.bouncedAt && !r.complainedAt,
+      );
 
   if (!loaded) return null;
 
@@ -105,9 +111,9 @@ export function EmailActivitySummary() {
           value={
             trackingUnproven
               ? "-"
-              : `${stats.sent ? Math.round((stats.opened / stats.sent) * 100) : 0}%`
+              : `${stats.tracked ? Math.round((stats.opened / stats.tracked) * 100) : 0}%`
           }
-          sub={trackingUnproven ? "not tracked yet" : `${stats.opened} of ${stats.sent}`}
+          sub={trackingUnproven ? "not tracked yet" : `${stats.opened} of ${stats.tracked} tracked`}
         />
         <Figure
           label="Bounced"
@@ -127,7 +133,7 @@ export function EmailActivitySummary() {
               </span>
             </span>
             <span className="shrink-0 tabular-nums" style={{ color: "var(--dx-text-muted)" }}>
-              {r.openedAt ? "opened" : "sent"}
+              {r.openedAt ? "opened" : r.backfilled ? "sent" : "sent"}
               {" · "}
               {toDate(r.sentAt)?.toLocaleDateString() ?? ""}
             </span>

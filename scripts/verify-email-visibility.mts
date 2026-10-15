@@ -366,6 +366,63 @@ const detail = readFileSync(
 ck("inbox: email is offered when the contact has an address",
   /if \(contact\?\.email\) availableChannels\.push\("email"\)/.test(detail));
 
+// ---------------------------------------------------------------------------
+// 9. Recovered history must not be mistaken for tracked history.
+//
+// Backfilled rows were sent when nothing was watching, so their opens are
+// UNKNOWN, not zero. Counting them in a denominator drags every rate towards
+// zero and makes a team look worse the MORE history is recovered, which is the
+// opposite of the point.
+// ---------------------------------------------------------------------------
+const logCode = strip(readFileSync("src/components/email/email-activity-log.tsx", "utf8"));
+const sumCode = strip(readFileSync("src/components/email/email-activity-summary.tsx", "utf8"));
+for (const [name, code] of [["log", logCode], ["summary", sumCode]] as const) {
+  // Assert the DENOMINATOR itself, not merely that the word "tracked"
+  // appears somewhere. The first version of this checked for the filter
+  // expression and `stats.tracked` anywhere in the file, and both survived a
+  // mutation that put `stats.sent` back in the divisor — it was testing
+  // vocabulary, not arithmetic.
+  ck(
+    `${name}: engagement rates divide by tracked sends, not all sends`,
+    /stats\.opened \/ stats\.tracked/.test(code) &&
+      !/stats\.opened \/ stats\.sent/.test(code),
+  );
+  ck(
+    `${name}: the tracked set is the one that excludes recovered rows`,
+    /const tracked = [a-z]+\.filter\(\(r\) => !r\.backfilled\)/.test(code),
+  );
+}
+ck(
+  "log: a recovered row says engagement was not tracked, not that it was unopened",
+  /row\.backfilled/.test(logCode) && /not tracked/.test(logCode),
+);
+// A log made entirely of recovered rows proves nothing about whether tracking
+// works today, so it must not trigger the "tracking is broken" notice either.
+for (const [name, code] of [["log", logCode], ["summary", sumCode]] as const) {
+  ck(
+    `${name}: the not-tracked notice ignores recovered-only history`,
+    /rows\.some\(\(r\) => !r\.backfilled\)/.test(code),
+  );
+}
+// The backfill itself must never overwrite a row the live path wrote: that row
+// holds real engagement data this reconstruction cannot know.
+{
+  const bf = strip(readFileSync("scripts/backfill-email-events.mts", "utf8"));
+  ck(
+    "backfill: never overwrites a row written at send time",
+    /existing\.exists && existing\.data\(\)\?\.backfilled !== true/.test(bf),
+  );
+  ck(
+    "backfill: keyed by provider message id, so a re-run cannot duplicate",
+    /collection\("emailEvents"\)\.doc\(messageId\)/.test(bf),
+  );
+  ck(
+    "backfill: marks what it writes, and where it came from",
+    /backfilled: true/.test(bf) && /backfillSource/.test(bf),
+  );
+  ck("backfill: supports a dry run", /--dry/.test(bf) && /DRY/.test(bf));
+}
+
 // A 0% open rate and "tracking was never configured" look identical. Claiming
 // the former is the kind of wrong number someone makes a decision on.
 // The log's implementation moved into a shared component so both shells can
