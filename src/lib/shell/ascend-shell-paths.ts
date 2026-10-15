@@ -45,6 +45,8 @@ const EXACT_MAP: Record<string, string> = {
   "/calendar": "/grow/calendar",
   "/ai-agents": "/agents",
   "/reports": "/performance",
+  // Index only: the log is a single page, there is nothing deeper to reach.
+  "/email-log": "/performance/email",
   "/dashboard/settings": "/settings",
 };
 

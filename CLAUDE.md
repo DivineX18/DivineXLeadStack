@@ -496,8 +496,24 @@ Resend sender every deployment already has.
 
 ### Operator surface
 
-**Sidebar → Email log** (`/sa/[id]/email-log`), next to Broadcasts deliberately,
-because that is where people looked. Date range, type and sender filters, KPI
+Reachable from **both shells**, because the Flow sidebar does not render in the
+Ascend shell at all — a Flow-only entry is not merely hard to find there, it is
+absent (the mistake that hid the traffic card until it was mounted onto
+Performance):
+
+- **Flow:** Sidebar → Email log (`/sa/[id]/email-log`), next to Broadcasts
+  deliberately, because that is where people looked.
+- **Ascend:** Performance → an "Email, last 30 days" summary panel
+  (`EmailActivitySummary`) with the full log one click away at
+  `/app/performance/email`. `/email-log` is mapped in
+  `lib/shell/ascend-shell-paths.ts` so a Flow-relative link resolves to the
+  Ascend route instead of yanking the operator into Flow chrome.
+
+Both mount the **same** `EmailActivityLog` component (a `variant` prop switches
+only chrome), so the two shells cannot show different numbers. Both wrap it in
+`SubAccountProvider ... inAscendShell` — required, because `useSubAccount()`
+throws without a provider and a throw in a client component takes the page to
+the error boundary. Date range, type and sender filters, KPI
 tiles, a per-sender roll-up answering "how is my team doing", and a send list
 with per-row status. Reads `emailEvents` directly — rows are member-readable, so
 an API layer would add only latency and a second place for the tenancy filter to

@@ -350,10 +350,66 @@ ck("inbox: email is offered when the contact has an address",
 
 // A 0% open rate and "tracking was never configured" look identical. Claiming
 // the former is the kind of wrong number someone makes a decision on.
-const page = readFileSync("src/app/(dashboard)/sa/[subAccountId]/email-log/page.tsx", "utf8");
+// The log's implementation moved into a shared component so both shells can
+// mount it; this assertion follows it rather than the thin page wrapper.
+const page = readFileSync("src/components/email/email-activity-log.tsx", "utf8");
 ck(
   "log page: distinguishes no-engagement from no-tracking",
   /trackingUnproven/.test(page) && /webhooks\/resend/.test(page),
+);
+
+// ---------------------------------------------------------------------------
+// 8. Reachable from BOTH shells.
+//
+// The Flow sidebar does not render in the Ascend shell, so a Flow-only entry
+// is not "hard to find" there, it is absent. That exact mistake hid the
+// traffic card until it was mounted onto Performance, and it would have hidden
+// this too.
+// ---------------------------------------------------------------------------
+const ascendPage = readFileSync("src/app/app/performance/email/page.tsx", "utf8");
+const flowPage = readFileSync(
+  "src/app/(dashboard)/sa/[subAccountId]/email-log/page.tsx",
+  "utf8",
+);
+const perf = readFileSync("src/app/app/performance/page.tsx", "utf8");
+const summary = readFileSync("src/components/email/email-activity-summary.tsx", "utf8");
+
+ck("ascend: there is an Ascend route for the log", /EmailActivityLog/.test(ascendPage));
+// ONE implementation. A second copy would be a second set of numbers that can
+// disagree with the first.
+ck(
+  "ascend: the Flow page delegates rather than re-implementing",
+  /EmailActivityLog/.test(flowPage) && !/subscribeToEmailEvents/.test(flowPage),
+);
+// useSubAccount() THROWS with no provider, and a throw in a client component
+// takes the whole page to the error boundary. That is the bug that broke the
+// Performance page once already.
+for (const [name, code] of [
+  ["the Ascend log route", ascendPage],
+  ["the Performance summary", perf],
+] as const) {
+  ck(
+    `ascend: ${name} mounts a SubAccountProvider`,
+    /<SubAccountProvider/.test(code) && /inAscendShell/.test(code),
+  );
+}
+// Without inAscendShell, saPath() emits /sa/... links that yank the operator
+// out of Ascend chrome and into Flow.
+ck(
+  "ascend: a Flow-relative /email-log link resolves to the Ascend route",
+  /"\/email-log": "\/performance\/email"/.test(
+    readFileSync("src/lib/shell/ascend-shell-paths.ts", "utf8"),
+  ),
+);
+// A workspace that has never sent email should see no card at all.
+ck(
+  "ascend: the summary renders nothing before the first send",
+  /rows\.length === 0\) return null/.test(summary),
+);
+// Same honesty requirement as the full page.
+ck(
+  "ascend: the summary distinguishes no-engagement from no-tracking",
+  /trackingUnproven/.test(summary),
 );
 
 console.log(fails === 0 ? "\nAll checks passed." : `\n${fails} check(s) failed.`);

@@ -7,6 +7,7 @@ import { formatCents } from "@/components/ascend/metric-card";
 import { PageHeader, Panel } from "@/components/divinex/ui";
 import { FunnelPerformancePanel } from "@/components/divinex/funnel-performance-panel";
 import { GoogleMetricsCard } from "@/components/dashboard/google-metrics-card";
+import { EmailActivitySummary } from "@/components/email/email-activity-summary";
 import { SubAccountProvider } from "@/context/sub-account-context";
 
 export const dynamic = "force-dynamic";
@@ -68,6 +69,13 @@ export default async function PerformancePage() {
           uses for the same reason. */}
       <SubAccountProvider subAccountId={saId} inAscendShell>
         <GoogleMetricsCard variant="ascend" />
+      </SubAccountProvider>
+
+      {/* Outbound email. A summary with the detail one click away, because
+          "did that go out, and did they read it" is a question operators ask
+          far more often than they want a full table on this page. */}
+      <SubAccountProvider subAccountId={saId} inAscendShell>
+        <EmailActivitySummary />
       </SubAccountProvider>
 
       <Panel className="mt-8">
