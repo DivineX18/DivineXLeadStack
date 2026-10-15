@@ -332,6 +332,24 @@ ck(
   /emailMessages/.test(thread) && /channel: "email" as const/.test(thread),
 );
 ck("inbox: email hydration is awaited before render", /emailReady/.test(thread));
+// The thread reads the message subcollection; the conversation upsert only
+// maintains the inbox INDEX. Without an outbound row, opening a conversation
+// shows the prospect's reply and not the email it replied to — the wrong half,
+// and the one most often wanted: "what exactly did we send them?"
+ck(
+  "inbox: a sent email is stored as a message row, not only as an index entry",
+  /collection\("emailMessages"\)/.test(sendRoute) &&
+    /direction: "outbound"/.test(sendRoute) &&
+    /\bbody,/.test(sendRoute),
+);
+// Shared id with the log row, so the two can be read together.
+{
+  const i = sendRoute.indexOf('collection("emailMessages")');
+  ck(
+    "inbox: the outbound row is keyed by the provider message id",
+    i !== -1 && /\.doc\(messageId\)/.test(sendRoute.slice(i, i + 200)),
+  );
+}
 const composer = readFileSync("src/components/conversations/conversation-composer.tsx", "utf8");
 ck(
   "inbox: the composer can send email, with a subject",

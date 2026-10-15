@@ -484,8 +484,12 @@ spam, address-guessing — is accepted and dropped; a **storage** failure return
 
 ### `email` as an inbox channel
 
-`ConversationChannel` gains `"email"`, messages live in
-`contacts/{id}/emailMessages` (member-read / `readAt`-only-update /
+`ConversationChannel` gains `"email"`. Messages live in
+`contacts/{id}/emailMessages` — **outbound rows too**, written by the send
+route and keyed by the provider message id so they share an identifier with
+the `emailEvents` log entry. The conversation upsert only maintains the inbox
+*index*, so without the outbound row an operator opening a thread would see
+the prospect's reply and not the email it replied to (member-read / `readAt`-only-update /
 server-only-create, same shape as `messages` and `whatsappMessages`), and
 `ConversationThread` merges them alongside SMS/WhatsApp/Meta. The composer can
 send email and is the only channel with a subject field, prefilled from the

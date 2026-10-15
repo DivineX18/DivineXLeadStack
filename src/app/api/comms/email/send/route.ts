@@ -106,6 +106,46 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 502 });
   }
 
+  /**
+   * Store the sent message itself.
+   *
+   * The conversation upsert below only maintains the inbox INDEX (preview,
+   * unread, last channel). The thread view reads the message subcollection,
+   * so without this row an operator opening the conversation would see the
+   * prospect's reply and not the email it was replying to — which is the
+   * wrong half, and the one most often needed: "what exactly did we send
+   * them?"
+   *
+   * Doc id is the provider message id, so this row and the `emailEvents`
+   * log entry for the same send share an identifier and can be read
+   * together. Best-effort: the mail has already gone, so a storage failure
+   * must not be reported to the operator as a failed send.
+   */
+  try {
+    await getAdminDb()
+      .collection("contacts")
+      .doc(contactId)
+      .collection("emailMessages")
+      .doc(messageId)
+      .set({
+        direction: "outbound",
+        subject,
+        body,
+        fromEmail: tenantFrom(subAccount) ?? process.env.EMAIL_FROM ?? null,
+        toEmail: contact.email,
+        replyTo: replyTo ?? null,
+        subAccountId: contact.subAccountId,
+        agencyId: contact.agencyId,
+        contactId,
+        sentByUid: auth.uid,
+        createdAt: FieldValue.serverTimestamp(),
+        // Outbound rows are never "unread" to the team that sent them.
+        readAt: FieldValue.serverTimestamp(),
+      });
+  } catch (err) {
+    console.warn("[email/send] message row write failed", err);
+  }
+
   // Put the send on the contact's inbox thread, so an emailed contact appears
   // in Conversations instead of only on their profile — and so the reply,
   // when it arrives, lands on a thread that already has context.
