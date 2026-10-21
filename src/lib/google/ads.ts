@@ -108,10 +108,21 @@ export function adsSearch(
   accessToken: string,
   customerId: string,
   query: string,
-  opts: { loginCustomerId?: string | null; pageSize?: number } = {},
+  opts: { loginCustomerId?: string | null } = {},
 ): Promise<AdsCall> {
+  // NO pageSize. The first real call sent one, from documentation habit, and
+  // v26 refused it outright:
+  //
+  //   {"requestError":"PAGE_SIZE_NOT_SUPPORTED"}
+  //   "Setting the page size is not supported. Search Responses will have
+  //    fixed page size of '10000' rows."
+  //
+  // Worth stating plainly because it is the whole argument for calling before
+  // fixturing: a fixture written alongside that request would have agreed with
+  // it, and the tests would have passed while every query failed. Paging, when
+  // it is ever needed, is `pageToken`, not a size.
   return adsCall(`customers/${encodeURIComponent(customerId)}/googleAds:search`, accessToken, {
-    body: { query, pageSize: opts.pageSize ?? 100 },
+    body: { query },
     loginCustomerId: opts.loginCustomerId ?? null,
   });
 }
@@ -158,4 +169,115 @@ export function customerIdFromResourceName(resourceName: unknown): string | null
   if (typeof resourceName !== "string") return null;
   const m = /^customers\/(\d{1,20})$/.exec(resourceName.trim());
   return m ? m[1] : null;
+}
+
+/* ───────────── readers, written against observed responses ───────────── */
+
+/**
+ * The accessible-customer list. Confirmed shape, from the first real call:
+ *
+ *   {"resourceNames":["customers/3606916397", ...]}
+ *
+ * Anything that does not match the resource-name format is returned in
+ * `unparsed` rather than dropped. A silently skipped entry would read as "that
+ * account does not exist", which is the wrong answer to give an operator
+ * hunting for an account they can see in the Ads UI.
+ */
+export function readAccessibleCustomerIds(body: unknown): {
+  ids: string[];
+  unparsed: unknown[];
+} {
+  const raw = (body as { resourceNames?: unknown } | null)?.resourceNames;
+  if (!Array.isArray(raw)) return { ids: [], unparsed: raw === undefined ? [] : [raw] };
+  const ids: string[] = [];
+  const unparsed: unknown[] = [];
+  for (const entry of raw) {
+    const id = customerIdFromResourceName(entry);
+    if (id) ids.push(id);
+    else unparsed.push(entry);
+  }
+  return { ids, unparsed };
+}
+
+export interface AdsErrorDetail {
+  /** e.g. "authorizationError", "requestError" — the key Google nests the code under. */
+  category: string;
+  /** e.g. "CUSTOMER_NOT_ENABLED", "PAGE_SIZE_NOT_SUPPORTED". */
+  code: string;
+  message: string;
+}
+
+export interface AdsErrorSummary {
+  httpStatus: number;
+  /** Google's top-level status, e.g. "PERMISSION_DENIED", "INVALID_ARGUMENT". */
+  status: string | null;
+  requestId: string | null;
+  details: AdsErrorDetail[];
+}
+
+/**
+ * Flatten a failure into something an operator and a log can both read.
+ *
+ * Observed envelope, from real 400 and 403 responses:
+ *
+ *   error.code / error.message / error.status
+ *   error.details[] -> "@type": ".../v26.errors.GoogleAdsFailure"
+ *                      errors[] -> errorCode: { <category>: "CODE" }, message
+ *                      requestId
+ *
+ * The specific code is the part that matters and the part a generic HTTP error
+ * throws away: CUSTOMER_NOT_ENABLED means the account is deactivated and no
+ * retry will help, USER_PERMISSION_DENIED means it is not reachable under this
+ * login context, and PAGE_SIZE_NOT_SUPPORTED means we sent a bad request. One
+ * "403 Forbidden" for the first two would hide the difference that decides
+ * what to do next.
+ */
+export function readAdsError(call: AdsCall): AdsErrorSummary | null {
+  if (call.ok) return null;
+  const err = (call.body as { error?: Record<string, unknown> } | null)?.error ?? null;
+  const details: AdsErrorDetail[] = [];
+  const rawDetails = Array.isArray(err?.details) ? (err!.details as unknown[]) : [];
+  for (const det of rawDetails) {
+    const errors = (det as { errors?: unknown })?.errors;
+    if (!Array.isArray(errors)) continue;
+    for (const e of errors) {
+      const codeObj = (e as { errorCode?: Record<string, unknown> })?.errorCode;
+      const message = typeof (e as { message?: unknown })?.message === "string"
+        ? ((e as { message: string }).message)
+        : "";
+      if (codeObj && typeof codeObj === "object") {
+        for (const [category, code] of Object.entries(codeObj)) {
+          details.push({ category, code: String(code), message });
+        }
+      } else {
+        // An error with no code still has to surface. Dropping it would report
+        // a failed call as having no reason.
+        details.push({ category: "unknown", code: "unknown", message });
+      }
+    }
+  }
+  return {
+    httpStatus: call.httpStatus,
+    status: typeof err?.status === "string" ? err.status : null,
+    requestId: call.requestId,
+    details,
+  };
+}
+
+/**
+ * True when a failure says this account cannot be reached at all, as opposed
+ * to our request being malformed. Kept as an explicit code list rather than
+ * inferred from the HTTP status, because 403 covers both "the account is
+ * deactivated" and "wrong login context" and the operator action differs.
+ */
+const UNREACHABLE_CODES = new Set([
+  "CUSTOMER_NOT_ENABLED",
+  "USER_PERMISSION_DENIED",
+  "NOT_ADS_USER",
+  "CUSTOMER_NOT_FOUND",
+]);
+
+export function isAccountUnreachable(call: AdsCall): boolean {
+  const summary = readAdsError(call);
+  return !!summary?.details.some((d) => UNREACHABLE_CODES.has(d.code));
 }

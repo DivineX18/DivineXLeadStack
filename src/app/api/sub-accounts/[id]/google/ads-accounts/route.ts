@@ -11,8 +11,10 @@ import {
   CUSTOMER_METADATA_QUERY,
   GOOGLE_ADS_API_VERSION,
   adsSearch,
-  customerIdFromResourceName,
+  isAccountUnreachable,
   listAccessibleCustomers,
+  readAccessibleCustomerIds,
+  readAdsError,
   type AdsCall,
 } from "@/lib/google/ads";
 import type { SubAccountDoc } from "@/types";
@@ -86,10 +88,10 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
   // sent; attaching one would be cargo cult.
   const accessible = await listAccessibleCustomers(accessToken);
 
-  const resourceNames = (() => {
-    const b = accessible.body as { resourceNames?: unknown } | null;
-    return Array.isArray(b?.resourceNames) ? (b.resourceNames as unknown[]) : [];
-  })();
+  // Shape confirmed by the first real call: {"resourceNames":["customers/123",…]}.
+  // Entries that do not match are surfaced, not skipped, so an unexpected
+  // format reads as "we could not understand this" rather than "it is absent".
+  const { ids: accessibleIds, unparsed } = readAccessibleCustomerIds(accessible.body);
 
   // The manager id is deployment config and is used ONLY as a fallback login
   // context, never as a target. Reaching a client account through a manager
@@ -97,54 +99,68 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
   const managerId = googleAdsManagerCustomerId();
 
   const inspected: {
-    resourceName: unknown;
-    customerId: string | null;
-    /** No login-customer-id. The first thing to try for a directly-shared account. */
-    direct: AdsCall | null;
-    /** Same query under the manager login context, tried only if direct failed,
-     *  so the real semantics are established by observation rather than belief. */
-    viaManager: AdsCall | null;
-    /** Populated only for an account that reports itself a manager. */
-    clients: AdsCall | null;
+    customerId: string;
+    /** No login-customer-id. Correct for a directly-shared account, and the
+     *  first real run proved it is also the ONLY thing that works for these:
+     *  routing a directly-shared account through the manager returned
+     *  USER_PERMISSION_DENIED. */
+    directOk: boolean;
+    directError: ReturnType<typeof readAdsError>;
+    /** Retried under the manager login context only when the direct call
+     *  failed, so the semantics stay established by observation. */
+    viaManagerOk: boolean | null;
+    viaManagerError: ReturnType<typeof readAdsError>;
+    /** The account cannot be reached at all, as opposed to our request being
+     *  wrong. A deactivated account and a bad argument both arrive as 4xx. */
+    unreachable: boolean;
+    /** Still RAW: this shape has not been observed yet, so there is nothing
+     *  honest to parse it with. The reader lands once it has been read. */
+    metadataRaw: unknown;
+    clientsRaw: unknown;
   }[] = [];
 
-  for (const resourceName of resourceNames.slice(0, MAX_ACCOUNTS_INSPECTED)) {
-    const customerId = customerIdFromResourceName(resourceName);
-    if (!customerId) {
-      inspected.push({ resourceName, customerId: null, direct: null, viaManager: null, clients: null });
-      continue;
-    }
-
-    const direct = await adsSearch(accessToken, customerId, CUSTOMER_METADATA_QUERY, { pageSize: 1 });
+  for (const customerId of accessibleIds.slice(0, MAX_ACCOUNTS_INSPECTED)) {
+    const direct = await adsSearch(accessToken, customerId, CUSTOMER_METADATA_QUERY);
     const viaManager =
       !direct.ok && managerId && managerId !== customerId
         ? await adsSearch(accessToken, customerId, CUSTOMER_METADATA_QUERY, {
             loginCustomerId: managerId,
-            pageSize: 1,
           })
         : null;
 
-    const winner = direct.ok ? direct : viaManager?.ok ? viaManager : null;
+    const winner: AdsCall | null = direct.ok ? direct : viaManager?.ok ? viaManager : null;
     const isManager = (() => {
       const rows = (winner?.body as { results?: { customer?: { manager?: unknown } }[] } | null)?.results;
       return Array.isArray(rows) && rows[0]?.customer?.manager === true;
     })();
 
-    // A manager account holds no campaigns of its own, so enumerating its
-    // children is the only way to find a real reporting target.
+    // A manager holds no campaigns of its own, so enumerating its children is
+    // the only way to find a real reporting target.
     const clients = isManager
       ? await adsSearch(accessToken, customerId, CUSTOMER_CLIENT_QUERY, { loginCustomerId: customerId })
       : null;
 
-    inspected.push({ resourceName, customerId, direct, viaManager, clients });
+    inspected.push({
+      customerId,
+      directOk: direct.ok,
+      directError: readAdsError(direct),
+      viaManagerOk: viaManager ? viaManager.ok : null,
+      viaManagerError: viaManager ? readAdsError(viaManager) : null,
+      unreachable: isAccountUnreachable(direct) && (!viaManager || isAccountUnreachable(viaManager)),
+      metadataRaw: winner?.body ?? null,
+      clientsRaw: clients?.body ?? null,
+    });
   }
 
   return NextResponse.json({
     apiVersion: GOOGLE_ADS_API_VERSION,
     developerTokenSent: false,
     managerLoginCustomerIdConfigured: managerId !== null,
-    accessible,
-    accessibleCount: resourceNames.length,
+    listRequestId: accessible.requestId,
+    listOk: accessible.ok,
+    listError: readAdsError(accessible),
+    accessibleCount: accessibleIds.length,
+    unparsedResourceNames: unparsed,
     inspected,
   });
 }

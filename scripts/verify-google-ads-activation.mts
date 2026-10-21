@@ -513,5 +513,144 @@ console.log("\n-- the Ads transport: read-only by construction --");
       customerIdFromResourceName(undefined) === null);
 }
 
+// ───────────────────────────────────────────────────────────────────────────────
+console.log("\n-- readers, against responses Google actually sent --");
+{
+  // FIXTURES BELOW ARE REAL, captured from DivineX's first Google Ads API
+  // calls on 2026-10-21 against v26, with the account numbers replaced. The
+  // request ids and the error envelopes are verbatim.
+  //
+  // This ordering is the point. The first run sent `pageSize`, which v26
+  // refuses outright, and a fixture written alongside that request would have
+  // agreed with it: the tests would have passed while every query failed. The
+  // same self-confirmation shipped a website-facts reader for a key that never
+  // existed. So nothing here was written before the response it asserts on.
+  const { readAccessibleCustomerIds, readAdsError, isAccountUnreachable } = await import(
+    "../src/lib/google/ads.ts"
+  );
+
+  const call = (over: Record<string, unknown>) => ({
+    ok: false, httpStatus: 403, requestId: "req-abc", apiVersion: "v26", body: {}, ...over,
+  }) as Parameters<typeof readAdsError>[0];
+
+  // ---- the success shape, verbatim from request-id alMukjdHJArcZwXhvWMcxg ----
+  const LIST_OK = {
+    resourceNames: ["customers/1111111111", "customers/2222222222", "customers/3333333333"],
+  };
+  const parsed = readAccessibleCustomerIds(LIST_OK);
+  ck("the real accessible-customer list parses to its ids",
+    parsed.ids.join(",") === "1111111111,2222222222,3333333333" && parsed.unparsed.length === 0);
+
+  // MUTATION — an entry in a format never seen must be REPORTED, not dropped.
+  // Silently skipping reads as "that account does not exist", which is the
+  // wrong answer for an operator looking straight at it in the Ads UI.
+  const odd = readAccessibleCustomerIds({
+    resourceNames: ["customers/1111111111", "customers/123/campaigns/9", "", null],
+  });
+  ck("MUTATION: unrecognised entries are surfaced rather than skipped",
+    odd.ids.join(",") === "1111111111" && odd.unparsed.length === 3);
+
+  ck("a missing resourceNames field is not a crash and not a silent empty",
+    readAccessibleCustomerIds({}).ids.length === 0 &&
+      readAccessibleCustomerIds(null).ids.length === 0 &&
+      readAccessibleCustomerIds({ resourceNames: "customers/1" }).unparsed.length === 1);
+
+  // ---- the 403 envelope, verbatim ----
+  const PERMISSION_DENIED = call({
+    httpStatus: 403,
+    requestId: "yVxlsf8nJn1qyhNj2u983w",
+    body: {
+      error: {
+        code: 403,
+        message: "The caller does not have permission",
+        status: "PERMISSION_DENIED",
+        details: [{
+          "@type": "type.googleapis.com/google.ads.googleads.v26.errors.GoogleAdsFailure",
+          errors: [{
+            errorCode: { authorizationError: "CUSTOMER_NOT_ENABLED" },
+            message: "The customer account can't be accessed because it is not yet enabled or has been deactivated.",
+          }],
+          requestId: "yVxlsf8nJn1qyhNj2u983w",
+        }],
+      },
+    },
+  });
+  const denied = readAdsError(PERMISSION_DENIED)!;
+  ck("a real 403 yields Google's specific code, not just the HTTP status",
+    denied.status === "PERMISSION_DENIED" &&
+      denied.httpStatus === 403 &&
+      denied.details[0].category === "authorizationError" &&
+      denied.details[0].code === "CUSTOMER_NOT_ENABLED" &&
+      denied.requestId === "yVxlsf8nJn1qyhNj2u983w");
+
+  // ---- the 400 envelope, verbatim: my own bug as Google reported it ----
+  const PAGE_SIZE = call({
+    httpStatus: 400,
+    requestId: "N3yEf5NjNYNOnz0VKalnCw",
+    body: {
+      error: {
+        code: 400,
+        message: "Request contains an invalid argument.",
+        status: "INVALID_ARGUMENT",
+        details: [{
+          "@type": "type.googleapis.com/google.ads.googleads.v26.errors.GoogleAdsFailure",
+          errors: [{
+            errorCode: { requestError: "PAGE_SIZE_NOT_SUPPORTED" },
+            message: "Setting the page size is not supported. Search Responses will have fixed page size of '10000' rows.",
+          }],
+          requestId: "N3yEf5NjNYNOnz0VKalnCw",
+        }],
+      },
+    },
+  });
+  const argErr = readAdsError(PAGE_SIZE)!;
+  ck("a real 400 is read as a request error, not an authorization one",
+    argErr.status === "INVALID_ARGUMENT" &&
+      argErr.details[0].category === "requestError" &&
+      argErr.details[0].code === "PAGE_SIZE_NOT_SUPPORTED");
+
+  // The distinction the HTTP status throws away. Both of these are 4xx, and
+  // one means stop while the other means fix the request.
+  ck("a deactivated account is unreachable", isAccountUnreachable(PERMISSION_DENIED) === true);
+  ck("MUTATION: a bad argument of OURS is NOT reported as an unreachable account",
+    isAccountUnreachable(PAGE_SIZE) === false);
+
+  const USER_DENIED = call({
+    body: {
+      error: {
+        status: "PERMISSION_DENIED",
+        details: [{
+          errors: [{
+            errorCode: { authorizationError: "USER_PERMISSION_DENIED" },
+            message: "User doesn't have permission to access customer.",
+          }],
+        }],
+      },
+    },
+  });
+  ck("the wrong login context is also unreachable, with its own code",
+    isAccountUnreachable(USER_DENIED) &&
+      readAdsError(USER_DENIED)!.details[0].code === "USER_PERMISSION_DENIED");
+
+  ck("a successful call has no error to read",
+    readAdsError({ ok: true, httpStatus: 200, requestId: "x", apiVersion: "v26", body: LIST_OK }) === null);
+
+  // MUTATION — a failure with an unreadable envelope must still report that it
+  // failed. Returning no detail would make a broken call look reasonless.
+  const WEIRD = call({ body: { error: { status: "UNKNOWN", details: [{ errors: [{ message: "no code here" }] }] } } });
+  ck("MUTATION: a failure with no error code still reports a reason",
+    readAdsError(WEIRD)!.details[0].code === "unknown" &&
+      readAdsError(WEIRD)!.details[0].message === "no code here");
+  ck("and an entirely unparseable failure is still a failure",
+    readAdsError(call({ body: { nonJsonBody: "<html>502</html>" } }))!.httpStatus === 403);
+
+  // ---- the bug itself, as a standing regression ----
+  const lib = read("src/lib/google/ads.ts");
+  ck("pageSize is never sent again, and the real error says why",
+    !/pageSize:/.test(lib) && /PAGE_SIZE_NOT_SUPPORTED/.test(lib));
+  ck("MUTATION: reintroducing pageSize in a request body would be caught",
+    /pageSize:/.test(lib.replace("body: { query }", "body: { query, pageSize: 100 }")));
+}
+
 console.log(fails === 0 ? "\nAll checks passed." : `\n${fails} check(s) failed.`);
 process.exit(fails === 0 ? 0 : 1);
