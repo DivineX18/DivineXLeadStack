@@ -771,8 +771,11 @@ console.log("\n-- binding: the caller proposes, Google decides --");
   // Int64 must survive to Ascend's canonical parser.
   ck("cost_micros is never numeric-coerced in Flow",
     !/Number\(/.test(report) && !/parseInt|parseFloat/.test(report));
+  // Anchored on text that currently exists. The first version of this mutation
+  // pointed at a line the delivery fix had already replaced, so the mutation
+  // was a no-op and the check failed for the wrong reason.
   ck("MUTATION: a Number() on a metric would be caught",
-    /Number\(/.test(report.replace("rowCount: Array.isArray(results)", "rowCount: Number(results)")));
+    /Number\(/.test(report.replace("rowCount: rows.length", "rowCount: Number(rows.length)")));
 
   // The bug I wrote and removed, as a standing guard for the whole class:
   // request-scoped state at module scope survives between requests, and for a
@@ -791,6 +794,56 @@ console.log("\n-- binding: the caller proposes, Google decides --");
   }
   ck("each Google route mints its access token inside the handler",
     /let accessToken: string;/.test(report) && /accessTokenForConfig\(config\)/.test(report));
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
+console.log("\n-- rows returned is not data delivered --");
+{
+  const { isNonZeroMetric, rowHasDelivery } = await import("../src/lib/google/ads.ts");
+
+  // VERBATIM from the first real report on the bound account, request-id
+  // 7nIj-fYobEDsEWDBtkOoTw. Two paused campaigns, two rows, every metric zero.
+  // An earlier version of the widening logic read this as usable data and
+  // stopped at seven days, which is the bug these checks exist for.
+  const ZERO_ROW = {
+    campaign: { resourceName: "customers/1111111111/campaigns/24143526204", status: "PAUSED", name: "Campaign #1", id: "24143526204" },
+    metrics: { clicks: "0", conversionsValue: 0, conversions: 0, costMicros: "0", impressions: "0" },
+  };
+
+  ck("a row of pure zeroes is not delivery", rowHasDelivery(ZERO_ROW) === false);
+
+  // MUTATION — the exact failure. If this passed, the escalation would stop on
+  // the first window and report an idle account as having data.
+  ck("MUTATION: impressions alone make it delivery",
+    rowHasDelivery({ ...ZERO_ROW, metrics: { ...ZERO_ROW.metrics, impressions: "1" } }) === true);
+  ck("and spend alone does too, since a campaign can spend without converting",
+    rowHasDelivery({ ...ZERO_ROW, metrics: { ...ZERO_ROW.metrics, costMicros: "12340000" } }) === true);
+  // Conversions are deliberately NOT part of the test: a campaign that
+  // delivered impressions and converted nobody still delivered.
+  ck("MUTATION: conversions alone are not treated as delivery",
+    rowHasDelivery({ ...ZERO_ROW, metrics: { ...ZERO_ROW.metrics, conversions: 3 } }) === false);
+
+  // Observed live: int64 metrics arrive as STRINGS, doubles as numbers.
+  ck("int64-as-string zero and non-zero are both read correctly",
+    isNonZeroMetric("0") === false && isNonZeroMetric("1") === true && isNonZeroMetric("12340000") === true);
+  ck("doubles are read as numbers", isNonZeroMetric(0) === false && isNonZeroMetric(1.5) === true);
+  ck("absent or malformed is not non-zero",
+    isNonZeroMetric(undefined) === false && isNonZeroMetric(null) === false &&
+      isNonZeroMetric("") === false && isNonZeroMetric({}) === false && isNonZeroMetric(NaN) === false);
+
+  // MUTATION — precision. A 19-digit int64 exceeds 2^53, so a Number()-based
+  // zero check would be lossy; a digit scan is exact at any magnitude.
+  ck("MUTATION: an int64 beyond the safe integer range is still read exactly",
+    isNonZeroMetric("9007199254740993") === true &&
+      isNonZeroMetric("0000") === false &&
+      isNonZeroMetric("10000000000000000000") === true);
+
+  const report = code("src/app/api/sub-accounts/[id]/google/ads-report/route.ts");
+  ck("the route widens on delivery, not on row count",
+    /delivering\.length > 0\) break/.test(report) && !/results\.length > 0\) break/.test(report));
+  ck("and names WHICH empty case applies, since the three need different answers",
+    /no_campaigns/.test(report) && /campaigns_exist_but_no_delivery_in_any_window/.test(report) &&
+      /query_failed/.test(report));
 }
 
 console.log(fails === 0 ? "\nAll checks passed." : `\n${fails} check(s) failed.`);

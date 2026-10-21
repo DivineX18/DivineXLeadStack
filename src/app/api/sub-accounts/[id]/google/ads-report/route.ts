@@ -12,6 +12,7 @@ import {
   campaignPerformanceQuery,
   completedWindow,
   readAdsError,
+  rowHasDelivery,
 } from "@/lib/google/ads";
 import type { SubAccountDoc } from "@/types";
 
@@ -111,6 +112,9 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
     ok: boolean;
     requestId: string | null;
     rowCount: number;
+    /** Rows whose impressions, clicks or cost are non-zero. The number that
+     *  decides whether this window is usable, which rowCount does not. */
+    deliveringRowCount: number;
     /** RAW rows, int64 strings intact. Never numeric-coerced here. */
     results: unknown;
     fieldMask: unknown;
@@ -127,24 +131,30 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
         { loginCustomerId },
       );
       const results = (call.body as { results?: unknown[] } | null)?.results ?? [];
+      const rows = Array.isArray(results) ? results : [];
+      const delivering = rows.filter(rowHasDelivery);
       attempts.push({
         window,
         ok: call.ok,
         requestId: call.requestId,
-        rowCount: Array.isArray(results) ? results.length : 0,
+        rowCount: rows.length,
+        deliveringRowCount: delivering.length,
         results,
         fieldMask: (call.body as { fieldMask?: unknown } | null)?.fieldMask ?? null,
         googleError: readAdsError(call),
       });
-      // Stop at the first window that returned anything. Widening further
-      // would spend quota to answer a question already answered, and a wider
-      // window is a worse one: it is less current and less comparable.
-      if (call.ok && Array.isArray(results) && results.length > 0) break;
+      // Stop at the first window with actual DELIVERY, not merely rows. Google
+      // returns a row per campaign whether or not it ran, so an earlier
+      // version of this stopped at seven days on two rows of pure zeroes and
+      // reported them as usable data. Beyond that, widening further would
+      // spend quota to answer a settled question and return a worse answer:
+      // less current, and less comparable to any baseline.
+      if (call.ok && delivering.length > 0) break;
       if (!call.ok) break;
     }
   }
 
-  const delivered = attempts.find((a) => a.ok && a.rowCount > 0) ?? null;
+  const delivered = attempts.find((a) => a.ok && a.deliveringRowCount > 0) ?? null;
 
   return NextResponse.json({
     apiVersion: GOOGLE_ADS_API_VERSION,
@@ -159,7 +169,18 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
     attempts,
     /** The window whose rows should be used, or null if none produced any. */
     chosenWindow: delivered?.window ?? null,
+    /** True only when some campaign actually delivered in one of the windows.
+     *  Distinct from "the query worked", which it did either way. */
     hasUsableData: !!delivered,
+    /** Why there is nothing to observe, when there is nothing. The three cases
+     *  need different answers and a single empty result hides which applies. */
+    emptyReason: delivered
+      ? null
+      : (Array.isArray(campaignRows) ? campaignRows.length : 0) === 0
+        ? "no_campaigns"
+        : attempts.some((a) => !a.ok)
+          ? "query_failed"
+          : "campaigns_exist_but_no_delivery_in_any_window",
     fetchedAt: new Date().toISOString(),
   });
 }

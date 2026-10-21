@@ -388,3 +388,39 @@ export function completedWindow(
   const endDate = shiftYmd(ymdInTimeZone(timeZone, now), -1);
   return { startDate: shiftYmd(endDate, -(days - 1)), endDate, days, timeZone };
 }
+
+/**
+ * Is a metric value non-zero, without coercing it?
+ *
+ * Google sends int64 metrics as JSON STRINGS and doubles as numbers, confirmed
+ * live: `{"clicks":"0","impressions":"0","costMicros":"0","conversions":0,
+ * "conversionsValue":0}`. So a zero check has to handle both, and must not go
+ * through Number(): that loses precision above 2^53, and canonical money
+ * parsing belongs to Ascend's primitives, which need the raw value.
+ *
+ * For a decimal integer string, non-zero is exactly "contains a digit 1-9",
+ * which is precise at any magnitude and needs no arithmetic at all.
+ */
+export function isNonZeroMetric(value: unknown): boolean {
+  if (typeof value === "number") return Number.isFinite(value) && value !== 0;
+  if (typeof value === "string") return /[1-9]/.test(value);
+  return false;
+}
+
+/**
+ * Did this campaign actually DELIVER in the window?
+ *
+ * Impressions or spend, deliberately, and not conversions: a campaign can
+ * deliver impressions and convert nobody, which is still delivery and still
+ * usable evidence. Conversions alone would call a delivering campaign empty.
+ *
+ * This exists because "rows returned" is not "data exists". Google returns one
+ * row per campaign whether or not it ran, so the first live report came back
+ * with two rows of pure zeroes and an earlier version of the widening logic
+ * read that as usable data and stopped at seven days.
+ */
+export function rowHasDelivery(row: unknown): boolean {
+  const m = (row as { metrics?: Record<string, unknown> } | null)?.metrics;
+  if (!m) return false;
+  return isNonZeroMetric(m.impressions) || isNonZeroMetric(m.costMicros) || isNonZeroMetric(m.clicks);
+}
