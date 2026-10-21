@@ -276,9 +276,9 @@ export function SubAccountGoogleSection() {
               <Check className="h-3.5 w-3.5" />
               Connected{config?.accountEmail ? ` as ${config.accountEmail}` : ""}
             </span>
-            {/* Capability badges read from what Google GRANTED, not what we asked
-                for — a client can accept Analytics and decline Search Console in
-                the same dialog. */}
+            {/* Capability badges read from what Google GRANTED, not what we
+                asked for. A client can accept Analytics and decline Search
+                Console in the same dialog. */}
             <Badge on={googleCan(config, "ga4")} label="Analytics" />
             <Badge on={googleCan(config, "searchConsole")} label="Search Console" />
             <Badge on={googleCan(config, "ads")} label="Ads" />
@@ -405,7 +405,7 @@ function Picker({
           {options === null
             ? "Loading…"
             : error
-              ? "Couldn't load — see below"
+              ? "Couldn't load: see below"
               : options.length === 0
                 ? "Nothing available on this account"
                 : "Not selected"}
@@ -413,7 +413,7 @@ function Picker({
         {(options ?? []).map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
-            {o.sub ? ` — ${o.sub}` : ""}
+            {o.sub ? ` · ${o.sub}` : ""}
           </option>
         ))}
       </select>
