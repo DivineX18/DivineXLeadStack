@@ -82,15 +82,23 @@ console.log("\n-- nothing outside the six approved scopes is ever requested --")
   ck("the scopes left after dropping Ads are all on the consent screen",
     withoutAds.every((s) => APPROVED.has(s)));
 
+  // Google sunset developer tokens on 2026-09-09 and moved API access onto the
+  // Cloud project that owns the OAuth credentials. Both of these checks used to
+  // assert that Ads was STRIPPED from the consent request when no token was
+  // configured; keeping them would pin the code to a credential Google no
+  // longer issues, which is how a feature stays permanently unreachable.
   const connect = readFileSync("src/app/api/sub-accounts/[id]/google/connect/route.ts", "utf8");
-  ck("Ads is dropped, not the whole connect, when the token is missing",
-    /services = services\.filter\(\(s\) => s !== "ads"\)/.test(connect));
-  ck("only an Ads-ONLY request is refused outright, since nothing would remain",
-    /if \(services\.length === 0\) return stop\("ads_not_configured"\)/.test(connect));
+  ck("Ads is no longer stripped from the consent request",
+    !/services\.filter\(\(s\) => s !== "ads"\)/.test(connect) &&
+      !/ads_not_configured/.test(connect));
 
   const oauth = readFileSync("src/lib/google/oauth.ts", "utf8");
-  ck("the Ads gate is one named function, so changing it is one line",
-    (oauth.match(/export function googleAdsConfigured/g) ?? []).length === 1);
+  ck("no developer-token gate survives anywhere in the Google lib",
+    !/export function googleAdsConfigured/.test(oauth) &&
+      !/process\.env\.GOOGLE_ADS_DEVELOPER_TOKEN/.test(oauth));
+  ck("the manager customer id is read from the environment, never hardcoded",
+    /export function googleAdsManagerCustomerId/.test(oauth) &&
+      /process\.env\.GOOGLE_ADS_LOGIN_CUSTOMER_ID/.test(oauth));
 }
 
 console.log("\n-- credentials never reach logs or responses --");
@@ -209,17 +217,17 @@ console.log("\n-- capabilities: believe what Google granted, not what we asked -
   const GSC = "https://www.googleapis.com/auth/webmasters.readonly";
   const ADS = "https://www.googleapis.com/auth/adwords";
 
-  const declinedAds = deriveGoogleCapabilities([GA4, GSC], { adsDeveloperTokenPresent: true });
+  const declinedAds = deriveGoogleCapabilities([GA4, GSC]);
   ck("declining Ads leaves Ads off", declinedAds.ads === false);
   ck("while the granted services stay on", declinedAds.ga4 && declinedAds.searchConsole);
 
-  const noToken = deriveGoogleCapabilities([GA4, ADS], { adsDeveloperTokenPresent: false });
-  ck("the Ads scope WITHOUT a developer token is not a capability", noToken.ads === false);
-  const withToken = deriveGoogleCapabilities([GA4, ADS], { adsDeveloperTokenPresent: true });
-  ck("the Ads scope WITH a developer token is", withToken.ads === true);
+  // The developer-token conjunct is gone with the token itself (2026-09-09).
+  // A granted scope is now the whole test, identically for all three services.
+  ck("a granted Ads scope IS a capability, with no second credential to find",
+    deriveGoogleCapabilities([GA4, ADS]).ads === true);
 
   ck("nothing granted means nothing enabled",
-    Object.values(deriveGoogleCapabilities([], { adsDeveloperTokenPresent: true })).every((v) => v === false));
+    Object.values(deriveGoogleCapabilities([])).every((v) => v === false));
 
   ck("a missing capabilities block reads as off", googleCan(null, "ga4") === false);
   ck("an empty config reads as off", googleCan({ capabilities: null }, "ads") === false);
@@ -235,8 +243,8 @@ console.log("\n-- the connect route refuses what cannot work --");
       src.indexOf("tenantSecretsConfigured") < src.indexOf("buildGoogleOAuthUrl"));
   ck("refuses when no Ascend business profile is linked, so syncs cannot be discarded",
     /primaryAscendBusinessProfileId/.test(src) && /no_business_profile/.test(src));
-  ck("drops Ads rather than requesting a scope the deployment cannot use",
-    /googleAdsConfigured\(\)/.test(src) && /filter\(\(s\) => s !== "ads"\)/.test(src));
+  ck("no longer refuses Ads for want of a sunset developer token",
+    !/googleAdsConfigured\(\)/.test(src) && !/GOOGLE_ADS_DEVELOPER_TOKEN/.test(src));
   ck("guard misses redirect with a status instead of throwing", /NextResponse\.redirect/.test(src));
 }
 
@@ -442,8 +450,15 @@ console.log("\n-- the UI tells the truth about what is connected --");
   const card = readFileSync("src/components/settings/sub-account-google-section.tsx", "utf8");
   ck("the card is admin-only", /if \(!isAdmin/.test(card));
   ck("badges read GRANTED capability, not what was requested", /googleCan\(config/.test(card));
-  ck("Ads is not offered, since the deployment has no developer token",
-    !/adwords/.test(card));
+  // Ads was absent from the card entirely, so no client could grant it even on
+  // a deployment that was fully configured. It is offered now, and OFF by
+  // default, because `adwords` is read/write with no read-only variant.
+  ck("Ads is offered, and the label says the grant is read/write",
+    /wantAds/.test(card) && /no read-only Ads permission/.test(card));
+  ck("Ads is not pre-ticked", /useState\(false\)[^\n]*\n?/.test(card) &&
+    /const \[wantAds, setWantAds\] = useState\(false\)/.test(card));
+  ck("a granted Ads scope with no linked account says so, rather than showing nothing",
+    /googleAdsReadiness\(config\) === "customer_unresolved"/.test(card));
   ck("a failed revoke is reported rather than claimed as success",
     /didn't confirm the revoke/.test(card));
   ck("a partial grant is surfaced", /partial:/.test(card));

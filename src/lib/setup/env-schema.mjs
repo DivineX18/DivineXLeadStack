@@ -316,15 +316,24 @@ export const GROUPS = [
       // Must match a redirect URI registered in the Google Cloud console
       // byte-for-byte or every connect fails at the exchange.
       ["GOOGLE_OAUTH_REDIRECT_URI", "rec", isUrl],
-      // Ads only. The `adwords` scope is necessary but NOT sufficient: the
-      // API refuses every request without a developer token, which is
-      // approved separately under a Google Ads manager account.
+      // DEPRECATED. Google sunset developer tokens on 9 September 2026: API
+      // access now attaches to the Cloud project that owns the OAuth
+      // credentials, and the header is "optional and ignored by the API
+      // servers". Kept in the catalog, unused by the app, so an existing
+      // deployment that still has the value set is not reported as broken.
       ["GOOGLE_ADS_DEVELOPER_TOKEN", "opt"],
+      // Only needed to reach a client account THROUGH the DivineX manager
+      // account. An account the connecting user was added to directly needs
+      // no manager, so absent is a normal state.
       ["GOOGLE_ADS_LOGIN_CUSTOMER_ID", "opt", isAdsCustomerId],
     ],
     deep(add, env) {
-      if (env.has("GOOGLE_ADS_LOGIN_CUSTOMER_ID") && !env.has("GOOGLE_ADS_DEVELOPER_TOKEN")) {
-        add("warn", "GOOGLE_ADS_LOGIN_CUSTOMER_ID is set but GOOGLE_ADS_DEVELOPER_TOKEN isn't — Ads calls will be refused");
+      // The old check warned that Ads calls would be refused without a
+      // developer token. That was true of the token and is now true of
+      // neither, so it would send someone hunting for a credential Google no
+      // longer issues. Say the opposite instead, once, if it is still set.
+      if (env.has("GOOGLE_ADS_DEVELOPER_TOKEN")) {
+        add("warn", "GOOGLE_ADS_DEVELOPER_TOKEN is set but no longer used — Google sunset developer tokens on 2026-09-09 and the header is ignored. Safe to remove.");
       }
       const uri = env.val("GOOGLE_OAUTH_REDIRECT_URI");
       if (uri && !uri.endsWith("/api/google/callback")) {

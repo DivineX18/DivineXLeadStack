@@ -10,7 +10,6 @@ import { deriveGoogleCapabilities } from "@/lib/google/capabilities";
 import {
   exchangeCodeForTokens,
   fetchGoogleUserInfo,
-  googleAdsConfigured,
   googleConfigured,
   googleRedirectUri,
   verifyGoogleState,
@@ -107,9 +106,7 @@ export async function GET(request: Request) {
 
   // Capabilities come from what Google actually GRANTED, never from what we
   // asked for. A client can hand over GA4 and decline Ads in one dialog.
-  const capabilities = deriveGoogleCapabilities(tokens.grantedScopes, {
-    adsDeveloperTokenPresent: googleAdsConfigured(),
-  });
+  const capabilities = deriveGoogleCapabilities(tokens.grantedScopes);
 
   // Reconnecting under a DIFFERENT Google account silently repoints every
   // report. Keep the selections only when it is the same account; otherwise

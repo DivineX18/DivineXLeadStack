@@ -31,9 +31,13 @@ export const GOOGLE_SCOPES = {
   searchConsole: "https://www.googleapis.com/auth/webmasters.readonly",
   /**
    * Google Ads API. There is NO read-only variant — `adwords` is read/write.
-   * We only ever issue reporting queries; the grant itself cannot be narrowed,
-   * which is a fact to state plainly in the OAuth verification justification
-   * rather than paper over.
+   * Google states it outright: the API "doesn't have a separate access model
+   * of its own, or use separate OAuth 2.0 scopes to limit functionality".
+   *
+   * So the grant cannot be narrowed, and read-only is a property of OUR code
+   * rather than of the permission. That is a fact to state plainly in the
+   * OAuth verification justification rather than paper over, and a reason the
+   * Ads checkbox is opt-in and off by default.
    */
   ads: "https://www.googleapis.com/auth/adwords",
 } as const;
@@ -74,24 +78,68 @@ export function googleRedirectUri(): string | null {
 }
 
 /**
- * THE ADS GATE. One function, deliberately — this is the single place that
- * decides whether Ads is offered, and changing how Ads access is proven is a
- * one-line change here rather than an edit across the connect route, the
- * callback and the capability derivation.
+ * THE DEVELOPER TOKEN IS GONE, and with it the deployment-level Ads gate.
  *
- * Today it tests for a developer token, because the Ads API refuses every
- * request without one. That may stop being the right test: Google moved Ads
- * API access management into the Cloud console with Test and Explorer tiers,
- * and an approved Explorer project does not visibly issue a developer token.
- * Until that resolves, the behaviour stays as-is and fails SAFE: with no
- * token, Ads is dropped from the consent request entirely rather than asking
- * a client for write-capable access the deployment cannot use.
+ * Google sunset developer tokens on 9 September 2026. API access now attaches
+ * to the Google Cloud project that owns the OAuth credentials, and per
+ * Google's own policy page you "can continue sending developer tokens in your
+ * API call headers, but this is optional and ignored by the API servers".
  *
- * Dropping Ads never blocks Analytics or Search Console — see
- * googleScopeList() and the connect route, which keep the remaining services.
+ * A `googleAdsConfigured()` lived here testing for that token, and the connect
+ * route dropped Ads from the consent request when it was absent. Both are now
+ * removed rather than rewritten, because the honest replacement is nothing:
+ * the precondition for requesting Ads authorization is the same one every
+ * other Google service has — OAuth credentials, hence a Cloud project — which
+ * googleConfigured() already tests and the connect route already enforces.
+ * Keeping the function as an alias would have left a gate that cannot fail,
+ * which reads as protection while offering none.
+ *
+ * What did NOT stop being necessary is the manager customer id below. The old
+ * doctor warning conflated the two ("GOOGLE_ADS_LOGIN_CUSTOMER_ID is set but
+ * GOOGLE_ADS_DEVELOPER_TOKEN isn't — Ads calls will be refused"), which was
+ * true of the token and is now true of neither.
+ *
+ * Per-workspace Ads state is a separate question from deployment config, and
+ * deliberately not collapsed into one boolean: see googleAdsReadiness() in
+ * lib/google/capabilities.ts.
  */
-export function googleAdsConfigured(): boolean {
-  return !!process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+
+/**
+ * The DivineX Ads MANAGER customer id, digits only, or null.
+ *
+ * Sent as `login-customer-id` when querying a CLIENT account through the
+ * manager: it names the hierarchy the request is authorized under. Three
+ * things it is not, each of which is an easy and expensive mistake:
+ *
+ *   - It is not the target customer id. The manager identifies the context;
+ *     the customer identifies whose campaigns are being read.
+ *   - It is not a consent precondition. Requesting the `adwords` scope needs
+ *     no manager at all.
+ *   - It is not needed for customers:listAccessibleCustomers, which per
+ *     Google's listing-accounts guide "ignores any supplied
+ *     login-customer-id" — the result comes from the OAuth credentials alone.
+ *     Sending it there would be cargo cult.
+ *
+ * An account the consenting user was added to DIRECTLY needs no manager
+ * either, so this being null is a normal state, not a misconfiguration.
+ *
+ * Accepts exactly two forms: the ten bare digits the API wants, and the dashed
+ * form the console DISPLAYS, which is the paste people actually make. `pnpm
+ * doctor` rejects the dashed form so it gets corrected at the source; being
+ * lenient here too means a cosmetic mistake degrades to a working call rather
+ * than a 400 nobody can read.
+ *
+ * Everything else is refused rather than cleaned up. An earlier version here
+ * stripped every non-digit, which turned an `ocid` lifted from an Ads URL
+ * (`ocid=1234567890`) into a ten-digit id that looked perfectly valid and
+ * named the wrong account — the one paste the doctor's own error message warns
+ * about. Silently repairing garbage into something plausible is worse than
+ * returning null, which reads as "no manager configured" and is handled.
+ */
+export function googleAdsManagerCustomerId(): string | null {
+  const raw = process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID?.trim() ?? "";
+  if (!/^\d{10}$/.test(raw) && !/^\d{3}-\d{3}-\d{4}$/.test(raw)) return null;
+  return raw.replace(/-/g, "");
 }
 
 // ── CSRF state ───────────────────────────────────────────────────────────────

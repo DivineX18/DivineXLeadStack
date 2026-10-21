@@ -9,7 +9,6 @@ import { getMappingBySubAccountId } from "@/lib/workspace/workspace-mappings-ser
 import { tenantSecretsConfigured } from "@/lib/crypto/secrets";
 import {
   buildGoogleOAuthUrl,
-  googleAdsConfigured,
   googleConfigured,
   googleRedirectUri,
   googleScopeList,
@@ -65,16 +64,16 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
   // whose result we would have to throw away.
   if (!tenantSecretsConfigured()) return stop("secrets_not_configured");
 
-  let services = parseServices(new URL(request.url).searchParams.get("services"));
-
-  // The `adwords` scope is useless without a developer token, which is a
-  // separate approval under a Google Ads manager account. Asking a client to
-  // grant write-capable Ads access we cannot yet use is the worst of both
-  // worlds, so drop it rather than request it.
-  if (services.includes("ads") && !googleAdsConfigured()) {
-    services = services.filter((s) => s !== "ads");
-    if (services.length === 0) return stop("ads_not_configured");
-  }
+  // Ads used to be stripped out here when no developer token was configured.
+  // Google sunset developer tokens on 9 September 2026 and moved API access
+  // onto the Cloud project that owns the OAuth credentials — the same project
+  // googleConfigured() above already requires — so there is nothing left to
+  // drop Ads for. The guard is removed rather than left testing for a
+  // credential that no longer exists, which would refuse the scope forever.
+  //
+  // Ads is still opt-in per connect: `adwords` is read/write with no
+  // read-only variant, so it is requested only when the operator ticks it.
+  const services = parseServices(new URL(request.url).searchParams.get("services"));
 
   // Metrics land in Ascend, keyed by the linked business profile. Without that
   // link there is nowhere to put what we would collect, and a connection that

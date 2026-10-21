@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { BarChart3, Check, ExternalLink, Loader2, Link2Off, Search, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useSubAccount } from "@/context/sub-account-context";
 import { getFirebaseDb } from "@/lib/firebase/client";
-import { googleCan } from "@/lib/google/capabilities";
+import { googleAdsReadiness, googleCan } from "@/lib/google/capabilities";
 import type { GoogleConfig } from "@/types/tenancy";
 
 /**
@@ -19,9 +19,14 @@ import type { GoogleConfig } from "@/types/tenancy";
  * routes behind every control here are admin-only and showing a panel whose
  * every button 403s is worse than showing none.
  *
- * Ads is absent on purpose. The connect route drops it when no developer
- * token is configured, so offering a checkbox for it would ask a client to
- * grant write-capable access this deployment cannot use.
+ * Ads is offered, and off by default. It was absent entirely while the connect
+ * route dropped it for want of a developer token — a credential Google sunset
+ * on 9 September 2026 — which meant there was no way for a client to grant Ads
+ * access at all, however the deployment was configured.
+ *
+ * It stays opt-in rather than ticked, because `adwords` has no read-only
+ * variant: a client who ticks it is granting write-capable access to their
+ * advertising spend, and the label has to say so before they click.
  */
 
 interface PropertyOption {
@@ -39,6 +44,9 @@ export function SubAccountGoogleSection() {
   const [busy, setBusy] = useState(false);
   const [wantGa4, setWantGa4] = useState(true);
   const [wantGsc, setWantGsc] = useState(true);
+  // Off by default — see the header note on `adwords` being read/write.
+  const [wantAds, setWantAds] = useState(false);
+  const seeded = useRef(false);
   const [ga4Options, setGa4Options] = useState<PropertyOption[] | null>(null);
   const [gscOptions, setGscOptions] = useState<PropertyOption[] | null>(null);
   // Why a picker is empty. "Nothing available" is a legitimate answer; an API
@@ -64,6 +72,23 @@ export function SubAccountGoogleSection() {
       () => setLoading(false),
     );
   }, [subAccountId]);
+
+  // Seed the tickboxes from what is ALREADY granted, once, when a connected
+  // config first arrives. Reconnect runs the same consent flow as a first
+  // connect, so without this it would send the component defaults and quietly
+  // drop a service the client had already granted — or, in the case it was
+  // written for, make it impossible to ADD Ads to an existing connection,
+  // since the defaults can never include it.
+  //
+  // Once only, guarded by a ref: this card is live on a Firestore snapshot, so
+  // re-seeding on every update would fight the operator's own clicks.
+  useEffect(() => {
+    if (seeded.current || !config?.connected) return;
+    seeded.current = true;
+    setWantGa4(googleCan(config, "ga4"));
+    setWantGsc(googleCan(config, "searchConsole"));
+    setWantAds(googleCan(config, "ads"));
+  }, [config]);
 
   // Surface the ?google=… status the callback redirects back with.
   useEffect(() => {
@@ -116,8 +141,39 @@ export function SubAccountGoogleSection() {
 
   if (!isAdmin || !subAccountId) return null;
 
+  // One control, rendered in both branches. Duplicating it is how the two
+  // copies drift and one of them silently stops offering a service.
+  const serviceChoices = (
+    <div className="space-y-2">
+      <label className="flex items-center gap-2 text-sm">
+        <Checkbox checked={wantGa4} onCheckedChange={(v) => setWantGa4(!!v)} />
+        Google Analytics (GA4) &mdash; sessions, users, conversions
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <Checkbox checked={wantGsc} onCheckedChange={(v) => setWantGsc(!!v)} />
+        Search Console &mdash; clicks, impressions, average position
+      </label>
+      <label className="flex items-start gap-2 text-sm">
+        <Checkbox
+          className="mt-0.5"
+          checked={wantAds}
+          onCheckedChange={(v) => setWantAds(!!v)}
+        />
+        <span>
+          Google Ads &mdash; campaign spend, clicks and conversions
+          <span className="mt-0.5 block text-xs text-muted-foreground">
+            Google offers no read-only Ads permission, so this grants read and
+            write access. We only ever run reporting queries.
+          </span>
+        </span>
+      </label>
+    </div>
+  );
+
   const connect = () => {
-    const services = [wantGa4 ? "ga4" : null, wantGsc ? "searchConsole" : null].filter(Boolean).join(",");
+    const services = [wantGa4 ? "ga4" : null, wantGsc ? "searchConsole" : null, wantAds ? "ads" : null]
+      .filter(Boolean)
+      .join(",");
     if (!services) {
       toast.error("Pick at least one service to connect.");
       return;
@@ -184,11 +240,12 @@ export function SubAccountGoogleSection() {
         <div>
           <h2 className="flex items-center gap-2 text-lg font-semibold">
             <BarChart3 className="h-5 w-5" />
-            Google Analytics &amp; Search Console
+            Google Analytics, Search Console &amp; Ads
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Connect this workspace&rsquo;s Google account to pull traffic and search
-            performance into Growth Intelligence. Read-only.
+            Connect this workspace&rsquo;s Google account to pull traffic, search and
+            campaign performance into Growth Intelligence. We only ever run
+            reporting queries &mdash; nothing is changed in these accounts.
           </p>
         </div>
       </div>
@@ -201,14 +258,7 @@ export function SubAccountGoogleSection() {
         <div className="mt-6 space-y-4">
           <div className="space-y-2">
             <Label>What to connect</Label>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={wantGa4} onCheckedChange={(v) => setWantGa4(!!v)} />
-              Google Analytics (GA4) &mdash; sessions, users, conversions
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={wantGsc} onCheckedChange={(v) => setWantGsc(!!v)} />
-              Search Console &mdash; clicks, impressions, average position
-            </label>
+            {serviceChoices}
             <p className="text-xs text-muted-foreground">
               Only the services you tick are requested. You can change this later by
               reconnecting.
@@ -231,7 +281,17 @@ export function SubAccountGoogleSection() {
                 the same dialog. */}
             <Badge on={googleCan(config, "ga4")} label="Analytics" />
             <Badge on={googleCan(config, "searchConsole")} label="Search Console" />
+            <Badge on={googleCan(config, "ads")} label="Ads" />
           </div>
+
+          {/* A granted Ads scope is not a working Ads report. Saying "Ads" and
+              showing nothing is the state this line exists to explain. */}
+          {googleAdsReadiness(config) === "customer_unresolved" && (
+            <p className="text-xs text-muted-foreground">
+              Ads access was granted. No Ads account is linked to this workspace
+              yet, so no campaign data is being pulled.
+            </p>
+          )}
 
           {config?.lastSyncError && (
             <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
@@ -267,6 +327,16 @@ export function SubAccountGoogleSection() {
             disabled={busy}
             error={pickerErrors.searchConsole}
           />
+
+          <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
+            <Label>Add or change services</Label>
+            {serviceChoices}
+            <p className="text-xs text-muted-foreground">
+              Reconnecting runs Google&rsquo;s consent screen again with exactly
+              these services. Untick one and it is dropped; tick a new one and
+              you&rsquo;ll be asked to approve it.
+            </p>
+          </div>
 
           <div className="flex flex-wrap gap-2 pt-1">
             <Button variant="outline" onClick={syncNow} disabled={busy}>

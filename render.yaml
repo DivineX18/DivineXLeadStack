@@ -164,10 +164,27 @@ services:
         sync: false
       - key: GOOGLE_OAUTH_REDIRECT_URI
         sync: false
-      # Google Ads, optional and currently unset. Without the developer token
-      # the connect route DROPS Ads from the consent request rather than
-      # asking a customer for write-capable access this deployment cannot use.
+      # GOOGLE_ADS_DEVELOPER_TOKEN is DEPRECATED and deliberately unset.
+      #
+      # Google sunset developer tokens on 9 September 2026: Ads API access now
+      # attaches to the Google Cloud project that owns GOOGLE_OAUTH_CLIENT_ID
+      # above, and a token in the request header is "optional and ignored by
+      # the API servers". It is kept declared so a deployment that still has a
+      # value set is not reported as unknown by `pnpm doctor`; nothing reads
+      # it. Do not set it, and do not treat its absence as the reason Ads is
+      # not working.
+      #
+      # This comment previously said the connect route DROPS Ads from the
+      # consent request without the token. That was true and is why Ads could
+      # never be granted on any deployment; the gate is gone.
       - key: GOOGLE_ADS_DEVELOPER_TOKEN
         sync: false
+      # GOOGLE_ADS_LOGIN_CUSTOMER_ID is the DivineX Ads MANAGER account id,
+      # ten bare digits, no dashes. Needed only to reach a client account
+      # THROUGH the manager: it names the hierarchy a request is authorized
+      # under. It is NOT the target customer id, NOT a consent precondition,
+      # and NOT used by customers:listAccessibleCustomers, which ignores it.
+      # An account shared directly with the connecting user needs no manager,
+      # so absent is a valid state. Value stays in the dashboard.
       - key: GOOGLE_ADS_LOGIN_CUSTOMER_ID
         sync: false
