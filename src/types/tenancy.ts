@@ -865,7 +865,29 @@ export interface GoogleConfig {
    *  reporting, which the card states rather than implying zero traffic. */
   ga4PropertyId: string | null;
   gscSiteUrl: string | null;
+  /**
+   * The Google Ads account this workspace reports on. Written ONLY after the
+   * server has verified it against Google's own accessible hierarchy, never
+   * from a value a caller supplied: ten digits someone typed prove access to
+   * nothing, and an id belonging to another advertiser proves less than
+   * nothing.
+   */
   adsCustomerId: string | null;
+  /**
+   * The manager account the target is authorized UNDER, sent as
+   * `login-customer-id`. Null when the account is shared directly with the
+   * connected user, which is a real case and not a missing value: the first
+   * live run showed a directly-shared account answer without the header and
+   * return USER_PERMISSION_DENIED when routed through a manager.
+   */
+  adsLoginCustomerId: string | null;
+  /** Account facts READ FROM GOOGLE at bind time, never assumed. A USD default
+   *  misreports every other currency and a UTC window misreports every account
+   *  not on UTC. */
+  adsCustomerName: string | null;
+  adsCurrencyCode: string | null;
+  adsTimeZone: string | null;
+  adsBoundAt: Timestamp | FieldValue | null;
   connectedByUid: string | null;
   connectedAt: Timestamp | FieldValue | null;
   /** Stamped when a sync last succeeded, so a stale dashboard can say so. */

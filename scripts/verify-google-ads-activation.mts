@@ -652,5 +652,146 @@ console.log("\n-- readers, against responses Google actually sent --");
     /pageSize:/.test(lib.replace("body: { query }", "body: { query, pageSize: 100 }")));
 }
 
+// ───────────────────────────────────────────────────────────────────────────────
+console.log("\n-- windows: the account's own day, never today --");
+{
+  const { completedWindow, shiftYmd, ymdInTimeZone, campaignPerformanceQuery, CAMPAIGN_EXISTENCE_QUERY } =
+    await import("../src/lib/google/ads.ts");
+
+  // Fixed instant: 2026-03-08T04:30:00Z. In America/Chicago that is still
+  // 2026-03-07 (22:30), which is the whole point of asking the account's zone.
+  const at = new Date("2026-03-08T04:30:00Z");
+  ck("the date is read in the account's zone, not the server's",
+    ymdInTimeZone("America/Chicago", at) === "2026-03-07" &&
+      ymdInTimeZone("UTC", at) === "2026-03-08" &&
+      ymdInTimeZone("Australia/Sydney", at) === "2026-03-08");
+
+  const w7 = completedWindow("America/Chicago", 7, at);
+  ck("a window ends on the last COMPLETE day in that zone",
+    w7.endDate === "2026-03-06" && w7.startDate === "2026-02-28" && w7.days === 7);
+
+  // MUTATION — the bug this exists to prevent. Today is partial until midnight
+  // in the account's zone, and including it makes every metric look collapsed
+  // for reasons that have nothing to do with the campaigns.
+  ck("MUTATION: today is never inside the window",
+    w7.endDate < ymdInTimeZone("America/Chicago", at) &&
+      completedWindow("UTC", 1, at).endDate === "2026-03-07");
+
+  ck("a one-day window is a single complete day, not an empty range",
+    (() => { const w = completedWindow("America/Chicago", 1, at); return w.startDate === w.endDate && w.startDate === "2026-03-06"; })());
+
+  // Calendar arithmetic on the STRING. Shifting a timestamp and reformatting
+  // in the zone is off by one whenever the shift crosses midnight there, which
+  // is exactly how an incomplete day sneaks into a report.
+  ck("shifting crosses a month boundary correctly",
+    shiftYmd("2026-03-01", -1) === "2026-02-28" && shiftYmd("2024-03-01", -1) === "2024-02-29");
+  ck("and a year boundary", shiftYmd("2026-01-01", -1) === "2025-12-31");
+  // DST is irrelevant to calendar days, and proving that is the reason to do
+  // this on strings: 8 March 2026 is the US spring-forward date.
+  ck("and a DST transition does not eat or duplicate a day",
+    shiftYmd("2026-03-07", 1) === "2026-03-08" && shiftYmd("2026-03-08", 1) === "2026-03-09");
+  ck("MUTATION: a 23-hour day would break this, which is why it is not timestamp maths",
+    shiftYmd("2026-03-06", 3) === "2026-03-09");
+
+  // The two questions have to stay separable.
+  ck("the existence query carries no date filter and no metrics",
+    !/segments\.date/.test(CAMPAIGN_EXISTENCE_QUERY) && !/metrics\./.test(CAMPAIGN_EXISTENCE_QUERY));
+
+  const q = campaignPerformanceQuery("2026-02-28", "2026-03-06");
+  ck("the performance query bounds itself to the explicit window",
+    /segments\.date BETWEEN '2026-02-28' AND '2026-03-06'/.test(q));
+  // Selecting segments.date returns a row per campaign PER DAY; this query
+  // wants the window total per campaign.
+  const selectList = q.slice(0, q.indexOf("FROM"));
+  ck("and does not select segments.date, which would re-segment every row",
+    !/segments\.date/.test(selectList) && /segments\.date/.test(q.slice(q.indexOf("WHERE"))));
+  ck("the metric names are the real v26 ones",
+    /metrics\.cost_micros/.test(q) && /metrics\.conversions_value/.test(q) &&
+      !/metrics\.conversion_value\b/.test(q));
+
+  // MUTATION — an unvalidated date would be interpolated straight into GAQL.
+  let threw = false;
+  try { campaignPerformanceQuery("2026-2-28", "2026-03-06"); } catch { threw = true; }
+  ck("MUTATION: a malformed date is refused rather than interpolated", threw);
+  let threw2 = false;
+  try { campaignPerformanceQuery("2026-02-28' OR '1'='1", "2026-03-06"); } catch { threw2 = true; }
+  ck("MUTATION: and so is anything shaped like an injection attempt", threw2);
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
+console.log("\n-- binding: the caller proposes, Google decides --");
+{
+  const BIND = "src/app/api/sub-accounts/[id]/google/ads-customer/route.ts";
+  const REPORT = "src/app/api/sub-accounts/[id]/google/ads-report/route.ts";
+  const bind = code(BIND);
+  const report = code(REPORT);
+
+  ck("the bind route is admin-gated and requires the GRANTED Ads scope",
+    /requireSubAccountAdmin\(request, id\)/.test(bind) && /googleCan\(config, "ads"\)/.test(bind));
+
+  ck("a proposed id is shape-checked before any network call or write",
+    /CUSTOMER_ID = \/\^\\d\{10\}\$\//.test(bind) &&
+      bind.indexOf("CUSTOMER_ID.test") < bind.indexOf("listAccessibleCustomers(accessToken)") &&
+      // The CALL site, not the import at the top of the file, which is where
+      // the first version of this assertion was accidentally pointing.
+      bind.indexOf("CUSTOMER_ID.test") < bind.indexOf("await accessTokenForConfig(config)"));
+
+  // The authorization evidence is Google's hierarchy, not the request body.
+  ck("the proposed id is checked against the live accessible hierarchy",
+    /listAccessibleCustomers\(accessToken\)/.test(bind) &&
+      /CUSTOMER_CLIENT_QUERY/.test(bind) &&
+      /not_authorized_for_this_workspace/.test(bind));
+
+  // MUTATION — membership is not readability. Finding an id in the tree does
+  // not prove we can read it, and the first real report should not be what
+  // discovers that.
+  ck("MUTATION: binding also proves the target is READABLE through the login context",
+    /target_not_readable/.test(bind) &&
+      bind.indexOf("CUSTOMER_METADATA_QUERY") < bind.indexOf("doc(`subAccounts/${id}`).set"));
+
+  ck("a manager is refused as a target, since it holds no campaigns",
+    /target_is_a_manager/.test(bind));
+  ck("a non-ENABLED account is refused with its real status",
+    /target_not_enabled/.test(bind));
+  ck("and an account with no currency or timezone is refused rather than defaulted",
+    /target_missing_currency_or_timezone/.test(bind));
+
+  // Currency and timezone are persisted FROM GOOGLE at bind time.
+  ck("the binding stores the account facts Google reported",
+    /adsCurrencyCode: currencyCode/.test(bind) && /adsTimeZone: timeZone/.test(bind) &&
+      /adsLoginCustomerId: loginCustomerId/.test(bind));
+
+  // The report route is stricter than the bind route: no id to tamper with.
+  ck("the report route accepts no customer id at all",
+    !/request\.json\(\)/.test(report) && !/searchParams\.get/.test(report) &&
+      /config\.adsCustomerId/.test(report));
+  ck("and refuses when nothing is bound, rather than defaulting a zone or currency",
+    /no_ads_account_bound/.test(report) && !/["']UTC["']/.test(report) && !/["']USD["']/.test(report));
+
+  // Int64 must survive to Ascend's canonical parser.
+  ck("cost_micros is never numeric-coerced in Flow",
+    !/Number\(/.test(report) && !/parseInt|parseFloat/.test(report));
+  ck("MUTATION: a Number() on a metric would be caught",
+    /Number\(/.test(report.replace("rowCount: Array.isArray(results)", "rowCount: Number(results)")));
+
+  // The bug I wrote and removed, as a standing guard for the whole class:
+  // request-scoped state at module scope survives between requests, and for a
+  // credential that is a cross-tenant leak rather than an inefficiency.
+  const googleRoutes = [
+    BIND, REPORT,
+    "src/app/api/sub-accounts/[id]/google/ads-accounts/route.ts",
+    "src/app/api/sub-accounts/[id]/google/connect/route.ts",
+    "src/app/api/google/callback/route.ts",
+  ];
+  for (const f of googleRoutes) {
+    const src = code(f);
+    ck(`${f.split("/").slice(-2)[0]}/${f.split("/").pop()}: no module-level mutable state`,
+      !/^\s*(let|var)\s+\w/m.test(src.replace(/^export (async )?function[\s\S]*/m, "")) ||
+        !/^(let|var)\s/m.test(src));
+  }
+  ck("each Google route mints its access token inside the handler",
+    /let accessToken: string;/.test(report) && /accessTokenForConfig\(config\)/.test(report));
+}
+
 console.log(fails === 0 ? "\nAll checks passed." : `\n${fails} check(s) failed.`);
 process.exit(fails === 0 ? 0 : 1);

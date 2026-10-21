@@ -125,6 +125,15 @@ export async function GET(request: Request) {
     ga4PropertyId: sameAccount ? (existing?.ga4PropertyId ?? null) : null,
     gscSiteUrl: sameAccount ? (existing?.gscSiteUrl ?? null) : null,
     adsCustomerId: sameAccount ? (existing?.adsCustomerId ?? null) : null,
+    // The whole Ads binding travels with the selection, for the same reason:
+    // reconnecting under a DIFFERENT Google account must not leave a workspace
+    // pointed at an Ads customer the new credentials were never authorized for.
+    // Clearing it forces a fresh server-side verification against Google.
+    adsLoginCustomerId: sameAccount ? (existing?.adsLoginCustomerId ?? null) : null,
+    adsCustomerName: sameAccount ? (existing?.adsCustomerName ?? null) : null,
+    adsCurrencyCode: sameAccount ? (existing?.adsCurrencyCode ?? null) : null,
+    adsTimeZone: sameAccount ? (existing?.adsTimeZone ?? null) : null,
+    adsBoundAt: sameAccount ? (existing?.adsBoundAt ?? null) : null,
     connectedByUid: access.uid,
     connectedAt: FieldValue.serverTimestamp(),
     lastSyncedAt: sameAccount ? (existing?.lastSyncedAt ?? null) : null,

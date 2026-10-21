@@ -281,3 +281,110 @@ export function isAccountUnreachable(call: AdsCall): boolean {
   const summary = readAdsError(call);
   return !!summary?.details.some((d) => UNREACHABLE_CODES.has(d.code));
 }
+
+/* ──────────────── campaign queries + the window they need ──────────────── */
+
+/**
+ * Do any campaigns exist at all, and what state are they in?
+ *
+ * No date filter and no metrics, because the campaign resource does not need
+ * one without them, and because "this account has no campaigns" and "this
+ * account had no delivery in the window I picked" are different answers that a
+ * single metrics query would collapse into the same empty result.
+ */
+export const CAMPAIGN_EXISTENCE_QUERY = `
+  SELECT campaign.id,
+         campaign.name,
+         campaign.status,
+         campaign.advertising_channel_type
+  FROM campaign
+`.trim();
+
+/**
+ * Campaign performance over one explicit, closed date range.
+ *
+ * `segments.date` is deliberately NOT selected. Selecting it returns one row
+ * per campaign per day, and this query wants the window total per campaign.
+ *
+ * Units differ between these metrics and it matters: `cost_micros` is an int64
+ * in millionths of the account currency, arriving as a JSON STRING, while
+ * `conversions_value` is already a decimal amount in the account currency and
+ * `conversions` can be fractional. Treating them alike would misstate every
+ * cost-per-conversion and every return on spend.
+ */
+export function campaignPerformanceQuery(startDate: string, endDate: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+    // A malformed date would be interpolated into GAQL. Every caller passes a
+    // value from ymdInTimeZone/shiftYmd, so this is a guard against a future
+    // caller rather than present input, which is exactly when it is worth having.
+    throw new Error(`campaignPerformanceQuery: dates must be YYYY-MM-DD, got ${startDate}..${endDate}`);
+  }
+  return `
+  SELECT campaign.id,
+         campaign.name,
+         campaign.status,
+         metrics.impressions,
+         metrics.clicks,
+         metrics.cost_micros,
+         metrics.conversions,
+         metrics.conversions_value
+  FROM campaign
+  WHERE segments.date BETWEEN '${startDate}' AND '${endDate}'
+`.trim();
+}
+
+/**
+ * Today's calendar date in a given IANA zone, as YYYY-MM-DD.
+ *
+ * WHY THIS LIVES HERE AND IS NOT A DUPLICATE of Ascend's window primitives.
+ * Ascend owns window SAFETY: whether a window is complete, comparable to a
+ * baseline, and non-overlapping. That stays there and is not reimplemented.
+ * What Flow needs is narrower and unavoidable: a date string to interpolate
+ * into a GAQL request, which cannot be computed anywhere else because only the
+ * caller of the API knows the request it is about to make. The window Flow
+ * used travels with the evidence so Ascend can validate it rather than trust
+ * it.
+ *
+ * en-CA because it formats as YYYY-MM-DD, which is what GAQL wants.
+ */
+export function ymdInTimeZone(timeZone: string, now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
+
+/**
+ * Shift a YYYY-MM-DD by whole calendar days.
+ *
+ * Done on the date STRING rather than on a Date in some zone. Shifting a
+ * timestamp and reformatting it in the target zone is off by one whenever the
+ * shift crosses midnight there, which is the bug that makes a report quietly
+ * include an incomplete day.
+ */
+export function shiftYmd(ymd: string, days: number): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d));
+  t.setUTCDate(t.getUTCDate() + days);
+  return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, "0")}-${String(
+    t.getUTCDate(),
+  ).padStart(2, "0")}`;
+}
+
+/**
+ * The last `days` COMPLETE days in the account's own timezone.
+ *
+ * Ends yesterday, never today. Today is partial everywhere until midnight in
+ * that zone, and including it makes every metric look collapsed for reasons
+ * that have nothing to do with the campaigns.
+ */
+export function completedWindow(
+  timeZone: string,
+  days: number,
+  now: Date = new Date(),
+): { startDate: string; endDate: string; days: number; timeZone: string } {
+  const endDate = shiftYmd(ymdInTimeZone(timeZone, now), -1);
+  return { startDate: shiftYmd(endDate, -(days - 1)), endDate, days, timeZone };
+}
