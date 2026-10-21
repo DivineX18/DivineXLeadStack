@@ -111,18 +111,40 @@ console.log("-- the developer token no longer gates anything --");
       !/googleAdsConfigured/.test(code(CALLBACK)),
   );
 
-  // Backward compatibility: an existing deployment that still has the value set
-  // must not be told it is broken, and must not be told it is needed.
-  const envSchema = read("src/lib/setup/env-schema.mjs");
-  ck(
-    "the env catalog still knows the variable, so a legacy value is not flagged unknown",
-    /GOOGLE_ADS_DEVELOPER_TOKEN/.test(envSchema),
-  );
-  ck(
-    "and no longer claims Ads calls are refused without it",
-    !/Ads calls will be refused/.test(envSchema) &&
-      /no longer used/.test(envSchema),
-  );
+  // Backward compatibility, exercised rather than grepped: an existing
+  // deployment that still has the value set must not be told it is broken,
+  // and must not be told the variable is needed.
+  const { GROUPS } = await import("../src/lib/setup/env-schema.mjs");
+  const group = (GROUPS as { title: string; vars: [string, string, unknown?][]; deep?: Function }[]).find(
+    (g) => /Google Analytics/.test(g.title),
+  )!;
+  ck("the env catalog still declares the variable, so a legacy value is not flagged unknown",
+    group.vars.some(([k]) => k === "GOOGLE_ADS_DEVELOPER_TOKEN"));
+  ck("and declares it optional, so its absence is never an error",
+    group.vars.find(([k]) => k === "GOOGLE_ADS_DEVELOPER_TOKEN")?.[1] === "opt");
+
+  const runDeep = (present: string[]) => {
+    const found: { level: string; msg: string }[] = [];
+    const env = {
+      has: (k: string) => present.includes(k),
+      val: (k: string) => (present.includes(k) ? "x" : undefined),
+    };
+    group.deep?.((level: string, msg: string) => found.push({ level, msg }), env);
+    return found;
+  };
+
+  const stillSet = runDeep(["GOOGLE_ADS_DEVELOPER_TOKEN", "GOOGLE_ADS_LOGIN_CUSTOMER_ID"]);
+  ck("a deployment that still has the token set is told it is ignored, not that it is required",
+    stillSet.some((w) => /no longer used|sunset/.test(w.msg)) &&
+      !stillSet.some((w) => /refused/.test(w.msg)) &&
+      stillSet.every((w) => w.level === "warn"));
+
+  // MUTATION — the old warning. A manager id with no token used to be reported
+  // as "Ads calls will be refused", which would now send someone hunting for a
+  // credential Google no longer issues.
+  const managerOnly = runDeep(["GOOGLE_ADS_LOGIN_CUSTOMER_ID"]);
+  ck("MUTATION: a manager id without a token is no longer reported as broken",
+    managerOnly.length === 0);
 
   // Section 3 of the brief, and a real trap: legacy code often keeps sending a
   // header "just in case". An ignored header is dead weight that implies a
