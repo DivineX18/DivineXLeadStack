@@ -435,5 +435,83 @@ console.log("\n-- the read-only promise the privacy policy makes out loud --");
     !/:mutate|campaignBudgets|campaignCriteria|:createCustomer/.test(lib));
 }
 
+// ───────────────────────────────────────────────────────────────────────────────
+console.log("\n-- the Ads transport: read-only by construction --");
+{
+  const ADS_LIB = "src/lib/google/ads.ts";
+  const ADS_ROUTE = "src/app/api/sub-accounts/[id]/google/ads-accounts/route.ts";
+  const lib = code(ADS_LIB);
+  const route = code(ADS_ROUTE);
+
+  // Section 16: the application boundary enforces read-only, NOT the OAuth
+  // scope, which permits writes and cannot be narrowed.
+  ck("no mutate surface exists at all",
+    !/:mutate|mutateCampaign|campaignBudgets|campaignCriteria|:createCustomer|method:\s*["']PUT|method:\s*["']DELETE|method:\s*["']PATCH/.test(lib) &&
+      !/:mutate|mutate/.test(route));
+
+  // MUTATION — proof the check can fail, since "no match" passes trivially.
+  ck("MUTATION: a mutate path would be caught",
+    /:mutate/.test(lib.replace("googleAds:search", "googleAds:mutate")));
+
+  // Narrow to actual HEADER construction. The route carries an honest
+  // `developerTokenSent: false` field, and a check that fired on the word
+  // would flag the very thing that documents the absence.
+  ck("no developer-token header is constructed",
+    !/\["developer-token"\]|["']developer-token["']\s*:|developer_token|GOOGLE_ADS_DEVELOPER_TOKEN/.test(lib + route));
+
+  // MUTATION — proof it still catches a real one.
+  ck("MUTATION: a reintroduced developer-token header would be caught",
+    /\["developer-token"\]/.test(lib.replace('headers["login-customer-id"]', 'headers["developer-token"]')));
+  ck("and the route states outright that none is sent",
+    /developerTokenSent: false/.test(route));
+
+  // Per Google's listing-accounts guide the endpoint ignores the header, so
+  // sending it would be cargo cult. Checked at the call site, not the helper.
+  const listFn = lib.slice(lib.indexOf("export function listAccessibleCustomers"));
+  ck("listAccessibleCustomers sends no login-customer-id",
+    /return adsCall\("customers:listAccessibleCustomers", accessToken\);/.test(listFn));
+
+  // GAQL injection surface: there must not be one.
+  ck("every query is a reviewed server-side constant",
+    /export const CUSTOMER_METADATA_QUERY/.test(lib) &&
+      /export const CUSTOMER_CLIENT_QUERY/.test(lib) &&
+      !/body\.query|searchParams\.get\("query"|body\.customerId|searchParams\.get\("customer/.test(route));
+
+  // Tenancy: the target comes from the stored connection, never the caller.
+  ck("the route accepts no customer id from the request",
+    !/await request\.json\(\)/.test(route) && !/req\.body/.test(route));
+  ck("the route is admin-gated and reads the workspace's own connection",
+    /requireSubAccountAdmin\(request, id\)/.test(route) &&
+      /doc\(`subAccounts\/\$\{id\}`\)/.test(route));
+  ck("and refuses on the GRANTED scope, not on what was requested",
+    /googleCan\(config, "ads"\)/.test(route));
+
+  // Currency and timezone are read from the account, never assumed. The query
+  // is what makes that possible, so its absence is the regression to catch.
+  ck("the metadata query reads currency and timezone from the account",
+    /customer\.currency_code/.test(lib) && /customer\.time_zone/.test(lib));
+  ck("and asks whether the account is a manager or a test account",
+    /customer\.manager/.test(lib) && /customer\.test_account/.test(lib));
+
+  ck("the API version is pinned in exactly one place",
+    (lib.match(/GOOGLE_ADS_API_VERSION = /g) ?? []).length === 1 &&
+      !/\/v2[0-9]\//.test(route));
+
+  const { customerIdFromResourceName, GOOGLE_ADS_API_VERSION } = await import("../src/lib/google/ads.ts");
+  ck("a resource name yields its customer id",
+    customerIdFromResourceName("customers/1234567890") === "1234567890");
+  ck("the pinned version is a real version string", /^v\d+$/.test(GOOGLE_ADS_API_VERSION));
+
+  // MUTATION — half-parsing an unexpected shape. A loose regex would turn a
+  // format we have never seen into a plausible id and query the wrong account.
+  ck("MUTATION: an unexpected resource-name format yields null, not a guess",
+    customerIdFromResourceName("customers/123/campaigns/456") === null &&
+      customerIdFromResourceName("customer/1234567890") === null &&
+      customerIdFromResourceName("1234567890") === null &&
+      customerIdFromResourceName("customers/abc") === null &&
+      customerIdFromResourceName(null) === null &&
+      customerIdFromResourceName(undefined) === null);
+}
+
 console.log(fails === 0 ? "\nAll checks passed." : `\n${fails} check(s) failed.`);
 process.exit(fails === 0 ? 0 : 1);
