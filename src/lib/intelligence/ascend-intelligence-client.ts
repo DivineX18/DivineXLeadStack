@@ -742,6 +742,39 @@ export function createAscendIntelligenceClient(options: AscendIntelligenceClient
       return { ok: true, jobId };
     },
 
+    /**
+     * Hand Ascend one window of Google Ads evidence.
+     *
+     * Flow owns the Google operational boundary: OAuth, the token lifecycle,
+     * the transport, the hierarchy and which account a workspace is authorized
+     * for. It does NOT own what a number means, so this sends what Google said
+     * with int64 values still as the strings Google sent, plus the account's
+     * own currency and timezone and the exact window queried. Ascend converts
+     * micros, validates the window and records the observations beside the
+     * action and outcome rows that read them.
+     *
+     * Rides the existing bridge rather than adding any: same shared secret,
+     * same business-profile header, same envelope, same retry and audit path.
+     * The business profile id is resolved server-side from the workspace
+     * mapping and never taken from a caller.
+     *
+     * No OAuth material crosses. Not the refresh token, not the access token,
+     * not the client secret, not a session cookie.
+     */
+    async postGoogleAdsEvidence(
+      businessProfileId: string,
+      evidence: unknown,
+    ): Promise<{ ok: true; data: unknown } | { ok: false; code: string; message: string }> {
+      return serviceFetch({
+        resource: "google-ads-evidence",
+        method: "POST",
+        path: `/internal/intelligence/google-ads/evidence`,
+        businessProfileId,
+        fetchImpl,
+        body: evidence,
+      });
+    },
+
     async getGrowthScanJobStatus(businessProfileId: string, jobId: number): Promise<GrowthScanJobStatusOutcome> {
       const result = await serviceFetch({
         resource: "growth-scan-status",

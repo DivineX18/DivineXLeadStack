@@ -761,21 +761,27 @@ console.log("\n-- binding: the caller proposes, Google decides --");
     /adsCurrencyCode: currencyCode/.test(bind) && /adsTimeZone: timeZone/.test(bind) &&
       /adsLoginCustomerId: loginCustomerId/.test(bind));
 
+  const FETCH = "src/lib/google/ads-fetch.ts";
+  const fetchLib = code(FETCH);
+
   // The report route is stricter than the bind route: no id to tamper with.
   ck("the report route accepts no customer id at all",
     !/request\.json\(\)/.test(report) && !/searchParams\.get/.test(report) &&
-      /config\.adsCustomerId/.test(report));
-  ck("and refuses when nothing is bound, rather than defaulting a zone or currency",
-    /no_ads_account_bound/.test(report) && !/["']UTC["']/.test(report) && !/["']USD["']/.test(report));
+      /fetchBoundAdsReport\(config\)/.test(report));
+  // Narrowed to real request-object access. The first version matched the
+  // substring "request", which `requestId: call.requestId` contains, so it
+  // flagged Google's own correlation id as if it were caller input.
+  ck("and the bound target is read from the stored connection, nowhere else",
+    /config\.adsCustomerId/.test(fetchLib) &&
+      !/\brequest\.|\breq\.|searchParams|await request/.test(fetchLib));
+  ck("refuses when nothing is bound, rather than defaulting a zone or currency",
+    /no_ads_account_bound/.test(fetchLib) && !/["']UTC["']/.test(fetchLib) && !/["']USD["']/.test(fetchLib));
 
   // Int64 must survive to Ascend's canonical parser.
   ck("cost_micros is never numeric-coerced in Flow",
-    !/Number\(/.test(report) && !/parseInt|parseFloat/.test(report));
-  // Anchored on text that currently exists. The first version of this mutation
-  // pointed at a line the delivery fix had already replaced, so the mutation
-  // was a no-op and the check failed for the wrong reason.
+    !/Number\(/.test(fetchLib) && !/parseInt|parseFloat/.test(fetchLib) && !/Number\(/.test(report));
   ck("MUTATION: a Number() on a metric would be caught",
-    /Number\(/.test(report.replace("rowCount: rows.length", "rowCount: Number(rows.length)")));
+    /Number\(/.test(fetchLib.replace("rowCount: rows.length", "rowCount: Number(rows.length)")));
 
   // The bug I wrote and removed, as a standing guard for the whole class:
   // request-scoped state at module scope survives between requests, and for a
@@ -792,8 +798,9 @@ console.log("\n-- binding: the caller proposes, Google decides --");
       !/^\s*(let|var)\s+\w/m.test(src.replace(/^export (async )?function[\s\S]*/m, "")) ||
         !/^(let|var)\s/m.test(src));
   }
-  ck("each Google route mints its access token inside the handler",
-    /let accessToken: string;/.test(report) && /accessTokenForConfig\(config\)/.test(report));
+  ck("the shared fetch mints its access token inside the call, not at module scope",
+    /let accessToken: string;/.test(fetchLib) && /accessTokenForConfig\(config\)/.test(fetchLib) &&
+      !/^(let|var)\s/m.test(fetchLib));
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -839,11 +846,99 @@ console.log("\n-- rows returned is not data delivered --");
       isNonZeroMetric("10000000000000000000") === true);
 
   const report = code("src/app/api/sub-accounts/[id]/google/ads-report/route.ts");
-  ck("the route widens on delivery, not on row count",
-    /delivering\.length > 0\) break/.test(report) && !/results\.length > 0\) break/.test(report));
+  const fl = code("src/lib/google/ads-fetch.ts");
+  ck("the fetch widens on delivery, not on row count",
+    /deliveringRowCount > 0\) break/.test(fl) && !/results\.length > 0\) break/.test(fl));
   ck("and names WHICH empty case applies, since the three need different answers",
-    /no_campaigns/.test(report) && /campaigns_exist_but_no_delivery_in_any_window/.test(report) &&
-      /query_failed/.test(report));
+    /no_campaigns/.test(fl) && /campaigns_exist_but_no_delivery_in_any_window/.test(fl) &&
+      /query_failed/.test(fl));
+  // One fetch, two consumers. Two copies would let the number an operator
+  // reads and the number Ascend learns from be computed differently, and that
+  // divergence is invisible until somebody compares them.
+  ck("the report and the Ascend sync share one fetch",
+    /fetchBoundAdsReport/.test(report) &&
+      /fetchBoundAdsReport/.test(code("src/app/api/sub-accounts/[id]/google/ads-sync/route.ts")) &&
+      (fl.match(/export async function fetchBoundAdsReport/g) ?? []).length === 1);
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
+console.log("\n-- the crossing into Ascend --");
+{
+  const SYNC = "src/app/api/sub-accounts/[id]/google/ads-sync/route.ts";
+  const sync = code(SYNC);
+  const client = code("src/lib/intelligence/ascend-intelligence-client.ts");
+  const fetchLib = read("src/lib/google/ads-fetch.ts");
+
+  ck("the sync route is admin-gated and requires the GRANTED Ads scope",
+    /requireSubAccountAdmin\(request, id\)/.test(sync) && /googleCan\(config, "ads"\)/.test(sync));
+
+  // TENANCY. Two identities, neither from the caller.
+  ck("the Ascend business profile is resolved from the workspace mapping",
+    /getMappingBySubAccountId\(id\)/.test(sync) && /primaryAscendBusinessProfileId/.test(sync));
+  ck("MUTATION: no identity is accepted from the request body",
+    !/request\.json\(\)/.test(sync) && !/searchParams\.get/.test(sync) &&
+      !/body\.(customerId|businessProfileId)/.test(sync));
+  ck("and it refuses rather than guessing when no profile is linked",
+    /no_business_profile/.test(sync));
+
+  // Reuse, not new infrastructure: the existing bridge carries this.
+  ck("the evidence rides the existing bridge client",
+    /createAscendIntelligenceClient/.test(sync) && /postGoogleAdsEvidence/.test(sync) &&
+      /postGoogleAdsEvidence/.test(client));
+  ck("the bridge sender uses the shared serviceFetch, not its own fetch",
+    /resource: "google-ads-evidence"/.test(client) &&
+      /path: `\/internal\/intelligence\/google-ads\/evidence`/.test(client));
+
+  // NO OAUTH MATERIAL CROSSES. The single worst thing this could leak.
+  const payloadKeys = /source|apiVersion|customerId|loginCustomerId|currencyCode|timeZone|window|fetchedAt|requestId|campaigns/;
+  ck("the evidence payload is built from a fixed field list",
+    payloadKeys.test(fetchLib) && /export function buildAdsEvidence/.test(fetchLib));
+  ck("MUTATION: no credential field can reach the payload",
+    !/refreshToken|accessToken|refreshTokenEncrypted|client_secret|clientSecret|cookie/i.test(
+      fetchLib.slice(fetchLib.indexOf("export function buildAdsEvidence")),
+    ));
+
+  // An idle account must not look like a successful sync.
+  ck("nothing is sent when no window delivered",
+    /if \(!result\.delivered\)/.test(sync) && /sent: false/.test(sync));
+  ck("and a bridge failure reports Ascend's own code rather than a generic failure",
+    /bridgeError/.test(sync) && /outcome\.code/.test(sync));
+
+  // The evidence builder: a row that cannot name what it measured is not
+  // evidence, so it is dropped rather than recorded against nothing.
+  ck("a row with no campaign id is skipped, not recorded unscoped",
+    /if \(!id\) continue;/.test(code("src/lib/google/ads-fetch.ts")));
+
+  const { buildAdsEvidence } = await import("../src/lib/google/ads-fetch.ts");
+  const attempt = {
+    window: { startDate: "2026-07-23", endDate: "2026-10-20", days: 90, timeZone: "America/Chicago" },
+    ok: true, requestId: "CF6g2vW0QJs31f-jNtt8SA", rowCount: 2, deliveringRowCount: 2, fieldMask: null, googleError: null,
+    // Verbatim rows from the real report, ids replaced.
+    results: [
+      { campaign: { id: "24143526204", name: "Campaign #1", status: "PAUSED" },
+        metrics: { impressions: "181", clicks: "9", costMicros: "18007216", conversions: 8, conversionsValue: 8 } },
+      { metrics: { impressions: "5", clicks: "1", costMicros: "1000", conversions: 0, conversionsValue: 0 } },
+    ],
+  };
+  const built = buildAdsEvidence(
+    { ok: true, apiVersion: "v26", customerId: "3912988533", loginCustomerId: "9184814350",
+      currencyCode: "USD", timeZone: "America/Chicago", campaignCount: 2, campaigns: [],
+      campaignExistenceRequestId: null, attempts: [], delivered: null, emptyReason: null,
+      fetchedAt: "2026-10-21T18:30:00.000Z" } as never,
+    attempt as never,
+  );
+  ck("int64 metrics cross as the STRINGS Google sent",
+    built.campaigns[0].metrics.costMicros === "18007216" &&
+      built.campaigns[0].metrics.impressions === "181" &&
+      typeof built.campaigns[0].metrics.conversions === "number");
+  ck("MUTATION: the unidentifiable row is dropped, so one campaign crosses, not two",
+    built.campaigns.length === 1 && built.campaigns[0].id === "24143526204");
+  ck("the account's own currency and timezone travel with the numbers",
+    built.currencyCode === "USD" && built.timeZone === "America/Chicago");
+  ck("and so does the exact window, so Ascend can validate rather than trust it",
+    built.window.startDate === "2026-07-23" && built.window.endDate === "2026-10-20" && built.window.days === 90);
+  ck("MUTATION: the serialised payload contains no credential-shaped key",
+    !/token|secret|cookie|password/i.test(JSON.stringify(built)));
 }
 
 console.log(fails === 0 ? "\nAll checks passed." : `\n${fails} check(s) failed.`);
