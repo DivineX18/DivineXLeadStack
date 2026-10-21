@@ -941,5 +941,45 @@ console.log("\n-- the crossing into Ascend --");
     !/token|secret|cookie|password/i.test(JSON.stringify(built)));
 }
 
+// ───────────────────────────────────────────────────────────────────────────────
+console.log("\n-- a diagnosis behind a 5xx is a diagnosis nobody reads --");
+{
+  // Found live. Binding a deactivated account returned HTTP 502 with a body
+  // naming CUSTOMER_NOT_ENABLED, and Cloudflare replaced the whole response
+  // with its own branded 502 page. The 403 case on the same route came back
+  // intact, so the status was the only difference. An origin 5xx discards the
+  // one field the response exists to carry.
+  const bind = code("src/app/api/sub-accounts/[id]/google/ads-customer/route.ts");
+  const report = code("src/app/api/sub-accounts/[id]/google/ads-report/route.ts");
+  const sync = code("src/app/api/sub-accounts/[id]/google/ads-sync/route.ts");
+
+  ck("a target Google answered about is 422, not a gateway error",
+    /target_not_readable[\s\S]{0,400}status: 422/.test(bind) &&
+      !/target_not_readable[\s\S]{0,400}status: 502/.test(bind));
+  ck("an empty metadata answer is also 422",
+    /target_metadata_empty[\s\S]{0,300}status: 422/.test(bind));
+  ck("a dead token is 409, because the fix is a reconnect",
+    /token_refresh_failed[\s\S]{0,300}status: 409/.test(bind));
+
+  // MUTATION — the exact regression. If any of these drifts back to 5xx the
+  // body stops arriving, and the failure looks like an outage rather than a
+  // deactivated account.
+  ck("MUTATION: moving a googleError-bearing refusal back to 5xx would be caught",
+    /status: 502/.test(bind.replace("status: 422", "status: 502")));
+
+  for (const [name, src] of [["report", report], ["sync", sync]] as const) {
+    ck(`the ${name} route routes by WHO refused: 400 unbound, 409 token, 422 Google, 502 unreachable`,
+      /result\.error === "no_ads_account_bound" \? 400/.test(src) &&
+        /result\.error === "token_refresh_failed" \? 409/.test(src) &&
+        /result\.googleError \? 422/.test(src) &&
+        /: 502/.test(src));
+  }
+
+  // The 403 path must stay 403: an id Google does not authorize is the
+  // caller's error, and it already survives the CDN.
+  ck("an unauthorized customer id stays a 403",
+    /not_authorized_for_this_workspace[\s\S]{0,500}status: 403/.test(bind));
+}
+
 console.log(fails === 0 ? "\nAll checks passed." : `\n${fails} check(s) failed.`);
 process.exit(fails === 0 ? 0 : 1);

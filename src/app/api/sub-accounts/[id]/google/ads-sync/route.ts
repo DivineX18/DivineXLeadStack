@@ -57,7 +57,14 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
 
   const result = await fetchBoundAdsReport(config);
   if (!result.ok) {
-    const status = result.error === "no_ads_account_bound" ? 400 : 502;
+    // A refusal Google explained is a 422, not a gateway error. An origin 5xx
+    // is replaced by the CDN's error page, which discards the googleError
+    // field that says WHY, and that field is the entire value of the response.
+    const status =
+      result.error === "no_ads_account_bound" ? 400
+      : result.error === "token_refresh_failed" ? 409
+      : result.googleError ? 422
+      : 502;
     return NextResponse.json(result, { status });
   }
 

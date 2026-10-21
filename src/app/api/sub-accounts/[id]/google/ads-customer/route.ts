@@ -95,7 +95,9 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   } catch (err) {
     return NextResponse.json(
       { error: "token_refresh_failed", detail: err instanceof Error ? err.message : "unknown" },
-      { status: 502 },
+      // 409, not 502: the fix is a reconnect, and a 5xx would be replaced by
+      // the CDN's own error page before the operator ever saw which it was.
+      { status: 409 },
     );
   }
 
@@ -162,14 +164,19 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
         loginCustomerIdUsed: loginCustomerId,
         googleError: readAdsError(metadata),
       },
-      { status: 502 },
+      // 422, not 502. Google ANSWERED, with a specific reason such as
+      // CUSTOMER_NOT_ENABLED; the request was well formed and the target
+      // simply cannot be used. Returning 5xx here cost me the body: an origin
+      // 5xx is swallowed by Cloudflare and replaced with a branded error
+      // page, so the one thing the operator needs is the one thing they lose.
+      { status: 422 },
     );
   }
   const customer = (metadata.body as { results?: { customer?: ClientRow }[] } | null)?.results?.[0]?.customer ?? null;
   if (!customer) {
     return NextResponse.json(
       { error: "target_metadata_empty", detail: "The metadata query returned no rows." },
-      { status: 502 },
+      { status: 422 },
     );
   }
 
