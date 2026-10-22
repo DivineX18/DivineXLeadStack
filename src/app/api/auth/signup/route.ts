@@ -3,6 +3,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { WORKSPACE_BUILD_GATES } from "@/lib/server/workspace-build-gates";
+import { ensureAscendWorkspaceLink } from "@/lib/workspace/ensure-ascend-link";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import { seedDefaultTemplates } from "@/lib/automations/seed-templates";
 import { GLOBAL_TERRITORY_ID, type Role } from "@/types";
@@ -322,13 +323,36 @@ export async function POST(request: Request) {
 
       await batch.commit();
 
+      // Give the bootstrap workspace its Ascend identity, same as every
+      // other creation path (sub-accounts-service.ts). Best-effort for the
+      // same reason: the agency + Main sub-account are already written and
+      // are what the signup asked for, so an unreachable Ascend must not
+      // undo them. Idempotent — ensureAscendWorkspaceLink() re-running here
+      // later (e.g. a retried onboarding call) never mints a second profile.
+      try {
+        await ensureAscendWorkspaceLink({
+          subAccountId,
+          agencyId,
+          ownerFirebaseUid: uid,
+          actingAsUid: uid,
+          businessName: agencyName,
+          email: email ?? null,
+        });
+      } catch (err) {
+        console.error(`[auth/signup] Ascend link threw for ${subAccountId}`, err);
+      }
+
       return NextResponse.json({
         uid,
         role: "admin",
         agencyId,
         agencyRole: "owner",
         subAccountId,
-        redirectTo: "/agency",
+        // Send them to onboarding — if this deployment/workspace isn't
+        // Ascend-entitled, /app/*'s own shell gate (decideShellMode) bounces
+        // them straight back to their CRM dashboard, so this is safe either
+        // way without duplicating that entitlement check here.
+        redirectTo: `/app/onboarding?w=${subAccountId}`,
       });
     }
 

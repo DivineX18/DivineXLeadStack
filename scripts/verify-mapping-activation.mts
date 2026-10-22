@@ -38,6 +38,8 @@ const link = read("src/lib/workspace/link-ascend-business-profile.ts");
 const authz = read("src/lib/divinex/profile-authorization.ts");
 const contract = read("src/lib/divinex/contract.ts");
 const sso = read("src/app/api/auth/sso/callback/route.ts");
+const ensureLink = read("src/lib/workspace/ensure-ascend-link.ts");
+const provisionOps = read("src/lib/workspace/provision-ascend-operations.ts");
 
 // ── The authorization rule is UNCHANGED ───────────────────────────────────
 {
@@ -94,24 +96,55 @@ const sso = read("src/app/api/auth/sso/callback/route.ts");
     /updateMappingStatus\([^)]*"active", "system:sso-bridge"\)/.test(sso),
   );
   check(
-    "3b. and the two paths are distinguishable in the audit trail",
-    /"system:onboarding"/.test(link) && /"system:sso-bridge"/.test(sso),
+    "3b. and the paths are distinguishable in the audit trail",
+    /"system:onboarding"/.test(link) && /"system:sso-bridge"/.test(sso) && /"system:ascend-provisioning"/.test(provisionOps),
+  );
+}
+
+// ── Create-time linking (createSubAccountForAgency / native signup) also
+//    finishes what it starts ────────────────────────────────────────────
+{
+  // Same regression, a different door: ensureAscendWorkspaceLink used to
+  // write the mapping directly via createMappingIdempotent/
+  // attachPrimaryBusinessProfile and never activate it, so a workspace
+  // created through the agency's "New sub-account" form (or native signup)
+  // came out permanently mapped-but-inactive -- linked on Flow's side,
+  // authorized nowhere, identical in effect to the onboarding regression
+  // this file was built to pin.
+  check(
+    "5a. create-time linking delegates to the SAME activator onboarding uses, not a parallel one",
+    /from "@\/lib\/workspace\/link-ascend-business-profile"/.test(ensureLink) && /linkAscendBusinessProfile\(/.test(ensureLink),
+  );
+  check(
+    "5b. it does NOT re-implement createMappingIdempotent/attachPrimaryBusinessProfile itself",
+    !/createMappingIdempotent\(/.test(ensureLink) && !/attachPrimaryBusinessProfile\(/.test(ensureLink),
+  );
+  check(
+    "5c. an already-linked-but-still-pending mapping (the exact regression state) is activated inline",
+    /existing\.status === "pending_provision"/.test(ensureLink) && /updateMappingStatus\(existing\.workspaceId, "active"/.test(ensureLink),
+  );
+  check(
+    "5d. MUTATION: a version that only checked existing.primaryAscendBusinessProfileId (the old bug) would be caught",
+    !/if \(existing\?\.primaryAscendBusinessProfileId\) \{\s*\n\s*return \{/.test(ensureLink),
+    "must not early-return on linked-ness alone, without checking status",
   );
 }
 
 // ── The regression itself, stated as a property ───────────────────────────
 {
-  // Before the fix, the ONLY activator in the codebase was the SSO callback.
-  // If that is ever true again, a Flow-first workspace silently loses all
-  // business context.
+  // Before the first fix, the ONLY activator in the codebase was the SSO
+  // callback. If that is ever true again, a Flow-first workspace silently
+  // loses all business context.
   const activators = [
     ["sso callback", /updateMappingStatus\([^)]*"active"/.test(sso)],
     ["onboarding linker", /updateMappingStatus\([^)]*"active"/.test(link)],
+    ["ascend-purchase provisioning", /updateMappingStatus\([^)]*"active"/.test(provisionOps)],
+    ["create-time linking (via the onboarding linker, reused)", /linkAscendBusinessProfile\(/.test(ensureLink)],
   ] as const;
   const count = activators.filter(([, v]) => v).length;
   check(
-    "4. a workspace can become active WITHOUT an SSO handoff",
-    count >= 2,
+    "6. a workspace can become active through every creation path, not just SSO",
+    count >= 4,
     activators.map(([n, v]) => `${n}=${v}`).join(" "),
   );
 }

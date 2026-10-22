@@ -120,9 +120,43 @@ console.log("\n-- a new workspace gets its Ascend identity --");
     /ascend_not_configured/.test(link) &&
       /link\.reason !== "ascend_not_configured"/.test(service));
 
-  // Both sides keep their own linkage record on purpose.
-  ck("the Flow-side mapping is written too, not just Ascend's",
-    /createMappingIdempotent/.test(link) && /attachPrimaryBusinessProfile/.test(link));
+  // Both sides keep their own linkage record on purpose. The actual
+  // create/attach/activate is delegated to linkAscendBusinessProfile
+  // (lib/workspace/link-ascend-business-profile.ts) -- reused, not
+  // duplicated here -- which is the Flow-side write, and is also the ONLY
+  // place that remembers to activate it (see verify-mapping-activation.mts).
+  ck("the Flow-side mapping is written through the shared linker, not a duplicated write",
+    /from "@\/lib\/workspace\/link-ascend-business-profile"/.test(link) && /linkAscendBusinessProfile\(/.test(link));
+}
+
+console.log("\n-- a brand-new account lands in onboarding, not straight in the CRM dashboard --");
+{
+  // Linking the workspace to a profile (above) and routing the person who
+  // just created it to the screen that actually DOES something with that
+  // profile are two different bugs -- a workspace can be perfectly linked
+  // and a new owner still never finds onboarding because nothing points them
+  // at it. Both the agency's "New sub-account" form and native signup's
+  // bootstrap branch used to land on the plain CRM dashboard/picker.
+  const newSubAccountPage = read("src/app/(dashboard)/agency/sub-accounts/new/page.tsx");
+
+  ck("agency \"New sub-account\" redirects to /app/onboarding, not straight to the CRM dashboard",
+    /router\.push\(`\/app\/onboarding\?w=\$\{payload\.subAccountId\}`\)/.test(newSubAccountPage));
+  ck("MUTATION: a redirect back to /sa/{id}/dashboard here would be caught",
+    !/router\.push\(`\/sa\/\$\{payload\.subAccountId\}\/dashboard`\)/.test(newSubAccountPage));
+
+  ck("native signup's bootstrap branch redirects to /app/onboarding too",
+    /redirectTo: `\/app\/onboarding\?w=\$\{subAccountId\}`/.test(code(SIGNUP)));
+  ck("MUTATION: a redirect back to the bare /agency picker here would be caught",
+    !/redirectTo: "\/agency"/.test(code(SIGNUP)));
+
+  // Safe-by-construction: onboarding doesn't need its own entitlement check
+  // here, because /app/*'s shell layout already bounces a non-full_ascend
+  // workspace straight back out (decide-shell-mode.ts, Slice 8). A CRM-only
+  // new workspace hitting /app/onboarding self-corrects instead of getting
+  // a broken/empty screen.
+  const shellLayout = code("src/app/app/layout.tsx");
+  ck("the shell layout's full_ascend gate covers /app/onboarding too (no path-specific bypass for it)",
+    !/pathname\.startsWith\("\/app\/onboarding"\)/.test(shellLayout));
 }
 
 console.log(fails === 0 ? "\nAll checks passed." : `\n${fails} check(s) failed.`);

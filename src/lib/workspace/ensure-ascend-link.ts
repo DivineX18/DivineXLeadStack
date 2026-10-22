@@ -1,11 +1,8 @@
 import "server-only";
 
 import { ascend, ascendConfigured } from "@/lib/divinex/ascend-client";
-import {
-  attachPrimaryBusinessProfile,
-  createMappingIdempotent,
-  getMappingBySubAccountId,
-} from "@/lib/workspace/workspace-mappings-service";
+import { getMappingBySubAccountId, updateMappingStatus } from "@/lib/workspace/workspace-mappings-service";
+import { linkAscendBusinessProfile } from "@/lib/workspace/link-ascend-business-profile";
 
 /**
  * Give a brand-new Flow workspace its Ascend identity.
@@ -33,6 +30,23 @@ import {
  * matters because a second profile for one workspace is the
  * many-profiles-to-one-workspace state the linkage rules forbid, and it is
  * not cheaply reversible.
+ *
+ * ACTIVATES, NOT JUST LINKS. `createMappingIdempotent` opens every mapping at
+ * `pending_provision`, and `resolveAuthorizedBusinessProfileId` denies
+ * anything that isn't `active` (lib/divinex/profile-authorization.ts) — the
+ * same "a mapping nobody activates authorizes nothing" lesson already learned
+ * once for the onboarding path (see link-ascend-business-profile.ts's own
+ * header comment) and once for Ascend-purchase provisioning
+ * (provision-ascend-operations.ts). This function used to write the mapping
+ * directly via createMappingIdempotent/attachPrimaryBusinessProfile and never
+ * activate it — a workspace created this way came out permanently
+ * mapped-but-inactive, which is indistinguishable from unmapped to every
+ * caller of resolveAuthorizedBusinessProfileId: linked on Flow's side,
+ * authorized nowhere. Delegating the actual create/attach/activate to
+ * linkAscendBusinessProfile (reused, not duplicated) closes that — it's the
+ * SAME function the onboarding path uses to finish this exact job, and it
+ * already owns "only pending_provision advances, suspended/archived are never
+ * quietly undone."
  */
 export type EnsureAscendLinkResult =
   | { linked: true; businessProfileId: string; created: boolean; alreadyLinked: boolean }
@@ -55,10 +69,17 @@ export async function ensureAscendWorkspaceLink(params: {
     return { linked: false, reason: "ascend_not_configured" };
   }
 
-  // Already linked? Then there is nothing to do, and asking Ascend again would
-  // risk a second profile for the same workspace.
+  // Already linked to a real profile? Then there's no need to call Ascend
+  // again (asking ascend.resolve() again would risk a second profile for the
+  // same workspace) — but a mapping created by an EARLIER, pre-activation
+  // version of this function (or any other path) may still be sitting at
+  // pending_provision, which authorizes nothing. Finish that job inline,
+  // without a network round trip to Ascend, before returning.
   const existing = await getMappingBySubAccountId(params.subAccountId).catch(() => null);
   if (existing?.primaryAscendBusinessProfileId) {
+    if (existing.status === "pending_provision") {
+      await updateMappingStatus(existing.workspaceId, "active", params.actingAsUid).catch(() => {});
+    }
     return {
       linked: true,
       businessProfileId: existing.primaryAscendBusinessProfileId,
@@ -81,28 +102,30 @@ export async function ensureAscendWorkspaceLink(params: {
   }
   const businessProfileId = String(resolved.data.businessProfileId);
 
-  // Ascend's /divinex/resolve writes its OWN mapping row. Flow keeps its own,
-  // which is what every Flow-side read goes through, so both sides have to be
-  // told. They are separate records by design: each system owns its own
-  // linkage authority rather than reading across the boundary at request time.
-  if (existing) {
-    const attached = await attachPrimaryBusinessProfile(
-      existing.workspaceId,
-      businessProfileId,
-      params.actingAsUid,
-    );
-    if (!attached.ok) return { linked: false, reason: attached.reason };
-    return { linked: true, businessProfileId, created: !!resolved.data.created, alreadyLinked: false };
+  const outcome = await linkAscendBusinessProfile({
+    subAccountId: params.subAccountId,
+    businessProfileId,
+    actingAsUid: params.actingAsUid,
+    agencyId: params.agencyId,
+  });
+
+  if (outcome === "failed") return { linked: false, reason: "link_failed" };
+
+  if (outcome === "left_alone_different_profile") {
+    // Race: something else linked a different profile between our read above
+    // and now (e.g. onboarding ran concurrently). Report what's actually
+    // there rather than claiming failure -- the workspace IS linked, just not
+    // to the id we just resolved.
+    const nowExisting = await getMappingBySubAccountId(params.subAccountId).catch(() => null);
+    return nowExisting?.primaryAscendBusinessProfileId
+      ? { linked: true, businessProfileId: nowExisting.primaryAscendBusinessProfileId, created: false, alreadyLinked: true }
+      : { linked: false, reason: "left_alone_different_profile" };
   }
 
-  const mapping = await createMappingIdempotent({
-    flowSubAccountId: params.subAccountId,
-    agencyId: params.agencyId,
-    ownerFirebaseUid: params.ownerFirebaseUid,
-    primaryAscendBusinessProfileId: businessProfileId,
-    actingAsUid: params.actingAsUid,
-  });
-  if (!mapping.ok) return { linked: false, reason: mapping.reason };
-
-  return { linked: true, businessProfileId, created: !!resolved.data.created, alreadyLinked: false };
+  return {
+    linked: true,
+    businessProfileId,
+    created: !!resolved.data.created,
+    alreadyLinked: outcome === "already_linked",
+  };
 }

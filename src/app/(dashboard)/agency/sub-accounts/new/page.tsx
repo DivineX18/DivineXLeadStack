@@ -234,7 +234,12 @@ export default function NewSubAccountPage() {
           billingNote +
           websiteGateNote,
       );
-      router.push(`/sa/${payload.subAccountId}/dashboard`);
+      // Send them to onboarding, not straight to the CRM dashboard. If this
+      // workspace isn't Ascend-entitled, /app/*'s own shell gate
+      // (decideShellMode) bounces them straight back to the dashboard below,
+      // so this is safe regardless of which tier the new workspace got —
+      // no need to duplicate that entitlement check here.
+      router.push(`/app/onboarding?w=${payload.subAccountId}`);
       router.refresh();
     } catch (err) {
       const message =
