@@ -1,6 +1,8 @@
 import "server-only";
 
 import { FieldValue } from "firebase-admin/firestore";
+import { WORKSPACE_BUILD_GATES } from "@/lib/server/workspace-build-gates";
+import { ensureAscendWorkspaceLink } from "@/lib/workspace/ensure-ascend-link";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { seedDefaultTemplates } from "@/lib/automations/seed-templates";
 import {
@@ -86,6 +88,10 @@ export interface CreateSubAccountResult {
   billingStatus: "comped" | "pending";
   /** Set when billingStatus is "pending" — share with the client to activate. */
   checkoutUrl: string | null;
+  /** The Ascend business profile this workspace was linked to, or null when
+   *  Ascend is not configured or was unreachable. Null is recoverable: the
+   *  same linker repairs it on a later call. */
+  ascendBusinessProfileId?: string | null;
 }
 
 /**
@@ -248,14 +254,14 @@ export async function createSubAccountForAgency(
       outboundVoiceEnabledByAgency: false,
       whatsappEnabledByAgency: false,
       metaInboxEnabledByAgency: false,
-      websiteEnabledByAgency: false,
       communityEnabledByAgency: false,
       getLeadsEnabledByAgency: false,
       missedCallTextBackEnabledByAgency: false,
-      // Zeno (sub-account level) ships OFF like every other gate (opt-in) — the
-      // agency owner enables it per sub-account from the Manage dialog.
-      aiSuiteEnabledByAgency: false,
-      funnelsEnabledByAgency: false,
+      // Funnels, websites and Zeno: the build tools, on by default. See
+      // WORKSPACE_BUILD_GATES for why these are not treated like the
+      // spend-capable channels around them. The agency owner can still turn
+      // any of them off per workspace from the Manage dialog.
+      ...WORKSPACE_BUILD_GATES,
       customDomainsEnabledByAgency: false,
       funnelCheckoutEnabledByAgency: false,
       ascendIntelligenceEnabledByAgency: false,
@@ -333,5 +339,34 @@ export async function createSubAccountForAgency(
     );
   }
 
-  return { subAccountId, accountNumber, name, agencyId, billingStatus, checkoutUrl };
+  // Give the workspace its Ascend identity, so the intelligence side is not an
+  // empty shell behind a tier badge. Without this a workspace has no business
+  // profile, and every Ascend surface errors rather than showing a new
+  // customer anything. Best-effort for the same reason the plan assign above
+  // is: the workspace is already written and is what the operator asked for,
+  // so an unreachable Ascend must not undo it. Re-running the same call later
+  // repairs it, and it is idempotent, so a workspace can never end up with two
+  // profiles.
+  let ascendBusinessProfileId: string | null = null;
+  try {
+    const link = await ensureAscendWorkspaceLink({
+      subAccountId,
+      agencyId,
+      ownerFirebaseUid: uid,
+      actingAsUid: uid,
+      businessName: name,
+      email: email ?? null,
+    });
+    if (link.linked) {
+      ascendBusinessProfileId = link.businessProfileId;
+    } else if (link.reason !== "ascend_not_configured") {
+      // A Flow-only deployment is a normal state, not a failure worth logging
+      // on every create. Anything else is.
+      console.error(`[sub-accounts] Ascend link failed for ${subAccountId}: ${link.reason}`);
+    }
+  } catch (err) {
+    console.error(`[sub-accounts] Ascend link threw for ${subAccountId}`, err);
+  }
+
+  return { subAccountId, accountNumber, name, agencyId, billingStatus, checkoutUrl, ascendBusinessProfileId };
 }

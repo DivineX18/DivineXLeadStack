@@ -2,6 +2,7 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
+import { WORKSPACE_BUILD_GATES } from "@/lib/server/workspace-build-gates";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import { seedDefaultTemplates } from "@/lib/automations/seed-templates";
 import { GLOBAL_TERRITORY_ID, type Role } from "@/types";
@@ -235,12 +236,12 @@ export async function POST(request: Request) {
         outboundVoiceEnabledByAgency: false,
         whatsappEnabledByAgency: false,
         metaInboxEnabledByAgency: false,
-        websiteEnabledByAgency: false,
         communityEnabledByAgency: false,
         getLeadsEnabledByAgency: false,
         missedCallTextBackEnabledByAgency: false,
-        aiSuiteEnabledByAgency: false,
-        funnelsEnabledByAgency: false,
+        // The build tools. The first workspace an owner ever sees is the worst
+        // possible place for an empty shell.
+        ...WORKSPACE_BUILD_GATES,
         customDomainsEnabledByAgency: false,
         funnelCheckoutEnabledByAgency: false,
         ascendIntelligenceEnabledByAgency: false,

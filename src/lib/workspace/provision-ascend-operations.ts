@@ -13,6 +13,7 @@ import {
 } from "@/lib/workspace/workspace-mappings-service";
 import { CUSTOM_BRAND } from "@/config/landing";
 import { GLOBAL_TERRITORY_ID, type Role } from "@/types";
+import { WORKSPACE_BUILD_GATES } from "@/lib/server/workspace-build-gates";
 import type { AscendOperationsGrant } from "@/types/tenancy";
 
 /**
@@ -70,8 +71,10 @@ export type AscendProvisionOutcome =
  * silently switch on broadcasts, WhatsApp, outbound voice or the public API.
  */
 const ASCEND_WORKSPACE_GATES = {
-  funnelsEnabledByAgency: true,
-  websiteEnabledByAgency: true,
+  // Funnels, websites AND Zeno. This path already turned the first two on and
+  // left the assistant that builds them off, so a paying customer got a
+  // builder with no builder in it.
+  ...WORKSPACE_BUILD_GATES,
 
   emailDomainEnabledByAgency: false,
   outboundVoiceEnabledByAgency: false,
@@ -80,7 +83,6 @@ const ASCEND_WORKSPACE_GATES = {
   communityEnabledByAgency: false,
   getLeadsEnabledByAgency: false,
   missedCallTextBackEnabledByAgency: false,
-  aiSuiteEnabledByAgency: false,
   customDomainsEnabledByAgency: false,
   funnelCheckoutEnabledByAgency: false,
   socialPlannerEnabledByAgency: false,
