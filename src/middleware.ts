@@ -127,6 +127,12 @@ const PUBLIC_PATHS = [
   "/api/pwa",
   "/u",
   "/api/u",
+  // Public tag-link pages — recipient-facing /t/[token] confirmation page
+  // (client-side-rendered) and the apply-the-tag endpoint it POSTs to. Same
+  // HMAC-token trust model as /u above; no session needed. See
+  // lib/automations/tag-link-token.ts.
+  "/t",
+  "/api/t",
   // Public quote pages — recipient-facing /q/[token] view (server-rendered)
   // and the accept/decline endpoint. Both gated by HMAC-signed token
   // verification inside the route; no session needed.

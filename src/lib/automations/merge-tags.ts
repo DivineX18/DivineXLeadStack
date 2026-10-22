@@ -12,6 +12,17 @@
  *   {{bookingLink}}        — sub-account's configured Calendly / Cal.com /
  *                            TidyCal URL. Empty string when not set.
  *   {{unsubscribeLink}}    — required in email bodies.
+ *   {{tagLink:slug}}       — one-click link that applies tag `slug` to the
+ *                            recipient contact (lib/automations/tag-link-token.ts).
+ *                            Empty string when the caller didn't supply
+ *                            `buildTagLink` (most callers don't need it — see
+ *                            MergeTagSubject below) or NEXT_PUBLIC_APP_URL
+ *                            isn't configured. Put it inside
+ *                            `[button: Label](...)` syntax (lib/email/body.ts)
+ *                            so it renders as a real clickable link/button in
+ *                            HTML mail — a bare `{{tagLink:slug}}` inline in a
+ *                            sentence resolves to a bare URL, which renders as
+ *                            escaped plain text, not a link.
  *
  * Per-type slugged booking tags ({{bookingLink:30min}}) are reserved for a
  * future multi-link booking integration.
@@ -38,6 +49,14 @@ export interface MergeTagSubject {
   bookingLink: string;
   /** Pre-built fully-qualified unsubscribe URL. Empty string for SMS templates. */
   unsubscribeLink: string;
+  /**
+   * Builds the URL for a `{{tagLink:slug}}` occurrence, given the slug after
+   * the colon. Optional — callers that have no per-contact tag-link use case
+   * (WhatsApp templates, broadcasts, reviews) omit it entirely, and any
+   * `{{tagLink:...}}` tag in their body resolves to empty, same as any other
+   * unrecognized tag. Only lib/workflows/engine.ts supplies this today.
+   */
+  buildTagLink?: (tag: string) => string;
 }
 
 const TAG_RE = /\{\{\s*([a-zA-Z0-9_.:-]+)\s*\}\}/g;
@@ -81,6 +100,10 @@ export function resolveMergeTags(
       case "unsubscribeLink":
         return subject.unsubscribeLink ?? "";
       default:
+        if (tag.startsWith("tagLink:")) {
+          const slug = tag.slice("tagLink:".length);
+          return subject.buildTagLink ? subject.buildTagLink(slug) : "";
+        }
         // Unknown / deferred tags (e.g. per-type slugged booking links like
         // bookingLink:30min). Surface as empty rather than leak the raw
         // token into outbound copy.

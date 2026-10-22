@@ -19,6 +19,7 @@ import {
   type MergeTagSubject,
 } from "@/lib/automations/merge-tags";
 import { buildUnsubscribeUrl } from "@/lib/automations/unsubscribe-token";
+import { buildTagLinkUrl } from "@/lib/automations/tag-link-token";
 import { withPublicAssetHost } from "@/lib/email/public-link";
 import { withDeliveryButton } from "@/lib/funnels/cta-integrity";
 import { publishCallback, qstashIsConfigured } from "@/lib/automations/qstash";
@@ -109,6 +110,7 @@ function mergeSubject(
     workspace: { name: ctx.subAccount?.name ?? "" },
     bookingLink: ctx.subAccount?.bookingLink ?? "",
     unsubscribeLink,
+    buildTagLink: (tag) => buildTagLinkUrl(ctx.contact.id, tag),
   };
 }
 
