@@ -1197,64 +1197,6 @@ export function WebsiteBuilder({
                     )}
 
                   <Section
-                    title="Testimonials (optional)"
-                    description="Real customer quotes only — leave this empty if you don't have any yet. The site generator invents its own when a section is left blank; this is how you replace that with the real thing (or remove the section) after a build."
-                  >
-                    <div className="space-y-3">
-                      {testimonials.map((t, i) => (
-                        <div key={i} className="rounded-lg border p-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <Textarea
-                              rows={2}
-                              placeholder="The real quote, as they said it"
-                              value={t.quote}
-                              onChange={(e) => updateTestimonial(i, { quote: e.target.value })}
-                              className="flex-1"
-                            />
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => removeTestimonial(i)}
-                              aria-label="Remove testimonial"
-                              title="Remove"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                            <Input
-                              placeholder="Name"
-                              value={t.name}
-                              onChange={(e) => updateTestimonial(i, { name: e.target.value })}
-                            />
-                            <Input
-                              placeholder="Detail (e.g. company, city)"
-                              value={t.detail ?? ""}
-                              onChange={(e) => updateTestimonial(i, { detail: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                      <div className="flex items-center gap-2">
-                        <Button type="button" size="sm" variant="outline" onClick={addTestimonial}>
-                          <Plus className="mr-1 h-3.5 w-3.5" />
-                          Add testimonial
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={saveTestimonials}
-                          disabled={savingTestimonials}
-                        >
-                          {savingTestimonials ? "Saving…" : "Save testimonials"}
-                        </Button>
-                      </div>
-                    </div>
-                  </Section>
-
-                  <Section
                     title="Design"
                     description="Pick a style. Gitpage applies these consistently."
                   >
@@ -1366,6 +1308,72 @@ export function WebsiteBuilder({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Deliberately NOT inside the fieldset above: that fieldset is
+              disabled whenever `isLocked` (which includes `needs_review`),
+              but `needs_review` is exactly the state where an operator needs
+              to add a real testimonial before the "Use my testimonials" fix
+              banner (rendered earlier, also outside the fieldset) can apply
+              it. See BUG-011 remediation. */}
+          <div className="mt-6">
+            <Section
+              title="Testimonials (optional)"
+              description="Real customer quotes only — leave this empty if you don't have any yet. The site generator invents its own when a section is left blank; this is how you replace that with the real thing (or remove the section) after a build."
+            >
+              <div className="space-y-3">
+                {testimonials.map((t, i) => (
+                  <div key={i} className="rounded-lg border p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <Textarea
+                        rows={2}
+                        placeholder="The real quote, as they said it"
+                        value={t.quote}
+                        onChange={(e) => updateTestimonial(i, { quote: e.target.value })}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => removeTestimonial(i)}
+                        aria-label="Remove testimonial"
+                        title="Remove"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                      <Input
+                        placeholder="Name"
+                        value={t.name}
+                        onChange={(e) => updateTestimonial(i, { name: e.target.value })}
+                      />
+                      <Input
+                        placeholder="Detail (e.g. company, city)"
+                        value={t.detail ?? ""}
+                        onChange={(e) => updateTestimonial(i, { detail: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                ))}
+                <div className="flex items-center gap-2">
+                  <Button type="button" size="sm" variant="outline" onClick={addTestimonial}>
+                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    Add testimonial
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={saveTestimonials}
+                    disabled={savingTestimonials}
+                  >
+                    {savingTestimonials ? "Saving…" : "Save testimonials"}
+                  </Button>
+                </div>
+              </div>
+            </Section>
           </div>
 
           {(status === "draft" || status === "failed") && (

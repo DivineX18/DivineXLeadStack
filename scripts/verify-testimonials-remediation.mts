@@ -148,6 +148,33 @@ const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), "u
   check("5e. the remediation block only renders when this specific category is flagged", /contentFlags\?\.some\(\(f\) => f\.category === "fabricated_testimonials"\)/.test(builder));
 }
 
+// ── 6. The editor is usable in needs_review — not trapped by the lock ─────
+// Found via live browser certification against a real flagged production
+// site: the whole build-config form sits in `<fieldset disabled={isLocked}>`,
+// and `isLocked` is true for `needs_review` — the EXACT state the "Add
+// testimonial" editor exists to serve, and exactly where it was unusable
+// before this check was added. The remediation banner's own apply/remove
+// buttons (section 5) were already outside this fieldset; only the
+// editor that FEEDS them (add a real quote, then click apply) was trapped.
+{
+  const builder = read("src/components/website/website-builder.tsx");
+  const fieldsetStart = builder.indexOf("<fieldset disabled={isLocked");
+  check("6a. the locking fieldset still exists (regression guard — the rest of the build form must stay locked while needs_review/ready)", fieldsetStart !== -1);
+  const fieldsetClose = builder.indexOf("</fieldset>", fieldsetStart);
+  check("6b. found the matching closing tag", fieldsetClose !== -1);
+  const testimonialsIdx = builder.indexOf("Testimonials (optional)");
+  check(
+    "6c. the Testimonials editor Section renders AFTER the fieldset closes, i.e. is NOT subject to fieldset[disabled] during needs_review/ready/queued/building",
+    testimonialsIdx !== -1 && fieldsetClose !== -1 && testimonialsIdx > fieldsetClose,
+  );
+  const addBtnIdx = builder.indexOf("Add testimonial", testimonialsIdx);
+  const saveBtnIdx = builder.indexOf("Save testimonials", testimonialsIdx);
+  check(
+    "6d. its Add/Save controls are part of that same relocated block (both found after the testimonials heading, before the next Section)",
+    addBtnIdx > testimonialsIdx && saveBtnIdx > testimonialsIdx,
+  );
+}
+
 console.log(
   failures === 0
     ? `\nverify-testimonials-remediation: all checks passed`
