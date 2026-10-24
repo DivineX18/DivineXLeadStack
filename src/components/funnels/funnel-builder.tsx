@@ -202,6 +202,7 @@ export function FunnelBuilder({
   // Files & delivery (Multistep Journey): operator uploads — images for
   // section media, and the lead-magnet PDF (auto-wired into the confirmation
   // email + the /thanks bridge page by the upload route).
+  const [removingLeadMagnet, setRemovingLeadMagnet] = useState(false);
   const [uploading, setUploading] = useState(false);
   // Only the direct audio path reports progress; everything else is quick.
   const [uploadPct, setUploadPct] = useState<number | null>(null);
@@ -261,6 +262,34 @@ export function FunnelBuilder({
     } finally {
       setUploading(false);
       setUploadPct(null);
+    }
+  }
+
+  // BUG-009 — attaching a lead magnet had no way back. The upload route
+  // writes leadMagnetAsset directly (outside the main Save flow), so
+  // detaching needs its own round trip rather than waiting for the next
+  // Save click to carry it. Only clears the funnel's delivery reference —
+  // the underlying asset and the email/thank-you wiring text are untouched,
+  // so re-attaching the same file afterward is a normal re-upload, not a
+  // recovery.
+  async function removeLeadMagnet() {
+    setRemovingLeadMagnet(true);
+    try {
+      const res = await fetch(`/api/sub-accounts/${saId}/funnels/${funnelId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ removeLeadMagnetAsset: true }),
+      });
+      if (!res.ok) {
+        const detail = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(detail?.error?.trim() || "Couldn't remove the lead magnet.");
+      }
+      setLeadMagnetName(null);
+      toast.success("Lead magnet removed.");
+    } catch (e) {
+      toast.error(describeError(e, "Couldn't remove the lead magnet."));
+    } finally {
+      setRemovingLeadMagnet(false);
     }
   }
   const [accentColor, setAccentColor] = useState("#2563eb");
@@ -536,8 +565,18 @@ export function FunnelBuilder({
             {uploading ? (uploadPct === null ? "Uploading…" : `Uploading… ${uploadPct}%`) : "Upload image, PDF or audio"}
           </label>
           {leadMagnetName && (
-            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
               ✓ Lead magnet attached: {leadMagnetName} (delivered via email + thank-you page)
+              <button
+                type="button"
+                onClick={removeLeadMagnet}
+                disabled={removingLeadMagnet}
+                aria-label={`Remove ${leadMagnetName}`}
+                title="Remove"
+                className="rounded p-0.5 text-emerald-700/70 outline-none transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:ring-2 focus-visible:ring-destructive disabled:opacity-50 dark:text-emerald-300/70"
+              >
+                {removingLeadMagnet ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+              </button>
             </span>
           )}
           {uploadedImageUrl && (

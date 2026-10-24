@@ -198,6 +198,7 @@ export async function PATCH(
     patch.eventStartAt =
       typeof v === "string" && !Number.isNaN(Date.parse(v)) ? new Date(v).toISOString() : null;
   }
+  if (body.removeLeadMagnetAsset === true) patch.removeLeadMagnetAsset = true;
   if (body.sections !== undefined) {
     const sections = sanitizeSections(body.sections);
     if (sections === null) {

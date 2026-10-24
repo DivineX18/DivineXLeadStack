@@ -322,6 +322,18 @@ export interface FunnelPatch {
    * unseen. Publication is guarded separately and unconditionally below.
    */
   enforceCompleteness?: boolean;
+  /**
+   * BUG-009 — once a lead magnet (PDF/audio) was attached via the upload
+   * route, there was no way to detach it: the field lived outside this
+   * allowlist entirely, so nothing could ever clear it. True removes the
+   * `leadMagnetAsset` reference from the funnel doc (FieldValue.delete(),
+   * not a null write — the field type is an object, not nullable).
+   * Deliberately does NOT delete the underlying funnelAssets doc or its
+   * stored file: detaching a delivery reference and destroying the asset
+   * are different, and a customer who detaches by mistake should be able
+   * to re-upload the same file without wondering if the old one is gone.
+   */
+  removeLeadMagnetAsset?: boolean;
 }
 
 /** For any `checkout` section in `stripe_checkout` mode, mints/reuses a real
@@ -502,6 +514,7 @@ export async function updateFunnelServerSide(opts: {
   if (patch.persuasionDepth !== undefined) write.persuasionDepth = patch.persuasionDepth;
   if (patch.decisionComplexity !== undefined) write.decisionComplexity = patch.decisionComplexity;
   if (patch.logoUrl !== undefined) write.logoUrl = patch.logoUrl;
+  if (patch.removeLeadMagnetAsset) write.leadMagnetAsset = FieldValue.delete();
   const oldData = snap.data() as Omit<FunnelDoc, "id">;
 
   // ── SHELL SAFETY ────────────────────────────────────────────────────────
