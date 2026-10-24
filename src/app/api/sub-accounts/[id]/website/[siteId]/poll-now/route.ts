@@ -100,6 +100,7 @@ export async function POST(
       await docRef.update({
         status: integrity.outcome,
         liveUrl: pollResult.pagesUrl,
+        gitpageRepoUrl: pollResult.repoUrl,
         errorMessage: null,
         partialErrors: pollResult.partialErrors,
         contentFlags: integrity.contentFlags,

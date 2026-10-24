@@ -621,9 +621,24 @@ export async function POST(request: Request) {
   } catch (err) {
     if (err instanceof ModelUnreachableError) {
       console.error("[ai-suite/chat] model call failed:", err.message);
+      // Credit exhaustion is not a gateway failure, and "please try again"
+      // is actively wrong advice for it — no amount of retrying buys
+      // credit. model.ts already labels this case by name in the error it
+      // throws (OPENROUTER CREDIT EXHAUSTED); without this branch that
+      // label was logged but then discarded into the same generic 502
+      // every other model-unreachable case gets, so a billing problem
+      // looked identical to a network outage to both the customer and
+      // whoever investigated the log. 503 (service unavailable, retrying
+      // won't help) over 502 (bad gateway) because nothing is actually
+      // unreachable — the deployment's own account is out of funds.
+      const isCreditExhausted = err.message.includes("credit exhausted");
       return NextResponse.json(
-        { error: "The assistant couldn't reach the model. Please try again." },
-        { status: 502 },
+        {
+          error: isCreditExhausted
+            ? "This deployment's AI model balance has run out. Contact the agency owner to top it up."
+            : "The assistant couldn't reach the model. Please try again.",
+        },
+        { status: isCreditExhausted ? 503 : 502 },
       );
     }
     // Our own fault, not the model's. It is logged in full so it is fixed,

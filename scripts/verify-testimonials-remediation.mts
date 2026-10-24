@@ -175,48 +175,59 @@ const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), "u
   );
 }
 
-// ── 7. The pageId lookup has a real-world-grounded fallback, not just the
-// theoretical formResponseId match ─────────────────────────────────────────
+// ── 7. The pageId lookup prefers a persisted identifier over rediscovery ──
 // Found via live browser certification against a real, flagged, published
 // site: fix-content's pageId lookup matched ONLY on our internal
 // `gitpageJobId` (shape `build_<ms>_<rand>`) against list_sites'
-// formResponseId/repoName/name fields -- and a real call returned 409
-// "Couldn't find this site in gitpage" even though the site was genuinely
-// live and flagged, meaning this remediation path had apparently never
-// actually succeeded against a real site before. The one piece of ground
-// truth available for a published site is its own live URL -- the fallback
-// below derives gitpage's own chosen repo name from it, rather than
-// guessing at undocumented list_sites fields.
+// formResponseId/repoName/name fields -- a real call returned 409 "Couldn't
+// find this site in gitpage" even though the site was genuinely live and
+// flagged. Root-caused further: gitpage's OWN status endpoint already
+// returns a `repoUrl` once a build publishes (lib/gitpage/client.ts ::
+// pollBuild()), and it was being read into PollBuildResult but then
+// silently discarded by both poll routes -- never written to the
+// WebsiteDoc. So remediation was re-deriving a GUESS from the live URL's
+// path segment instead of using the real identifier gitpage had already
+// handed us. Fixed at the source: persist it (WebsiteDoc.gitpageRepoUrl),
+// and prefer it over the URL-derived guess, which now only covers docs
+// built before this field existed.
 {
   const mcp = read("src/lib/gitpage/mcp-client.ts");
   const fix = read("src/lib/website/content-fix.ts");
   const service = read("src/lib/server/websites-service.ts");
+  const client = read("src/lib/gitpage/client.ts");
+  const types = read("src/types/website.ts");
+  const poll = read("src/app/api/sub-accounts/[id]/website/[siteId]/poll/route.ts");
+  const pollNow = read("src/app/api/sub-accounts/[id]/website/[siteId]/poll-now/route.ts");
+
+  check("7a. pollBuild() reads repoUrl off gitpage's real status response", /repoUrl = typeof body\.repoUrl/.test(client));
+  check("7b. WebsiteDoc persists it under its own documented field", /gitpageRepoUrl\?: string \| null/.test(types));
   check(
-    "7a. findPageIdForJob accepts a second, liveUrl-derived fallback argument",
-    /findPageIdForJob\(formResponseId: string, liveUrlSlug\?: string\)/.test(mcp),
+    "7c. the scheduled poll route writes it on every Published settle (not dropped on the floor like before)",
+    /gitpageRepoUrl: pollResult\.repoUrl/.test(poll),
+  );
+  check("7d. the manual poll-now route writes it too (both settle paths, not just one)", /gitpageRepoUrl: pollResult\.repoUrl/.test(pollNow));
+  check(
+    "7e. findPageIdForJob takes a PRIORITY-ORDERED candidate list, trying the most authoritative identifier first",
+    /findPageIdForJob\(formResponseId: string, candidates: \(string \| undefined\)\[\] = \[\]\)/.test(mcp),
   );
   check(
-    "7b. the fallback is tried only after the direct formResponseId/repoName/name match misses (never skips/overrides a real direct hit)",
-    /bySlug = !direct && liveUrlSlug/.test(mcp),
+    "7f. the direct formResponseId match is still tried first (candidates never skip/override a real direct hit — formResponseId is unshifted ahead of them)",
+    /tryOrder = \[formResponseId, \.\.\.candidates/.test(mcp),
   );
   check(
-    "7c. the fallback matches against repoName/name -- the same fields list_sites actually exposes -- not a new invented field",
-    /sites\.find\(\(s\) => s\.repoName === liveUrlSlug \|\| s\.name === liveUrlSlug\)/.test(mcp),
+    "7g. content-fix.ts passes the PERSISTED repo identifier ahead of the live-URL-derived guess",
+    /findPageIdForJob\(gitpageJobId, \[repoUrlSlug, liveUrlSlug\]\)/.test(fix),
   );
   check(
-    "7d. content-fix.ts derives the slug from the real liveUrl path segment, not a guess",
-    /liveUrlSlug = liveUrl[\s\S]{0,60}\.split\("\/"\)\.pop\(\)/.test(fix),
+    "7h. the service passes the site's own doc.gitpageRepoUrl through, not just doc.liveUrl, so the authoritative identifier is actually available to use",
+    /fixFabricatedTestimonials\(\s*doc\.gitpageJobId,\s*action,\s*testimonials,\s*doc\.liveUrl \?\? undefined,\s*doc\.gitpageRepoUrl \?\? undefined,/.test(service),
   );
   check(
-    "7e. the service passes the site's own doc.liveUrl through so the fallback has real data to work with",
-    /fixFabricatedTestimonials\(doc\.gitpageJobId, action, testimonials, doc\.liveUrl/.test(service),
-  );
-  check(
-    "7f. a still-unmatched lookup reports how many sites list_sites actually returned, not just a generic 'not found' -- debuggable without a one-off script next time",
+    "7i. a still-unmatched lookup reports how many sites list_sites actually returned, not just a generic 'not found' -- debuggable without a one-off script next time",
     /lookup\.totalSites/.test(fix) && /totalSites: number/.test(mcp),
   );
   check(
-    "7g. the diagnostic includes sample names, so a real mismatch (vs. an empty/broken list) is distinguishable from the error text alone",
+    "7j. the diagnostic includes sample names, so a real mismatch (vs. an empty/broken list) is distinguishable from the error text alone",
     /sampleRepoNames/.test(fix) && /sampleRepoNames: sites\.slice\(0, 5\)/.test(mcp),
   );
 }

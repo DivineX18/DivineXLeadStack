@@ -159,12 +159,18 @@ export async function listSites(): Promise<GitpageSiteSummary[]> {
  * stamped at submit time — see client.ts). Live testing against a real
  * published site found that `list_sites` entries don't actually carry that
  * id as `formResponseId`/`repoName`/`name` at all, so the direct match
- * always missed — this remediation path had apparently never been exercised
- * against a real gitpage site before. `liveUrlSlug` (the published URL's
- * last path segment, e.g. the `river-oaks-medspa-2026-10-24-a2k7m` in
- * `https://hello1534.gitlab.io/river-oaks-medspa-2026-10-24-a2k7m`) IS
- * ground truth we already have for a published site — it's the repo name
- * gitpage itself chose — so it's checked as a fallback, never a guess.
+ * always missed.
+ *
+ * PREFER A PERSISTED IDENTIFIER OVER REDISCOVERY. gitpage's own status
+ * endpoint returns a `repoUrl` once a build publishes (see
+ * WebsiteDoc.gitpageRepoUrl) — that repo name IS exactly what list_sites'
+ * `repoName` refers to, ground truth from gitpage itself, not a guess. Any
+ * doc built before that field existed falls back to the published URL's own
+ * last path segment, which happens to equal the same repo name in practice
+ * but isn't persisted provenance — kept as a fallback for old docs only,
+ * never the primary path for a new one. Candidates are tried in priority
+ * order (most authoritative first); `candidates[0]` is reported in
+ * diagnostics as "what we actually looked for."
  */
 export interface PageIdLookupResult {
   pageId: string | null;
@@ -176,14 +182,19 @@ export interface PageIdLookupResult {
   sampleRepoNames: string[];
 }
 
-export async function findPageIdForJob(formResponseId: string, liveUrlSlug?: string): Promise<PageIdLookupResult> {
+export async function findPageIdForJob(formResponseId: string, candidates: (string | undefined)[] = []): Promise<PageIdLookupResult> {
   const sites = await listSites();
-  const direct = sites.find(
-    (s) => s.formResponseId === formResponseId || s.repoName === formResponseId || s.name === formResponseId,
-  );
-  const bySlug = !direct && liveUrlSlug ? sites.find((s) => s.repoName === liveUrlSlug || s.name === liveUrlSlug) : undefined;
+  const tryOrder = [formResponseId, ...candidates.filter((c): c is string => !!c)];
+  let pageId: string | null = null;
+  for (const candidate of tryOrder) {
+    const match = sites.find((s) => s.formResponseId === candidate || s.repoName === candidate || s.name === candidate);
+    if (match) {
+      pageId = match.pageId;
+      break;
+    }
+  }
   return {
-    pageId: direct?.pageId ?? bySlug?.pageId ?? null,
+    pageId,
     totalSites: sites.length,
     sampleRepoNames: sites.slice(0, 5).map((s) => s.repoName ?? s.name ?? s.pageId),
   };

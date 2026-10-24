@@ -168,6 +168,16 @@ export interface WebsiteDoc {
   gitpageJobId: string | null;
   /** Live URL once status === "ready". */
   liveUrl: string | null;
+  /**
+   * The underlying git repo URL gitpage's status endpoint returns alongside
+   * `pagesUrl` once published (e.g. a GitHub/GitLab repo URL). This is the
+   * canonical identifier gitpage's MCP `list_sites` tool exposes as
+   * `repoName` — persisting it at poll time means remediation (fix-content)
+   * can look a site up directly instead of re-deriving a guess from the live
+   * URL's path segment. Null for docs built before this field existed, and
+   * for any build whose status response didn't include it.
+   */
+  gitpageRepoUrl?: string | null;
   /** Populated when status === "failed". */
   errorMessage: string | null;
   /**

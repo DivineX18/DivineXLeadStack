@@ -88,22 +88,27 @@ export async function fixFabricatedTestimonials(
   action: "apply" | "remove",
   testimonials: WebsiteTestimonial[],
   liveUrl?: string,
+  gitpageRepoUrl?: string,
 ): Promise<ApplyFixResult> {
   if (action === "apply" && testimonials.length === 0) {
     throw new ContentFixError("No testimonials supplied — add at least one real quote, or choose Remove instead.");
   }
 
-  // See findPageIdForJob's own comment: the direct formResponseId match
-  // doesn't reflect how gitpage's list_sites actually identifies a site in
-  // practice, so the published URL's own path segment (gitpage's own repo
-  // name) is passed as a grounded fallback rather than guessing at it.
-  const liveUrlSlug = liveUrl ? liveUrl.replace(/\/+$/, "").split("/").pop() : undefined;
-  const lookup = await findPageIdForJob(gitpageJobId, liveUrlSlug);
+  // Priority order: the PERSISTED repo identifier (gitpage's own status
+  // response, captured at poll time — see WebsiteDoc.gitpageRepoUrl) comes
+  // first, because it's ground truth gitpage told us directly. The live
+  // URL's own path segment is kept only as a fallback for docs built before
+  // that field existed. See findPageIdForJob's own comment.
+  const slugOf = (url?: string) => (url ? url.replace(/\/+$/, "").split("/").pop() : undefined);
+  const repoUrlSlug = slugOf(gitpageRepoUrl)?.replace(/\.git$/, "");
+  const liveUrlSlug = slugOf(liveUrl);
+  const lookup = await findPageIdForJob(gitpageJobId, [repoUrlSlug, liveUrlSlug]);
   if (!lookup.pageId) {
     throw new ContentFixError(
       "Couldn't find this site in gitpage. It may still be mid-build, or the job id is stale. " +
         `(list_sites returned ${lookup.totalSites} site(s); looked for job "${gitpageJobId}"` +
-        `${liveUrlSlug ? ` / repo "${liveUrlSlug}"` : ""}; sample names: ${lookup.sampleRepoNames.join(", ") || "none"})`,
+        `${repoUrlSlug ? ` / persisted repo "${repoUrlSlug}"` : ""}` +
+        `${liveUrlSlug ? ` / url-derived repo "${liveUrlSlug}"` : ""}; sample names: ${lookup.sampleRepoNames.join(", ") || "none"})`,
     );
   }
   const pageId = lookup.pageId;

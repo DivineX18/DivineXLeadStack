@@ -194,6 +194,10 @@ export async function POST(
         status: integrity.outcome,
         // Kept on both paths: a flagged site is corrected, not discarded.
         liveUrl: pollResult.pagesUrl,
+        // Persisted so fix-content can look the site up directly via MCP
+        // later, rather than re-deriving a guess from the live URL. See
+        // WebsiteDoc.gitpageRepoUrl.
+        gitpageRepoUrl: pollResult.repoUrl,
         errorMessage: null,
         partialErrors: pollResult.partialErrors,
         contentFlags: integrity.contentFlags,
