@@ -175,6 +175,44 @@ const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), "u
   );
 }
 
+// ── 7. The pageId lookup has a real-world-grounded fallback, not just the
+// theoretical formResponseId match ─────────────────────────────────────────
+// Found via live browser certification against a real, flagged, published
+// site: fix-content's pageId lookup matched ONLY on our internal
+// `gitpageJobId` (shape `build_<ms>_<rand>`) against list_sites'
+// formResponseId/repoName/name fields -- and a real call returned 409
+// "Couldn't find this site in gitpage" even though the site was genuinely
+// live and flagged, meaning this remediation path had apparently never
+// actually succeeded against a real site before. The one piece of ground
+// truth available for a published site is its own live URL -- the fallback
+// below derives gitpage's own chosen repo name from it, rather than
+// guessing at undocumented list_sites fields.
+{
+  const mcp = read("src/lib/gitpage/mcp-client.ts");
+  const fix = read("src/lib/website/content-fix.ts");
+  const service = read("src/lib/server/websites-service.ts");
+  check(
+    "7a. findPageIdForJob accepts a second, liveUrl-derived fallback argument",
+    /findPageIdForJob\(formResponseId: string, liveUrlSlug\?: string\)/.test(mcp),
+  );
+  check(
+    "7b. the fallback is tried only after the direct formResponseId/repoName/name match misses (never skips/overrides a real direct hit)",
+    /if \(direct\) return direct\.pageId;[\s\S]{0,40}if \(!liveUrlSlug\) return null;/.test(mcp),
+  );
+  check(
+    "7c. the fallback matches against repoName/name -- the same fields list_sites actually exposes -- not a new invented field",
+    /bySlug = sites\.find\(\(s\) => s\.repoName === liveUrlSlug \|\| s\.name === liveUrlSlug\)/.test(mcp),
+  );
+  check(
+    "7d. content-fix.ts derives the slug from the real liveUrl path segment, not a guess",
+    /liveUrlSlug = liveUrl[\s\S]{0,60}\.split\("\/"\)\.pop\(\)/.test(fix),
+  );
+  check(
+    "7e. the service passes the site's own doc.liveUrl through so the fallback has real data to work with",
+    /fixFabricatedTestimonials\(doc\.gitpageJobId, action, testimonials, doc\.liveUrl/.test(service),
+  );
+}
+
 console.log(
   failures === 0
     ? `\nverify-testimonials-remediation: all checks passed`

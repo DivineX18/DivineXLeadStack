@@ -154,12 +154,27 @@ export async function listSites(): Promise<GitpageSiteSummary[]> {
   return Array.isArray(result) ? result : result.sites ?? [];
 }
 
-export async function findPageIdForJob(formResponseId: string): Promise<string | null> {
+/**
+ * `formResponseId` is OUR internal build-job id (shape `build_<ms>_<rand>`,
+ * stamped at submit time — see client.ts). Live testing against a real
+ * published site found that `list_sites` entries don't actually carry that
+ * id as `formResponseId`/`repoName`/`name` at all, so the direct match
+ * always missed — this remediation path had apparently never been exercised
+ * against a real gitpage site before. `liveUrlSlug` (the published URL's
+ * last path segment, e.g. the `river-oaks-medspa-2026-10-24-a2k7m` in
+ * `https://hello1534.gitlab.io/river-oaks-medspa-2026-10-24-a2k7m`) IS
+ * ground truth we already have for a published site — it's the repo name
+ * gitpage itself chose — so it's checked as a fallback, never a guess.
+ */
+export async function findPageIdForJob(formResponseId: string, liveUrlSlug?: string): Promise<string | null> {
   const sites = await listSites();
-  const match = sites.find(
+  const direct = sites.find(
     (s) => s.formResponseId === formResponseId || s.repoName === formResponseId || s.name === formResponseId,
   );
-  return match?.pageId ?? null;
+  if (direct) return direct.pageId;
+  if (!liveUrlSlug) return null;
+  const bySlug = sites.find((s) => s.repoName === liveUrlSlug || s.name === liveUrlSlug);
+  return bySlug?.pageId ?? null;
 }
 
 export async function readSiteFile(pageId: string, path: string): Promise<{ content: string; sha: string }> {

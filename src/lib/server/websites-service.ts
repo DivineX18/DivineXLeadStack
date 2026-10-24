@@ -576,7 +576,7 @@ export async function applyTestimonialsFixForSubAccount(
 
   let fixed: { liveUrl: string };
   try {
-    fixed = await fixFabricatedTestimonials(doc.gitpageJobId, action, testimonials);
+    fixed = await fixFabricatedTestimonials(doc.gitpageJobId, action, testimonials, doc.liveUrl ?? undefined);
   } catch (err) {
     if (err instanceof ContentFixError) {
       return { ok: false, reason: "not_flagged", message: err.message };

@@ -87,12 +87,18 @@ export async function fixFabricatedTestimonials(
   gitpageJobId: string,
   action: "apply" | "remove",
   testimonials: WebsiteTestimonial[],
+  liveUrl?: string,
 ): Promise<ApplyFixResult> {
   if (action === "apply" && testimonials.length === 0) {
     throw new ContentFixError("No testimonials supplied — add at least one real quote, or choose Remove instead.");
   }
 
-  const pageId = await findPageIdForJob(gitpageJobId);
+  // See findPageIdForJob's own comment: the direct formResponseId match
+  // doesn't reflect how gitpage's list_sites actually identifies a site in
+  // practice, so the published URL's own path segment (gitpage's own repo
+  // name) is passed as a grounded fallback rather than guessing at it.
+  const liveUrlSlug = liveUrl ? liveUrl.replace(/\/+$/, "").split("/").pop() : undefined;
+  const pageId = await findPageIdForJob(gitpageJobId, liveUrlSlug);
   if (!pageId) {
     throw new ContentFixError("Couldn't find this site in gitpage. It may still be mid-build, or the job id is stale.");
   }
