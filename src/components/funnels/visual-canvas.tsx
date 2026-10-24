@@ -240,7 +240,7 @@ function SortableSection({
       </div>
 
       <div className="pointer-events-none">
-        <PublicFunnelView funnel={single} forms={forms} previewMode />
+        <PublicFunnelView funnel={single} forms={forms} previewMode embedded />
       </div>
     </div>
   );

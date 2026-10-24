@@ -197,6 +197,7 @@ export function PublicFunnelView({
   forms,
   deliveryLive = false,
   previewMode = false,
+  embedded = false,
 }: {
   funnel: FunnelDoc;
   forms: Record<string, LeadForm>;
@@ -210,6 +211,26 @@ export function PublicFunnelView({
    *  action — no real leads, no automation firing, no production
    *  analytics. Set ONLY by the /app/preview route. */
   previewMode?: boolean;
+  /**
+   * True ONLY when this is mounted inside another page's own document (the
+   * funnel builder's Visual canvas — see visual-canvas.tsx), as opposed to
+   * being the page itself (/lp/[funnelId], /preview/funnel/[funnelId], and
+   * custom domains — each a real Next.js route with its own html/body).
+   *
+   * BUG-005/007: the three real routes legitimately force html/body's
+   * background to the funnel's own color below, so a mismatched next-themes
+   * system-preference class on <html> can't leak a flash of the wrong color
+   * through at the very edges. But the Visual canvas renders this component
+   * INLINE inside the admin editor's own document — same html/body as the
+   * sidebar and every card around it. That global override leaked out and
+   * permanently overwrote the editor's own dark-theme background the moment
+   * Visual mode mounted, independent of admin theme, because of the
+   * `!important` + bare `html, body` selector. `embedded` skips exactly that
+   * one rule; the root div below still paints its own area with the
+   * funnel's real background via inline style, so the visitor-facing design
+   * is untouched — only the stray global reach is removed.
+   */
+  embedded?: boolean;
 }) {
   const dark = funnel.theme === "dark";
   // Warm off-white base instead of stark #fff — softens the "website" feel and
@@ -242,10 +263,21 @@ export function PublicFunnelView({
       {!previewMode && <FunnelTracker funnelId={funnel.id} />}
       {/* Forces html/body background so next-themes' system-preference
        *  class on <html> can't leak a mismatched background through —
-       *  same fix the public form page (/f/[formId]) already applies. */}
-      <style>{`html, body { background: ${bg} !important; background-color: ${bg} !important; }
+       *  same fix the public form page (/f/[formId]) already applies.
+       *  Skipped when embedded: there is no separate html/body here, it's
+       *  the admin editor's — forcing it would leak the funnel's own
+       *  background onto the surrounding admin chrome (BUG-005/007). The
+       *  root div below already paints its own area regardless. */}
+      {!embedded && (
+        <style>{`html, body { background: ${bg} !important; background-color: ${bg} !important; }
         .flow-funnel-root h1, .flow-funnel-root h2, .flow-funnel-root h3 { font-family: ${headingFamily}; letter-spacing: -0.02em; }
         .flow-funnel-root .flow-serif-accent { font-family: var(--flow-font-serif), ${SERIF_FONT_STACK}; font-style: italic; }`}</style>
+      )}
+      {embedded && (
+        <style>{`
+        .flow-funnel-root h1, .flow-funnel-root h2, .flow-funnel-root h3 { font-family: ${headingFamily}; letter-spacing: -0.02em; }
+        .flow-funnel-root .flow-serif-accent { font-family: var(--flow-font-serif), ${SERIF_FONT_STACK}; font-style: italic; }`}</style>
+      )}
       <div
         style={
           {
