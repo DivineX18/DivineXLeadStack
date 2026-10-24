@@ -166,15 +166,27 @@ export async function listSites(): Promise<GitpageSiteSummary[]> {
  * ground truth we already have for a published site — it's the repo name
  * gitpage itself chose — so it's checked as a fallback, never a guess.
  */
-export async function findPageIdForJob(formResponseId: string, liveUrlSlug?: string): Promise<string | null> {
+export interface PageIdLookupResult {
+  pageId: string | null;
+  /** Diagnostics for the not-found case — surfaced in the caller's error
+   *  message rather than swallowed, so "no match" is debuggable without
+   *  a one-off script: is list_sites returning everything we'd expect, or
+   *  is this agency's site missing from it entirely? */
+  totalSites: number;
+  sampleRepoNames: string[];
+}
+
+export async function findPageIdForJob(formResponseId: string, liveUrlSlug?: string): Promise<PageIdLookupResult> {
   const sites = await listSites();
   const direct = sites.find(
     (s) => s.formResponseId === formResponseId || s.repoName === formResponseId || s.name === formResponseId,
   );
-  if (direct) return direct.pageId;
-  if (!liveUrlSlug) return null;
-  const bySlug = sites.find((s) => s.repoName === liveUrlSlug || s.name === liveUrlSlug);
-  return bySlug?.pageId ?? null;
+  const bySlug = !direct && liveUrlSlug ? sites.find((s) => s.repoName === liveUrlSlug || s.name === liveUrlSlug) : undefined;
+  return {
+    pageId: direct?.pageId ?? bySlug?.pageId ?? null,
+    totalSites: sites.length,
+    sampleRepoNames: sites.slice(0, 5).map((s) => s.repoName ?? s.name ?? s.pageId),
+  };
 }
 
 export async function readSiteFile(pageId: string, path: string): Promise<{ content: string; sha: string }> {

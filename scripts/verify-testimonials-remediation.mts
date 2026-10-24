@@ -197,11 +197,11 @@ const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), "u
   );
   check(
     "7b. the fallback is tried only after the direct formResponseId/repoName/name match misses (never skips/overrides a real direct hit)",
-    /if \(direct\) return direct\.pageId;[\s\S]{0,40}if \(!liveUrlSlug\) return null;/.test(mcp),
+    /bySlug = !direct && liveUrlSlug/.test(mcp),
   );
   check(
     "7c. the fallback matches against repoName/name -- the same fields list_sites actually exposes -- not a new invented field",
-    /bySlug = sites\.find\(\(s\) => s\.repoName === liveUrlSlug \|\| s\.name === liveUrlSlug\)/.test(mcp),
+    /sites\.find\(\(s\) => s\.repoName === liveUrlSlug \|\| s\.name === liveUrlSlug\)/.test(mcp),
   );
   check(
     "7d. content-fix.ts derives the slug from the real liveUrl path segment, not a guess",
@@ -210,6 +210,14 @@ const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), "u
   check(
     "7e. the service passes the site's own doc.liveUrl through so the fallback has real data to work with",
     /fixFabricatedTestimonials\(doc\.gitpageJobId, action, testimonials, doc\.liveUrl/.test(service),
+  );
+  check(
+    "7f. a still-unmatched lookup reports how many sites list_sites actually returned, not just a generic 'not found' -- debuggable without a one-off script next time",
+    /lookup\.totalSites/.test(fix) && /totalSites: number/.test(mcp),
+  );
+  check(
+    "7g. the diagnostic includes sample names, so a real mismatch (vs. an empty/broken list) is distinguishable from the error text alone",
+    /sampleRepoNames/.test(fix) && /sampleRepoNames: sites\.slice\(0, 5\)/.test(mcp),
   );
 }
 

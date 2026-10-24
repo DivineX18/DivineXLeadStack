@@ -98,10 +98,15 @@ export async function fixFabricatedTestimonials(
   // practice, so the published URL's own path segment (gitpage's own repo
   // name) is passed as a grounded fallback rather than guessing at it.
   const liveUrlSlug = liveUrl ? liveUrl.replace(/\/+$/, "").split("/").pop() : undefined;
-  const pageId = await findPageIdForJob(gitpageJobId, liveUrlSlug);
-  if (!pageId) {
-    throw new ContentFixError("Couldn't find this site in gitpage. It may still be mid-build, or the job id is stale.");
+  const lookup = await findPageIdForJob(gitpageJobId, liveUrlSlug);
+  if (!lookup.pageId) {
+    throw new ContentFixError(
+      "Couldn't find this site in gitpage. It may still be mid-build, or the job id is stale. " +
+        `(list_sites returned ${lookup.totalSites} site(s); looked for job "${gitpageJobId}"` +
+        `${liveUrlSlug ? ` / repo "${liveUrlSlug}"` : ""}; sample names: ${lookup.sampleRepoNames.join(", ") || "none"})`,
+    );
   }
+  const pageId = lookup.pageId;
 
   const { content: html } = await readSiteFile(pageId, "index.html");
   const bounds = locateTestimonialsSection(html);
