@@ -22,12 +22,23 @@ import { isNicheKey, NICHE_FORCED_PAGES } from "@/lib/website/niches";
 
 const DEFAULT_BASE_URL = "https://www.gitpage.site";
 
-/** Exported for mcp-client.ts, which hits a different gitpage endpoint
- *  (/api/mcp) under the same auth + base-URL config. */
+/**
+ * Exported for mcp-client.ts, which hits a different gitpage endpoint
+ * (/api/mcp) under the same auth + base-URL config.
+ *
+ * Reproduced live, 2026-10-24: a deployment with `GITPAGE_API_URL=` present
+ * but BLANK (not absent — e.g. copied verbatim from .env.example's empty
+ * placeholder, a realistic buyer setup, not just a local artifact) made
+ * every build fail with "Failed to parse URL from /api/v1/generate-site".
+ * `process.env.GITPAGE_API_URL?.replace(...) ?? DEFAULT_BASE_URL` only
+ * falls back on null/undefined; an empty string is neither, so `??` never
+ * fires and submitBuild() ends up POSTing a bare relative path, which
+ * Node's fetch() cannot resolve with no base URL. Trimming and treating
+ * "" as unset closes that gap without changing the real-override case.
+ */
 export function getBaseUrl(): string {
-  return (
-    process.env.GITPAGE_API_URL?.replace(/\/$/, "") ?? DEFAULT_BASE_URL
-  );
+  const configured = process.env.GITPAGE_API_URL?.trim().replace(/\/$/, "");
+  return configured || DEFAULT_BASE_URL;
 }
 
 export function getApiKey(): string {

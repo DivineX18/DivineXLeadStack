@@ -3117,7 +3117,18 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       },
       additionalProperties: false,
     },
-    validate: (raw) => {
+    validate: (rawIn) => {
+      // VALIDATE IDEMPOTENCY (see aliasCamelKeysDeep's own comment): this
+      // runs twice — once against the model's raw snake_case tool call,
+      // again at confirm time against THIS capability's own previously
+      // normalized camelCase `args`. Without the alias pass, the second
+      // run's str(raw, "website_url") finds nothing (the key is now
+      // `websiteUrl`), so the URL the user typed and the proposal card
+      // displayed silently vanished by the time Confirm actually ran —
+      // reproduced live: Zeno asked "What's the URL?" immediately after
+      // showing "Scan https://www.divinex.io for real business and brand
+      // facts." as the proposal text.
+      const raw = aliasCamelKeysDeep({ ...((rawIn ?? {}) as Record<string, unknown>) });
       let url = str(raw, "website_url");
       if (url && !/^https?:\/\//i.test(url) && /^[\w-]+(\.[\w-]+)+/.test(url)) url = `https://${url}`;
       if (url && (!/^https?:\/\/.+\..+/i.test(url) || url.length > 300)) {

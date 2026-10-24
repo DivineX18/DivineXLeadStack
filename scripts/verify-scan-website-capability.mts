@@ -35,6 +35,10 @@ check("7. a missing website URL (no_website_url) asks the user rather than silen
 check("8. website_url is optional — omitting it lets Ascend fall back to the saved site (matches runBrandDiscovery's own fallback)", /additionalProperties:\s*false/.test(block) && !/required:\s*\["website_url"\]/.test(block));
 check("9. distinguished from research_website_reference in its own description (own site vs. competitor/reference)", /not a competitor\/reference site/.test(block));
 check("10. registered for agency-delegated use against a named client workspace", /"scan_business_website",\n\s*"create_website"/.test(caps));
+check(
+  "11. validate() is re-run idempotent (aliasCamelKeysDeep) -- found live in browser certification: without this, the URL shown in the proposal card vanished by the time Confirm actually ran",
+  /aliasCamelKeysDeep\(\{ \.\.\.\(\(rawIn \?\? \{\}\) as Record<string, unknown>\) \}\)/.test(block),
+);
 
 console.log(failures === 0 ? `\nverify-scan-website-capability: all checks passed` : `\nverify-scan-website-capability: ${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);
