@@ -22,13 +22,15 @@ import { isNicheKey, NICHE_FORCED_PAGES } from "@/lib/website/niches";
 
 const DEFAULT_BASE_URL = "https://www.gitpage.site";
 
-function getBaseUrl(): string {
+/** Exported for mcp-client.ts, which hits a different gitpage endpoint
+ *  (/api/mcp) under the same auth + base-URL config. */
+export function getBaseUrl(): string {
   return (
     process.env.GITPAGE_API_URL?.replace(/\/$/, "") ?? DEFAULT_BASE_URL
   );
 }
 
-function getApiKey(): string {
+export function getApiKey(): string {
   const key = process.env.GITPAGE_API_KEY;
   if (!key) {
     throw new Error(

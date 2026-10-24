@@ -8,6 +8,7 @@ import {
   Check,
   Eye,
   Pencil,
+  History as HistoryIcon,
   Loader2,
   RotateCcw,
   Send,
@@ -82,18 +83,25 @@ type UiMessage =
  * nowhere else); workflows route to their builder, where the human Publish
  * boundary lives.
  */
-function BuildResult({ resultRef }: { resultRef: { kind: string; id: string } | null }) {
+function BuildResult({
+  resultRef,
+}: {
+  resultRef: { kind: string; id: string } | null;
+}) {
   if (!resultRef?.id) return null;
 
   if (resultRef.kind === "funnel") {
     return (
       <div className="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-3">
         <p className="text-xs font-semibold">Your funnel is ready</p>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">
+        <p className="text-muted-foreground mt-0.5 text-[11px]">
           It is saved as a draft. Nothing is public until you publish it.
         </p>
         <div className="mt-2.5 flex flex-wrap gap-2">
-          <Button size="sm" render={<Link href={`/preview/funnel/${resultRef.id}`} />}>
+          <Button
+            size="sm"
+            render={<Link href={`/preview/funnel/${resultRef.id}`} />}
+          >
             <Eye className="mr-1.5 h-3.5 w-3.5" /> Preview funnel
           </Button>
           <Button
@@ -103,7 +111,11 @@ function BuildResult({ resultRef }: { resultRef: { kind: string; id: string } | 
           >
             <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
           </Button>
-          <Button size="sm" variant="ghost" render={<Link href="/app/create" />}>
+          <Button
+            size="sm"
+            variant="ghost"
+            render={<Link href="/app/create" />}
+          >
             Open Create
           </Button>
         </div>
@@ -115,14 +127,21 @@ function BuildResult({ resultRef }: { resultRef: { kind: string; id: string } | 
     return (
       <div className="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-3">
         <p className="text-xs font-semibold">Your form is live</p>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">
+        <p className="text-muted-foreground mt-0.5 text-[11px]">
           Share the link or embed it, every submission becomes a contact here.
         </p>
         <div className="mt-2.5 flex flex-wrap gap-2">
-          <Button size="sm" render={<Link href={`/f/${resultRef.id}`} target="_blank" />}>
+          <Button
+            size="sm"
+            render={<Link href={`/f/${resultRef.id}`} target="_blank" />}
+          >
             <Eye className="mr-1.5 h-3.5 w-3.5" /> Open form
           </Button>
-          <Button size="sm" variant="secondary" render={<Link href="/app/create/forms" />}>
+          <Button
+            size="sm"
+            variant="secondary"
+            render={<Link href="/app/create/forms" />}
+          >
             <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
           </Button>
         </div>
@@ -134,7 +153,7 @@ function BuildResult({ resultRef }: { resultRef: { kind: string; id: string } | 
     return (
       <div className="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-3">
         <p className="text-xs font-semibold">Your booking page is ready</p>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">
+        <p className="text-muted-foreground mt-0.5 text-[11px]">
           It is a draft. Check the hours match when you actually take
           appointments, then publish it.
         </p>
@@ -151,11 +170,14 @@ function BuildResult({ resultRef }: { resultRef: { kind: string; id: string } | 
     return (
       <div className="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-3">
         <p className="text-xs font-semibold">Your follow-up is ready</p>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">
+        <p className="text-muted-foreground mt-0.5 text-[11px]">
           Saved as a draft. It cannot contact anyone until you publish it.
         </p>
         <div className="mt-2.5 flex flex-wrap gap-2">
-          <Button size="sm" render={<Link href={`/app/create/workflows/${resultRef.id}`} />}>
+          <Button
+            size="sm"
+            render={<Link href={`/app/create/workflows/${resultRef.id}`} />}
+          >
             Review follow-up
           </Button>
         </div>
@@ -245,6 +267,16 @@ export function AiSuiteChat({
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // QA BUG-004 — which saved conversation this thread autosaves into. Null
+  // until the first message of a brand-new conversation is saved, at which
+  // point the server mints one and hands its id back.
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyItems, setHistoryItems] = useState<
+    | { id: string; title: string; updatedAt: string | null; active: boolean }[]
+    | null
+  >(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const suggestions =
     level === "agency" ? AGENCY_SUGGESTIONS : SUB_ACCOUNT_SUGGESTIONS;
@@ -258,13 +290,15 @@ export function AiSuiteChat({
     (async () => {
       try {
         const res = await fetch(
-          `/api/ai-suite/thread?${threadQuery(level, subAccountId)}`,
+          `/api/ai-suite/thread?${threadQuery(level, subAccountId)}`
         );
         const data = (await res.json().catch(() => null)) as {
           messages?: UiMessage[];
+          sessionId?: string | null;
         } | null;
         if (!cancelled && res.ok && Array.isArray(data?.messages)) {
           setMessages(data.messages);
+          setSessionId(data?.sessionId ?? null);
         }
       } catch {
         /* start fresh */
@@ -278,16 +312,30 @@ export function AiSuiteChat({
 
   // Persist the thread (debounced) after every change. Empty threads are
   // never PUT — clearing goes through the explicit DELETE in newChat().
+  // Carries the open session id so repeated autosaves update the SAME
+  // conversation instead of forking a new one each tick; the server hands
+  // one back the first time (a brand-new conversation) and that's stored
+  // for every save after.
   useEffect(() => {
     if (!hydrated || messages.length === 0) return;
     const t = setTimeout(() => {
       void fetch("/api/ai-suite/thread", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ level, subAccountId, messages }),
-      }).catch(() => {});
+        body: JSON.stringify({ level, subAccountId, messages, sessionId }),
+      })
+        .then((res) => res.json())
+        .then((data: { sessionId?: string }) => {
+          if (data?.sessionId && data.sessionId !== sessionId)
+            setSessionId(data.sessionId);
+        })
+        .catch(() => {});
     }, 600);
     return () => clearTimeout(t);
+    // sessionId intentionally omitted — it's written back above without
+    // re-triggering this effect, or every autosave response would queue
+    // another identical save.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, hydrated, level, subAccountId]);
 
   useEffect(() => {
@@ -310,10 +358,58 @@ export function AiSuiteChat({
   function newChat() {
     if (loading || confirmingId) return;
     setMessages([]);
+    setSessionId(null);
     setError(null);
+    // Only clears which conversation is OPEN. The one just left is kept
+    // (see thread-store.ts) — it's in History, not deleted.
     void fetch(`/api/ai-suite/thread?${threadQuery(level, subAccountId)}`, {
       method: "DELETE",
     }).catch(() => {});
+  }
+
+  async function openHistory() {
+    setHistoryOpen(true);
+    setHistoryLoading(true);
+    try {
+      const res = await fetch(
+        `/api/ai-suite/thread/sessions?${threadQuery(level, subAccountId)}`
+      );
+      const data = (await res.json().catch(() => null)) as {
+        sessions?: {
+          id: string;
+          title: string;
+          updatedAt: string | null;
+          active: boolean;
+        }[];
+      } | null;
+      setHistoryItems(res.ok ? (data?.sessions ?? []) : []);
+    } catch {
+      setHistoryItems([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  async function reopenSession(id: string) {
+    if (loading || confirmingId) return;
+    try {
+      const res = await fetch(
+        `/api/ai-suite/thread/sessions/${id}?${threadQuery(level, subAccountId)}`
+      );
+      const data = (await res.json().catch(() => null)) as {
+        messages?: UiMessage[];
+        sessionId?: string;
+      } | null;
+      if (res.ok && Array.isArray(data?.messages)) {
+        setMessages(data.messages);
+        setSessionId(data?.sessionId ?? id);
+        setError(null);
+      }
+    } catch {
+      /* leave the current thread as-is */
+    } finally {
+      setHistoryOpen(false);
+    }
   }
 
   async function send(question: string) {
@@ -342,9 +438,20 @@ export function AiSuiteChat({
           // known there. Never send profile, brand or artifact CONTENTS from
           // the browser: the server reads those from authority itself.
           pageContext: {
-            route: typeof window !== "undefined" ? window.location.pathname : undefined,
+            route:
+              typeof window !== "undefined"
+                ? window.location.pathname
+                : undefined,
             ...(artifactRef
-              ? { artifactRef: { kind: artifactRef.kind, id: artifactRef.id, ...(artifactRef.sectionId ? { sectionId: artifactRef.sectionId } : {}) } }
+              ? {
+                  artifactRef: {
+                    kind: artifactRef.kind,
+                    id: artifactRef.id,
+                    ...(artifactRef.sectionId
+                      ? { sectionId: artifactRef.sectionId }
+                      : {}),
+                  },
+                }
               : {}),
           },
         }),
@@ -361,7 +468,7 @@ export function AiSuiteChat({
             status: res.status,
             stage: "chat",
             serverMessage: (data as { error?: string })?.error ?? null,
-          }),
+          })
         );
       }
 
@@ -403,7 +510,7 @@ export function AiSuiteChat({
       setError(
         err instanceof Error && err.message.trim()
           ? err.message
-          : "I couldn't reach the server. Check your connection and ask me again. Nothing was changed.",
+          : "I couldn't reach the server. Check your connection and ask me again. Nothing was changed."
       );
     } finally {
       setLoading(false);
@@ -413,12 +520,17 @@ export function AiSuiteChat({
   async function confirmProposal(id: string) {
     const msg = messages.find(
       (m): m is Extract<UiMessage, { kind: "proposal" }> =>
-        m.kind === "proposal" && m.id === id,
+        m.kind === "proposal" && m.id === id
     );
     // "failed" is retryable on purpose: a build that fell over on a
     // transient error must not become a dead end the customer can only
     // escape by retyping the whole request.
-    if (!msg || (msg.status !== "pending" && msg.status !== "failed") || confirmingId) return;
+    if (
+      !msg ||
+      (msg.status !== "pending" && msg.status !== "failed") ||
+      confirmingId
+    )
+      return;
     setError(null);
     setConfirmingId(id);
     try {
@@ -442,7 +554,11 @@ export function AiSuiteChat({
         // This one IS the write, so what it may claim about state depends on
         // whether the change was refused or faulted part-way.
         throw new Error(
-          describeZenoFailure({ status: res.status, stage: "confirm", serverMessage: data?.error ?? null }),
+          describeZenoFailure({
+            status: res.status,
+            stage: "confirm",
+            serverMessage: data?.error ?? null,
+          })
         );
       }
       updateProposal(id, {
@@ -465,12 +581,16 @@ export function AiSuiteChat({
 
   function updateProposal(
     id: string,
-    patch: { status: ProposalStatus; resultText?: string; resultRef?: { kind: string; id: string } | null },
+    patch: {
+      status: ProposalStatus;
+      resultText?: string;
+      resultRef?: { kind: string; id: string } | null;
+    }
   ) {
     setMessages((prev) =>
       prev.map((m) =>
-        m.kind === "proposal" && m.id === id ? { ...m, ...patch } : m,
-      ),
+        m.kind === "proposal" && m.id === id ? { ...m, ...patch } : m
+      )
     );
   }
 
@@ -500,7 +620,7 @@ export function AiSuiteChat({
         autoFocus
         placeholder="Ask a question, or ask me to create something…"
         disabled={loading}
-        className="max-h-32 flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+        className="bg-background focus-visible:ring-ring max-h-32 flex-1 resize-none rounded-lg border px-3 py-2 text-sm outline-none focus-visible:ring-2 disabled:opacity-60"
       />
       <Button
         type="submit"
@@ -515,56 +635,126 @@ export function AiSuiteChat({
 
   if (!hydrated) {
     return (
-      <div className="flex h-full min-h-[24rem] items-center justify-center rounded-xl border bg-card">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      <div className="bg-card flex h-full min-h-[24rem] items-center justify-center rounded-xl border">
+        <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
       </div>
     );
   }
 
+  const historyButton = (
+    <Button
+      size="sm"
+      variant="ghost"
+      onClick={() => void openHistory()}
+      className="text-muted-foreground h-7 gap-1.5 text-xs"
+      aria-label="Conversation history"
+    >
+      <HistoryIcon className="h-3.5 w-3.5" />
+      History
+    </Button>
+  );
+
   return (
-    <div className="flex h-full min-h-[24rem] flex-col rounded-xl border bg-card">
+    <div className="bg-card relative flex h-full min-h-[24rem] flex-col rounded-xl border">
+      {historyOpen && (
+        <div className="bg-card absolute inset-0 z-20 flex flex-col rounded-xl">
+          <div className="flex items-center justify-between border-b px-3 py-2">
+            <p className="text-sm font-medium">Conversation history</p>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setHistoryOpen(false)}
+              className="h-7 w-7 p-0"
+              aria-label="Close history"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2">
+            {historyLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+              </div>
+            ) : !historyItems || historyItems.length === 0 ? (
+              <p className="text-muted-foreground p-3 text-xs">
+                No past conversations yet. Starting a new chat will save this
+                one here.
+              </p>
+            ) : (
+              <ul className="space-y-1">
+                {historyItems.map((s) => (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      onClick={() => void reopenSession(s.id)}
+                      className={cn(
+                        "hover:bg-muted flex w-full flex-col gap-0.5 rounded-lg px-3 py-2 text-left transition-colors",
+                        s.active && "bg-muted/60"
+                      )}
+                    >
+                      <span className="truncate text-sm">{s.title}</span>
+                      {s.updatedAt && (
+                        <span className="text-muted-foreground text-[11px]">
+                          {new Date(s.updatedAt).toLocaleString()}
+                          {s.active ? " · current" : ""}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
       {empty ? (
         // ── Landing state: greeting + input centered, suggestions beneath ──
-        <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
-          <div className="flex flex-col items-center gap-3 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/15 via-violet-500/15 to-pink-500/15 text-primary">
-              <Sparkles className="h-6 w-6" />
-            </span>
-            <div>
-              <p className="text-base font-medium">{landing.heading}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {landing.sub}
-              </p>
-            </div>
+        <div className="flex flex-1 flex-col">
+          <div className="flex items-center justify-end border-b px-3 py-1.5">
+            {historyButton}
           </div>
+          <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <span className="text-primary flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/15 via-violet-500/15 to-pink-500/15">
+                <Sparkles className="h-6 w-6" />
+              </span>
+              <div>
+                <p className="text-base font-medium">{landing.heading}</p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {landing.sub}
+                </p>
+              </div>
+            </div>
 
-          <div className="w-full max-w-xl">{inputForm}</div>
+            <div className="w-full max-w-xl">{inputForm}</div>
 
-          {error && <p className="text-xs text-destructive">{error}</p>}
+            {error && <p className="text-destructive text-xs">{error}</p>}
 
-          <div className="flex max-w-xl flex-wrap justify-center gap-2">
-            {suggestions.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => send(s)}
-                className="rounded-full border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                {s}
-              </button>
-            ))}
+            <div className="flex max-w-xl flex-wrap justify-center gap-2">
+              {suggestions.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => send(s)}
+                  className="text-muted-foreground hover:bg-muted hover:text-foreground rounded-full border px-3 py-1.5 text-xs transition-colors"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       ) : (
         // ── Thread state: scrolling messages + docked input ──
         <>
-          <div className="flex items-center justify-end border-b px-3 py-1.5">
+          <div className="flex items-center justify-between border-b px-3 py-1.5">
+            {historyButton}
             <Button
               size="sm"
               variant="ghost"
               onClick={newChat}
               disabled={loading || !!confirmingId}
-              className="h-7 gap-1.5 text-xs text-muted-foreground"
+              className="text-muted-foreground h-7 gap-1.5 text-xs"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               New chat
@@ -575,14 +765,14 @@ export function AiSuiteChat({
               if (m.kind === "navigate") {
                 return (
                   <div key={i} className="flex gap-3">
-                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <span className="bg-primary/10 text-primary mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
                       <Sparkles className="h-4 w-4" />
                     </span>
-                    <div className="max-w-[80%] rounded-2xl bg-muted px-4 py-2.5 text-sm leading-relaxed">
+                    <div className="bg-muted max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed">
                       <p>{m.content}</p>
                       <Link
                         href={m.href}
-                        className="mt-2.5 inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                        className="bg-primary text-primary-foreground hover:bg-primary/90 mt-2.5 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
                       >
                         {m.label.replace(/\s*→\s*$/, "")}
                         <ArrowRight className="h-3.5 w-3.5" />
@@ -609,11 +799,11 @@ export function AiSuiteChat({
                   key={i}
                   className={cn(
                     "flex gap-3",
-                    m.role === "user" ? "justify-end" : "justify-start",
+                    m.role === "user" ? "justify-end" : "justify-start"
                   )}
                 >
                   {m.role === "assistant" && (
-                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <span className="bg-primary/10 text-primary mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
                       <Sparkles className="h-4 w-4" />
                     </span>
                   )}
@@ -621,8 +811,8 @@ export function AiSuiteChat({
                     className={cn(
                       "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
                       m.role === "user"
-                        ? "whitespace-pre-wrap bg-primary text-primary-foreground"
-                        : "bg-muted text-foreground",
+                        ? "bg-primary text-primary-foreground whitespace-pre-wrap"
+                        : "bg-muted text-foreground"
                     )}
                   >
                     {m.role === "assistant" ? (
@@ -632,7 +822,7 @@ export function AiSuiteChat({
                     )}
                   </div>
                   {m.role === "user" && (
-                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                    <span className="bg-muted text-muted-foreground mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
                       <User className="h-4 w-4" />
                     </span>
                   )}
@@ -641,7 +831,7 @@ export function AiSuiteChat({
             })}
 
             {loading && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="text-muted-foreground flex items-center gap-2 text-sm">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Thinking…
               </div>
@@ -649,7 +839,7 @@ export function AiSuiteChat({
           </div>
 
           {error && (
-            <div className="border-t border-destructive/30 bg-destructive/5 px-4 py-2 text-xs text-destructive">
+            <div className="border-destructive/30 bg-destructive/5 text-destructive border-t px-4 py-2 text-xs">
               {error}
             </div>
           )}
@@ -676,7 +866,7 @@ function linkify(text: string) {
       </a>
     ) : (
       part
-    ),
+    )
   );
 }
 
@@ -693,11 +883,11 @@ function ProposalCard({
 }) {
   return (
     <div className="flex gap-3">
-      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+      <span className="bg-primary/10 text-primary mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
         <Sparkles className="h-4 w-4" />
       </span>
-      <div className="max-w-[80%] flex-1 rounded-2xl border bg-muted/40 px-4 py-3 text-sm">
-        <p className="font-medium text-foreground">{msg.summary}</p>
+      <div className="bg-muted/40 max-w-[80%] flex-1 rounded-2xl border px-4 py-3 text-sm">
+        <p className="text-foreground font-medium">{msg.summary}</p>
 
         {msg.status === "pending" && (
           <div className="mt-3 flex items-center gap-2">
@@ -723,7 +913,7 @@ function ProposalCard({
 
         {msg.status === "confirmed" && (
           <>
-            <p className="mt-2 flex items-start gap-1.5 whitespace-pre-wrap text-xs text-emerald-600 dark:text-emerald-400">
+            <p className="mt-2 flex items-start gap-1.5 text-xs whitespace-pre-wrap text-emerald-600 dark:text-emerald-400">
               <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span className="min-w-0 break-words">
                 {linkify(msg.resultText || "Done.")}
@@ -736,11 +926,11 @@ function ProposalCard({
           </>
         )}
         {msg.status === "cancelled" && (
-          <p className="mt-2 text-xs text-muted-foreground">Cancelled.</p>
+          <p className="text-muted-foreground mt-2 text-xs">Cancelled.</p>
         )}
         {msg.status === "failed" && (
           <div className="mt-2">
-            <p className="flex items-start gap-1.5 text-xs text-destructive">
+            <p className="text-destructive flex items-start gap-1.5 text-xs">
               <X className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span className="min-w-0 break-words">
                 {msg.resultText || "The action failed."}
@@ -749,11 +939,16 @@ function ProposalCard({
             {/* Nothing was saved, so retrying is safe and cannot duplicate
                 work, say so, then offer the retry. A failure with no way
                 forward is the state customers get stuck in. */}
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="text-muted-foreground mt-1 text-[11px]">
               Nothing was created, so it&apos;s safe to try again.
             </p>
             <div className="mt-2 flex items-center gap-2">
-              <Button size="sm" variant="secondary" onClick={onConfirm} disabled={busy}>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={onConfirm}
+                disabled={busy}
+              >
                 {busy ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
@@ -761,7 +956,12 @@ function ProposalCard({
                 )}
                 Try again
               </Button>
-              <Button size="sm" variant="ghost" onClick={onCancel} disabled={busy}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={onCancel}
+                disabled={busy}
+              >
                 Cancel
               </Button>
             </div>

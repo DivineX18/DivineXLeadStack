@@ -23,7 +23,10 @@ import {
   blankWebsiteConfig,
   type WebsiteConfig,
   type WebsiteDoc,
+  type WebsiteTestimonial,
 } from "@/types/website";
+import { assessPublishedSite } from "@/lib/website/publish-gate";
+import { fixFabricatedTestimonials, ContentFixError } from "@/lib/website/content-fix";
 
 /**
  * Server-side website create + build — the single write path shared by the
@@ -64,8 +67,10 @@ export class WebsiteServiceError extends Error {
 const GATE_OFF_MESSAGE =
   "The website builder is disabled for this sub-account. Your agency administrator can enable it from Manage in the agency sub-accounts list.";
 
-/** Load the sub-account doc + enforce the agency website gate. */
-async function requireWebsiteEnabledSub(subAccountId: string): Promise<{
+/** Load the sub-account doc + enforce the agency website gate. Exported so
+ *  the testimonials-fix routes share the exact same gate check rather than
+ *  a second hand-copied version of it. */
+export async function requireWebsiteEnabledSub(subAccountId: string): Promise<{
   agencyId: string;
   name: string | undefined;
   data: Record<string, unknown>;
@@ -478,4 +483,119 @@ export async function getWebsiteForSubAccount(
     liveUrl: d.liveUrl ?? null,
     config: (d.config ?? blankWebsiteConfig()) as WebsiteConfig,
   };
+}
+
+/**
+ * Save the operator's real testimonials on the site doc. Pure storage — does
+ * NOT touch the published page. Applying them to an already-published site
+ * (when gitpage fabricated its own) is the separate, explicit
+ * applyTestimonialsFixForSubAccount() below, so saving a quote can never by
+ * itself trigger a live edit the operator didn't ask for.
+ */
+export async function saveWebsiteTestimonials(
+  subAccountId: string,
+  siteId: string,
+  testimonials: WebsiteTestimonial[],
+): Promise<{ ok: true } | { ok: false; reason: "missing" | "invalid"; message?: string }> {
+  if (testimonials.length > 10) {
+    return { ok: false, reason: "invalid", message: "Up to 10 testimonials." };
+  }
+  const cleaned: WebsiteTestimonial[] = [];
+  for (const t of testimonials) {
+    const quote = typeof t.quote === "string" ? t.quote.trim() : "";
+    const name = typeof t.name === "string" ? t.name.trim() : "";
+    if (!quote || !name) {
+      return { ok: false, reason: "invalid", message: "Each testimonial needs a quote and a name." };
+    }
+    if (quote.length > 500 || name.length > 80) {
+      return { ok: false, reason: "invalid", message: "Quote is capped at 500 characters, name at 80." };
+    }
+    const detail = typeof t.detail === "string" ? t.detail.trim().slice(0, 120) : undefined;
+    cleaned.push({ quote, name, ...(detail ? { detail } : {}) });
+  }
+
+  const ref = getAdminDb().doc(`subAccounts/${subAccountId}/website/${siteId}`);
+  const snap = await ref.get();
+  if (!snap.exists) return { ok: false, reason: "missing" };
+
+  await ref.set(
+    { testimonials: cleaned.length > 0 ? cleaned : null, updatedAt: FieldValue.serverTimestamp() },
+    { merge: true },
+  );
+  return { ok: true };
+}
+
+export type TestimonialsFixResult =
+  | { ok: true; liveUrl: string; status: WebsiteDoc["status"]; contentFlags: WebsiteDoc["contentFlags"] }
+  | { ok: false; reason: "missing" | "not_flagged" | "no_testimonials" | "not_configured"; message: string };
+
+/**
+ * BUG-011's actual remediation step. gitpage's generate-site API has no
+ * testimonials input (see content-fix.ts), so the only way to replace its
+ * invented quotes — or remove the section outright — is editing the
+ * already-published page via gitpage's MCP tools, then re-running the exact
+ * same assessPublishedSite() every build settles through, so a fixed page
+ * is held to the identical bar as a freshly generated one.
+ */
+export async function applyTestimonialsFixForSubAccount(
+  subAccountId: string,
+  siteId: string,
+  action: "apply" | "remove",
+): Promise<TestimonialsFixResult> {
+  await requireWebsiteEnabledSub(subAccountId);
+  if (!gitpageIsConfigured()) {
+    return {
+      ok: false,
+      reason: "not_configured",
+      message: "The website builder isn't configured on this deployment yet.",
+    };
+  }
+
+  const ref = getAdminDb().doc(`subAccounts/${subAccountId}/website/${siteId}`);
+  const snap = await ref.get();
+  if (!snap.exists) return { ok: false, reason: "missing", message: "Site not found." };
+  const doc = snap.data() as WebsiteDoc;
+
+  const flagged = doc.contentFlags?.some((f) => f.category === "fabricated_testimonials");
+  if (doc.status !== "needs_review" || !flagged || !doc.gitpageJobId) {
+    return {
+      ok: false,
+      reason: "not_flagged",
+      message: "This site has no pending testimonials flag to fix.",
+    };
+  }
+
+  const testimonials = action === "apply" ? doc.testimonials ?? [] : [];
+  if (action === "apply" && testimonials.length === 0) {
+    return {
+      ok: false,
+      reason: "no_testimonials",
+      message: "Add at least one real testimonial above before applying it, or choose Remove instead.",
+    };
+  }
+
+  let fixed: { liveUrl: string };
+  try {
+    fixed = await fixFabricatedTestimonials(doc.gitpageJobId, action, testimonials);
+  } catch (err) {
+    if (err instanceof ContentFixError) {
+      return { ok: false, reason: "not_flagged", message: err.message };
+    }
+    throw err;
+  }
+
+  const integrity = await assessPublishedSite(fixed.liveUrl, { canRetry: false });
+  const status: WebsiteDoc["status"] = integrity.outcome === "retry" ? "needs_review" : integrity.outcome;
+  await ref.set(
+    {
+      liveUrl: fixed.liveUrl,
+      status,
+      contentFlags: integrity.contentFlags,
+      integrityReason: integrity.integrityReason,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  return { ok: true, liveUrl: fixed.liveUrl, status, contentFlags: integrity.contentFlags };
 }

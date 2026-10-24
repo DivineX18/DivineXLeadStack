@@ -97,18 +97,41 @@ const PATTERNS: Pattern[] = [
   },
 ];
 
+/**
+ * Builds a human-readable snippet around a match. The naive version of this
+ * (slice a fixed window, strip complete `<tag>`s) leaked raw markup into the
+ * operator-facing banner whenever the window boundary fell MID-TAG — which
+ * is the common case here, since two of the five testimonial patterns match
+ * HTML structure itself (`<section id="testimonials">`, `class="testimonial"`).
+ * A 40-char lookback from a match inside an attribute routinely lands after
+ * a PRECEDING tag's `<` but before its `>`, so `/<[^>]+>/g` (which needs both
+ * delimiters present to strip anything) leaves the fragment — e.g.
+ * `<div clas` — sitting in the excerpt verbatim. Two more passes clean up
+ * exactly that: a leftover tag-tail at the very start (its own `<` fell
+ * outside the window) and a leftover tag-head at the very end (its `>` falls
+ * outside the window). Any remaining bare `>` or `<` at this point can only
+ * be an unbalanced delimiter, never real body text — HTML escapes those as
+ * `&gt;`/`&lt;` everywhere else.
+ */
+function buildExcerpt(html: string, matchIndex: number, matchLength: number): string {
+  const start = Math.max(0, matchIndex - 40);
+  const end = matchIndex + matchLength + 120;
+  return html
+    .slice(start, end)
+    .replace(/<[^>]+>/g, " ") // complete tags
+    .replace(/^[^<]*>/, " ") // leftover tag-tail at the start
+    .replace(/<[^>]*$/, " ") // leftover tag-head at the end
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** Scans generated site HTML for known gitpage fabrication patterns. Cheap (no LLM call) — a handful of regexes over one page's markup. Flags for human review, never deletes. */
 export function auditGeneratedContent(html: string): ContentFlag[] {
   const flags: ContentFlag[] = [];
   for (const { category, regex } of PATTERNS) {
     const match = html.match(regex);
     if (!match || match.index === undefined) continue;
-    const start = Math.max(0, match.index - 40);
-    const excerpt = html
-      .slice(start, match.index + 120)
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
+    const excerpt = buildExcerpt(html, match.index, match[0].length);
     flags.push({ category, excerpt });
   }
   return flags;

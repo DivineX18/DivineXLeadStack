@@ -70,6 +70,15 @@ export interface WebsiteBusinessDetails {
   opening_hours: string;
 }
 
+/** A real customer quote — never AI-invented. Mirrors funnels' TestimonialsConfig
+ *  item shape (quote/name/detail) for the same reason: it's the honest,
+ *  minimal field set for "a real person said this." */
+export interface WebsiteTestimonial {
+  quote: string;
+  name: string;
+  detail?: string;
+}
+
 export interface WebsitePageSelections {
   /** Always true; index.html is required by gitpage. UI locks this on. */
   index: true;
@@ -177,6 +186,19 @@ export interface WebsiteDoc {
    * gitpage's MCP tools, which produces a fresh doc on the next poll cycle.
    */
   contentFlags: ContentFlag[] | null;
+  /**
+   * Real customer quotes the operator supplied for the generic (non-niche)
+   * local template's testimonials section — gitpage's own v1 payload has no
+   * field for this (confirmed against the full schema in
+   * lib/gitpage/client.ts), so it can't travel in the generate-site request.
+   * It lives here so the `fix-content` route (lib/gitpage/content-fix.ts)
+   * can splice real quotes into the already-published page via gitpage's
+   * MCP edit tools instead of leaving the operator with gitpage's invented
+   * ones and no way to replace them. Null/empty = none supplied — a
+   * `fabricated_testimonials` flag then offers "remove the section" instead
+   * of "use my quotes".
+   */
+  testimonials?: WebsiteTestimonial[] | null;
   /** Number of times we've polled gitpage for the current job — used to cap. */
   pollAttempts: number;
   /** First time gitpage stopped heart-beating on this build. Diagnostic

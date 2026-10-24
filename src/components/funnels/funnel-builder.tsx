@@ -184,6 +184,22 @@ function linesToArray(v: string): string[] {
   return v.split("\n").filter((s) => s.trim().length > 0);
 }
 
+/** "ultimate-seo_checklist (final v2).pdf" -> "Ultimate Seo Checklist Final V2".
+ *  QA BUG-008's thank-you-page defaults: the operator's own filename is the
+ *  only genuinely "structured" fact about the lead magnet available at
+ *  attach time in this codebase (there's no separate title/topic/offer
+ *  record), so this is reused rather than re-parsing the PDF's contents. */
+function humanizeAssetFilename(filename: string): string {
+  const base = filename.replace(/\.[^./\\]+$/, "");
+  const words = base
+    .replace(/[_-]+/g, " ")
+    .replace(/[()]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const titled = words.replace(/\b\w/g, (c) => c.toUpperCase());
+  return titled || "download";
+}
+
 const fieldClass =
   "border-input bg-background h-9 w-full rounded-md border px-2 text-sm";
 const labelClass = "mb-1 block text-xs font-medium text-muted-foreground";
@@ -252,8 +268,41 @@ export function FunnelBuilder({
         ? await uploadFunnelAudioDirect(saId, funnelId, file, (f) => setUploadPct(Math.round(f * 100)))
         : await uploadFunnelAsset(saId, funnelId, file);
       // Audio is a deliverable like the PDF, not a page image to paste.
-      if (json.kind === "pdf" || json.kind === "audio") setLeadMagnetName(file.name);
-      else {
+      if (json.kind === "pdf" || json.kind === "audio") {
+        setLeadMagnetName(file.name);
+        // QA BUG-008 — attaching a real file used to leave the Thank-you
+        // page's Headline/Message/SEO fields on their generic grey
+        // placeholder text, so the operator had to write all four from
+        // scratch even though the file they just named and the funnel's
+        // own name already say what this is. Only fills fields that are
+        // genuinely empty — an operator who already wrote their own copy,
+        // or re-uploads a replacement file, never gets it silently
+        // overwritten.
+        const title = humanizeAssetFilename(file.name);
+        let filledAny = false;
+        if (!bridgeHeadline.trim()) {
+          setBridgeHeadline(`Your ${title} is ready!`.slice(0, 200));
+          filledAny = true;
+        }
+        if (!bridgeMessage.trim()) {
+          setBridgeMessage(
+            `Thanks for signing up, grab your ${title} below. We've also sent a copy to your inbox.`.slice(0, 600),
+          );
+          filledAny = true;
+        }
+        const seoBase = name.trim() ? `${title} - ${name.trim()}` : title;
+        if (!seoTitle.trim()) {
+          setSeoTitle(seoBase.slice(0, 70));
+          filledAny = true;
+        }
+        if (!seoDescription.trim()) {
+          setSeoDescription(`Download your free ${title}${name.trim() ? ` from ${name.trim()}` : ""}.`.slice(0, 170));
+          filledAny = true;
+        }
+        if (filledAny) {
+          toast.success("Filled in the thank-you page copy from your file, edit anything before saving.");
+        }
+      } else {
         setUploadedImageUrl(json.url);
         try { await navigator.clipboard.writeText(json.url); } catch { /* clipboard optional */ }
       }

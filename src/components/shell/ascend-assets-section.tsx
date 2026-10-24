@@ -249,6 +249,16 @@ export function AscendAssetsSection({ saId, isAdmin }: { saId: string; isAdmin: 
                 >
                   Copy
                 </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    window.open(`/api/sub-accounts/${saId}/divinex/assets/${open.id}/pdf`, "_blank");
+                  }}
+                >
+                  Download PDF
+                </Button>
                 <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(null)}>
                   Close
                 </Button>
@@ -259,10 +269,14 @@ export function AscendAssetsSection({ saId, isAdmin }: { saId: string; isAdmin: 
                 here. The paths that actually build something in Flow (a funnel
                 page, a follow-up sequence) run through Zeno, so this points
                 there rather than leaving the reader to work out why there is no
-                publish button. */}
+                publish button. Downloading a PDF is the exception: a lead
+                magnet needs a real FILE to attach as a funnel's delivery
+                asset, which plain copy-paste can never produce. */}
             <p className="mb-4 rounded-lg border border-[var(--dx-border-subtle)] px-3 py-2 text-xs text-[var(--dx-text-muted)]">
-              This is written copy to use wherever you need it. To build something live in Flow instead
-              (a page, a form, a follow-up sequence), ask Zeno to create it and you&apos;ll get a draft to publish.
+              This is written copy to use wherever you need it. Download it as a PDF to attach as a
+              funnel&apos;s lead-magnet delivery file (Funnel Builder → Files &amp; delivery). To build
+              something live in Flow instead (a page, a form, a follow-up sequence), ask Zeno to create
+              it and you&apos;ll get a draft to publish.
             </p>
             <pre className="whitespace-pre-wrap break-words font-sans text-sm text-[var(--dx-text-primary)]">
               {open.content}

@@ -30,6 +30,7 @@ import {
   type WebsiteConfig,
   type WebsiteDoc,
   type WebsiteServicesConfig,
+  type WebsiteTestimonial,
 } from "@/types/website";
 import {
   isNicheKey,
@@ -141,6 +142,11 @@ export function WebsiteBuilder({
   const [rechecking, setRechecking] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [urlShown, setUrlShown] = useState(false);
+  const [testimonials, setTestimonials] = useState<WebsiteTestimonial[]>(
+    () => doc.testimonials ?? [],
+  );
+  const [savingTestimonials, setSavingTestimonials] = useState(false);
+  const [fixingAction, setFixingAction] = useState<"apply" | "remove" | null>(null);
 
   const status = doc.status;
   const isLocked =
@@ -410,6 +416,81 @@ export function WebsiteBuilder({
     }
   }
 
+  function addTestimonial() {
+    setTestimonials((prev) => [...prev, { quote: "", name: "", detail: "" }]);
+  }
+  function updateTestimonial(i: number, patch: Partial<WebsiteTestimonial>) {
+    setTestimonials((prev) => prev.map((t, idx) => (idx === i ? { ...t, ...patch } : t)));
+  }
+  function removeTestimonial(i: number) {
+    setTestimonials((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
+  async function putTestimonials(): Promise<boolean> {
+    try {
+      const res = await fetch(
+        `/api/sub-accounts/${subAccountId}/website/${siteId}/testimonials`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ testimonials }),
+        },
+      );
+      const payload = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(payload.error ?? "Could not save testimonials.");
+      return true;
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not save testimonials.");
+      return false;
+    }
+  }
+
+  async function saveTestimonials() {
+    setSavingTestimonials(true);
+    try {
+      if (await putTestimonials()) toast.success("Testimonials saved.");
+    } finally {
+      setSavingTestimonials(false);
+    }
+  }
+
+  /** BUG-011 remediation — splice the operator's real quotes into the
+   *  already-published page (or strip the section outright) via gitpage's
+   *  MCP tools, then re-run the same publish-integrity check every build
+   *  settles through. See lib/server/websites-service.ts. */
+  async function applyTestimonialsFix(action: "apply" | "remove") {
+    if (action === "apply" && testimonials.length === 0) {
+      toast.error("Add at least one real testimonial below first, or choose Remove instead.");
+      return;
+    }
+    setFixingAction(action);
+    try {
+      // The fix route reads testimonials from the saved doc, not from this
+      // request body — persist first so "I typed a quote then clicked Fix"
+      // can never apply a stale/empty list.
+      if (action === "apply" && !(await putTestimonials())) return;
+      const res = await fetch(
+        `/api/sub-accounts/${subAccountId}/website/${siteId}/fix-content`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action }),
+        },
+      );
+      const payload = (await res.json().catch(() => ({}))) as { error?: string; status?: string };
+      if (!res.ok) throw new Error(payload.error ?? "Could not apply the fix.");
+      toast.success(
+        payload.status === "ready"
+          ? "Fixed — the page is clean and live."
+          : "Applied. Re-checking for anything else that still needs review.",
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not apply the fix.");
+    } finally {
+      setFixingAction(null);
+    }
+  }
+
   const title = config.heading?.trim() || doc.name || "Untitled site";
   const liveUrl = doc.liveUrl;
   const accentClass =
@@ -613,6 +694,42 @@ export function WebsiteBuilder({
               </a>{" "}
               to see it, then use Rebuild once the source details are filled in.
             </p>
+          )}
+          {doc.contentFlags?.some((f) => f.category === "fabricated_testimonials") && (
+            <div className="mt-3 rounded-lg border border-destructive/30 bg-background/60 p-3">
+              <p className="text-[11px] font-medium text-foreground">
+                Fix the testimonials section without touching raw HTML:
+              </p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Add your real testimonials below, then apply them here — or remove the section if
+                you don&apos;t have any yet.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => applyTestimonialsFix("apply")}
+                  disabled={fixingAction !== null}
+                >
+                  {fixingAction === "apply" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : null}
+                  Use my testimonials
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => applyTestimonialsFix("remove")}
+                  disabled={fixingAction !== null}
+                >
+                  {fixingAction === "remove" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : null}
+                  Remove this section
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -1078,6 +1195,64 @@ export function WebsiteBuilder({
                         </div>
                       </Section>
                     )}
+
+                  <Section
+                    title="Testimonials (optional)"
+                    description="Real customer quotes only — leave this empty if you don't have any yet. The site generator invents its own when a section is left blank; this is how you replace that with the real thing (or remove the section) after a build."
+                  >
+                    <div className="space-y-3">
+                      {testimonials.map((t, i) => (
+                        <div key={i} className="rounded-lg border p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <Textarea
+                              rows={2}
+                              placeholder="The real quote, as they said it"
+                              value={t.quote}
+                              onChange={(e) => updateTestimonial(i, { quote: e.target.value })}
+                              className="flex-1"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => removeTestimonial(i)}
+                              aria-label="Remove testimonial"
+                              title="Remove"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                            <Input
+                              placeholder="Name"
+                              value={t.name}
+                              onChange={(e) => updateTestimonial(i, { name: e.target.value })}
+                            />
+                            <Input
+                              placeholder="Detail (e.g. company, city)"
+                              value={t.detail ?? ""}
+                              onChange={(e) => updateTestimonial(i, { detail: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      <div className="flex items-center gap-2">
+                        <Button type="button" size="sm" variant="outline" onClick={addTestimonial}>
+                          <Plus className="mr-1 h-3.5 w-3.5" />
+                          Add testimonial
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={saveTestimonials}
+                          disabled={savingTestimonials}
+                        >
+                          {savingTestimonials ? "Saving…" : "Save testimonials"}
+                        </Button>
+                      </div>
+                    </div>
+                  </Section>
 
                   <Section
                     title="Design"

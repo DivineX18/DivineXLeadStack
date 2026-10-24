@@ -159,5 +159,23 @@ check(
   );
 }
 
+// ── QA BUG-003 — "Continue with Zeno" used the /app-prefixed form, which
+// round-trips through a redirect (next.config.ts: /app/{section} -> 307 ->
+// /{section} -> rewrite -> /app/{section}) before landing, an avoidable hop
+// that risks losing ?funnel= if that redirect's query passthrough ever
+// regresses. The canonical, zero-redirect customer-facing form is bare
+// /zeno. ──────────────────────────────────────────────────────────────────
+{
+  check(
+    "12a. 'Continue with Zeno' links use the bare canonical /zeno, not the redirect-round-tripping /app/zeno",
+    !/\/app\/zeno\?funnel=/.test(list) && /\/zeno\?funnel=\$\{f\.id\}/.test(list),
+  );
+  const config = read("next.config.ts");
+  check(
+    "12b. 'zeno' really is one of the sections /app/zeno would redirect FROM (confirms 12a closes a real round trip, not a no-op)",
+    /"zeno",/.test(config),
+  );
+}
+
 console.log(failures === 0 ? `\nverify-funnels-navigation: all checks passed` : `\nverify-funnels-navigation: ${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

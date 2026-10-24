@@ -160,6 +160,7 @@ import {
 } from "@/lib/server/message-templates-service";
 import { validateEmailBody } from "@/lib/automations/merge-tags";
 import { ascend, ascendConfigured, ASCEND_ASSET_TYPES } from "@/lib/divinex/ascend-client";
+import { resolveAuthorizedBusinessProfileId } from "@/lib/divinex/profile-authorization";
 import { updateWorkflowServerSide } from "@/lib/server/workflows-service";
 import { composeStrategyNodes, synthesizeAutomationPlan } from "@/lib/workflows/compose-strategy";
 import {
@@ -3088,6 +3089,98 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
           resultText: `That page couldn't be read${status}. It may be blocked or unavailable. Draft the website from the user's description instead.`,
         };
       }
+    },
+  },
+  {
+    // BUG-002 (QA) — Zeno had no way to scan the WORKSPACE'S OWN business
+    // website at all. ascend.discover() (the real, certified Growth
+    // Scan/brand-discovery crawler — see runBrandDiscovery() in the Ascend
+    // repo's divinexContract.ts) already existed and was already wired into
+    // onboarding, but no chat capability called it, so "scan my website" /
+    // "read my site and tell me about my business" had nothing to run.
+    // This wires the EXISTING crawler into chat; it adds zero new crawling
+    // logic. Distinct from research_website_reference above, which reads a
+    // COMPETITOR/reference site for tone and writes nothing.
+    name: "scan_business_website",
+    level: "sub-account",
+    requiredRole: "subAccountAdmin",
+    menuLabel: "Scan this workspace's own website for real business/brand facts",
+    description:
+      "Crawl THIS WORKSPACE'S OWN business website (not a competitor/reference site — use research_website_reference for that) and pull real facts into its business profile: business name (if unset), logo, brand colors/fonts, visual personality, social links, and candidate photos found on the page. This is the SAME Growth Scan brand-discovery crawler onboarding already uses, not a new one. Use whenever the user asks you to scan/read/look at/analyze their own website, or to pull their brand from their site. Extracted facts land with 'extracted'/'inferred' provenance, never silently treated as confirmed — the user reviews them in onboarding afterward. If they don't give a URL, omit website_url; the workspace's already-saved site is used automatically, and if there isn't one you'll be told so you can ask for it. Candidate photos are NOT auto-approved for use elsewhere; that still needs the user's review.",
+    parameters: {
+      type: "object",
+      properties: {
+        website_url: {
+          type: "string",
+          description: "Full http(s) URL of the business's own site, if the user gave one. Omit to use the workspace's already-saved website.",
+        },
+      },
+      additionalProperties: false,
+    },
+    validate: (raw) => {
+      let url = str(raw, "website_url");
+      if (url && !/^https?:\/\//i.test(url) && /^[\w-]+(\.[\w-]+)+/.test(url)) url = `https://${url}`;
+      if (url && (!/^https?:\/\/.+\..+/i.test(url) || url.length > 300)) {
+        return { ok: false, error: "website_url must be a valid http(s) URL, or omitted" };
+      }
+      return { ok: true, args: { websiteUrl: url || undefined } };
+    },
+    summarize: (args) =>
+      args.websiteUrl
+        ? `Scan ${args.websiteUrl as string} for real business and brand facts.`
+        : "Scan this workspace's saved website for real business and brand facts.",
+    execute: async (ctx, args) => {
+      const subAccountId = ctx.subAccountId!;
+      const auth = await resolveAuthorizedBusinessProfileId(subAccountId);
+      let businessProfileId: number;
+      if (auth.authorized) {
+        businessProfileId = auth.businessProfileId;
+      } else {
+        // Same bootstrap find-or-create every other DivineX-linked capability
+        // uses (see create_asset) — find-or-create is keyed on the workspace
+        // id alone, so it cannot be steered at someone else's profile.
+        const resolved = await ascend.resolve({ flowSubAccountId: subAccountId });
+        if (!resolved.ok || !resolved.data?.businessProfileId) {
+          throw new CapabilityUserError(
+            "This workspace isn't linked to a DivineX business profile yet. Finish onboarding first and I can scan the site then.",
+          );
+        }
+        businessProfileId = resolved.data.businessProfileId;
+      }
+
+      const res = await ascend.discover(subAccountId, businessProfileId, args.websiteUrl as string | undefined);
+      const errCode = (res.data as { error?: string } | undefined)?.error ?? res.error;
+      if (!res.ok || errCode) {
+        if (errCode === "no_website_url") {
+          throw new CapabilityUserError("I don't have a website URL on file for this business yet. What's the URL?");
+        }
+        throw new CapabilityUserError("Couldn't scan that site just now — it may be unreachable or blocking automated requests. Try again, or give me a different URL.");
+      }
+
+      const d = (res.data?.discovery ?? {}) as {
+        websiteUrl?: string;
+        identity?: { businessName?: string | null; logoUrl?: string | null };
+        tokens?: { palette?: string[]; fonts?: string[] };
+        inferredVisual?: { personality?: string | null };
+        socials?: Record<string, string>;
+        persistedAssets?: number;
+      };
+      const parts: string[] = [];
+      if (d.identity?.businessName) parts.push(`business name "${d.identity.businessName}"`);
+      if (d.identity?.logoUrl) parts.push("a logo");
+      if (d.tokens?.palette?.length) parts.push(`a ${d.tokens.palette.length}-color brand palette`);
+      if (d.tokens?.fonts?.length) parts.push("fonts");
+      if (d.inferredVisual?.personality) parts.push(`a "${d.inferredVisual.personality}" visual personality`);
+      const socialCount = d.socials ? Object.keys(d.socials).length : 0;
+      if (socialCount > 0) parts.push(`${socialCount} social link${socialCount === 1 ? "" : "s"}`);
+      if ((d.persistedAssets ?? 0) > 0) parts.push(`${d.persistedAssets} candidate photo${d.persistedAssets === 1 ? "" : "s"} (awaiting your review)`);
+
+      return {
+        resultText:
+          parts.length > 0
+            ? `Scanned ${d.websiteUrl ?? "the site"} and found: ${parts.join(", ")}. These are saved as extracted/inferred facts on the business profile, review and confirm them in onboarding to lock them in.`
+            : `Scanned ${d.websiteUrl ?? "the site"}, but didn't find much usable brand/business information on the page.`,
+      };
     },
   },
   {
@@ -10687,6 +10780,7 @@ const AGENCY_DELEGATED = [
   // websiteEnabledByAgency gate still applies inside the service.
   "get_website_prefill",
   "research_website_reference",
+  "scan_business_website",
   "create_website",
   "check_website_status",
   // Funnel Builder, same delegation shape as the website builder above.

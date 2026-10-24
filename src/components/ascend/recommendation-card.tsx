@@ -1,7 +1,47 @@
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { AscendCardShell } from "@/components/ascend/card-shell";
 import { IntelligenceStatusBadge } from "@/components/ascend/intelligence-status-badge";
 import { FixWithZenoButton } from "@/components/ascend/fix-with-zeno-button";
 import type { WithMeta, CroAuditRecommendation } from "@/types/intelligence";
+
+/**
+ * QA BUG-001 — Home's ONLY first-run guidance was one line of plain text
+ * ("Run a Growth Scan or CRO Audit from Intelligence") in the one spot the
+ * page already knows there's nothing better to show (no recommendation
+ * yet). It named Intelligence alone; a customer who hasn't built anything
+ * had no pointer to Create (websites/funnels/assets) or Leads (CRM), and
+ * nothing here was a real clickable action. This is the lightweight fix —
+ * four short links to the product's own real top-level destinations
+ * (reusing the exact nav structure build-shell-navigation.ts already
+ * defines: Create absorbs websites/funnels/assets, Leads absorbs CRM —
+ * there is no second nav model here), not a new wizard or onboarding flow. */
+const QUICK_START_LINKS: { label: string; description: string; href: string }[] = [
+  { label: "Ask Zeno", description: "Describe what you want built, in plain language.", href: "/zeno" },
+  { label: "Run a Growth Scan", description: "See what Intelligence already knows, or scan your site.", href: "/intelligence" },
+  { label: "Build something", description: "Websites, funnels, and marketing assets.", href: "/create" },
+  { label: "Your contacts", description: "Leads, pipeline, and follow-up.", href: "/leads" },
+];
+
+function QuickStartLinks() {
+  return (
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      {QUICK_START_LINKS.map((q) => (
+        <Link
+          key={q.href}
+          href={q.href}
+          className="group flex items-center justify-between gap-2 rounded-lg border border-[var(--dx-border-subtle)] px-3 py-2.5 transition-colors hover:bg-[var(--dx-hover)]"
+        >
+          <span>
+            <span className="block text-sm font-medium text-[var(--dx-text-primary)]">{q.label}</span>
+            <span className="block text-xs text-[var(--dx-text-muted)]">{q.description}</span>
+          </span>
+          <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[var(--dx-text-muted)] transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 /**
  * Corrected Slice 10.5: sourced from the real `croAuditEngine.ts`
@@ -44,10 +84,13 @@ export function RecommendedNextActionCard({
       {action ? (
         <RecommendationRow rec={action} />
       ) : (
-        // Names the FINAL IA destination. This previously pointed at a
-        // lifecycle section P0.3 removed, sending customers to a place that
-        // no longer exists in the navigation.
-        <p className="text-sm text-[var(--dx-text-muted)]">Nothing to recommend yet. Run a Growth Scan or CRO Audit from Intelligence.</p>
+        <div className="space-y-3">
+          <p className="text-sm text-[var(--dx-text-muted)]">
+            Nothing to recommend yet, there&apos;s not enough here for Intelligence to work from. A quick
+            place to start:
+          </p>
+          <QuickStartLinks />
+        </div>
       )}
     </AscendCardShell>
   );
