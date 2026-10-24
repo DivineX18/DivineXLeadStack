@@ -35,6 +35,13 @@ const EXACT_MAP: Record<string, string> = {
   "/dashboard": "/",
   "/ai-suite": "/scale",
   "/website": "/create",
+  // Index only. Without this, the bare "/funnels" case fell through to the
+  // /funnels PREFIX_MAP entry below (intended for /funnels/{id} only, since
+  // bare === from matches too) and resolved to "/create/funnels" — a path
+  // with no index page (only /create/funnels/[funnelId] exists). The
+  // Funnel Orders page's own back-arrow calls exactly this (saPath("/funnels")),
+  // so every "back" click from Orders 404'd.
+  "/funnels": "/create",
   // Index only: Products has no detail route in Flow either, so there is
   // nothing deeper for a link to reach.
   "/products": "/create/products",
