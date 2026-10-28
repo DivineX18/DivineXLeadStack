@@ -32,26 +32,54 @@ import {
 export const UPLOAD_MAX_BYTES = MAX_ASSET_BYTES;
 export const UPLOAD_ACCEPT = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 
-export function describeUploadLimit(): string {
-  return (
-    `Images (JPEG, PNG, WebP) and PDFs up to ${Math.round(UPLOAD_MAX_BYTES / 1024 / 1024)}MB, ` +
-    `or audio (MP3, M4A, WAV) up to ${Math.round(MAX_AUDIO_DIRECT_BYTES / 1024 / 1024)}MB.`
-  );
+const UPLOAD_KIND_LABELS: Record<string, string> = {
+  "image/jpeg": "JPEG",
+  "image/png": "PNG",
+  "image/webp": "WebP",
+  "application/pdf": "PDF",
+};
+
+export function describeUploadLimit(allowedTypes: readonly string[] = UPLOAD_ACCEPT): string {
+  const imageTypes = allowedTypes.filter((t) => t in UPLOAD_KIND_LABELS && t !== "application/pdf");
+  const hasPdf = allowedTypes.includes("application/pdf");
+  const hasAudio = allowedTypes.some((t) => (AUDIO_MIME_TYPES as readonly string[]).includes(t));
+  const parts: string[] = [];
+  if (imageTypes.length > 0) {
+    const label = imageTypes.map((t) => UPLOAD_KIND_LABELS[t]).join(", ");
+    parts.push(`Images (${label})${hasPdf ? " and PDFs" : ""} up to ${Math.round(UPLOAD_MAX_BYTES / 1024 / 1024)}MB`);
+  } else if (hasPdf) {
+    parts.push(`PDFs up to ${Math.round(UPLOAD_MAX_BYTES / 1024 / 1024)}MB`);
+  }
+  if (hasAudio) parts.push(`audio (MP3, M4A, WAV) up to ${Math.round(MAX_AUDIO_DIRECT_BYTES / 1024 / 1024)}MB`);
+  return `${parts.join(", or ")}.`;
 }
 
-/** A human-readable reason this file can't be uploaded, or null if it can. */
-export function checkUploadable(file: File): string | null {
+/**
+ * Bitrupt QA BUG-017 — the Visual Requirements Panel's file input declares
+ * `accept="image/jpeg,image/png,image/webp"`, but that attribute is only a
+ * hint to the OS file picker: drag-and-drop or an explicit "All Files"
+ * choice bypasses it entirely in every browser. The real gate was this
+ * function, and it used the SAME broad UPLOAD_ACCEPT list the main "Upload
+ * image, PDF or audio" lead-magnet button needs (that one legitimately
+ * accepts PDFs) — so a PDF dragged into an image-only slot sailed through
+ * validation and got attached as if it were a photo, producing a broken
+ * render on the canvas. `allowedTypes` lets a narrower call site (an
+ * image-only slot) restrict the check without touching the lead-magnet
+ * button's own broader default.
+ */
+export function checkUploadable(file: File, allowedTypes: readonly string[] = UPLOAD_ACCEPT): string | null {
   // Audio has its own, much larger ceiling because it does not travel
-  // through the server. See uploadFunnelAudioDirect below.
-  if ((AUDIO_MIME_TYPES as readonly string[]).includes(file.type)) {
+  // through the server. See uploadFunnelAudioDirect below. Only reachable
+  // for a call site whose allowed-types list includes an audio MIME type.
+  if ((AUDIO_MIME_TYPES as readonly string[]).includes(file.type) && allowedTypes.includes(file.type)) {
     if (file.size === 0) return `${file.name} is empty.`;
     if (file.size > MAX_AUDIO_DIRECT_BYTES) {
       return `${file.name} is ${(file.size / 1024 / 1024).toFixed(1)}MB, over the ${Math.round(MAX_AUDIO_DIRECT_BYTES / 1024 / 1024)}MB limit for audio.`;
     }
     return null;
   }
-  if (!UPLOAD_ACCEPT.includes(file.type)) {
-    return `${file.name} is a ${file.type || "file of unknown type"}. ${describeUploadLimit()}`;
+  if (!allowedTypes.includes(file.type)) {
+    return `${file.name} is a ${file.type || "file of unknown type"}. ${describeUploadLimit(allowedTypes)}`;
   }
   if (file.size > UPLOAD_MAX_BYTES) {
     const mb = (file.size / 1024 / 1024).toFixed(1);
@@ -80,8 +108,9 @@ export async function uploadFunnelAsset(
   subAccountId: string,
   funnelId: string,
   file: File,
+  allowedTypes: readonly string[] = UPLOAD_ACCEPT,
 ): Promise<UploadedAsset> {
-  const rejected = checkUploadable(file);
+  const rejected = checkUploadable(file, allowedTypes);
   if (rejected) throw new Error(rejected);
 
   const body = new FormData();

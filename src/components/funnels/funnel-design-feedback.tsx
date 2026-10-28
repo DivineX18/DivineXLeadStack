@@ -75,8 +75,17 @@ export function FunnelDesignFeedback({
   }
 
   async function submitFeedback() {
-    if (!rating || !whatImproved.trim() || !why.trim()) {
-      toast.error("Pick helpful/not helpful and fill in both fields.");
+    // BUG-015: this used to say "Pick helpful/not helpful" while the two
+    // buttons on screen are labeled "Worked well" / "Needed changes" --
+    // real UI copy, a different error vocabulary, genuine confusion. Named
+    // consistently with what the operator actually sees, and specific
+    // about which part is missing rather than a blanket "both fields".
+    if (!rating) {
+      toast.error("Select “Worked well” or “Needed changes” first.");
+      return;
+    }
+    if (!whatImproved.trim() || !why.trim()) {
+      toast.error("Fill in both notes below before submitting.");
       return;
     }
     setSubmitting(true);

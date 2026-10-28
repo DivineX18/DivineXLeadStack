@@ -5,6 +5,8 @@ import { Camera, ImageIcon, Loader2 } from "lucide-react";
 import type { VisualRequirement } from "@/types/funnels";
 import { uploadFunnelAsset } from "@/lib/funnels/upload-client";
 
+const IMAGE_ONLY_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+
 /**
  * The missing-media resolution loop, shown in preview — P0.5.
  *
@@ -79,7 +81,14 @@ export function VisualRequirementsPanel({
     setError(null);
     let data: { url: string };
     try {
-      data = await uploadFunnelAsset(subAccountId, funnelId, file);
+      // BUG-017: this slot is photos only (its own input's accept= already
+      // says so) — the accept attribute is a file-picker hint a browser
+      // never enforces for drag-and-drop or an explicit "All Files" choice,
+      // so the real gate has to be here. Restricting it stops a dropped PDF
+      // from sailing through the shared, broader upload check (built for
+      // the lead-magnet button, which legitimately accepts PDFs) and
+      // getting attached as if it were a photo.
+      data = await uploadFunnelAsset(subAccountId, funnelId, file, IMAGE_ONLY_TYPES);
     } catch (e) {
       setBusy(null);
       setError(e instanceof Error ? e.message : "That file couldn't be uploaded.");

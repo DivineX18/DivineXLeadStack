@@ -36,6 +36,30 @@ interface AssetRow {
   createdAt: string;
 }
 
+/**
+ * Bitrupt QA BUG-020 — multiple drafts of the same asset type generated on
+ * the same calendar day are indistinguishable in the list: the title
+ * carries a date (the backend bakes it in, e.g. "Lead Magnet Full Draft,
+ * Oct 23, 2026") but never a time, so a second draft from that afternoon
+ * looks identical to the morning's. `createdAt` was already coming back
+ * from the API on every row and sitting completely unused — this surfaces
+ * it rather than changing what the backend generates. Relative for
+ * anything from today ("10m ago"), an absolute date+time otherwise, so an
+ * older entry still reads unambiguously without needing today's date as
+ * context.
+ */
+function formatAssetTime(createdAt: string): string | null {
+  const d = new Date(createdAt);
+  if (Number.isNaN(d.getTime())) return null;
+  const diffMs = Date.now() - d.getTime();
+  const diffMin = Math.round(diffMs / 60000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.round(diffMin / 60);
+  if (diffHr < 24 && d.toDateString() === new Date().toDateString()) return `${diffHr}h ago`;
+  return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
 export function AscendAssetsSection({ saId, isAdmin }: { saId: string; isAdmin: boolean }) {
   const [assets, setAssets] = useState<AssetRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -211,7 +235,10 @@ export function AscendAssetsSection({ saId, isAdmin }: { saId: string; isAdmin: 
               <FileText className="h-4 w-4 shrink-0 text-[var(--dx-text-muted)]" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-[var(--dx-text-primary)]">{a.title}</span>
-                <span className="block text-xs text-[var(--dx-text-muted)]">{a.assetType}</span>
+                <span className="block text-xs text-[var(--dx-text-muted)]">
+                  {a.assetType}
+                  {formatAssetTime(a.createdAt) ? ` · ${formatAssetTime(a.createdAt)}` : ""}
+                </span>
               </span>
             </button>
           ))

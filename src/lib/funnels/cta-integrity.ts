@@ -256,12 +256,30 @@ export function deliveryRejection(gaps: string[]): string {
  * check that looks for the current one cannot drift apart in one file.
  */
 const DELIVERY_URL = String.raw`\S*\/(?:api\/funnel-asset|d)\/[A-Za-z0-9_-]+`;
+/**
+ * A button-line href that can NEVER render as a working link, by the exact
+ * rule parseButtonLine (lib/email/body.ts) already enforces: only
+ * http(s)/mailto schemes become a clickable <a>; anything else falls back to
+ * literal escaped text in the sent email. Found live (BUG-029, 2026-10-28):
+ * an operator hand-typed `[button: Download your guide](REPLACE-WITH-PDF-LINK)`
+ * as a self-reminder placeholder while drafting the email, then uploaded the
+ * real asset expecting it to fill the link in. It didn't — DELIVERY_URL only
+ * recognizes a href this exact wiring had ALREADY inserted (by design: it
+ * must never touch a URL the operator wrote on purpose), so the upload
+ * appended a second, correct button instead of replacing the placeholder,
+ * and the literal unparsed markdown shipped in a real delivery email.
+ * Any href this clause matches is DEFINITIONALLY already broken — it cannot
+ * become a working link by any other means — so treating it as the stale
+ * line to replace can never discard a real, working, operator-authored one.
+ */
+const BROKEN_BUTTON_HREF = String.raw`(?!https?:\/\/|mailto:)\S+`;
+const DELIVERY_OR_BROKEN_HREF = `(?:${DELIVERY_URL}|${BROKEN_BUTTON_HREF})`;
 const DELIVERY_LINE_RE = new RegExp(
-  `\n*(?:\\[button(?: secondary)?: [^\\]]*\\]\\(${DELIVERY_URL}\\)|Download your copy here: ${DELIVERY_URL})`,
+  `\n*(?:\\[button(?: secondary)?: [^\\]]*\\]\\(${DELIVERY_OR_BROKEN_HREF}\\)|Download your copy here: ${DELIVERY_URL})`,
   "g",
 );
 const DELIVERY_LINE = new RegExp(
-  `(?:\\[button(?: secondary)?: [^\\]]*\\]\\(${DELIVERY_URL}\\)|Download your copy here: ${DELIVERY_URL})`,
+  `(?:\\[button(?: secondary)?: [^\\]]*\\]\\(${DELIVERY_OR_BROKEN_HREF}\\)|Download your copy here: ${DELIVERY_URL})`,
 );
 const UNSUBSCRIBE_TOKEN = "{{unsubscribeLink}}";
 

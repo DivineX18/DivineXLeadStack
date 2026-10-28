@@ -64,6 +64,17 @@ interface NavItem {
   matchPrefix?: string;
 }
 
+// Same fallback the SSO-return link already uses (intelligence-home.ts) —
+// the one client-safe source of truth for "which hostname is the Ascend
+// shell." Computed once at module scope since it never changes at runtime.
+const ascendHostname = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_ASCEND_APP_URL ?? "https://app.divinex.io").hostname;
+  } catch {
+    return "app.divinex.io";
+  }
+})();
+
 // Per-sub-account nav. `href` is templated with the active sub-account id at
 // render time; `matchPrefix` is the stem used to highlight the active link.
 const SUB_ACCOUNT_NAV: NavItem[] = [
@@ -382,7 +393,28 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
             {SUB_ACCOUNT_NAV.filter(
               (item) => !trimmed || PWA_CORE_HREFS.has(item.href),
             ).map((item) => {
-              const fullHref = `${subRoot ?? `/sa/${linkSubId}`}${item.href}`;
+              // Bitrupt QA BUG-013 — clicking Dashboard from Flow's own
+              // sidebar (reached via the "Agency home" escape hatch on the
+              // Ascend host) landed on /sa/{id}/dashboard, which that page's
+              // own server-side entitlement check immediately bounces back
+              // to /app/home for a full_ascend workspace (deliberately, so a
+              // stale bookmark can't strand an entitled customer in legacy
+              // Flow — see that page's own comment). The bounce is correct;
+              // it was just silent and round-tripped through a dead page,
+              // reading as "Dashboard does nothing" / a loop. Pointing
+              // straight at /app/home when we're already on the Ascend host
+              // skips that visible round trip. This is a client-only
+              // hostname check, not an entitlement check — the real
+              // authority stays server-side in /app/layout.tsx's own gate,
+              // which still rescues a non-entitled workspace straight back
+              // to this exact Flow dashboard if this guess is ever wrong.
+              const dashboardSkipsBounce =
+                item.href === "/dashboard" &&
+                typeof window !== "undefined" &&
+                window.location.hostname === ascendHostname;
+              const fullHref = dashboardSkipsBounce
+                ? "/app/home"
+                : `${subRoot ?? `/sa/${linkSubId}`}${item.href}`;
               const isActive =
                 pathname === fullHref ||
                 (item.href !== "/dashboard" && pathname.startsWith(fullHref));

@@ -120,17 +120,28 @@ export default function FormsPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {/* BUG-025: these two create forms differently -- one instantly,
+              pre-filled; the other opens a dialog to name a blank one -- but
+              read as two unlabeled near-synonyms side by side. title=
+              carries the distinction on hover without a layout change; the
+              right button's label itself now says what it's for instead of
+              just restating "it creates a form" a second time. */}
           <Button
             variant="outline"
             onClick={handleCreateContact}
             disabled={creating}
+            title="Instantly creates a ready-to-use contact form named 'Contact us' — no setup dialog."
           >
             <MessageSquare className="mr-1 h-4 w-4" />
-            Contact form
+            Default contact form
           </Button>
-          <Button onClick={() => setCreateOpen(true)} disabled={creating}>
+          <Button
+            onClick={() => setCreateOpen(true)}
+            disabled={creating}
+            title="Build a custom form from scratch — you name it and add your own fields."
+          >
             <Plus className="mr-1 h-4 w-4" />
-            New Form
+            Create custom form
           </Button>
         </div>
       </div>

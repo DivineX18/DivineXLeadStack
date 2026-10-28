@@ -19,6 +19,21 @@ export interface NormalizedVideo {
   provider: VideoProvider;
   /** True when we recognised the link and rewrote it. */
   normalized: boolean;
+  /**
+   * Bitrupt QA BUG-022 — an operator pasted their own business's plain
+   * homepage (https://hunterpest.com) into this field, got only the soft
+   * "Using this link as-is. It must be embeddable." note, published anyway,
+   * and a real visitor's browser then tried to iframe the live business
+   * site and failed (ERR_NAME_NOT_RESOLVED in the network log — the site's
+   * own frame-busting/CSP, not a DNS problem, but broken either way).
+   * `provider: "other"` legitimately also covers real third-party embed
+   * providers this normalizer doesn't special-case (Wistia, Loom, etc.),
+   * which this flag must never catch — so it's deliberately narrow: true
+   * only for a bare domain root with no path or query at all, which no
+   * genuine video-embed URL from any real provider ever looks like, but
+   * which is exactly what pasting a homepage by mistake produces.
+   */
+  looksLikePlainWebsite: boolean;
 }
 
 function youtubeId(u: URL): string | null {
@@ -63,13 +78,18 @@ export function normalizeVideoUrl(raw: string): NormalizedVideo | null {
       embedUrl: `https://www.youtube.com/embed/${yt}${start ? `?start=${start}` : ""}`,
       provider: "youtube",
       normalized: true,
+      looksLikePlainWebsite: false,
     };
   }
 
   const vm = vimeoId(u);
   if (vm) {
-    return { embedUrl: `https://player.vimeo.com/video/${vm}`, provider: "vimeo", normalized: true };
+    return { embedUrl: `https://player.vimeo.com/video/${vm}`, provider: "vimeo", normalized: true, looksLikePlainWebsite: false };
   }
 
-  return { embedUrl: u.toString(), provider: "other", normalized: false };
+  // A bare domain root (no path, no query) is what pasting a homepage by
+  // mistake produces, never what a real embed URL from any provider looks
+  // like. See the field's own doc comment for why this is narrow by design.
+  const looksLikePlainWebsite = (u.pathname === "/" || u.pathname === "") && !u.search;
+  return { embedUrl: u.toString(), provider: "other", normalized: false, looksLikePlainWebsite };
 }

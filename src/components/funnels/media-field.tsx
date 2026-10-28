@@ -97,16 +97,32 @@ export function VideoField({
 }) {
   const [draft, setDraft] = useState(value);
   const [note, setNote] = useState<string | null>(null);
+  const [noteIsError, setNoteIsError] = useState(false);
 
   function commit(raw: string) {
     const result = normalizeVideoUrl(raw);
     if (!result) {
       onChange("");
       setNote(null);
+      setNoteIsError(false);
+      return;
+    }
+    // BUG-022: a bare domain root (no path, no query) is never a real video
+    // embed from any provider — it's what pasting a business homepage by
+    // mistake produces. Refuse to save it rather than accepting it with
+    // only a soft note nobody reads before publishing: the draft stays
+    // visible so the operator can fix it, but the funnel's own field is
+    // left empty rather than carrying a URL that will fail for every real
+    // visitor.
+    if (result.looksLikePlainWebsite) {
+      onChange("");
+      setNote("That looks like a website, not a video link. Paste the URL from YouTube, Vimeo, or your video provider's share/embed link instead.");
+      setNoteIsError(true);
       return;
     }
     onChange(result.embedUrl);
     setDraft(result.embedUrl);
+    setNoteIsError(false);
     setNote(
       result.provider === "youtube"
         ? "YouTube link recognised."
@@ -125,7 +141,7 @@ export function VideoField({
         placeholder="Paste a YouTube or Vimeo link"
         className="h-9"
       />
-      <p className="text-xs text-muted-foreground">
+      <p className={noteIsError ? "text-xs font-medium text-destructive" : "text-xs text-muted-foreground"}>
         {note ?? "Paste the normal link from your browser, we'll turn it into an embed."}
       </p>
     </div>
