@@ -198,6 +198,20 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
   // SAME subscription as the feature gates below — no extra query — and used
   // only to decide where the return link goes.
   const [ascendGrantActive, setAscendGrantActive] = useState(false);
+  // BUG-013's own fix introduced a hydration mismatch: reading
+  // window.location.hostname directly during render means the server (no
+  // window) and the client's FIRST render disagree, which is exactly what
+  // React hydration error #418 is — confirmed live, reproducing on every
+  // /sa/* page load regardless of which one, because the sidebar renders on
+  // all of them. Starting false and flipping it in an effect (after mount,
+  // so hydration has already completed) is the standard safe pattern: both
+  // the server and the client's first paint render the ORIGINAL /sa/{id}/
+  // dashboard href identically, and the Ascend-host shortcut applies one
+  // tick later as an ordinary re-render, not a hydration disagreement.
+  const [onAscendHost, setOnAscendHost] = useState(false);
+  useEffect(() => {
+    setOnAscendHost(window.location.hostname === ascendHostname);
+  }, []);
   useEffect(() => {
     const linkSubIdLocal = activeSubId ?? memberships[0]?.subAccountId ?? null;
     if (!linkSubIdLocal) {
@@ -408,10 +422,10 @@ function SidebarContent({ trimmed = false }: { trimmed?: boolean }) {
               // authority stays server-side in /app/layout.tsx's own gate,
               // which still rescues a non-entitled workspace straight back
               // to this exact Flow dashboard if this guess is ever wrong.
-              const dashboardSkipsBounce =
-                item.href === "/dashboard" &&
-                typeof window !== "undefined" &&
-                window.location.hostname === ascendHostname;
+              // (onAscendHost starts false and resolves post-mount — see its
+              // own comment above — so this never disagrees with the
+              // server's render.)
+              const dashboardSkipsBounce = item.href === "/dashboard" && onAscendHost;
               const fullHref = dashboardSkipsBounce
                 ? "/app/home"
                 : `${subRoot ?? `/sa/${linkSubId}`}${item.href}`;
