@@ -3189,7 +3189,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       return {
         resultText:
           parts.length > 0
-            ? `Scanned ${d.websiteUrl ?? "the site"} and found: ${parts.join(", ")}. These are saved as extracted/inferred facts on the business profile, review and confirm them in onboarding to lock them in.`
+            ? `Scanned ${d.websiteUrl ?? "the site"} and found: ${parts.join(", ")}. These are saved as extracted/inferred facts on the business profile — you can see exactly what was captured anytime under "Brand & assets" on Home (Review brand), and confirm or correct them from there via onboarding.`
             : `Scanned ${d.websiteUrl ?? "the site"}, but didn't find much usable brand/business information on the page.`,
       };
     },
