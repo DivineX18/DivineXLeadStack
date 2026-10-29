@@ -6,7 +6,7 @@ import { ArrowLeft, ChevronDown, ChevronRight, Loader2, RefreshCw } from "lucide
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { NODE_LABELS } from "@/lib/workflows/catalog";
+import { NODE_LABELS, humanizeRunLog } from "@/lib/workflows/catalog";
 import type { WorkflowNodeType, WorkflowRunStatus } from "@/types/workflows";
 import { useWorkspaceHref } from "@/lib/shell/use-workspace-href";
 
@@ -137,7 +137,7 @@ export function WorkflowRuns({
                         <span>
                           {NODE_LABELS[h.type as WorkflowNodeType] ?? h.type}
                           <span className="ml-2 text-muted-foreground">
-                            {h.result}
+                            {humanizeRunLog(h.result)}
                           </span>
                         </span>
                         <span className="shrink-0 text-muted-foreground">

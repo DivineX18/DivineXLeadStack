@@ -40,6 +40,7 @@ import {
   ADDABLE_TYPES,
   NODE_LABELS,
   NODE_REQUIREMENT,
+  REQUIREMENT_WARNING,
   TRIGGER_LABELS,
   defaultConfig,
   nodeSummary,
@@ -522,14 +523,6 @@ function GoalGateLine({ tag }: { tag: string }) {
     </div>
   );
 }
-
-const REQUIREMENT_WARNING: Record<string, string> = {
-  email:
-    "Email isn't configured on this deployment, so this step will be skipped when the workflow runs. Add RESEND_API_KEY + EMAIL_FROM to fix it.",
-  sms: "SMS can't run for this sub-account, so this step will be skipped. Give this sub-account a dedicated Twilio number in Settings → SMS, or have your agency enable the shared SMS sender. (See the sub/agency indicators below.)",
-  whatsapp:
-    "WhatsApp isn't ready for this sub-account, so this step will be skipped. It needs all three: your agency to enable WhatsApp, a WhatsApp sender configured in Settings → SMS, and at least one Meta-approved template.",
-};
 
 /**
  * Compact availability badges on a step. Shows ONLY the senders this step can
