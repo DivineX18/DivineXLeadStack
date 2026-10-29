@@ -9,6 +9,7 @@ import { MemberAvatar } from "@/components/community/member-avatar";
 import { ActionsMenu, type MenuItem } from "@/components/community/actions-menu";
 import { AuthorLink } from "@/components/community/author-link";
 import { cn } from "@/lib/utils";
+import { useHydrationSafeNow } from "@/hooks/use-hydration-safe-now";
 import type { ClientPost } from "./feed-view";
 
 export interface ClientComment {
@@ -29,9 +30,14 @@ interface Viewer {
   level: number;
 }
 
-function timeAgo(ms: number | null): string {
-  if (!ms) return "";
-  const s = Math.floor((Date.now() - ms) / 1000);
+// QA fix (2026-10-28): Date.now() computed unconditionally during
+// render disagreed between the server and a real visitor's browser --
+// React hydration error #418, same shape already fixed in feed-view.tsx
+// and members-directory.tsx. `now === null` (pre-mount) returns "",
+// matching what the server can safely render.
+function timeAgo(ms: number | null, now: number | null): string {
+  if (!ms || now === null) return "";
+  const s = Math.floor((now - ms) / 1000);
   if (s < 60) return "just now";
   const m = Math.floor(s / 60);
   if (m < 60) return `${m}m`;
@@ -58,6 +64,7 @@ export function PostDetailView({
   viewer: Viewer;
 }) {
   const router = useRouter();
+  const now = useHydrationSafeNow();
   const [liked, setLiked] = useState(post.likedByViewer);
   const [likeCount, setLikeCount] = useState(post.likeCount);
   const [pinned, setPinned] = useState(post.pinned);
@@ -233,7 +240,7 @@ export function PostDetailView({
                 brand={brand}
               />
               <span className="text-xs text-[#909090]">
-                {timeAgo(post.createdAtMs)}
+                {timeAgo(post.createdAtMs, now)}
               </span>
               {post.category && (
                 <span className="text-xs text-[#909090]">· {post.category}</span>
@@ -378,6 +385,7 @@ function CommentBubble({
 }) {
   const canDelete =
     viewer.role === "moderator" || comment.author.memberId === viewer.memberId;
+  const now = useHydrationSafeNow();
   return (
     <div
       className={cn(
@@ -395,7 +403,7 @@ function CommentBubble({
             brand={brand}
           />
           <span className="text-xs text-[#909090]">
-            {timeAgo(comment.createdAtMs)}
+            {timeAgo(comment.createdAtMs, now)}
           </span>
           {canDelete && (
             <div className="ml-auto">

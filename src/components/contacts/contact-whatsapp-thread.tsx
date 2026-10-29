@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { WhatsappTemplateSender } from "@/components/contacts/whatsapp-template-sender";
 import { toDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useHydrationSafeNow } from "@/hooks/use-hydration-safe-now";
 import type { Contact } from "@/types/contacts";
 import type { MessageDoc } from "@/types/messages";
 
@@ -255,6 +256,12 @@ export function ContactWhatsappThread({ contact }: { contact: Contact }) {
 function MessageBubble({ message }: { message: MessageDoc }) {
   const isOutbound = message.direction === "outbound";
   const ts = toDate(message.createdAt);
+  // QA fix (2026-10-28): toLocaleString() formats in the CALLER's locale
+  // and timezone, so calling it unconditionally during render disagreed
+  // between the server and a real visitor's browser -- React hydration
+  // error #418. useHydrationSafeNow() is null until mount, matching what
+  // the server can safely render; the real timestamp fills in right after.
+  const now = useHydrationSafeNow();
   return (
     <div className={cn("flex flex-col", isOutbound ? "items-end" : "items-start")}>
       <div
@@ -270,7 +277,7 @@ function MessageBubble({ message }: { message: MessageDoc }) {
       </div>
       <div className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
         <span>
-          {ts
+          {now !== null && ts
             ? ts.toLocaleString(undefined, {
                 hour: "numeric",
                 minute: "2-digit",

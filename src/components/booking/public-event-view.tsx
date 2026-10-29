@@ -9,6 +9,7 @@ import {
   XCircle,
 } from "lucide-react";
 import type { EventStatus } from "@/types/events";
+import { useHydrationSafeNow } from "@/hooks/use-hydration-safe-now";
 
 /**
  * Public-facing event-management surface. Shows the attendee a summary
@@ -52,8 +53,14 @@ function detectBrowserTz(): string {
   }
 }
 
+// QA fix (2026-10-28): locale left as `undefined` formats with the
+// CALLING RUNTIME's default locale, which differs between the server
+// and a real visitor's browser even when timeZone is pinned (as it
+// already is here, via viewerTz). Pinned to "en-US" so the text itself
+// can't disagree, matching the pattern already used for the machine-
+// readable isoDayKeyInTz() below.
 function formatLong(iso: string, tz: string): string {
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat("en-US", {
     timeZone: tz,
     weekday: "long",
     month: "short",
@@ -66,7 +73,7 @@ function formatLong(iso: string, tz: string): string {
 }
 
 function formatTime(iso: string, tz: string): string {
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat("en-US", {
     timeZone: tz,
     hour: "numeric",
     minute: "2-digit",
@@ -74,7 +81,7 @@ function formatTime(iso: string, tz: string): string {
 }
 
 function formatDate(iso: string, tz: string): string {
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat("en-US", {
     timeZone: tz,
     weekday: "short",
     month: "short",
@@ -120,7 +127,15 @@ export function PublicEventView(props: Props) {
     status === "cancelled" ||
     status === "completed" ||
     status === "no_show";
-  const isPast = new Date(currentEnd).getTime() < Date.now();
+  // QA fix (2026-10-28): Date.now() computed unconditionally during
+  // render disagreed between the server and a real visitor's browser
+  // (seconds apart over a real network, easily enough to flip this for
+  // an event ending right around that moment) -- React hydration error
+  // #418, since isPast drives both the StatusBadge text and whether the
+  // cancel/reschedule buttons render. now === null (pre-mount) defaults
+  // to "not past", matching the server's own render of this component.
+  const now = useHydrationSafeNow();
+  const isPast = now !== null && new Date(currentEnd).getTime() < now;
 
   // Load availability when entering reschedule mode. Excludes the
   // current slot from the busy list server-side via the `excludeEventId`

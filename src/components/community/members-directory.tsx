@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { describeError } from "@/lib/errors/describe";
 import { CalendarDays, Search, Tag } from "lucide-react";
@@ -8,6 +8,7 @@ import { MemberAvatar } from "@/components/community/member-avatar";
 import { ActionsMenu, type MenuItem } from "@/components/community/actions-menu";
 import { DmThreadModal } from "@/components/community/dm/dm-thread-modal";
 import { cn } from "@/lib/utils";
+import { useHydrationSafeNow } from "@/hooks/use-hydration-safe-now";
 import type { DmMemberView } from "@/types/community";
 
 export interface DirectoryRow {
@@ -33,11 +34,12 @@ export interface DirectoryRow {
  * visitor's browser disagree on both -- different timezone/locale for
  * joinedLabel, and a real network gap between server-render and
  * client-hydration for presence, easily enough to cross presence's
- * minute-rounding boundaries. Same fix shape: render a neutral,
- * SSR-matching placeholder until mounted, then fill in the real value.
+ * minute-rounding boundaries. Fixed with the shared useHydrationSafeNow()
+ * hook (src/hooks/use-hydration-safe-now.ts): `now` is null until mount,
+ * matching what the server can safely render.
  */
-function joinedLabel(ms: number | null, mounted: boolean): string {
-  if (!mounted) return "";
+function joinedLabel(ms: number | null, now: number | null): string {
+  if (now === null) return "";
   if (!ms) return "Joined recently";
   return `Joined ${new Date(ms).toLocaleDateString(undefined, {
     month: "short",
@@ -46,10 +48,10 @@ function joinedLabel(ms: number | null, mounted: boolean): string {
   })}`;
 }
 
-function presence(ms: number | null, mounted: boolean): { online: boolean; label: string } {
-  if (!mounted) return { online: false, label: "" };
+function presence(ms: number | null, now: number | null): { online: boolean; label: string } {
+  if (now === null) return { online: false, label: "" };
   if (!ms) return { online: false, label: "Offline" };
-  const mins = Math.floor((Date.now() - ms) / 60000);
+  const mins = Math.floor((now - ms) / 60000);
   if (mins < 5) return { online: true, label: "Online now" };
   if (mins < 60) return { online: false, label: `Active ${mins}m ago` };
   const h = Math.floor(mins / 60);
@@ -79,8 +81,7 @@ export function MembersDirectory({
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [dmTarget, setDmTarget] = useState<DmMemberView | null>(null);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const now = useHydrationSafeNow();
 
   const counts = useMemo(
     () => ({
@@ -200,7 +201,7 @@ export function MembersDirectory({
       ) : (
         <div className="space-y-3">
           {visible.map((r) => {
-            const p = presence(r.lastSeenAtMs, mounted);
+            const p = presence(r.lastSeenAtMs, now);
             const items = menuFor(r);
             return (
               <div
@@ -277,7 +278,7 @@ export function MembersDirectory({
                       </span>
                       <span className="flex items-center gap-2">
                         <CalendarDays className="h-3.5 w-3.5 text-[#909090]" />
-                        {joinedLabel(r.joinedAtMs, mounted)}
+                        {joinedLabel(r.joinedAtMs, now)}
                       </span>
                     </div>
                   </div>

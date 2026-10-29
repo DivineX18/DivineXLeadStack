@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { EventDialog } from "@/components/calendar/event-dialog";
 import { isCancelledEvent, type CalendarEvent } from "@/types/events";
 import type { Contact } from "@/types/contacts";
+import { useHydrationSafeNow } from "@/hooks/use-hydration-safe-now";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -28,7 +29,16 @@ function startOfGrid(monthStart: Date): Date {
   return d;
 }
 
-function formatTime(d: Date): string {
+// QA fix (2026-10-28): toLocaleTimeString() with no timeZone option uses
+// the CALLING RUNTIME's own local zone -- the server's (Render, likely
+// UTC) during SSR, the visitor's real zone during the client's first
+// render -- so this text disagreed between the two, React hydration
+// error #418. `now` (from the shared useHydrationSafeNow() hook, called
+// once in CalendarView below) is only non-null after mount, so the
+// server and the client's first paint both render "" here; the real,
+// correctly-zoned time fills in right after.
+function formatTime(d: Date, now: number | null): string {
+  if (now === null) return "";
   return d
     .toLocaleTimeString("en-US", {
       hour: "numeric",
@@ -53,6 +63,7 @@ export function CalendarView({ events, contacts }: CalendarViewProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editEvent, setEditEvent] = useState<CalendarEvent | null>(null);
   const [defaultDate, setDefaultDate] = useState<Date | null>(null);
+  const now = useHydrationSafeNow();
 
   // Counted separately so the header cannot describe a cancelled booking
   // as something still on the calendar.
@@ -264,7 +275,7 @@ export function CalendarView({ events, contacts }: CalendarViewProps) {
                         />
                         {start && (
                           <span className="shrink-0 text-muted-foreground">
-                            {formatTime(start)}
+                            {formatTime(start, now)}
                           </span>
                         )}
                         <span className="truncate">

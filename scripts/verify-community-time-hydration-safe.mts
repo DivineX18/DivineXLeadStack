@@ -19,9 +19,10 @@
  *     unconditionally during render -- the former formats with the
  *     runtime's default locale/timezone, the latter depends on real
  *     elapsed time since the server rendered. Same bug class as
- *     flow-dashboard.tsx. Fixed with a `mounted` gate.
+ *     flow-dashboard.tsx. Fixed with the shared useHydrationSafeNow()
+ *     hook (src/hooks/use-hydration-safe-now.ts).
  *   - components/community/feed/feed-view.tsx      -> REAL BUG, same
- *     shape, in timeAgo(). Also fixed with a `mounted` gate.
+ *     shape, in timeAgo(). Also fixed with the shared hook.
  *
  * Structural, source-level — same class as every other verify-*.mts here.
  * Run: npx tsx scripts/verify-community-time-hydration-safe.mts
@@ -43,22 +44,24 @@ const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), "u
   check("countdown-section: timeLeft() is only called inside useEffect, not during render", /useEffect\(\(\) => \{\s*setLeft\(timeLeft\(config\.endsAt\)\)/.test(src));
 }
 
-// ── Real fixes ───────────────────────────────────────────────────────────
+// ── Real fixes, both now on the shared hook ────────────────────────────
 {
   const src = read("src/components/community/members-directory.tsx");
-  check("members-directory: mounted starts false", /const \[mounted, setMounted\] = useState\(false\)/.test(src));
-  check("members-directory: mounted flips in a useEffect", /useEffect\(\(\) => setMounted\(true\), \[\]\)/.test(src));
-  check("members-directory: joinedLabel takes mounted and returns \"\" until mounted", /function joinedLabel\(ms: number \| null, mounted: boolean\): string \{\s*if \(!mounted\) return "";/.test(src));
-  check("members-directory: presence takes mounted and returns a neutral label until mounted", /function presence\(ms: number \| null, mounted: boolean\)[\s\S]*?if \(!mounted\) return \{ online: false, label: "" \};/.test(src));
-  check("members-directory: both call sites pass mounted through", /presence\(r\.lastSeenAtMs, mounted\)/.test(src) && /joinedLabel\(r\.joinedAtMs, mounted\)/.test(src));
+  check("members-directory: uses the shared useHydrationSafeNow() hook", /import \{ useHydrationSafeNow \} from "@\/hooks\/use-hydration-safe-now";/.test(src));
+  check("members-directory: now comes from the hook, no local mounted boilerplate", /const now = useHydrationSafeNow\(\);/.test(src) && !/\[mounted, setMounted\]/.test(src));
+  check("members-directory: joinedLabel takes `now` and returns \"\" until it's non-null", /function joinedLabel\(ms: number \| null, now: number \| null\): string \{\s*if \(now === null\) return "";/.test(src));
+  check("members-directory: presence takes `now` and returns a neutral label until it's non-null", /function presence\(ms: number \| null, now: number \| null\)[\s\S]*?if \(now === null\) return \{ online: false, label: "" \};/.test(src));
+  check("members-directory: presence computes elapsed time from the passed-in `now`, not a fresh Date.now()", /const mins = Math\.floor\(\(now - ms\) \/ 60000\);/.test(src));
+  check("members-directory: both call sites pass `now` through", /presence\(r\.lastSeenAtMs, now\)/.test(src) && /joinedLabel\(r\.joinedAtMs, now\)/.test(src));
 }
 
 {
   const src = read("src/components/community/feed/feed-view.tsx");
-  check("feed-view: mounted starts false", /const \[mounted, setMounted\] = useState\(false\)/.test(src));
-  check("feed-view: mounted flips in a useEffect", /useEffect\(\(\) => setMounted\(true\), \[\]\)/.test(src));
-  check("feed-view: timeAgo takes mounted and returns \"\" until mounted", /function timeAgo\(ms: number \| null, mounted: boolean\): string \{\s*if \(!mounted \|\| !ms\) return "";/.test(src));
-  check("feed-view: the call site passes mounted through", /timeAgo\(p\.createdAtMs, mounted\)/.test(src));
+  check("feed-view: uses the shared useHydrationSafeNow() hook", /import \{ useHydrationSafeNow \} from "@\/hooks\/use-hydration-safe-now";/.test(src));
+  check("feed-view: now comes from the hook, no local mounted boilerplate", /const now = useHydrationSafeNow\(\);/.test(src) && !/\[mounted, setMounted\]/.test(src));
+  check("feed-view: timeAgo takes `now` and returns \"\" until it's non-null", /function timeAgo\(ms: number \| null, now: number \| null\): string \{\s*if \(now === null \|\| !ms\) return "";/.test(src));
+  check("feed-view: timeAgo computes elapsed time from the passed-in `now`, not a fresh Date.now()", /const s = Math\.floor\(\(now - ms\) \/ 1000\);/.test(src));
+  check("feed-view: the call site passes `now` through", /timeAgo\(p\.createdAtMs, now\)/.test(src));
 }
 
 console.log(

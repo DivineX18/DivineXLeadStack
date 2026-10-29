@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { useAuth } from "@/hooks/use-auth";
+import { useHydrationSafeNow } from "@/hooks/use-hydration-safe-now";
 import { useSubAccount } from "@/context/sub-account-context";
 import { useEffectiveTerritoryFilter } from "@/hooks/use-effective-territory-filter";
 import { getFirebaseDb } from "@/lib/firebase/client";
@@ -167,16 +168,15 @@ export function FlowDashboard() {
   // completely -- it only shows up against a real deployment. Same fix
   // shape as the sidebar/header bugs: start empty (matches the server),
   // fill in the real, locally-correct date in a post-mount effect.
-  const [today, setToday] = useState("");
-  useEffect(() => {
-    setToday(
-      new Date().toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-      }),
-    );
-  }, []);
+  const now = useHydrationSafeNow();
+  const today =
+    now === null
+      ? ""
+      : new Date(now).toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+        });
 
   const accountContact = subAccount?.accountContact ?? null;
   const hasContact =

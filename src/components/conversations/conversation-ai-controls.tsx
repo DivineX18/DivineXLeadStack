@@ -7,6 +7,7 @@ import {
   setConversationBotMode,
 } from "@/lib/firestore/conversations";
 import { cn } from "@/lib/utils";
+import { useHydrationSafeNow } from "@/hooks/use-hydration-safe-now";
 import type {
   ConversationBotMode,
   ConversationDoc,
@@ -30,8 +31,15 @@ export function ConversationAiControls({
 }) {
   const mode = conversation.botMode ?? "auto";
   const pausedUntil = toDate(conversation.botPausedUntil);
+  // QA fix (2026-10-28): Date.now() computed unconditionally during
+  // render disagreed between the server and a real visitor's browser,
+  // and `paused` controls whether the whole "Bot paused. Resume" button
+  // is mounted at all -- a node-presence mismatch, same root cause as
+  // the text-content hydration bugs found elsewhere today. now === null
+  // (pre-mount) defaults to "not paused", matching the server's render.
+  const now = useHydrationSafeNow();
   const paused =
-    mode !== "off" && !!pausedUntil && pausedUntil.getTime() > Date.now();
+    now !== null && mode !== "off" && !!pausedUntil && pausedUntil.getTime() > now;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/30 px-4 py-2">

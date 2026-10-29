@@ -22,7 +22,12 @@
  * context option against a local production build -- this is also WHY it
  * never reproduced testing against a plain local dev/production server
  * before: that server and the test browser share one machine's clock and
- * timezone, so there was nothing to disagree about.
+ * timezone.
+ *
+ * Originally fixed with a local useState+useEffect pair; retrofitted to
+ * the shared useHydrationSafeNow() hook (src/hooks/use-hydration-safe-
+ * now.ts) once the same bug turned up in several other files, so the
+ * "start safe, fill in after mount" logic lives in one place.
  *
  * Structural, source-level — same class as every other verify-*.mts here.
  * Run: npx tsx scripts/verify-flow-dashboard-date-hydration-safe.mts
@@ -39,15 +44,14 @@ const src = readFileSync(
   "utf8",
 );
 
-check("1. today starts as useState(\"\"), matching what the server can safely render", /const \[today, setToday\] = useState\(""\);/.test(src));
+check("1. imports the shared useHydrationSafeNow hook", /import \{ useHydrationSafeNow \} from "@\/hooks\/use-hydration-safe-now";/.test(src));
+check("2. today is derived from the hook's `now`, not local mounted/useEffect boilerplate", /const now = useHydrationSafeNow\(\);/.test(src) && !/\[today, setToday\]/.test(src));
+check("3. today renders \"\" until now is non-null (matches what the server can safely render)", /const today =\s*now === null\s*\?\s*""/.test(src));
 check(
-  "2. the real, locale-formatted date is set inside a useEffect, never during render",
-  /useEffect\(\(\) => \{\s*setToday\(\s*new Date\(\)\.toLocaleDateString\("en-US", \{/.test(src),
+  "4. the real date is derived from the hook's `now`, not a fresh Date.now()/new Date() call",
+  /: new Date\(now\)\.toLocaleDateString\("en-US", \{/.test(src),
 );
-check(
-  "3. no render-time (non-effect) call to toLocaleDateString remains assigned to `today` (the actual bug)",
-  !/const today = new Date\(\)\.toLocaleDateString/.test(src),
-);
+check("5. no render-time (non-hook) call to toLocaleDateString remains assigned to `today` (the actual bug)", !/const today = new Date\(\)\.toLocaleDateString/.test(src));
 
 console.log(
   failures === 0

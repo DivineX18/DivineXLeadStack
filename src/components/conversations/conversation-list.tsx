@@ -4,6 +4,7 @@ import Link from "next/link";
 import { MessagesSquare } from "lucide-react";
 import { toDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useHydrationSafeNow } from "@/hooks/use-hydration-safe-now";
 import type { ConversationDoc, ConversationChannel } from "@/types/conversations";
 
 const CHANNEL_LABEL: Record<ConversationChannel, string> = {
@@ -31,6 +32,7 @@ export function ConversationList({
   /** e.g. `/sa/{id}/conversations` — rows link to `{basePath}/{contactId}`. */
   basePath: string;
 }) {
+  const now = useHydrationSafeNow();
   if (conversations.length === 0) {
     return (
       <div className="rounded-xl border border-dashed bg-card/50 p-12 text-center">
@@ -72,7 +74,7 @@ export function ConversationList({
                   {title}
                 </span>
                 <span className="shrink-0 text-[11px] text-muted-foreground">
-                  {ts ? formatShort(ts) : ""}
+                  {ts ? formatShort(ts, now) : ""}
                 </span>
               </div>
               <div className="mt-0.5 flex items-center justify-between gap-2">
@@ -121,14 +123,20 @@ function initials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function formatShort(d: Date): string {
-  const now = Date.now();
+// QA fix (2026-10-28): both the "which branch" decision (elapsed time
+// from Date.now()) and the format itself (locale left as `undefined`)
+// disagreed between the server and a real visitor's browser -- React
+// hydration error #418. `now === null` (pre-mount) returns "", matching
+// what the server can safely render; locale pinned to "en-US" so the
+// text itself can't disagree once `now` is real.
+function formatShort(d: Date, now: number | null): string {
+  if (now === null) return "";
   const diff = now - d.getTime();
   if (diff < 24 * 3600 * 1000) {
-    return d.toLocaleTimeString(undefined, {
+    return d.toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
     });
   }
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }

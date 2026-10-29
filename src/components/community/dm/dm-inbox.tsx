@@ -3,12 +3,18 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useInbox } from "@/lib/community/dm-hooks";
+import { useHydrationSafeNow } from "@/hooks/use-hydration-safe-now";
 import { DmAvatar } from "./dm-avatar";
 import type { DmInboxItem } from "@/types/community";
 
-function timeAgo(ms: number | null): string {
-  if (!ms) return "";
-  const s = Math.floor((Date.now() - ms) / 1000);
+// QA fix (2026-10-28): Date.now() computed unconditionally during render
+// disagreed between the server and a real visitor's browser (seconds
+// apart over a real network, easily enough to cross a minute-rounding
+// boundary) -- React hydration error #418. `now === null` (pre-mount)
+// returns "", matching what the server can safely render.
+function timeAgo(ms: number | null, now: number | null): string {
+  if (!ms || now === null) return "";
+  const s = Math.floor((now - ms) / 1000);
   if (s < 60) return "now";
   const m = Math.floor(s / 60);
   if (m < 60) return `${m}m`;
@@ -27,6 +33,7 @@ export function DmInbox({
   initialItems: DmInboxItem[];
 }) {
   const items = useInbox(saId, initialItems);
+  const now = useHydrationSafeNow();
 
   if (items.length === 0) {
     return (
@@ -61,7 +68,7 @@ export function DmInbox({
                 {t.other.displayName}
               </span>
               <span className="shrink-0 text-xs text-[#909090]">
-                {timeAgo(t.lastAtMs)}
+                {timeAgo(t.lastAtMs, now)}
               </span>
             </div>
             <p
