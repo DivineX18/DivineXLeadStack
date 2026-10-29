@@ -5,6 +5,7 @@ import { ImageIcon, Link2, Loader2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { describeError } from "@/lib/errors/describe";
+import { checkUploadable } from "@/lib/funnels/upload-client";
 
 /**
  * SHARED MEDIA PICKER.
@@ -95,6 +96,21 @@ export function MediaPicker({
   }, [open, loadLibrary, loadBrand]);
 
   async function upload(file: File) {
+    // Bitrupt QA BUG-016: this had no pre-flight check at all, unlike the
+    // other upload call sites in the app (see upload-client.ts's own doc
+    // comment, and funnel-builder.tsx's handleAssetUpload). The platform in
+    // front of this app rejects an oversized body with an HTML error page
+    // well below this route's own 10MB limit, so `await res.json()` below
+    // throws a JSON parse error the operator never sees explained -- they
+    // just got a generic "couldn't upload" with no size/type guidance,
+    // exactly Bitrupt's reported symptom. Checking here, before the file
+    // ever leaves the browser, means the common case (an oversized or
+    // wrong-type file) never reaches that failure mode at all.
+    const rejected = checkUploadable(file);
+    if (rejected) {
+      toast.error(rejected);
+      return;
+    }
     setBusy(true);
     try {
       const fd = new FormData();

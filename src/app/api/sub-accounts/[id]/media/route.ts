@@ -90,7 +90,13 @@ export async function POST(
     );
   }
   if (file.size > MAX_ASSET_BYTES) {
-    return NextResponse.json({ error: "That file is larger than 10MB." }, { status: 400 });
+    // Was hardcoded "10MB" while the real ceiling (MAX_ASSET_BYTES) is 4MB --
+    // found auditing BUG-016. Computed from the same constant the check
+    // above enforces, so the number in the message can't drift from it again.
+    return NextResponse.json(
+      { error: `That file is larger than ${Math.round(MAX_ASSET_BYTES / 1024 / 1024)}MB.` },
+      { status: 400 },
+    );
   }
   if (file.size === 0) {
     return NextResponse.json({ error: "That file is empty." }, { status: 400 });
