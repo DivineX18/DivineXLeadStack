@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { IntelligenceFetchMeta } from "@/types/intelligence";
 
 /**
@@ -9,9 +10,24 @@ import type { IntelligenceFetchMeta } from "@/types/intelligence";
  * for). "ok" renders nothing (the data speaks for itself); every other
  * state is always visible, never hidden, so a customer never mistakes
  * stale/unavailable data for current data.
+ *
+ * Found during final QA certification (2026-10-28): this badge renders on
+ * Home multiple times (one per intelligence card), each instance reading
+ * Date.now() fresh in a Server Component with no client hydration step of
+ * its own. React's #418 ("text didn't match") is this exact documented
+ * pattern verbatim -- "Variable input such as Date.now()... which changes
+ * each time it's called" -- reproduced live on crm.divinex.io's real
+ * production build (never reproduced on a local dev server, where
+ * server+client share one clock with near-zero drift between repeated
+ * evaluations of the same request). getNow() is memoized with React's
+ * cache() so every relativeTime() call within ONE request sees the exact
+ * same instant, however many times -- or however late in a streamed
+ * response -- this component is evaluated.
  */
+const getNow = cache(() => Date.now());
+
 function relativeTime(fetchedAt: number): string {
-  const seconds = Math.max(0, Math.round((Date.now() - fetchedAt) / 1000));
+  const seconds = Math.max(0, Math.round((getNow() - fetchedAt) / 1000));
   if (seconds < 60) return "just now";
   const minutes = Math.round(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;
