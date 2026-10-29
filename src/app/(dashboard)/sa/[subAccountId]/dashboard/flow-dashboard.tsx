@@ -156,11 +156,27 @@ export function FlowDashboard() {
   const maxStageCount = Math.max(1, ...Array.from(stageCounts.values()));
 
   const isEmpty = !loading && contacts.length === 0 && deals.length === 0;
-  const today = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
+  // Found during final QA certification (2026-10-28): this read the real
+  // date directly during render -- toLocaleDateString() formats in
+  // whatever timezone the CALLER is in, so the server (Render, UTC) and a
+  // visitor's browser (their own local zone) disagree on the calendar
+  // date for several hours around each UTC day boundary, and React throws
+  // hydration error #418 on the mismatched text. Never reproduced testing
+  // against a local dev/production server because that server and the
+  // test browser share one machine's clock/timezone, masking it
+  // completely -- it only shows up against a real deployment. Same fix
+  // shape as the sidebar/header bugs: start empty (matches the server),
+  // fill in the real, locally-correct date in a post-mount effect.
+  const [today, setToday] = useState("");
+  useEffect(() => {
+    setToday(
+      new Date().toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+      }),
+    );
+  }, []);
 
   const accountContact = subAccount?.accountContact ?? null;
   const hasContact =
