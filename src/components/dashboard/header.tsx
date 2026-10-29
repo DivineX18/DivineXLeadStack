@@ -112,8 +112,19 @@ export function Header({ onMenuClick, onOpenSearch }: HeaderProps) {
   // Email defaults to masked in the dropdown header so screenshares don't
   // leak the operator's address. Per-session toggle.
   const [emailShown, setEmailShown] = useState(false);
-  const isMac =
-    typeof navigator !== "undefined" && /Mac/.test(navigator.platform);
+  // Found during final QA certification (2026-10-28): reading
+  // navigator.platform directly during render is the same class of bug as
+  // the sidebar's BUG-013 fix (window.location.hostname) -- the server has
+  // no navigator (reads false), but the client's FIRST render sees the
+  // real platform, so a Mac visitor's client and server disagree on the
+  // "Ctrl K" vs "⌘ K" text and React throws hydration error #418. This was
+  // an independent, pre-existing instance of the same mistake, not caused
+  // by the sidebar fix -- same fix shape: start false (matches the
+  // server), flip it in a post-mount effect.
+  const [isMac, setIsMac] = useState(false);
+  useEffect(() => {
+    setIsMac(typeof navigator !== "undefined" && /Mac/.test(navigator.platform));
+  }, []);
 
   async function handleSignOut() {
     await signOutUser();

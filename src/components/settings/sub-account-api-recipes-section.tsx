@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { describeError } from "@/lib/errors/describe";
 import {
@@ -217,6 +217,24 @@ export function SubAccountApiRecipesSection() {
   );
 }
 
+/**
+ * Found during final QA certification (2026-10-28), same sweep that caught
+ * the header/sidebar hydration bugs: both recipe guides below read
+ * window.location.origin directly during render to build a copy-paste API
+ * endpoint URL. The server has no window (renders a relative URL), the
+ * client's first render has the real origin -- same text-mismatch shape as
+ * BUG-013's hydration regression, just on a different page (Settings ->
+ * API Recipes, never reported by QA, but the identical bug class). Starts
+ * empty (matches the server) and fills in post-mount.
+ */
+function useOrigin(): string {
+  const [origin, setOrigin] = useState("");
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
+  return origin;
+}
+
 // ── Recipe 1: Meta / Google Ads ─────────────────────────────────────────
 
 function MetaAdsGuide({
@@ -230,7 +248,7 @@ function MetaAdsGuide({
   onMint: () => void;
   onCopy: (text: string) => Promise<void>;
 }) {
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+  const baseUrl = useOrigin();
   const endpoint = `${baseUrl}/api/v1/contacts`;
   const bodyTemplate = `{
   "name": "{{Full Name from Meta}}",
@@ -355,7 +373,7 @@ function WebsiteFormGuide({
   onCopy: (text: string) => Promise<void>;
 }) {
   const { subAccountId } = useSubAccount();
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+  const baseUrl = useOrigin();
   // Operator picks the form id from their Forms list; we can't pre-fill it
   // without a server lookup. Use a placeholder and tell them where to find it.
   const endpoint = `${baseUrl}/api/v1/forms/FORM_ID_HERE/submissions`;
