@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { describeError } from "@/lib/errors/describe";
 import { CalendarDays, Search, Tag } from "lucide-react";
@@ -24,7 +24,20 @@ export interface DirectoryRow {
   lastSeenAtMs: number | null;
 }
 
-function joinedLabel(ms: number | null): string {
+/**
+ * Found during final QA certification (2026-10-28), same bug class as the
+ * flow-dashboard.tsx fix: both functions read the real locale/timezone
+ * (joinedLabel, via toLocaleDateString(undefined, ...)) or the real
+ * elapsed time (presence, via Date.now()) and were called unconditionally
+ * during this "use client" component's render. The server and a real
+ * visitor's browser disagree on both -- different timezone/locale for
+ * joinedLabel, and a real network gap between server-render and
+ * client-hydration for presence, easily enough to cross presence's
+ * minute-rounding boundaries. Same fix shape: render a neutral,
+ * SSR-matching placeholder until mounted, then fill in the real value.
+ */
+function joinedLabel(ms: number | null, mounted: boolean): string {
+  if (!mounted) return "";
   if (!ms) return "Joined recently";
   return `Joined ${new Date(ms).toLocaleDateString(undefined, {
     month: "short",
@@ -33,7 +46,8 @@ function joinedLabel(ms: number | null): string {
   })}`;
 }
 
-function presence(ms: number | null): { online: boolean; label: string } {
+function presence(ms: number | null, mounted: boolean): { online: boolean; label: string } {
+  if (!mounted) return { online: false, label: "" };
   if (!ms) return { online: false, label: "Offline" };
   const mins = Math.floor((Date.now() - ms) / 60000);
   if (mins < 5) return { online: true, label: "Online now" };
@@ -65,6 +79,8 @@ export function MembersDirectory({
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [dmTarget, setDmTarget] = useState<DmMemberView | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const counts = useMemo(
     () => ({
@@ -184,7 +200,7 @@ export function MembersDirectory({
       ) : (
         <div className="space-y-3">
           {visible.map((r) => {
-            const p = presence(r.lastSeenAtMs);
+            const p = presence(r.lastSeenAtMs, mounted);
             const items = menuFor(r);
             return (
               <div
@@ -261,7 +277,7 @@ export function MembersDirectory({
                       </span>
                       <span className="flex items-center gap-2">
                         <CalendarDays className="h-3.5 w-3.5 text-[#909090]" />
-                        {joinedLabel(r.joinedAtMs)}
+                        {joinedLabel(r.joinedAtMs, mounted)}
                       </span>
                     </div>
                   </div>

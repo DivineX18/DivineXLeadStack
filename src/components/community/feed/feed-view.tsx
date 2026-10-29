@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Loader2, MessageCircle, Pin, ThumbsUp } from "lucide-react";
@@ -32,8 +32,17 @@ interface Viewer {
   level: number;
 }
 
-function timeAgo(ms: number | null): string {
-  if (!ms) return "";
+/**
+ * Found during final QA certification (2026-10-28), same bug class as the
+ * flow-dashboard.tsx and members-directory.tsx fixes: reads real elapsed
+ * time (Date.now()) and, past 30 days, the real locale/timezone (via the
+ * unqualified toLocaleDateString()) -- both disagree between the server
+ * and a real visitor's browser. Called unconditionally during render; the
+ * `mounted` gate renders a neutral, SSR-matching placeholder until the
+ * real value is safe to compute client-side.
+ */
+function timeAgo(ms: number | null, mounted: boolean): string {
+  if (!mounted || !ms) return "";
   const s = Math.floor((Date.now() - ms) / 1000);
   if (s < 60) return "just now";
   const m = Math.floor(s / 60);
@@ -64,6 +73,8 @@ export function FeedView({
 }) {
   const [posts, setPosts] = useState(initialPosts);
   const [filter, setFilter] = useState<string>("All");
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   function prependPost(post: ClientPost) {
     setPosts((prev) => [post, ...prev]);
@@ -194,7 +205,7 @@ export function FeedView({
                           brand={brand}
                         />
                         <span className="text-xs text-[#909090]">
-                          {timeAgo(p.createdAtMs)}
+                          {timeAgo(p.createdAtMs, mounted)}
                         </span>
                         {p.category && (
                           <span className="text-xs text-[#909090]">
