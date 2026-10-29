@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { describeError } from "@/lib/errors/describe";
 import { useSubAccount } from "@/context/sub-account-context";
 import { getFirebaseDb } from "@/lib/firebase/client";
+import { useHydrationSafeNow } from "@/hooks/use-hydration-safe-now";
 import { Button } from "@/components/ui/button";
 import { formatContactDate, formatRelativeTime } from "@/lib/format";
 import { PIPELINE_STAGES } from "@/types/deals";
@@ -38,14 +39,15 @@ export default function VoiceCampaignDetailPage() {
   const [campaign, setCampaign] = useState<VoiceCampaignDoc | null>(null);
   const [recipients, setRecipients] = useState<VoiceCampaignRecipientDoc[]>([]);
   const [loading, setLoading] = useState(true);
-  // Tick every 15s so live-call evaluation + relative times refresh even
+  // Ticks every 15s so live-call evaluation + relative times refresh even
   // when no Firestore snapshot fires (a live call's doc doesn't change
-  // until the end-of-call report lands).
-  const [, forceTick] = useState(0);
-  useEffect(() => {
-    const i = setInterval(() => forceTick((t) => t + 1), 15000);
-    return () => clearInterval(i);
-  }, []);
+  // until the end-of-call report lands). Also fixes a real hydration bug
+  // (QA, 2026-10-28): isRecipientLive() used to read Date.now() directly
+  // during render, which disagreed between the server and a real
+  // visitor's browser and controlled whether <LiveBadge/> mounts at all.
+  // now === null (pre-mount) makes isRecipientLive() default to "not
+  // live", matching the server's own render.
+  const now = useHydrationSafeNow(15000);
   const [cancellingMode, setCancellingMode] = useState<
     "scheduled" | "all" | null
   >(null);
@@ -326,7 +328,7 @@ export default function VoiceCampaignDetailPage() {
                     </p>
                   )}
                 </div>
-                {isRecipientLive(r) ? (
+                {isRecipientLive(r, now) ? (
                   <LiveBadge />
                 ) : (
                   <>
@@ -335,7 +337,7 @@ export default function VoiceCampaignDetailPage() {
                   </>
                 )}
                 <span className="w-16 shrink-0 text-right text-xs text-muted-foreground">
-                  {isRecipientLive(r) ? (
+                  {isRecipientLive(r, now) ? (
                     <span className="text-orange-600 dark:text-orange-400">
                       in progress
                     </span>
@@ -384,13 +386,14 @@ const SKIP_LABELS: Record<VoiceCampaignSkipReason, string> = {
  *  report lands (outcome set). Bounded to 15 min so a missed report can't
  *  leave a row pinned to LIVE forever. */
 const LIVE_WINDOW_MS = 15 * 60 * 1000;
-function isRecipientLive(r: VoiceCampaignRecipientDoc): boolean {
+function isRecipientLive(r: VoiceCampaignRecipientDoc, now: number | null): boolean {
+  if (now === null) return false;
   if (r.status !== "called" || r.outcome) return false;
   const placed = r.settledAt as Timestamp | null | undefined;
   const ms =
     placed && typeof placed.toMillis === "function" ? placed.toMillis() : 0;
   if (!ms) return true; // just placed, server timestamp not yet resolved
-  return Date.now() - ms < LIVE_WINDOW_MS;
+  return now - ms < LIVE_WINDOW_MS;
 }
 
 function LiveBadge() {

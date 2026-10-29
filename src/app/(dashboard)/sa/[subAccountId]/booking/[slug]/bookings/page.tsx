@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useSubAccount } from "@/context/sub-account-context";
 import { useEffectiveTerritoryFilter } from "@/hooks/use-effective-territory-filter";
+import { useHydrationSafeNow } from "@/hooks/use-hydration-safe-now";
 import { subscribeToContacts } from "@/lib/firestore/contacts";
 import {
   subscribeToBookingPage,
@@ -111,13 +112,19 @@ export default function BookingsListPage() {
     return m;
   }, [contacts]);
 
-  const now = Date.now();
+  // QA fix (2026-10-28): Date.now() computed unconditionally during
+  // render disagreed between the server and a real visitor's browser,
+  // feeding both the filter-chip membership AND the counts rendered as
+  // text below -- React hydration error #418. now === null (pre-mount)
+  // makes isPast default to false (nothing is "past" yet), matching the
+  // server's own render.
+  const now = useHydrationSafeNow();
   const filteredEvents = useMemo(() => {
     const q = search.trim().toLowerCase();
     return scopedEvents.filter((e) => {
       const status = eventStatus(e);
       const startMs = toDate(e.startAt)?.getTime() ?? 0;
-      const isPast = startMs < now;
+      const isPast = now !== null && startMs < now;
 
       // Filter chip.
       if (filter === "upcoming") {
@@ -165,7 +172,7 @@ export default function BookingsListPage() {
     for (const e of scopedEvents) {
       const status = eventStatus(e);
       const startMs = toDate(e.startAt)?.getTime() ?? 0;
-      const isPast = startMs < now;
+      const isPast = now !== null && startMs < now;
       if (status === "scheduled" && !isPast) out.upcoming++;
       else if (status === "scheduled" && isPast) out.completed++;
       else if (status === "completed") out.completed++;
@@ -286,8 +293,15 @@ function BookingRow({
 }) {
   const startAt = toDate(event.startAt);
   const status = eventStatus(event);
-  const whenLabel = startAt
-    ? new Intl.DateTimeFormat(undefined, {
+  // QA fix (2026-10-28): no timeZone option means this formats in the
+  // CALLING RUNTIME's own local zone (and locale was left `undefined`
+  // too) -- both disagree between the server and a real visitor's
+  // browser -- React hydration error #418. `now` is used only as a
+  // mount-readiness gate here (the value itself isn't needed, startAt is
+  // a fixed date); locale is now pinned too.
+  const now = useHydrationSafeNow();
+  const whenLabel = startAt && now !== null
+    ? new Intl.DateTimeFormat("en-US", {
         weekday: "short",
         month: "short",
         day: "numeric",

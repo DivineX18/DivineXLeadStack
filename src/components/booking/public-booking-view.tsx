@@ -64,8 +64,13 @@ function isoDayKeyInTz(iso: string, tz: string): string {
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
+// QA fix (2026-10-28): locale left as `undefined` formats with the
+// CALLING RUNTIME's default locale, which disagrees between the server
+// and a real visitor's browser even when timeZone is pinned (as it
+// already is here, via viewerTz) -- React hydration error #418. Pinned
+// to "en-US" so the text itself can't disagree.
 function formatTimeInTz(iso: string, tz: string): string {
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat("en-US", {
     timeZone: tz,
     hour: "numeric",
     minute: "2-digit",
@@ -78,7 +83,7 @@ function formatDateHeadingInTz(dayKey: string, tz: string): string {
   const [y, m, d] = dayKey.split("-").map(Number);
   // Anchor at 12:00 UTC of the date — within rounding of correct tz day.
   const anchor = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat("en-US", {
     timeZone: tz,
     weekday: "long",
     month: "short",
@@ -459,7 +464,7 @@ function IntakeFormSection({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="rounded-2xl border bg-muted/30 p-3 text-center text-sm">
         <span className="font-medium">
-          {new Intl.DateTimeFormat(undefined, {
+          {new Intl.DateTimeFormat("en-US", {
             timeZone: viewerTz,
             weekday: "long",
             month: "short",

@@ -152,11 +152,19 @@ export function PublicQuoteView({
     });
   };
 
+  // QA fix (2026-10-28): no timeZone option meant this formatted in the
+  // CALLING RUNTIME's own local zone -- the server (Render, UTC) and a
+  // real visitor's browser disagree, and `quote` is a required prop with
+  // real data on the very first render (no async-loading gate), so this
+  // ran identically during SSR and the client's hydration pass -- React
+  // hydration error #418. Pinned to UTC so the deadline date reads the
+  // same for every viewer regardless of their timezone.
   const validUntilDisplay = quote.validUntil
     ? new Date(quote.validUntil).toLocaleDateString("en-GB", {
         day: "numeric",
         month: "short",
         year: "numeric",
+        timeZone: "UTC",
       })
     : null;
 

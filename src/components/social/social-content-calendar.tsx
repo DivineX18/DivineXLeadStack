@@ -60,7 +60,12 @@ export function SocialContentCalendar({
 
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
-  const monthLabel = cursor.toLocaleDateString(undefined, {
+  // QA fix (2026-10-28): locale left as `undefined` formats with the
+  // CALLING RUNTIME's default locale, which disagrees between the
+  // server and a real visitor's browser -- React hydration error #418.
+  // Pinned so the text itself can't disagree (same fix as
+  // calendar-view.tsx's analogous risk).
+  const monthLabel = cursor.toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
   });
