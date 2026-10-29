@@ -15,7 +15,20 @@ import type { WithMeta, CroAuditRecommendation } from "@/types/intelligence";
  * four short links to the product's own real top-level destinations
  * (reusing the exact nav structure build-shell-navigation.ts already
  * defines: Create absorbs websites/funnels/assets, Leads absorbs CRM —
- * there is no second nav model here), not a new wizard or onboarding flow. */
+ * there is no second nav model here), not a new wizard or onboarding flow.
+ *
+ * RETEST FAIL (Bitrupt, 2026-10-28): "No sort of onboarding guide or step
+ * guide showing user how to navigate through the basic core modules." The
+ * original fix only rendered these links in the EMPTY branch below — the
+ * moment any CRO Audit recommendation exists (true for almost any account
+ * that has done anything, including a QA tester's own test account), the
+ * card shows that recommendation instead and the links vanish entirely.
+ * The complaint was never about the empty state specifically, it was "I
+ * don't know where the core modules are" — true regardless of whether
+ * Intelligence has a recommendation. Fixed by rendering QuickStartLinks
+ * unconditionally, always below the recommendation (or the empty-state
+ * line) rather than instead of it, so wayfinding is visible on every visit
+ * to Home, not just a brand-new, zero-data one. */
 const QUICK_START_LINKS: { label: string; description: string; href: string }[] = [
   { label: "Ask Zeno", description: "Describe what you want built, in plain language.", href: "/zeno" },
   { label: "Run a Growth Scan", description: "See what Intelligence already knows, or scan your site.", href: "/intelligence" },
@@ -81,17 +94,21 @@ export function RecommendedNextActionCard({
 }) {
   return (
     <AscendCardShell title="Recommended Next Step" action={<IntelligenceStatusBadge meta={meta} />}>
-      {action ? (
-        <RecommendationRow rec={action} />
-      ) : (
-        <div className="space-y-3">
+      <div className="space-y-3">
+        {action ? (
+          <RecommendationRow rec={action} />
+        ) : (
           <p className="text-sm text-[var(--dx-text-muted)]">
-            Nothing to recommend yet, there&apos;s not enough here for Intelligence to work from. A quick
-            place to start:
+            Nothing to recommend yet, there&apos;s not enough here for Intelligence to work from.
+          </p>
+        )}
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--dx-text-muted)]">
+            Quick start
           </p>
           <QuickStartLinks />
         </div>
-      )}
+      </div>
     </AscendCardShell>
   );
 }
