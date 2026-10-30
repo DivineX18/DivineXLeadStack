@@ -430,6 +430,13 @@ export interface SubAccountDoc {
   /** The workspace's Google Analytics / Search Console / Ads connection.
    *  Absent or null means never connected. See {@link GoogleConfig}. */
   googleConfig?: GoogleConfig | null;
+  /** The workspace's Shopify commerce-intelligence connection (read-only
+   *  orders/products, feeding Ascend). Absent or null means never
+   *  connected. See {@link ShopifyConfig}. Distinct from, and unrelated
+   *  to, the Website Factory's own Shopify storefront-build connection --
+   *  that lives in a different repo/database entirely; this is Flow's own
+   *  OAuth connection for reading an EXISTING store's commerce data. */
+  shopifyConfig?: ShopifyConfig | null;
   bookingConfig: BookingConfig | null;
   sendWindow: SendWindow | null;
   /**
@@ -904,6 +911,46 @@ export interface GoogleCapabilitiesShape {
   ga4: boolean;
   searchConsole: boolean;
   ads: boolean;
+}
+
+/**
+ * The workspace's Shopify commerce-intelligence connection.
+ *
+ * Both the access token AND the refresh token are stored encrypted (see
+ * lib/shopify/oauth.ts's file header on why expiring tokens are mandatory
+ * as of 2026-04-01). Unlike GoogleConfig's refresh token, which Google
+ * reissues rarely, Shopify issues a NEW refresh token on every refresh
+ * call -- `refreshTokenEncrypted` is overwritten on every refresh, not
+ * just appended to, or the next refresh would present a token Shopify has
+ * already invalidated.
+ */
+export interface ShopifyConfig {
+  /** True once a connection completed and tokens were stored. */
+  connected: boolean;
+  /** Canonical *.myshopify.com domain, never the operator's typed-in
+   *  variant -- see normalizeShopDomain(). Shown in the settings card so
+   *  an operator can tell WHICH store is linked before trusting the
+   *  numbers, same reasoning as GoogleConfig.accountEmail. */
+  shop: string;
+  /** AES-256-GCM ciphertext ("v1:<iv>:<tag>:<ct>") of the current access
+   *  token. Server-only -- never returned to a client, never logged.
+   *  Expires in ~1 hour; see accessTokenExpiresAt. */
+  accessTokenEncrypted: string;
+  /** AES-256-GCM ciphertext of the current refresh token. Rotates on
+   *  every use -- see the interface doc comment above. */
+  refreshTokenEncrypted: string;
+  accessTokenExpiresAt: Timestamp | FieldValue | null;
+  refreshTokenExpiresAt: Timestamp | FieldValue | null;
+  /** Exactly what Shopify granted, verbatim -- the source for whether a
+   *  sync may proceed, same discipline as GoogleConfig.grantedScopes. */
+  grantedScopes: string[];
+  connectedByUid: string | null;
+  connectedAt: Timestamp | FieldValue | null;
+  /** Stamped when a sync last succeeded, so a stale dashboard can say so. */
+  lastSyncedAt: Timestamp | FieldValue | null;
+  /** Last sync failure reason, surfaced to the operator. Cleared on
+   *  success. */
+  lastSyncError: string | null;
 }
 
 export interface PayPalConfig {

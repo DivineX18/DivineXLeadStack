@@ -775,6 +775,33 @@ export function createAscendIntelligenceClient(options: AscendIntelligenceClient
       });
     },
 
+    /**
+     * Hand Ascend one window of Shopify commerce evidence. Same shape as
+     * postGoogleAdsEvidence immediately above, same reasoning: Flow owns
+     * the Shopify OAuth boundary (the token lifecycle, the connection,
+     * which store a workspace is authorized for) and sends Shopify's own
+     * MoneyV2 figures verbatim; Ascend owns what they mean (gross/net
+     * sales, product rollups, AOV).
+     *
+     * Rides the existing bridge, same as Ads: same shared secret, same
+     * business-profile header, same envelope, same retry and audit path.
+     * No OAuth material crosses -- not the access token, not the refresh
+     * token, not the client secret.
+     */
+    async postShopifyEvidence(
+      businessProfileId: string,
+      evidence: unknown,
+    ): Promise<{ ok: true; data: unknown } | { ok: false; code: string; message: string }> {
+      return serviceFetch({
+        resource: "shopify-evidence",
+        method: "POST",
+        path: `/internal/intelligence/shopify/evidence`,
+        businessProfileId,
+        fetchImpl,
+        body: evidence,
+      });
+    },
+
     async getGrowthScanJobStatus(businessProfileId: string, jobId: number): Promise<GrowthScanJobStatusOutcome> {
       const result = await serviceFetch({
         resource: "growth-scan-status",
