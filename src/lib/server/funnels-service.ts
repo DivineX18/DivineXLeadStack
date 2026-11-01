@@ -598,9 +598,13 @@ export async function updateFunnelServerSide(opts: {
     // longer exists in this workspace strands a customer mid-purchase on a
     // dead end. assertNoChainCycle already refuses a LOOP on every save; this
     // refuses a BROKEN LINK at the point it would go live.
+    // Validate what this save will publish. Using the stored bridge here
+    // prevented clearing a broken link and let a newly entered foreign or
+    // missing target bypass the same guard on its first save.
+    const finalBridge = patch.bridge !== undefined ? patch.bridge : oldData.bridge;
     const targets = new Set([
       ...outboundChainTargets(finalSections),
-      ...(oldData.bridge?.nextFunnelId ? [oldData.bridge.nextFunnelId] : []),
+      ...(finalBridge?.nextFunnelId ? [finalBridge.nextFunnelId] : []),
     ]);
     if (targets.size > 0) {
       const resolved = await Promise.all(

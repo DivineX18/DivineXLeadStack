@@ -189,6 +189,7 @@ export function CtaButton({
       return (
         <PublicForm
           form={form}
+          successRedirect={successRedirect}
           onSuccess={
             successRedirect
               ? () => setTimeout(() => window.location.assign(successRedirect), 1100)
@@ -258,7 +259,7 @@ export function CtaButton({
             <img src={cta.popupImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
           </div>
           <div className="p-6 sm:p-7">
-            <PublicForm form={form} onSuccess={closeAfterSuccess} />
+            <PublicForm form={form} successRedirect={successRedirect} onSuccess={closeAfterSuccess} />
           </div>
         </div>
       );
@@ -279,7 +280,7 @@ export function CtaButton({
             </ul>
           </div>
           <div className="p-6 sm:p-7">
-            <PublicForm form={form} onSuccess={closeAfterSuccess} />
+            <PublicForm form={form} successRedirect={successRedirect} onSuccess={closeAfterSuccess} />
           </div>
         </div>
       );
@@ -288,7 +289,7 @@ export function CtaButton({
     return (
       <div className="p-6">
         {cta?.popupHeadline && <p className="mb-4 font-bold tracking-tight">{cta.popupHeadline}</p>}
-        <PublicForm form={form} onSuccess={closeAfterSuccess} />
+        <PublicForm form={form} successRedirect={successRedirect} onSuccess={closeAfterSuccess} />
       </div>
     );
   };

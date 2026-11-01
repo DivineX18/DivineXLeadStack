@@ -54,9 +54,9 @@ export default async function IntelligenceBrandPage() {
     );
   }
 
-  const business = (snapshot.business ?? {}) as { name?: string; website?: string; industry?: string };
+  const business = (snapshot.business ?? {}) as { name?: string; websiteUrl?: string; industry?: string };
   const brand = (snapshot.brand ?? {}) as {
-    visual?: { tokens?: { palette?: string[]; fonts?: string[] } };
+    visual?: { tokens?: { palette?: string[]; fonts?: string[] }; personality?: string | string[]; photographyStyle?: string | string[]; composition?: string };
     voice?: { tone?: string };
   };
   const palette = brand.visual?.tokens?.palette ?? [];
@@ -85,12 +85,33 @@ export default async function IntelligenceBrandPage() {
           {business.name ?? "Unnamed business"}
         </p>
         <p className="mt-1 text-sm" style={{ color: "var(--dx-text-secondary)" }}>
-          {[business.industry, business.website].filter(Boolean).join(" · ") || "No industry or website on file yet."}
+          {[business.industry, business.websiteUrl].filter(Boolean).join(" · ") || "No industry or website on file yet."}
         </p>
         <p className="mt-3 text-xs" style={{ color: "var(--dx-text-muted)" }}>
           Synced from your DivineX business profile (version {snapshot.profileVersion}).
         </p>
       </Panel>
+
+      {(brand.visual?.personality || brand.visual?.photographyStyle || brand.visual?.composition) && (
+        <Panel>
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--dx-text-muted)" }}>
+            Visual style extracted from your website
+          </p>
+          <dl className="mt-3 space-y-2 text-sm" style={{ color: "var(--dx-text-secondary)" }}>
+            {[
+              ["Personality", brand.visual.personality],
+              ["Photography", brand.visual.photographyStyle],
+              ["Composition", brand.visual.composition],
+            ].map(([label, value]) => [String(label), Array.isArray(value) ? value.join(", ") : value])
+              .filter(([, value]) => value).map(([label, value]) => (
+              <div key={label}><dt className="font-medium">{label}</dt><dd>{value}</dd></div>
+            ))}
+          </dl>
+          <p className="mt-3 text-xs" style={{ color: "var(--dx-text-muted)" }}>
+            Inferred style guidance; review it before treating it as confirmed brand direction.
+          </p>
+        </Panel>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Panel>

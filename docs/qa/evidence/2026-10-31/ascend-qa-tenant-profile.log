@@ -1,0 +1,52 @@
+PASS 0a. a numeric and a string id for the same profile match
+PASS 0b. different ids never match
+PASS 0c. null/undefined/empty authorize nothing
+PASS 0d. junk is not an id
+PASS 0e. a float is not a profile id
+PASS 0f. the live numeric/string shape mismatch cannot deny an authorized caller
+PASS A. workspace A + its mapped profile -> authorized
+PASS B. workspace A + another workspace's profile -> rejected — profile_not_owned_by_workspace
+PASS C. workspace with NO mapping cannot authorize anything
+PASS C2. an inactive mapping authorizes nothing
+PASS C3. a mapping with no profile authorizes nothing
+PASS D. client sends the mapped profile -> allowed
+PASS E. client sends a foreign profile -> rejected
+PASS F. client sends a nonexistent/garbage id -> rejected safely
+PASS F2. a legitimately linked SECONDARY profile is authorized
+PASS F3. but only the ones actually linked
+PASS G/H. applyProfileSnapshot authorizes the workspace/profile pair
+PASS H2. a mismatched profile is REJECTED, not applied
+PASS I. an unmapped workspace is rejected
+PASS H3. authorization runs BEFORE the existing snapshot is read or replaced
+PASS H4. a signature alone is not treated as authorization
+PASS J/K. monotonicity still applies WITHIN one profile
+PASS L. identity is evaluated before version (a foreign profile cannot be outranked by a higher version)
+PASS M. an authorized profile change starts a NEW version series
+PASS N1. the accessor compares stored snapshot id against the mapped id
+PASS N2. a mismatch returns unavailable, never a substituted profile
+PASS N3. the mismatch is logged without naming the other tenant's business
+PASS N4. route.ts uses the authorized accessor
+PASS N5. route.ts does not read the raw snapshot
+PASS N4. page.tsx uses the authorized accessor
+PASS N5. page.tsx does not read the raw snapshot
+PASS N4. page.tsx uses the authorized accessor
+PASS N5. page.tsx does not read the raw snapshot
+PASS N4. page.tsx uses the authorized accessor
+PASS N5. page.tsx does not read the raw snapshot
+PASS N4. consume-profile.ts uses the authorized accessor
+PASS N5. consume-profile.ts does not read the raw snapshot
+PASS E2. onboarding/route.ts resolves the profile id server-side
+PASS E3. onboarding/route.ts rejects a mismatched client id with 403
+PASS E4. onboarding/route.ts never selects a profile from the client body
+PASS E5. onboarding/route.ts never launders a foreign id in via the stored snapshot
+PASS E2. reconcile/route.ts resolves the profile id server-side
+PASS E3. reconcile/route.ts rejects a mismatched client id with 403
+PASS E4. reconcile/route.ts never selects a profile from the client body
+PASS E5. reconcile/route.ts never launders a foreign id in via the stored snapshot
+PASS O. DivineX mapping=3 with stored snapshot=27 authorizes NOTHING
+PASS P. the media provenance gate is still present and separate
+PASS Q. an AUTHORIZED profile with untrusted media still yields context
+PASS R. trusted media is still available to an authorized profile
+PASS Q2. tenant authorization runs BEFORE media trust, not instead of it
+
+verify-tenant-profile-isolation: all checks passed

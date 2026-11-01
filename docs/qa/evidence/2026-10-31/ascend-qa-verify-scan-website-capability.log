@@ -1,0 +1,13 @@
+PASS 1. the capability exists
+PASS 2. it calls the EXISTING ascend.discover() — no new crawler/fetch logic of its own
+PASS 3. it is NOT readonly — a real profile write deserves the standard confirm card
+PASS 4. requires admin, matching create_website/create_asset's write gating
+PASS 5. resolves the business profile via the SAME authorized resolver onboarding uses, not a client-supplied id
+PASS 6. unlinked workspaces fail with a clear, actionable message rather than throwing raw
+PASS 7. a missing website URL (no_website_url) asks the user rather than silently failing
+PASS 8. website_url is optional — omitting it lets Ascend fall back to the saved site (matches runBrandDiscovery's own fallback)
+PASS 9. distinguished from research_website_reference in its own description (own site vs. competitor/reference)
+PASS 10. registered for agency-delegated use against a named client workspace
+PASS 11. validate() is re-run idempotent (aliasCamelKeysDeep) -- found live in browser certification: without this, the URL shown in the proposal card vanished by the time Confirm actually ran
+
+verify-scan-website-capability: all checks passed

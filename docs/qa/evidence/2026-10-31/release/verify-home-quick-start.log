@@ -1,0 +1,7 @@
+PASS 1a. the quick-start links are real hrefs, not a prose-only hint
+PASS 1b. /create and /leads are the SAME real top-level sections the shell nav already defines — not invented routes
+PASS 1c. covers all four required pillars from the bug report (Zeno, business-intelligence, Create[websites/funnels/assets], CRM/contacts)
+PASS 1d. renders UNCONDITIONALLY, not gated behind the empty-recommendation branch (the actual retest-FAIL cause)
+PASS 1e. the recommendation row (when one exists) is NOT wrapped inside the old if/else that hid the links
+
+verify-home-quick-start: all checks passed

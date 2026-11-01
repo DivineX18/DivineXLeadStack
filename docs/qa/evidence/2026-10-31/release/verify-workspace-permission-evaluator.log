@@ -1,0 +1,30 @@
+✅ Core evaluator does NOT import NextResponse anywhere (checking actual import statements, not prose in comments)
+✅ Core evaluator is server-only (client components cannot import it)
+✅ Core evaluator's export name matches the required contract
+✅ EvaluateWorkspacePermissionInput has NO effectiveRole/role field a caller could submit (type-level enforcement)
+✅ effectiveRole in the evaluator is ALWAYS derived from resolveSubAccountAccess's own Firestore read, never from input
+✅ resolveSubAccountAccess is always called with the SAME workspaceId that was passed into the evaluator (never a different one)
+✅ getMappingBySubAccountId is called with the same workspaceId too (no cross-workspace lookup)
+✅ Evaluation steps appear in the required order in source (validate -> caller -> access -> mapping -> requirements -> role)
+✅ Exactly one allow path exists (the final success branch)
+✅ Multiple explicit deny paths exist, each returning immediately (deny by default, not one catch-all)
+✅ The function's final statement is the allow branch — nothing falls through past it (deny-by-default has no code path after the last explicit check)
+✅ Billing-state check reuses the EXISTING effectiveBillingState(), not a reimplementation
+✅ Agency owner is never walled by a lapsed billing state (matches the real, documented BillingGuard behavior)
+✅ Territory check reuses the EXISTING loadEffectiveTerritoryScope(), not a reimplementation
+✅ Workspace Mapping status check reuses the EXISTING Slice 4 service, not a duplicated Firestore read
+✅ WorkspacePermissionDecision never carries raw membership/entitlement doc data (only effectiveRole, a coarse label)
+✅ Human-session wrapper returns a GENERIC error message to HTTP callers, never the internal reason string verbatim
+✅ requireWorkspacePermission (human-session) delegates to the core evaluator, doesn't reimplement it
+✅ evaluateServiceToServicePermission REQUIRES representedUid (not optional) at the type level
+✅ Service-to-service wrapper defensively rejects an empty representedUid before calling the evaluator (never a blanket-secret bypass)
+✅ Zeno-capability stub also requires representedUid and routes through the SAME service-to-service function (no third parallel implementation)
+✅ Wrappers file does not duplicate a direct Firestore membership read (no db.doc(`subAccounts/ call here)
+✅ Every denial gets a structured console log
+✅ Only the named HIGH_RISK_PERMISSIONS list gets a persistent Firestore audit row
+✅ Read-only/routine permissions (contacts.read, workspace.read) are NOT in the high-risk list (no persistent audit noise for them)
+✅ High-risk audit writes are best-effort (never throw into the caller's request path)
+✅ Audit write is append-only (.add(), not .set()/.update() on a fixed doc)
+✅ firestore.rules: workspacePermissionAudit is Admin-SDK-only
+
+✅ All checks passed

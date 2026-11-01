@@ -1,0 +1,37 @@
+PASS 1a. the Orders back-link uses saPath()
+PASS 1b. and no longer hand-builds a /sa/{id} path
+PASS 2a. funnels-list.tsx builds no /sa/ paths by hand
+PASS 2b. the Orders adapter builds no /sa/ paths by hand
+PASS 2c. ascend-create-content builds no /sa/ paths by hand
+PASS 8a. in the Ascend shell "/funnels" resolves to the Ascend list (got /create)
+PASS 8b. which is a route that exists
+PASS 9a. and "/funnels/orders" resolves to the Ascend orders page (got /create/orders)
+PASS 9b. Flow resolution is untouched — saPath falls back to /sa/{id}{path}
+PASS 10a. the default funnelBaseHref is the canonical singular editor (got /create/funnel)
+PASS 10b. and that route really exists
+PASS 10c. the only real caller agrees with the default
+PASS 3a. a three-state machine exists (loading | ready | error)
+PASS 3b. an error state is actually rendered
+PASS 3c. with a way to recover
+PASS 3d. the old conflated `rows === null` spinner contract is gone
+PASS 4a. funnels-list opens no onSnapshot of its own
+PASS 4b. and imports no Firestore client
+PASS 4c. the gate is read from the provider, which waits for auth before subscribing
+PASS 4d. the provider guards its subscription on the user
+PASS 4e. and re-subscribes when user or workspace changes
+PASS 4f. and unsubscribes on change
+PASS 5a. the fetch checks res.ok
+PASS 5b. a non-ok response becomes an error state, not an empty list
+PASS 5c. 403 is named honestly rather than shown as 'no funnels yet'
+PASS 6a. the fetch is wrapped in try/catch
+FAIL 6b. delete failures are caught too, rather than rejecting unhandled
+PASS 7a. an unreadable workspace is an error, never folded back into loading
+PASS 7b. a stale in-flight response cannot overwrite a newer one
+PASS 7c. the effect re-runs when the workspace changes
+PASS 7d. the list waits for the workspace DOC, not for memberships too
+PASS 7e. and the provider exposes the two separately
+PASS 11a. the API independently re-enforces funnelsEnabledByAgency
+PASS 12a. 'Continue with Zeno' links use the bare canonical /zeno, not the redirect-round-tripping /app/zeno
+PASS 12b. 'zeno' really is one of the sections /app/zeno would redirect FROM (confirms 12a closes a real round trip, not a no-op)
+
+verify-funnels-navigation: 1 FAILED

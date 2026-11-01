@@ -1,0 +1,6 @@
+PASS 1. MediaPicker imports the shared pre-flight checker, not a bespoke one
+PASS 2. upload() calls it BEFORE the network request, not after
+PASS 3. the route's over-limit message is computed from the real constant, not a stale hardcoded number
+PASS 4. a 50MB file is rejected locally with a specific, non-generic message
+
+verify-media-picker-upload-guard: all checks passed

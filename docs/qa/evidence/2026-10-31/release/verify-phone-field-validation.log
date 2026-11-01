@@ -1,0 +1,21 @@
+PASS 1a. letters ("abc") rejected
+PASS 1b. symbols ("###") rejected
+PASS 1c. a too-short fragment ("12") rejected
+PASS 1d. empty string rejected
+PASS 1e. letters mixed with digits rejected
+PASS 2a. a plain US-format number (no country code)
+PASS 2b. a parenthesized US-format number
+PASS 2c. a dotted format
+PASS 2d. a number WITH a leading + and country code also still works
+PASS 2e. a UK-style local number
+PASS 2f. a bare digit run with no formatting
+PASS 3a. exactly 7 digits (shortest real-world numbers) accepted
+PASS 3b. 6 digits rejected (below the floor)
+PASS 3c. exactly 15 digits (E.164 ceiling) accepted
+PASS 3d. 16 digits rejected (above the ceiling)
+PASS 4a. a garbage phone value produces a field error
+PASS 4b. a valid email alongside it is untouched
+PASS 4c. a real phone value produces no error
+PASS 4d. an empty, non-required phone field is not flagged (optional fields stay optional)
+
+verify-phone-field-validation: all checks passed

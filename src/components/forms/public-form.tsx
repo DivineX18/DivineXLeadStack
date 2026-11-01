@@ -15,9 +15,12 @@ interface PublicFormProps {
    *  the page is navigating away at that point anyway). Lets a modal
    *  auto-dismiss a moment after a successful submission. */
   onSuccess?: () => void;
+  /** A containing funnel owns its next step; standalone forms keep the
+   * server-configured redirect. Do not let a reused form's stale URL win. */
+  successRedirect?: string;
 }
 
-export function PublicForm({ form, onSuccess }: PublicFormProps) {
+export function PublicForm({ form, onSuccess, successRedirect }: PublicFormProps) {
   const [values, setValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
     for (const f of form.fields) initial[f.id] = "";
@@ -62,8 +65,9 @@ export function PublicForm({ form, onSuccess }: PublicFormProps) {
       setApiError(data.error ?? "Something went wrong. Please try again.");
       return;
     }
-    if (data.redirectUrl) {
-      window.location.href = data.redirectUrl;
+    const redirectUrl = successRedirect || data.redirectUrl;
+    if (redirectUrl) {
+      window.location.href = redirectUrl;
       return;
     }
     setSuccess({

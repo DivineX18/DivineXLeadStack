@@ -1,0 +1,13 @@
+PASS 1a. the stale placeholder text is gone
+PASS 1b. the real asset URL is present
+PASS 1c. exactly one button line survives (replaced, not duplicated)
+PASS 1d. the operator's surrounding copy (Enjoy.) is preserved untouched
+PASS 2a. the real operator-authored Calendly link survives verbatim
+PASS 2b. the real delivery link is added separately, not merged into it
+PASS 2c. both buttons coexist (two distinct CTAs, not a collision)
+PASS 3a. the old asset id is gone
+PASS 3b. the new asset id is present
+PASS 3c. still exactly one button (idempotent, not duplicated)
+PASS 4. a raw placeholder href really does render as literal escaped text (confirms this was genuinely customer-visible)
+
+verify-delivery-link-placeholder-fix: all checks passed

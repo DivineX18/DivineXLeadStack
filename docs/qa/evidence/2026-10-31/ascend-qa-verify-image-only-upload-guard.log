@@ -1,0 +1,9 @@
+PASS 1a. a PDF is rejected when the call site restricts to images only
+PASS 1b. the rejection message doesn't claim PDFs are allowed here (only names what the file itself is)
+PASS 2a. a PDF is still accepted with no allowedTypes override (lead-magnet button, unchanged)
+PASS 3a. a real JPEG passes the image-only check
+PASS 3b. a real PNG passes the image-only check
+PASS 4a. the panel imports/defines an image-only type list
+PASS 4b. onFileChosen's upload call actually passes it through
+
+verify-image-only-upload-guard: all checks passed

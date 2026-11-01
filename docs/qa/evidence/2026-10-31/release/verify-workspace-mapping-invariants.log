@@ -1,0 +1,30 @@
+✅ No overlap when primary is null
+✅ No overlap when primary isn't in secondaries
+✅ Overlap detected when primary IS in secondaries
+✅ Dedupe removes exact duplicates
+✅ Dedupe on already-unique input is a no-op
+✅ Dedupe on empty input returns empty
+✅ Dedupe is idempotent (running it twice gives the same result)
+✅ Version increments by exactly 1
+✅ Version increments correctly from a non-trivial starting value
+✅ Attach primary to an empty Workspace succeeds
+✅ Attaching a profile that was secondary REMOVES it from secondaries (no overlap after the mutation)
+✅ Add secondary succeeds when it isn't the primary
+✅ Add secondary REJECTS adding the current primary as a secondary
+✅ Add secondary is idempotent — adding an already-secondary profile doesn't duplicate it
+✅ Remove secondary removes exactly the named profile
+✅ Removing a profile that isn't secondary is a harmless no-op
+✅ Promoting a secondary makes it primary AND moves the old primary into secondaries (nothing is lost)
+✅ Promoting when there was no prior primary just sets the new primary, no phantom entry added
+✅ Promoting a profile that ISN'T currently secondary is rejected
+✅ Clean row with exactly 1 candidate profile is eligible_for_auto_migration
+✅ Row with 2 candidate profiles is ALWAYS multiple_primary_candidates — never auto-picks 'most recently active' even though bp_2 is newer
+✅ Both candidates are surfaced in the report for manual review
+✅ Missing Flow sub-account classifies as missing_flow_subaccount
+✅ Missing identity link classifies as missing_identity_link
+✅ Duplicate flowSubAccountId across source rows classifies as duplicate_flow_subaccount (takes priority over other checks)
+✅ Unrecognized role classifies as invalid_role_or_status
+✅ Non-active connectionStatus classifies as invalid_role_or_status
+✅ Zero candidate profiles classifies as requires_manual_review (not silently eligible)
+
+✅ All checks passed

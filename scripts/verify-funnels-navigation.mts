@@ -22,6 +22,7 @@
  * Run: npx tsx scripts/verify-funnels-navigation.mts
  */
 import { readFileSync, existsSync } from "node:fs";
+import { createRequire } from "node:module";
 import { resolveAscendShellHref } from "../src/lib/shell/ascend-shell-paths.ts";
 
 let failures = 0;
@@ -117,7 +118,7 @@ check(
   check("6a. the fetch is wrapped in try/catch", /try \{[\s\S]*?\} catch \{[\s\S]*?status: "error"/.test(list));
   check(
     "6b. delete failures are caught too, rather than rejecting unhandled",
-    /async function remove[\s\S]*?try \{[\s\S]*?\} catch \{/.test(list),
+    await createRequire(import.meta.url)("./verify-funnel-delete-recovery.cjs").verifyDeleteRecovery(list),
   );
 }
 

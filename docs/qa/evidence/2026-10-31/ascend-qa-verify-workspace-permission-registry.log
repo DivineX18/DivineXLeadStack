@@ -1,0 +1,45 @@
+✅ Registry contains exactly the 53 permissions specified in this slice's instructions
+✅ Registry has no duplicate entries
+✅ isWorkspacePermission accepts every real registry entry
+✅ isWorkspacePermission rejects an unknown string
+✅ isWorkspacePermission rejects an empty string
+✅ isWorkspacePermission rejects a role name accidentally passed as a permission
+✅ Every registered permission has a compat-map entry (nothing silently unmapped)
+✅ Agency owner is allowed EVERY registered permission (matches today's real unrestricted agency-wide authority)
+✅ Sub-account admin is allowed agency.manage's opposite — denied only agency.manage
+✅ Sub-account admin is allowed every OTHER permission (matches today's canAdminSub ceiling)
+✅ Collaborator retains today's real access to workspace.read
+✅ Collaborator retains today's real access to contacts.read
+✅ Collaborator retains today's real access to contacts.create
+✅ Collaborator retains today's real access to contacts.update
+✅ Collaborator retains today's real access to pipeline.read
+✅ Collaborator retains today's real access to pipeline.manage
+✅ Collaborator retains today's real access to deals.read
+✅ Collaborator retains today's real access to deals.manage
+✅ Collaborator retains today's real access to tasks.read
+✅ Collaborator retains today's real access to tasks.manage
+✅ Collaborator retains today's real access to calendar.read
+✅ Collaborator retains today's real access to calendar.manage
+✅ Collaborator retains today's real access to zeno.advise
+✅ Collaborator does NOT gain new access to workspace.update (structural/admin-tier action)
+✅ Collaborator does NOT gain new access to members.manage (structural/admin-tier action)
+✅ Collaborator does NOT gain new access to billing.manage (structural/admin-tier action)
+✅ Collaborator does NOT gain new access to contacts.delete (structural/admin-tier action)
+✅ Collaborator does NOT gain new access to funnels.publish (structural/admin-tier action)
+✅ Collaborator does NOT gain new access to websites.publish (structural/admin-tier action)
+✅ Collaborator does NOT gain new access to stripe.connect (structural/admin-tier action)
+✅ Collaborator does NOT gain new access to api.manage (structural/admin-tier action)
+✅ Collaborator does NOT gain new access to agency.manage (structural/admin-tier action)
+✅ Collaborator does NOT gain new access to orders.refund (structural/admin-tier action)
+✅ Collaborator does NOT gain new access to zeno.execute (structural/admin-tier action)
+✅ Collaborator's allowed permissions are always a subset of admin's (monotonic hierarchy)
+✅ Admin's allowed permissions are always a subset of agency owner's (monotonic hierarchy)
+✅ An unrecognized role string is denied every permission (deny by default)
+✅ An empty-string role is denied
+✅ Only permissions with a REAL, verified gate are mapped (api.manage -> apiAccessEnabledByAgency)
+✅ stripe.connect maps to the real funnelCheckoutEnabledByAgency gate
+✅ Permissions with no real gate today have NO requirement (not invented) — contacts.read
+✅ Ascend-intelligence-only permissions (assessments/memory/recommendations) have no invented Flow-side gate
+✅ ascendTier is never set on any requirement in this slice (typed hook exists, not wired — see the type's doc comment)
+
+✅ All checks passed

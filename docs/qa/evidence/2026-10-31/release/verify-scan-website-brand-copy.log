@@ -1,0 +1,8 @@
+PASS 1. the old, misleading 'review and confirm them in onboarding to lock them in' copy is gone
+PASS 2. the new copy names the real, persistent page by its actual on-screen label
+PASS 3. it still mentions onboarding as where corrections happen (that part was accurate)
+PASS 4. Home really has a 'Brand & assets' card with a 'Review brand' link
+PASS 5. /app/brand really redirects to the Intelligence brand page (not a dead link)
+PASS 6. that page really renders the same facts scan_business_website captures (name/colors/fonts/assets)
+
+verify-scan-website-brand-copy: all checks passed

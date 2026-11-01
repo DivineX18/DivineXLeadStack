@@ -39,7 +39,7 @@ const route = read("src/app/api/sub-accounts/[id]/media/route.ts");
 check("1. MediaPicker imports the shared pre-flight checker, not a bespoke one", /import \{ checkUploadable \} from "@\/lib\/funnels\/upload-client"/.test(picker));
 check(
   "2. upload() calls it BEFORE the network request, not after",
-  /const rejected = checkUploadable\(file\);\s*if \(rejected\) \{\s*toast\.error\(rejected\);\s*return;\s*\}\s*setBusy\(true\);/.test(picker),
+  /const rejected = checkUploadable\(file, accept === "image"[^;]+;\s*if \(rejected\) \{\s*toast\.error\(rejected\);\s*return;\s*\}\s*setBusy\(true\);/.test(picker),
 );
 check("3. the route's over-limit message is computed from the real constant, not a stale hardcoded number", /\$\{Math\.round\(MAX_ASSET_BYTES \/ 1024 \/ 1024\)\}MB/.test(route) && !/"That file is larger than 10MB\."/.test(route));
 

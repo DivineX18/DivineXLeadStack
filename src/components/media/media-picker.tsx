@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { describeError } from "@/lib/errors/describe";
 import { checkUploadable } from "@/lib/funnels/upload-client";
+import { describeUploadLimit, UPLOAD_ACCEPT } from "@/lib/funnels/upload-client";
 
 /**
  * SHARED MEDIA PICKER.
@@ -106,7 +107,7 @@ export function MediaPicker({
     // exactly Bitrupt's reported symptom. Checking here, before the file
     // ever leaves the browser, means the common case (an oversized or
     // wrong-type file) never reaches that failure mode at all.
-    const rejected = checkUploadable(file);
+    const rejected = checkUploadable(file, accept === "image" ? UPLOAD_ACCEPT.filter((type) => type.startsWith("image/")) : UPLOAD_ACCEPT);
     if (rejected) {
       toast.error(rejected);
       return;
@@ -193,8 +194,8 @@ export function MediaPicker({
               }}
             >
               <Upload className="mb-3 h-7 w-7 text-[var(--dx-text-muted)]" />
-              <p className="text-sm text-[var(--dx-text-primary)]">Drop an image here, or choose a file</p>
-              <p className="mt-1 text-xs text-[var(--dx-text-muted)]">JPG, PNG or WebP · up to 10MB</p>
+              <p className="text-sm text-[var(--dx-text-primary)]">{accept === "image" ? "Drop an image here, or choose a file" : "Drop an image or PDF here, or choose a file"}</p>
+              <p className="mt-1 text-xs text-[var(--dx-text-muted)]">{describeUploadLimit(accept === "image" ? UPLOAD_ACCEPT.filter((type) => type.startsWith("image/")) : UPLOAD_ACCEPT)}</p>
               <input
                 ref={fileRef}
                 type="file"

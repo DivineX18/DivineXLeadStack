@@ -1,0 +1,11 @@
+PASS 015a. the old mismatched toast text is gone
+PASS 015b. the rating-missing error names the REAL button labels
+PASS 015c. a separate, specific error exists for the two text fields
+PASS 020a. a time-formatting helper exists and is exported from the row render path
+PASS 020b. it's actually called when rendering each asset row (not just defined and unused, repeating the original bug)
+PASS 020c. an unparseable/missing createdAt degrades to showing nothing extra, never a crash or 'Invalid Date'
+PASS 020d. the module containing the fix imports cleanly
+PASS 025a. the two create-form buttons no longer read as near-identical labels
+PASS 025b. each button carries a distinguishing title= tooltip
+
+verify-bitrupt-ux-copy-fixes: all checks passed

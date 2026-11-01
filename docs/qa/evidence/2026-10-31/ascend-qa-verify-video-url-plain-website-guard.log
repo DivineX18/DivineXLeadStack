@@ -1,0 +1,13 @@
+PASS 1a. a bare business-homepage domain is flagged
+PASS 1b. same with a trailing slash
+PASS 1c. same without an explicit scheme (as a visitor would type it)
+PASS 2a. a Wistia-style embed URL (has a path) is NOT flagged
+PASS 2b. a Loom share link (has a path) is NOT flagged
+PASS 2c. a bare domain with just a query string is NOT flagged (ambiguous, so not blocked)
+PASS 3a. a real YouTube URL is never flagged
+PASS 3b. a real Vimeo URL is never flagged
+PASS 4a. commit() checks looksLikePlainWebsite before accepting
+PASS 4b. the flagged case clears the field rather than saving a URL that will fail for every visitor
+PASS 4c. the warning is styled as an error, not the same neutral note style as a normal confirmation
+
+verify-video-url-plain-website-guard: all checks passed

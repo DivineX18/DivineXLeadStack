@@ -1,0 +1,12 @@
+PASS 1a. a filename humanizer exists
+PASS 1b. it's reused rather than a second parser being added for this
+PASS 2a. headline is only filled when currently blank, never overwriting operator-typed copy
+PASS 2b. message is only filled when currently blank
+PASS 2c. SEO title is only filled when currently blank
+PASS 2d. SEO description is only filled when currently blank
+PASS 2e. the funnel's own name is incorporated into the SEO default, not just the filename
+PASS 2f. the operator is told defaults were filled in and are editable, not silently changed underneath them
+PASS 2g. nothing here is auto-SAVED — it only sets local form state, Save remains the operator's own explicit act
+PASS 3a. MUTATION: removing the blank-guards would be caught — i.e. the guards gate the actual setState calls, not just sit nearby
+
+verify-thank-you-defaults: all checks passed

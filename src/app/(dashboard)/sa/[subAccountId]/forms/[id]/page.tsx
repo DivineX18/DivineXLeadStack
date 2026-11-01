@@ -292,7 +292,8 @@ export default function FormBuilderPage() {
   const { saPath, subAccount } = useSubAccount();
   const [form, setForm] = useState<LeadForm | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [pendingSaves, setPendingSaves] = useState(0);
+  const [saveFailed, setSaveFailed] = useState(false);
   const [copiedTag, setCopiedTag] = useState("");
 
   useEffect(() => {
@@ -320,13 +321,16 @@ export default function FormBuilderPage() {
 
   async function save(patch: Partial<LeadForm>) {
     if (!form) return;
-    setSaving(true);
+    setPendingSaves((count) => count + 1);
     try {
       await updateForm(form.id, patch);
     } catch (err) { console.error(err);
+      // A later successful edit does not prove that this failed patch was
+      // saved. Keep the warning until the operator reloads persisted data.
+      setSaveFailed(true);
       toast.error(describeError(err, "Couldn't save. Try again."), { duration: 12_000 });
     } finally {
-      setSaving(false);
+      setPendingSaves((count) => count - 1);
     }
   }
 
@@ -430,9 +434,14 @@ export default function FormBuilderPage() {
               {form.enabled ? "Live" : "Paused"}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {saving ? "Saving…" : "All changes saved"}
+          <p role="status" aria-live="polite" className="text-xs text-muted-foreground">
+            {pendingSaves > 0 ? "Saving…" : saveFailed ? "Some changes were not saved." : "Autosave is on · All changes saved"}
           </p>
+          {saveFailed && (
+            <p role="alert" className="mt-1 text-xs text-destructive">
+              A save failed. Reload to check your saved values, then reapply any missing changes.
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-1.5">
           <Button
