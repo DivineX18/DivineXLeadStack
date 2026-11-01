@@ -1,6 +1,6 @@
 # ASCEND / Flow — human QA retest package
 
-**Release candidate:** local branch `fix/ascend-qa-stabilization`, based on production commit `5022c582e7a504c3f5fe08949af11c0a6e6bb84d`. This branch contains only the stabilization repairs and their tests/documentation. It has not been pushed, merged or deployed. The current production build cannot verify these new repairs.
+**Deployed initial candidate:** `93266249b0ac7be9b63566d0b71baa610a93a49c` on production main; both app.divinex.io and crm.divinex.io verified November 1. A follow-up BUG-023 workspace-availability explanation is locally verified; capture its final deployed commit before testing that change.
 
 ## Before testing
 
@@ -8,8 +8,8 @@ The release owner must fill in the following before handing this package to test
 
 | Required detail | Current state |
 |---|---|
-| Approved deployed candidate commit | Pending deployment approval; capture `/api/version` after deployment and compare to the approved branch commit |
-| Test environment URL | Not yet selected; do not assume staging uses an isolated database |
+| Approved deployed candidate commit | Initial `9326624` verified live; follow-up candidate pending release |
+| Test environment URL | Production app.divinex.io / crm.divinex.io; designated QA workspace still required |
 | QA workspace ID and expected business/profile | Not provided; explicitly distinguish Hunter Pest Control from Bitrupt |
 | Authorized QA user and role | Not provided; use the ordinary assigned role, not an owner impersonation |
 | Second restricted user/workspace for isolation tests | Not provided |
@@ -47,7 +47,7 @@ BUG-021's latest note says “no back button”, while its original acceptance c
 | Bug | Required resolution before closure |
 |---|---|
 | 001 | Retest new-user wayfinding with and without recommendations. Existing quick-start links should be visible. If a guided tour is required, supply the approved tutorial requirement; do not pass it based solely on link presence. |
-| 023 | Owner confirms whether Hunter should be a separately provisioned workspace and which QA user should access it. Verify actual memberships and canonical profile mapping. A single eligible workspace intentionally has no switch control; do not create a guessed mapping or grant access to make the test pass. |
+| 023 | Verify that an account with exactly one authorized workspace sees the availability explanation in desktop/mobile navigation; zero must not claim one, and multiple must retain switching. Owner confirms whether Hunter should be a separately provisioned workspace and which QA user should access it. Verify actual memberships and canonical profile mapping. A single eligible workspace intentionally has no switch control; do not create a guessed mapping or grant access to make the test pass. |
 | 018 | Product owner confirms whether granular within-section/freeform dragging was approved. Current editor supports section reordering. No freeform implementation is in this candidate. |
 | 019 | Product owner identifies approved resize/crop/position controls and applicable sections. Current image-text left/right positioning is distinct from a general image editor. No general crop/resize implementation is in this candidate. |
 | 014 PDF | Confirm the approved comprehensive audit/PDF-export requirement separately from brand discovery. No new PDF reporting system is in this candidate. |

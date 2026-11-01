@@ -13,6 +13,7 @@ interface AscendMobileNavProps {
   navigation: AscendNavigationSection[];
   capabilities: AscendShellCapabilities;
   zenoHref: string | null;
+  workspaceCount: number;
 }
 
 /**
@@ -25,7 +26,7 @@ interface AscendMobileNavProps {
  * Base UI's Dialog, which provides focus-trap + Escape-to-close for
  * free), same close-on-navigate behavior.
  */
-export function AscendMobileNav({ branding, navigation, capabilities, zenoHref }: AscendMobileNavProps) {
+export function AscendMobileNav({ branding, navigation, capabilities, zenoHref, workspaceCount }: AscendMobileNavProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -45,7 +46,7 @@ export function AscendMobileNav({ branding, navigation, capabilities, zenoHref }
           <SheetHeader className="sr-only">
             <SheetTitle>Navigation</SheetTitle>
           </SheetHeader>
-          <AscendShellSidebarContent branding={branding} navigation={navigation} capabilities={capabilities} zenoHref={zenoHref} />
+          <AscendShellSidebarContent branding={branding} navigation={navigation} capabilities={capabilities} zenoHref={zenoHref} workspaceCount={workspaceCount} />
         </SheetContent>
       </Sheet>
     </>

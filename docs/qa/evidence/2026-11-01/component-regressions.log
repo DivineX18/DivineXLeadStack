@@ -1,0 +1,13 @@
+PASS BUG-023 single workspace explanation follows authorized count
+PASS BUG-014 brand review exposes the canonical scanned website and visual personality
+PASS BUG-017 picker rejects PDF before upload or selection
+PASS BUG-017 drop rejects PDF before upload or selection
+PASS BUG-017 image retains supported image/png uploads
+PASS BUG-017 any retains supported application/pdf uploads
+PASS BUG-021 publish validates the cleared Thank-You target
+PASS BUG-021 publish validates the new foreign Thank-You target
+PASS BUG-028 repeated successful captures follow the funnel destination over a stale form redirect
+PASS BUG-028 standalone form retains its redirect
+PASS BUG-028 failed capture does not navigate
+PASS BUG-024 failed write never reports all changes saved
+PASS BUG-024 stays saving until every concurrent write settles

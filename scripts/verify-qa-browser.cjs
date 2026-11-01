@@ -15,12 +15,14 @@ import {createRoot} from 'react-dom/client';
 import {Toaster} from 'sonner';
 import {MediaPicker} from './src/components/media/media-picker';
 import FormBuilder from './src/app/(dashboard)/sa/[subAccountId]/forms/[id]/page';
+import {AscendShellSidebarContent} from './src/components/shell/ascend-shell-sidebar-content';
 import {CtaButton} from './src/components/funnels/sections/cta-button';
 import {defaultFormFields,defaultFormSettings} from './src/types/forms';
 window.qa = {failNext:false,delay:0,writes:0,uploads:0};
 const form={id:'qa-form',name:'QA form',fields:defaultFormFields(),settings:defaultFormSettings(),enabled:true};
 function App(){
  const [selected,setSelected]=React.useState('');
+ if(location.pathname==='/workspace') {const count=Number(new URLSearchParams(location.search).get('count'));return <AscendShellSidebarContent branding={{productName:'Ascend',tagline:''}} navigation={[]} capabilities={{canSwitchWorkspace:count>1}} zenoHref={null} workspaceCount={count}/>;}
  if(location.pathname==='/forms') return <FormBuilder/>;
  if(location.pathname==='/capture') return <CtaButton label="Sign up" form={form} accentColor="#123456" successRedirect="/lp/qa-funnel/thanks" cta={{style:new URLSearchParams(location.search).get('style')||'inline'}}/>;
  if(location.pathname==='/lp/qa-funnel/thanks') return <h1>QA Thank-You destination</h1>;
@@ -29,6 +31,7 @@ function App(){
 createRoot(document.getElementById('root')).render(<><App/><Toaster/></>);
 `;
 const mocks = {
+  '@/components/shell/ascend-shell-nav': `export const AscendShellNav=()=>null;`,
   'next/navigation': `export const useParams=()=>({id:'qa-form'});`,
   'next/link': `import React from 'react';export default function Link({children,...props}){return <a {...props}>{children}</a>}`,
   '@/hooks/use-auth': `const user={uid:'qa'};export const useAuth=()=>({user,loading:false});`,
@@ -69,6 +72,12 @@ async function main() {
     const page=await context.newPage();
     const pageErrors=[];page.on('pageerror',e=>pageErrors.push(e.message));
     let uploadPosts=0;page.on('request',r=>{if(r.method()==='POST'&&r.url().includes('/media'))uploadPosts++});
+    for (const count of [0,1,2]) {
+      await page.goto(base+'/workspace?count='+count);
+      await expect(page.getByText(/Only one workspace is available/)).toHaveCount(count===1?1:0);
+      await expect(page.getByRole('link',{name:'Switch workspace',exact:true})).toHaveCount(count>1?1:0);
+    }
+    console.log('PASS browser BUG-023 authorized workspace count explains single workspace and preserves switch link');
     await page.goto(base+'/media');
     await page.locator('input[type=file]').setInputFiles({name:'guide.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF')});
     await expect(page.getByText(/guide.pdf is a/)).toBeVisible();

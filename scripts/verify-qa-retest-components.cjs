@@ -62,6 +62,17 @@ async function run() {
   async function test(name, fn) {
     try { await fn(); console.log('PASS', name); } catch (e) { failures++; console.error('FAIL', name, e.message); }
   }
+  await test('BUG-023 single workspace explanation follows authorized count', async () => {
+    const h = harness('src/components/shell/ascend-shell-sidebar-content.tsx');
+    for (const count of [0, 1, 2]) {
+      const tree = h.render('AscendShellSidebarContent', {
+        branding: { productName: 'Ascend', tagline: '' }, navigation: [],
+        capabilities: { canSwitchWorkspace: count > 1 }, zenoHref: null, workspaceCount: count,
+      });
+      assert.equal(text(tree).includes('Only one workspace is available to your account.'), count === 1);
+      assert.equal(text(tree).includes('Switch workspace'), count > 1);
+    }
+  });
   await test('BUG-014 brand review exposes the canonical scanned website and visual personality', async () => {
     const h = harness('src/app/app/intelligence/brand/page.tsx', [], {
       '@/lib/shell/shell-context-wrappers': { resolveShellContextForPage: async () => ({ workspace: { workspaceId: 'a' } }) },

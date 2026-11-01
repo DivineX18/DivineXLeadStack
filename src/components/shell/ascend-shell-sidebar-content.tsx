@@ -7,6 +7,7 @@ interface AscendShellSidebarContentProps {
   navigation: AscendNavigationSection[];
   capabilities: AscendShellCapabilities;
   zenoHref: string | null;
+  workspaceCount: number;
 }
 
 /**
@@ -18,7 +19,7 @@ interface AscendShellSidebarContentProps {
  * audit). Server-renderable (no hooks of its own); AscendShellNav is the
  * only client boundary inside it.
  */
-export function AscendShellSidebarContent({ branding, navigation, capabilities, zenoHref }: AscendShellSidebarContentProps) {
+export function AscendShellSidebarContent({ branding, navigation, capabilities, zenoHref, workspaceCount }: AscendShellSidebarContentProps) {
   return (
     <div className="flex h-full flex-col">
       <div className="mb-6 px-3">
@@ -44,6 +45,11 @@ export function AscendShellSidebarContent({ branding, navigation, capabilities, 
           >
             Ask Zeno
           </a>
+        )}
+        {workspaceCount === 1 && (
+          <p className="px-3 py-2 text-xs text-[var(--dx-text-muted)]">
+            Only one workspace is available to your account. Contact your agency administrator if another business is missing.
+          </p>
         )}
         {capabilities.canSwitchWorkspace && (
           <a

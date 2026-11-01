@@ -120,12 +120,12 @@ export default async function AscendAppLayout({ children }: { children: ReactNod
           against the screen instead, and overflow-y-auto keeps the nav
           reachable on a short viewport. */}
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 overflow-y-auto border-r border-[var(--dx-border-subtle)] bg-[var(--dx-surface-1)] p-4 md:flex">
-        <AscendShellSidebarContent branding={branding} navigation={shell.navigation} capabilities={shell.capabilities} zenoHref={zenoHref} />
+        <AscendShellSidebarContent branding={branding} navigation={shell.navigation} capabilities={shell.capabilities} zenoHref={zenoHref} workspaceCount={shell.workspaceSelection.candidates.length} />
       </aside>
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--dx-border-subtle)] px-4 md:justify-end md:px-6">
-          <AscendMobileNav branding={branding} navigation={shell.navigation} capabilities={shell.capabilities} zenoHref={zenoHref} />
+          <AscendMobileNav branding={branding} navigation={shell.navigation} capabilities={shell.capabilities} zenoHref={zenoHref} workspaceCount={shell.workspaceSelection.candidates.length} />
           <span className="text-sm font-medium text-[var(--dx-text-secondary)] md:hidden">{branding.productName}</span>
           <div className="ml-auto flex items-center gap-1 md:ml-0">
             {/* Reuses the existing next-themes toggle — one theme engine, not

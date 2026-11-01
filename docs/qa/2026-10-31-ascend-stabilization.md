@@ -1,6 +1,17 @@
 # ASCEND / Flow QA stabilization — 2026-10-31
 
-**Verdict: NOT CERTIFIED for production.** Confirmed defects were repaired and verified locally. No deployment, remote push, merge, Website Factory edit, tenant provisioning, production lead creation, or follow-up send was performed. A complete authenticated, persistent, deployed journey remains outstanding.
+**Verdict: NOT FULLY CERTIFIED.** Initial repairs are deployed as `9326624`; authenticated human workflow and product/provisioning decisions remain open.
+
+## November 1 follow-up (supersedes historical deployment statements below)
+
+- Both app.divinex.io and crm.divinex.io `/api/version` report full commit `93266249b0ac7be9b63566d0b71baa610a93a49c`, main, service ascend-crm-x2j3, started 2026-11-01T03:30:17.276Z. Deployment is verified.
+- Refreshed complete QA tracker: cohort unchanged (30 issues; 20 PASS, eight FAIL, one BLOCKER, one CLOSED).
+- BUG-023 retest explicitly requests an explanation when only one workspace is available. Reproduced missing explanation in the actual shared sidebar component. Added count-based guidance shared by desktop/mobile, using the existing canonical authorized candidate list. Zero candidates never claim one; multiple candidates retain switching. No membership, mapping or provisioning change.
+- Permanent component regression failed before this correction and passes afterward. All 13 component/service cases pass; Chromium passes the new 0/1/2-workspace scenario plus existing upload, save/reload/recovery and 20/20 submission fixtures. TypeScript, mapping invariants and permission evaluator checks pass. Browser fixture evidence is not real CRM/email certification.
+- Read-only Firestore diagnosis: reported funnel M5svjMgUWpGzZHtCPxNS is published under Bitrupt (rsFtkF0WcZUjtTW14zu9). Its canonical mapping is active/complete, primary profile 25. The parent agency has no sub-account named Hunter. This does not establish the tester's membership list or authorize creation/reassignment of a Hunter tenant.
+- Stored Thank-You message is `Funnel 2 QA final update 1793223920159`, matching the prior live observation. The original message-loss incident remains unattributed; no production funnel edits were made to manufacture a pass.
+- Production Chromium smoke: both login pages, reported public funnel and Thank-You page return HTTP 200 with expected headings and no captured JavaScript exceptions. Initial network-idle navigation timed out; retry used DOMContentLoaded and visible document checks. No submission or follow-up was triggered. Screenshot: `evidence/2026-11-01/production-thanks.png`.
+- Live QA identity, intended Hunter/Bitrupt workspace and follow-up recipient remain unspecified. Product scope remains unresolved for granular dragging, general image crop/resize and comprehensive audit/PDF. These are explicit blockers to closing all tracker rows, not implied regressions.
 
 ## Release preparation follow-up
 
