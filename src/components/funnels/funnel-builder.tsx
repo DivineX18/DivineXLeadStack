@@ -2,7 +2,7 @@
 
 import { useSubAccount } from "@/context/sub-account-context";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { describeError } from "@/lib/errors/describe";
 import {
@@ -359,6 +359,27 @@ export function FunnelBuilder({
   const [logoUrl, setLogoUrl] = useState("");
   const [sections, setSections] = useState<FunnelSection[]>([]);
   const [saving, setSaving] = useState(false);
+  /**
+   * UNSAVED EDITS LEFT WITHOUT A WORD.
+   *
+   * Closing or reloading the editor discarded everything since the last save
+   * and said nothing at all.
+   *
+   * DERIVED, NOT FLAGGED. The obvious fix is a setDirty(true) in each edit
+   * path, and this component has a dozen of them with more arriving. One
+   * forgotten call is a silent hole in exactly the guard that is supposed to
+   * stop silent loss, so instead the saved shape is remembered and compared.
+   * A path that mutates sections cannot opt out of being noticed.
+   *
+   * Honest about its reach: this is the BROWSER-level guard, covering tab
+   * close, reload, and leaving for another site. In-app navigation within the
+   * same React tree does not fire beforeunload, and catching that needs router
+   * interception this component cannot do alone. Partial protection beats
+   * none, and the gap is named rather than papered over.
+   */
+  const savedShape = useRef<string | null>(null);
+  const currentShape = JSON.stringify(sections);
+  const dirty = savedShape.current !== null && savedShape.current !== currentShape;
   const [expanded, setExpanded] = useState<string | null>(null);
   const [forms, setForms] = useState<LeadForm[]>([]);
   // The visual canvas and the field editor are two views of ONE funnel
@@ -366,6 +387,19 @@ export function FunnelBuilder({
   // same panel the form view uses.
   const [view, setView] = useState<"visual" | "fields">("visual");
   const [viewport, setViewport] = useState<"desktop" | "mobile">("desktop");
+
+  // Ask before discarding. Only while dirty, so a clean editor never nags.
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Browsers show their own wording and ignore ours; returnValue is what
+      // actually triggers the prompt.
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty]);
 
   useEffect(() => {
     let cancelled = false;
@@ -397,6 +431,8 @@ export function FunnelBuilder({
         setCtaStrategy(strategy?.ctaStrategy ?? "");
         setLogoUrl(d.funnel.logoUrl ?? "");
         setSections(d.funnel.sections);
+        // The baseline every later comparison is against.
+        savedShape.current = JSON.stringify(d.funnel.sections);
       }
     })();
     return () => {
@@ -422,8 +458,46 @@ export function FunnelBuilder({
     });
   }
 
+  /**
+   * DELETE IS RECOVERABLE, NOT CONFIRMED.
+   *
+   * This removed a whole section on one click with no confirmation and no way
+   * back, and QA lost work to it. A confirm dialog was the obvious fix and is
+   * the worse one: it taxes every deliberate delete, which is nearly all of
+   * them, to protect against the rare accident, and people learn to dismiss it
+   * without reading.
+   *
+   * Undo costs nothing when you meant it and returns everything when you did
+   * not. The index is captured too, so the section comes back where it was
+   * rather than at the end, which for a page built in an order is most of what
+   * "undo" has to mean.
+   *
+   * This is not Ctrl+Z over the whole editor, which QA also asked for and
+   * which needs a real history stack. It is the one destructive action that
+   * had no recovery at all.
+   */
   function removeSection(id: string) {
-    setSections((prev) => prev.filter((s) => s.id !== id));
+    setSections((prev) => {
+      const index = prev.findIndex((s) => s.id === id);
+      if (index < 0) return prev;
+      const removed = prev[index]!;
+      // Restore by index into whatever the list looks like THEN, rather than
+      // replaying a stale snapshot: between delete and undo the operator may
+      // have changed something else, and undo must not revert that too.
+      toast("Section deleted.", {
+        action: {
+          label: "Undo",
+          onClick: () =>
+            setSections((cur) => {
+              if (cur.some((s) => s.id === removed.id)) return cur;
+              const next = [...cur];
+              next.splice(Math.min(index, next.length), 0, removed);
+              return next;
+            }),
+        },
+      });
+      return prev.filter((s) => s.id !== id);
+    });
   }
 
   /** Duplicate keeps every field the composed plan put on the section —
@@ -474,6 +548,12 @@ export function FunnelBuilder({
     const id = `s${Date.now()}`;
     setSections((prev) => [...prev, { id, type, config: SECTION_DEFAULTS[type]() }]);
     setExpanded(id);
+  }
+
+  /** Called by save() once the PATCH has actually succeeded, so a failed save
+   *  leaves the document dirty and still guarded rather than looking clean. */
+  function markSaved(saved: FunnelSection[]) {
+    savedShape.current = JSON.stringify(saved);
   }
 
   async function save(patchStatus?: "draft" | "published") {
@@ -529,6 +609,9 @@ export function FunnelBuilder({
         throw new Error(detail?.error?.trim() || "");
       }
       if (patchStatus) setStatus(patchStatus);
+      // Only now, after the PATCH actually succeeded. A failed save must
+      // leave the document dirty and still guarded rather than looking clean.
+      markSaved(sections);
       toast.success("Saved.");
     } catch (err) {
       const message = err instanceof Error ? err.message : "";
