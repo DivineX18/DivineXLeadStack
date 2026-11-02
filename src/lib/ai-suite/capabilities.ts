@@ -81,6 +81,7 @@ import {
   updateFunnelServerSide,
   FunnelValidationError,
 } from "@/lib/server/funnels-service";
+import { findRecentFunnelByName } from "@/lib/funnels/duplicate-guard";
 import { scoreFunnelDesign } from "@/lib/design-intelligence/scoring";
 import { reviewFunnelCopy, type FunnelCopyReview } from "@/lib/conversion/funnel-copy-review";
 import type { OfferConfig, IncludedConfig, CtaBannerConfig, FunnelDoc, FunnelSection, FunnelSectionType, HeroConfig, PhotoGalleryConfig, TicketTiersConfig, VisualRequirement, VisualDecision } from "@/types/funnels";
@@ -5117,6 +5118,32 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
       if (subSnap.data()?.funnelsEnabledByAgency !== true) {
         throw new CapabilityUserError(
           "Funnels aren't enabled for this workspace. Ask the agency owner to turn it on first.",
+        );
+      }
+
+      // ONE CALL BUILDS THREE THINGS, SO A REPEATED CALL BUILDS THREE MORE.
+      //
+      // This capability creates a funnel, its capture form and its follow-up
+      // workflow together. It had no idempotency, so when a clarifying
+      // question is asked before building and the customer answers, a second
+      // emission produced a second complete set under identical names. QA
+      // could not publish: two identically-named workflows existed and the
+      // live one was whichever had been activated, with the other hidden
+      // behind it.
+      //
+      // Refused rather than silently returning the first one. The customer
+      // asked for a funnel and there is already a funnel of that name they
+      // have not seen yet; saying so, with its id, lets them look at it.
+      // Quietly returning it would read as "built" and send them hunting for
+      // a second page that was never made.
+      const intendedName = (((args.funnelName as string) || (args.headline as string)) ?? "").trim();
+      const recentTwin = intendedName
+        ? await findRecentFunnelByName(subAccountId, intendedName)
+        : null;
+      if (recentTwin) {
+        throw new CapabilityUserError(
+          `A funnel called "${recentTwin.name}" was just created in this workspace (id ${recentTwin.id}), so I haven't made a second one. ` +
+            `Open that one to keep editing it. If you really do want a separate funnel, give this one a different name.`,
         );
       }
 
