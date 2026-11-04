@@ -1,10 +1,43 @@
 # ASCEND / Flow QA stabilization — 2026-10-31
 
-**Verdict: NOT FULLY CERTIFIED.** Initial repairs are deployed as `9326624`; authenticated human workflow and product/provisioning decisions remain open.
+**Verdict: NOT FULLY CERTIFIED.** Repairs are deployed through `075bbac`; authenticated human workflow and product/provisioning decisions remain open.
+
+## Applied Hunter configuration repair
+
+User authorized the Hunter configuration fixes after confirming Bitrupt as the QA workspace. Changes were applied atomically with source-version preconditions and a restricted local backup; no application deployment was required (production code remains `075bbac`).
+
+- Root cause: Funnel 2 reused MedSpa capture form `Ot0AWMGbuLS2m70bPa4n`, selecting its skincare follow-up. The separate Hunter workflow also used a workspace-wide contact-created trigger and omitted its guide link.
+- Additional reproduced blocker: Funnel 2 asset `rtrFp10dGHuBfXms1hoJ` was only 15 bytes (`%PDF-1.4 test`), not a readable PDF. HTTP 200 and PDF MIME alone had hidden this. The existing same-workspace Hunter guide `myt0OUhOP1LnsjcoCyDY` parses successfully as eight pages of Houston pest-prevention content.
+- Created dedicated Funnel 2 form `uFLAqip8kf5l3Avb2Gav`, cloned from the existing Hunter form, with its own Thank-You redirect and reset submission count.
+- Created active workflow `TKDqsA7nFrYvA6nMZD3r`, scoped to that form, retaining the existing Hunter workflow graph/cadence and using matching guide delivery copy plus the valid asset link.
+- Updated Funnel 2's form reference and delivery asset. Preserved its saved Thank-You headline/message.
+- Scoped original Hunter workflow `8a3nzNCDeGRNpoAg2YYI` to original Hunter form `czdFv0oZv911s0SRB282` and repaired its delivery email link/copy. No running/waiting runs existed before the change.
+- Verified unchanged update times for shared MedSpa form/workflow and original Hunter form/draft funnel. Business profile and memberships were untouched.
+- Regression coverage: `scripts/verify-bitrupt-hunter-repair.cjs` verifies isolated references, valid asset selection, unchanged source objects/Thank-You copy, reset counters, exact form triggers, and rejection of foreign tenants or unexpected configuration. Dry-run and applied readback passed. One-off repair script defaults to dry-run and rejects reapplication after the source changes.
+- Live readback shows exactly one matching active workflow for each of the new Hunter, original Hunter and MedSpa forms. This checks trigger configuration, not execution or delivery.
+- Chromium verifies Hunter public form rendering without MedSpa copy, Thank-You link to the valid guide, absence of the old test-PDF link and no captured JavaScript exceptions. No lead submission, workflow dispatch or email send was performed.
+- Restricted backup: `/private/tmp/ascend-hunter-repair/repair-1793540658823.json`. Browser screenshots: `evidence/2026-11-01/hunter-form.png` and `hunter-thanks.png`.
+
+**Remaining certification:** an authorized test recipient/login is still needed to exercise real capture, CRM persistence and configured follow-up delivery. Product-scope decisions remain separate. Earlier diagnostic sections below are historical and superseded by this applied-repair record.
+
+## Bitrupt test-target confirmation
+
+User confirmed Bitrupt as the QA workspace. Read-only search verified:
+
+- Workspace: `rsFtkF0WcZUjtTW14zu9` (Bitrupt), canonical business profile 25, website `https://bitrupt.co`.
+- Published `Hunter Pest Control Funnel 2`: `M5svjMgUWpGzZHtCPxNS`.
+- Draft `Hunter Pest - Termite Signs Guide`: `91BJrAusXIqJYRp3xvI0`.
+- Published Hunter Funnel 2 and a River Oaks funnel share form `Ot0AWMGbuLS2m70bPa4n`. Its active form-submission workflow `qVKDy5wZdx8ND6udLpdu` contains actual River Oaks skincare emails, not merely an outdated label, plus unfilled PDF/booking placeholders in stored copy. Runtime delivery behavior has not been exercised.
+- A separate Hunter capture form `czdFv0oZv911s0SRB282` exists. The Hunter-named active workflow `8a3nzNCDeGRNpoAg2YYI` currently triggers on `contact.created`, not that form's submission. Its email describes a termite guide. Do not assume it is correctly connected to Funnel 2.
+- Classification: confirmed shared QA configuration mismatch; no evidence that the application mapped the funnel across tenant boundaries. No shared form/workflow or tenant profile was changed during this search. Rewriting the shared MedSpa workflow would also affect the MedSpa funnel.
+- Bitrupt resolves the workspace-choice blocker. An authorized test login/recipient and intended Hunter delivery configuration remain needed for real submission/follow-up certification.
 
 ## November 1 follow-up (supersedes historical deployment statements below)
 
-- Both app.divinex.io and crm.divinex.io `/api/version` report full commit `93266249b0ac7be9b63566d0b71baa610a93a49c`, main, service ascend-crm-x2j3, started 2026-11-01T03:30:17.276Z. Deployment is verified.
+- Follow-up commit `075bbac85ad17830cef7ab6ed913bb4417084dc5` was pushed to main for BUG-023. Render deployment 7473530987 succeeded. Both production hostnames report full commit `075bbac85ad17830cef7ab6ed913bb4417084dc5`, started 2026-11-01T13:20:51.994Z.
+- BI production `/api/version` reports main `5b0245f4232c67d1b77536996baa39940f3a5b1a`, started 2026-10-29T17:43:56.207Z.
+- Bitrupt profile snapshot 25 (version 66) matches the canonical mapping and contains websiteUrl, personality, photographyStyle and composition. This confirms stored source fields, not the entire authenticated scan/review journey.
+- Initial deployment `9326624` was verified on both hosts before releasing the follow-up. Production now serves `075bbac` as recorded above.
 - Refreshed complete QA tracker: cohort unchanged (30 issues; 20 PASS, eight FAIL, one BLOCKER, one CLOSED).
 - BUG-023 retest explicitly requests an explanation when only one workspace is available. Reproduced missing explanation in the actual shared sidebar component. Added count-based guidance shared by desktop/mobile, using the existing canonical authorized candidate list. Zero candidates never claim one; multiple candidates retain switching. No membership, mapping or provisioning change.
 - Permanent component regression failed before this correction and passes afterward. All 13 component/service cases pass; Chromium passes the new 0/1/2-workspace scenario plus existing upload, save/reload/recovery and 20/20 submission fixtures. TypeScript, mapping invariants and permission evaluator checks pass. Browser fixture evidence is not real CRM/email certification.

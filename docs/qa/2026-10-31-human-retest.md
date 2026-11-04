@@ -1,6 +1,6 @@
 # ASCEND / Flow — human QA retest package
 
-**Deployed initial candidate:** `93266249b0ac7be9b63566d0b71baa610a93a49c` on production main; both app.divinex.io and crm.divinex.io verified November 1. A follow-up BUG-023 workspace-availability explanation is locally verified; capture its final deployed commit before testing that change.
+**Deployed QA candidate:** `075bbac85ad17830cef7ab6ed913bb4417084dc5` on production main, verified on both app.divinex.io and crm.divinex.io November 1. Includes the initial stabilization repairs and BUG-023 single-workspace explanation. Render deployment succeeded; service started 2026-11-01T13:20:51.994Z.
 
 ## Before testing
 
@@ -8,14 +8,14 @@ The release owner must fill in the following before handing this package to test
 
 | Required detail | Current state |
 |---|---|
-| Approved deployed candidate commit | Initial `9326624` verified live; follow-up candidate pending release |
+| Approved deployed candidate commit | `075bbac85ad17830cef7ab6ed913bb4417084dc5` verified live on both production hosts |
 | Test environment URL | Production app.divinex.io / crm.divinex.io; designated QA workspace still required |
-| QA workspace ID and expected business/profile | Not provided; explicitly distinguish Hunter Pest Control from Bitrupt |
+| QA workspace ID and expected business/profile | User approved Bitrupt (`rsFtkF0WcZUjtTW14zu9`); Hunter funnels are QA content inside it |
 | Authorized QA user and role | Not provided; use the ordinary assigned role, not an owner impersonation |
 | Second restricted user/workspace for isolation tests | Not provided |
 | Authorized test email/phone recipient | Not provided; no inferred real customer recipient |
-| Test funnel/form/workflow IDs | Create or designate only within the approved QA workspace |
-| Expected follow-up action and timing | Record from actual enabled workflow configuration |
+| Test funnel/form/workflow IDs | Hunter Funnel 2 `M5svjMgUWpGzZHtCPxNS`; dedicated form `uFLAqip8kf5l3Avb2Gav`; active workflow `TKDqsA7nFrYvA6nMZD3r`; valid guide asset `myt0OUhOP1LnsjcoCyDY` |
+| Expected follow-up action and timing | Hunter guide delivery email, existing team notification, then existing one-day follow-up branch; verify actual run/delivery with the authorized test recipient |
 
 If a prerequisite is absent, mark its scenario **BLOCKED**, not PASS or FAIL. Record the URL, commit, user role, workspace ID, timestamp, and unique run marker for every run. Redact credentials and customer data from evidence.
 
