@@ -33,10 +33,16 @@ const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signIn
 });
 const { idToken } = (await r.json()) as { idToken?: string };
 const login = await fetch(`${BASE}/api/login`, { headers: { Authorization: `Bearer ${idToken}` }, redirect: "manual" });
+// The cookie domain was hardcoded "localhost", which pinned this suite to a
+// dev server on port 3114 -- so it had been failing on a missing server
+// rather than on anything about the product. Deriving it from BASE lets the
+// same suite judge the DEPLOYED shell, which is the artifact that matters:
+//   E2E_BASE=https://app.divinex.io npx tsx scripts/verify-shell-render.mts
+const cookieDomain = new URL(BASE).hostname;
 const cookies = (login.headers.getSetCookie?.() ?? []).map((c) => {
   const [pair] = c.split(";");
   const idx = pair.indexOf("=");
-  return { name: pair.slice(0, idx), value: pair.slice(idx + 1), domain: "localhost", path: "/" };
+  return { name: pair.slice(0, idx), value: pair.slice(idx + 1), domain: cookieDomain, path: "/" };
 });
 
 const browser = await chromium.launch();
@@ -101,8 +107,23 @@ for (const mode of ["light", "dark"] as const) {
     }
     return out;
   });
+  // Judge NEUTRAL surfaces only. Luminance alone cannot tell a theme
+  // violation from a brand accent: the "Ask Zeno" primary CTA is
+  // rgb(11, 100, 244), luminance 0.157, so it read as "a dark panel in
+  // light mode" and failed this check for being exactly the colour it is
+  // supposed to be. A saturated hue is an accent by definition; the real
+  // failure this check exists for is a NEAR-GREY card on the wrong side of
+  // the scale (a white card in dark mode, luminance 1.0 and chroma 0, or a
+  // slate panel in light mode, luminance 0.01 and chroma 27). Chroma
+  // separates them cleanly -- the CTA's is 233.
+  const ACCENT_CHROMA = 60;
   const wrong = bad2.filter((s) => {
-    const l = lum(s.split(":").slice(1).join(":"));
+    const rgb = s.split(":").slice(1).join(":");
+    const m = rgb.match(/rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)/);
+    if (!m) return false;
+    const chroma = Math.max(+m[1], +m[2], +m[3]) - Math.min(+m[1], +m[2], +m[3]);
+    if (chroma > ACCENT_CHROMA) return false;
+    const l = lum(rgb);
     return shellL > 0.5 ? l < 0.2 : l > 0.8;
   });
   check(`  ${mode}: no panel is pinned to the opposite theme`, wrong.length === 0,

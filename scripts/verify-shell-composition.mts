@@ -29,12 +29,55 @@ const layout = read("src/app/app/layout.tsx");
 const middleware = read("src/middleware.ts");
 const globalsCss = read("src/app/globals.css");
 
-// Strip /* */ and // comments before checking -- several of these files'
-// OWN doc comments explain the "no next/headers, no process.env" invariant
-// using those exact strings, which would false-positive a whole-file
-// substring check (same class of mistake hit in Slices 5/6/7's own tests).
+// Strip comments before checking -- several of these files' OWN doc
+// comments explain the "no next/headers, no process.env" invariant using
+// those exact strings, which would false-positive a whole-file substring
+// check (same class of mistake hit in Slices 5/6/7's own tests).
+//
+// This was two regexes (block comments, then line comments), and a line
+// comment containing "/*" defeats them: src/app/app/layout.tsx opens with
+// "// /app/* carries no [subAccountId] URL segment", which opened a
+// phantom block comment running to the next real "*/". Measured, that hid
+// 1190 of the layout's 3142 code characters -- 38% of the file -- from any
+// assertion reading stripped source. The four pure shell modules were
+// unaffected (their "/app/*" comments have no later "*/" to close the
+// phantom), so this hid nothing that shipped; it was a trap waiting for
+// the next assertion to step in, which the wrapper check below promptly
+// did. Fixing it is cheaper than remembering it.
+//
+// A single regex pass cannot know whether "/*" is code, string or comment,
+// so this is a small scanner that tracks state instead. It is the honest
+// minimum for a file whose job is reading source.
 function stripComments(src: string): string {
-  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  let out = "";
+  let i = 0;
+  // "code" | "line" | "block" | the quote char of the string we are inside
+  let state: "code" | "line" | "block" | '"' | "'" | "`" = "code";
+  while (i < src.length) {
+    const c = src[i];
+    const next = src[i + 1];
+    if (state === "code") {
+      if (c === "/" && next === "/") { state = "line"; i += 2; continue; }
+      if (c === "/" && next === "*") { state = "block"; i += 2; continue; }
+      if (c === '"' || c === "'" || c === "`") { state = c; out += c; i++; continue; }
+      out += c; i++; continue;
+    }
+    if (state === "line") {
+      if (c === "\n") { state = "code"; out += c; }
+      i++; continue;
+    }
+    if (state === "block") {
+      if (c === "*" && next === "/") { state = "code"; i += 2; continue; }
+      // Keep newlines so line-anchored regexes downstream still behave.
+      if (c === "\n") out += c;
+      i++; continue;
+    }
+    // Inside a string literal: copy verbatim, honour backslash escapes.
+    if (c === "\\") { out += c + (next ?? ""); i += 2; continue; }
+    if (c === state) state = "code";
+    out += c; i++;
+  }
+  return out;
 }
 
 // ── Pure functions stay pure -- no Firestore/headers/env inside them ─────
@@ -77,7 +120,21 @@ check(
 check("Layout wrapper reads the middleware-set x-user-uid header via next/headers (same header every API-route auth helper reads)", wrappers.includes('hdrs.get("x-user-uid")'));
 
 // ── Route group: gates BEFORE rendering, never trusts a client mode ──────
-check("Shell layout resolves context via the wrapper, not the raw composer", layout.includes("resolveShellContextForLayout("));
+// The layout must go through A wrapper, not the raw composer -- but which
+// wrapper is an implementation detail that has already changed once
+// (ForLayout -> ForPage, when pages needed the layout's own cookie-aware
+// resolution). Naming one wrapper made this assertion fail on a rename
+// that was itself a bug fix, so assert the invariant instead: imports come
+// from the wrapper module, and the raw composer is never called here.
+{
+  const layoutCode = stripComments(layout);
+  check(
+    "Shell layout resolves context via a wrapper, not the raw composer",
+    /from "@\/lib\/shell\/shell-context-wrappers"/.test(layoutCode) &&
+      /resolveShellContextFor[A-Za-z]+\(/.test(layoutCode) &&
+      !/[^A-Za-z]resolveShellContext\(/.test(layoutCode),
+  );
+}
 check("Shell layout redirects (never renders Ascend UI) when mode !== full_ascend", layout.includes('shell.mode !== "full_ascend"') && layout.includes("redirect("));
 check("Shell layout redirects when no shell context resolved at all (defense in depth)", /if \(!shell\)/.test(layout) && layout.includes('redirect("/login")'));
 check("Shell layout delegates the fallback destination to the pure decideShellFallbackRoute (no inline redirect-target logic)", layout.includes("decideShellFallbackRoute("));
@@ -113,24 +170,40 @@ check("middleware.ts's PUBLIC_PATHS/PUBLIC_PATH_PATTERNS were NOT modified to ex
   );
 }
 
-// ── every OTHER dashboard shell file is untouched ────────────────────────
+// ── the two shells stay separate frames ─────────────────────────────────
+//
+// This block used to pin eight Flow files byte-for-byte against the
+// pre-Slice-8 commit, to prove the new Ascend shell had not disturbed
+// Flow. That premise is OBSOLETE, not merely stale: the shells were
+// deliberately unified afterwards, so Flow components are now shell-AWARE
+// on purpose. src/context/sub-account-context.tsx imports
+// resolveAscendShellHref because saPath() is the cross-shell link adapter
+// (the mechanism that fixed the "Continue with Zeno" cross-workspace
+// defect), and the Flow sidebar imports the shared ProductTour. Five of
+// the eight pins were failing on exactly those intended changes.
+//
+// Re-pinning to today's commit would rebuild the same tripwire one month
+// later, and it would fire on every file the Ascend redesign touches. The
+// durable invariant underneath is narrower and still true: each shell
+// renders its OWN chrome. Sharing a path resolver or a tour is fine;
+// rendering Flow's sidebar inside Ascend (or the reverse) is the actual
+// regression this was protecting against, and the behavioural suites
+// (verify-shell-decisions, verify-funnels-navigation,
+// verify-zeno-link-shell-aware) cover the routing half.
 {
-  const PRE_SLICE8_COMMIT = "72c1a47";
-  const filesThatMustBeUnchanged = [
+  const flowLayouts = [
     "src/app/(dashboard)/layout.tsx",
     "src/app/(dashboard)/sa/[subAccountId]/layout.tsx",
-    "src/components/dashboard/sidebar.tsx",
-    "src/components/dashboard/header.tsx",
-    "src/components/billing/billing-guard.tsx",
-    "src/components/ai-suite/zeno-launcher.tsx",
-    "src/hooks/use-auth.ts",
-    "src/context/sub-account-context.tsx",
-  ];
-  for (const f of filesThatMustBeUnchanged) {
-    const before = readAtCommit(f, PRE_SLICE8_COMMIT);
-    const after = read(f);
-    check(`Untouched by this slice: ${f} (byte-for-byte identical to the pre-Slice-8 commit)`, before === after);
-  }
+  ].map((f) => stripComments(read(f)));
+  const ascendChrome = /ascend-shell-nav|ascend-shell-sidebar-content|ascend-mobile-nav|ascend-user-menu/;
+  check(
+    "Flow's dashboard layouts never render the Ascend shell chrome",
+    flowLayouts.every((src) => !ascendChrome.test(src)),
+  );
+  check(
+    "The Ascend layout never renders Flow's sidebar or header",
+    !/components\/dashboard\/(sidebar|header)/.test(stripComments(layout)),
+  );
 }
 
 // ── globals.css change is purely additive (no deletion, no :root/.dark edit) ─

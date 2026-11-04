@@ -88,3 +88,27 @@ export function buildShellNavigation(workspace: WorkspaceIdentity | null): Ascen
     };
   });
 }
+
+/**
+ * Is `pathname` inside `section`? Pure, so it can be unit-tested and so the
+ * desktop nav, the mobile nav and anything else that highlights a section
+ * cannot answer this differently.
+ *
+ * Home is the reason this exists. Its href is the bare root, and the root is
+ * a prefix of every path, so it cannot use the startsWith rule the other
+ * sections use. It is ALSO reachable at /home: next.config.ts rewrites the
+ * bare /{section} form of each lifecycle section to /app/{section}, and
+ * /app/home canonicalises back to /home -- which is exactly where a Flow
+ * visitor redirected into this shell lands. Matching only "/" left that
+ * visitor on the shell's landing page with no "you are here" marker at all,
+ * measured on production: "/" highlighted Home, "/home" highlighted nothing.
+ */
+export function isLifecycleSectionActive(
+  pathname: string,
+  section: Pick<AscendNavigationSection, "id" | "href">,
+): boolean {
+  // The section's own addressable path, which for Home is /home rather than
+  // the root it also answers on.
+  const ownPath = section.href === "/" ? `/${section.id}` : section.href;
+  return pathname === section.href || pathname === ownPath || pathname.startsWith(`${ownPath}/`);
+}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Lock } from "lucide-react";
+import { isLifecycleSectionActive } from "@/lib/shell/build-shell-navigation";
 import type { AscendNavigationSection } from "@/types/ascend-shell";
 
 /**
@@ -34,7 +35,7 @@ export function AscendShellNav({ sections, ariaLabel = "Lifecycle navigation" }:
       {sections
         .filter((section) => section.visible)
         .map((section) => {
-          const active = pathname === section.href || pathname.startsWith(`${section.href}/`);
+          const active = isLifecycleSectionActive(pathname, section);
 
           if (section.locked) {
             const reason = section.lockedReason ?? "Locked";
