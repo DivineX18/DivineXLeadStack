@@ -63,7 +63,7 @@ const PLAN_LABEL: Record<SubscriptionStatus, { label: string; tone: string }> =
 
 export default function SettingsPage() {
   const { user, role } = useAuth();
-  const { subAccountId, agencyId, subAccount } = useSubAccount();
+  const { subAccountId, agencyId, subAccount, inAscendShell } = useSubAccount();
   const workspaceName = subAccount?.name ?? "this sub-account";
   const [profile, setProfile] = useState<UserDoc | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -118,12 +118,18 @@ export default function SettingsPage() {
     ? PLAN_LABEL[profile.subscriptionStatus]
     : PLAN_LABEL.inactive;
 
+  const Heading = inAscendShell ? "h2" : "h1";
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">
+        {/* Mounted as the execution band of the Ascend Settings section,
+            which supplies the page's own <h1>; a second one here left the
+            document with two top-level headings. Same mechanism as Flow's
+            AI Agents page, which is composed the same way. */}
+        <Heading className="text-2xl font-bold tracking-tight">
           {workspaceName} · Settings
-        </h1>
+        </Heading>
         <p className="text-sm text-muted-foreground">
           Workspace-level configuration for{" "}
           <strong className="text-foreground">{workspaceName}</strong>. For

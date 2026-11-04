@@ -75,8 +75,6 @@ export function AscendCreateContent({
   saId,
   isAdmin,
   websiteMaxSites,
-  title = "Create",
-  description = "Build funnels and websites, the same proven builders, native to Ascend.",
   // The canonical Ascend funnel editor is /create/funnel/{id} (singular). The
   // plural default sent every click through the /create/funnels/{id} legacy
   // shim, which exists only to redirect old links and costs a round trip; and
@@ -88,21 +86,20 @@ export function AscendCreateContent({
   saId: string;
   isAdmin: boolean;
   websiteMaxSites: number | null;
-  /** Production Experience 2.0: the same content renders under the
-   *  customer-facing "Campaigns" section. Title/href are props so there is
-   *  exactly ONE implementation, not a second copy per section name. */
-  title?: string;
-  description?: string;
+  /**
+   * NO title/description PROPS, deliberately. This component rendered its
+   * own <h1>, defaulted to "Create", so composing it as the execution band
+   * of the Ascend Create section gave that document two top-level headings
+   * -- and because the title DEFAULTED, simply not passing one did not help.
+   * The section owns the heading; this owns the tools. The props existed so
+   * a second "Campaigns" section could relabel the same implementation, and
+   * that section no longer exists: /app/campaigns is a redirect to here.
+   */
   funnelBaseHref?: string;
 }) {
   const [category, setCategory] = useState<CreateCategory>("funnels");
   return (
-    <div className="max-w-6xl space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--dx-text-primary)]">{title}</h1>
-        <p className="mt-1 text-sm text-[var(--dx-text-muted)]">{description}</p>
-      </div>
-
+    <div className="space-y-8">
       {/* The plan comes first when there is one: what was agreed, and what is
           waiting on the customer, before the library of things already built.
           Renders nothing at all when no campaign exists, so an individual
@@ -137,7 +134,7 @@ export function AscendCreateContent({
 
       {category === "funnels" && (
         <section className="rounded-[var(--dx-radius-lg)] border p-6" style={{ backgroundColor: "var(--dx-surface-1)", borderColor: "var(--dx-border-subtle)" }}>
-          <FunnelsList saId={saId} baseHref={funnelBaseHref} />
+          <FunnelsList saId={saId} baseHref={funnelBaseHref} headingLevel="h2" />
         </section>
       )}
 
@@ -172,7 +169,7 @@ export function AscendCreateContent({
             delivers it.
           </p>
           <div className="mt-6">
-            <FunnelsList saId={saId} baseHref={funnelBaseHref} />
+            <FunnelsList saId={saId} baseHref={funnelBaseHref} headingLevel="h2" />
           </div>
         </section>
       )}

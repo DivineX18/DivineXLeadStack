@@ -17,12 +17,14 @@ import type { AiChannelConfig } from "@/types/ai";
  * fetch alongside the SMS one here.
  */
 export default function AiAgentsOverviewPage() {
-  const { subAccountId, subAccount } = useSubAccount();
+  const { subAccountId, subAccount, inAscendShell } = useSubAccount();
+  const Heading = inAscendShell ? "h2" : "h1";
   const [smsConfig, setSmsConfig] = useState<AiChannelConfig | null>(null);
   const [voiceConfig, setVoiceConfig] = useState<AiChannelConfig | null>(null);
   const [whatsappConfig, setWhatsappConfig] = useState<AiChannelConfig | null>(
     null,
   );
+  const [webChatConfig, setWebChatConfig] = useState<AiChannelConfig | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [warningOpen, setWarningOpen] = useState(false);
 
@@ -30,10 +32,18 @@ export default function AiAgentsOverviewPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [smsRes, voiceRes, whatsappRes] = await Promise.all([
+        const [smsRes, voiceRes, whatsappRes, webChatRes] = await Promise.all([
           fetch(`/api/sub-accounts/${subAccountId}/ai-agent/channels/sms`),
           fetch(`/api/sub-accounts/${subAccountId}/ai-agent/channels/voice`),
           fetch(`/api/sub-accounts/${subAccountId}/ai-agent/channels/whatsapp`),
+          // WEB CHAT WAS NEVER FETCHED. The grid passed `enabled: undefined`
+          // for it, which this card renders as "Not configured" -- so a
+          // workspace with Web Chat live and hundreds of thousands of tokens
+          // spent on it still read "Not configured" on the overview, every
+          // time. The header comment on this file asked for exactly this
+          // ("as channels graduate from comingSoon, add their fetch
+          // alongside the SMS one"); Web Chat graduated and nobody did.
+          fetch(`/api/sub-accounts/${subAccountId}/ai-agent/channels/web-chat`),
         ]);
         const smsData = smsRes.ok
           ? ((await smsRes.json()) as { config: AiChannelConfig | null })
@@ -44,7 +54,11 @@ export default function AiAgentsOverviewPage() {
         const whatsappData = whatsappRes.ok
           ? ((await whatsappRes.json()) as { config: AiChannelConfig | null })
           : { config: null };
+        const webChatData = webChatRes.ok
+          ? ((await webChatRes.json()) as { config: AiChannelConfig | null })
+          : { config: null };
         if (!cancelled) {
+          setWebChatConfig(webChatData.config);
           setSmsConfig(smsData.config);
           setVoiceConfig(voiceData.config);
           setWhatsappConfig(whatsappData.config);
@@ -69,6 +83,10 @@ export default function AiAgentsOverviewPage() {
     whatsappSenderConfigured &&
     subAccount?.whatsappEnabledByAgency === true;
 
+  // Web Chat needs no per-workspace provisioning the way SMS/WhatsApp/Voice
+  // need a Twilio number, so its own toggle is the whole story.
+  const webChatEnabled = !!webChatConfig?.enabled;
+
   // Overview grid shows the inbound channels only — Outbound has its own
   // tab + config and isn't a shared-persona inbound channel.
   const channelsForGrid = VISIBLE_AI_CHANNELS.filter(
@@ -82,7 +100,12 @@ export default function AiAgentsOverviewPage() {
           <Bot className="h-6 w-6" />
         </span>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">AI Agents</h1>
+          {/* ONE <h1> PER PAGE. In Flow this page IS the page. In the Ascend
+              shell it renders as the execution band of /agents, under that
+              section's own <h1>, so a second one here would give the page two
+              top-level headings and break the document outline for anyone
+              navigating by heading. */}
+          <Heading className="text-2xl font-semibold tracking-tight">AI Agents</Heading>
           <p className="mt-1 text-sm text-muted-foreground">
             One persona, every channel. Configure the agent below, channels
             inherit and can override specific settings.
@@ -139,7 +162,9 @@ export default function AiAgentsOverviewPage() {
                 key={channel.id}
                 channel={channel}
                 enabled={
-                  channel.id === "sms"
+                  channel.id === "web-chat"
+                    ? webChatEnabled
+                    : channel.id === "sms"
                     ? smsEnabled
                     : channel.id === "voice"
                       ? voiceEnabled

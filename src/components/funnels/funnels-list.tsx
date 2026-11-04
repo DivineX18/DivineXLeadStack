@@ -124,8 +124,18 @@ type ListState =
 export function FunnelsList({
   saId,
   baseHref = `/sa/${saId}/funnels`,
+  headingLevel = "h1",
 }: {
   saId: string;
+  /**
+   * The heading level this list's own title renders at. "h1" is right at
+   * /sa/{id}/funnels, where this list IS the page. It is wrong wherever the
+   * list is nested under a page that already has an <h1> -- Ascend's Create
+   * section mounts it inside a band, which gave that document two top-level
+   * headings. Passed explicitly rather than read from context, because the
+   * parent is the thing that knows it is nesting.
+   */
+  headingLevel?: "h1" | "h2";
   /** Ascend OS launch pass — lets the /app/create native mount point at
    *  /app/create/funnels instead of the legacy /sa/{id}/funnels, so
    *  clicking into a specific funnel also stays inside Ascend chrome.
@@ -133,6 +143,7 @@ export function FunnelsList({
    *  existing CRM-only page, which never passes this prop. */
   baseHref?: string;
 }) {
+  const Heading = headingLevel;
   // ONE SUBSCRIPTION TO THIS WORKSPACE, NOT TWO.
   //
   // This component used to open its own onSnapshot on subAccounts/{saId} purely
@@ -282,7 +293,7 @@ export function FunnelsList({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Funnels</h1>
+          <Heading className="text-xl font-semibold">Funnels</Heading>
           <p className="text-sm text-muted-foreground">
             High-converting single-page funnels, hosted directly on this
             platform.

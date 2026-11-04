@@ -44,6 +44,13 @@ export interface SubAccountContextValue {
    * in-app navigation so links stay scoped to the current sub-account.
    */
   saPath: (path: string) => string;
+  /**
+   * True when this provider is mounted inside the Ascend shell. Already
+   * drives saPath(); also read by a Flow page rendered as the execution
+   * band of an Ascend section, which must demote its own <h1> so the page
+   * does not ship two top-level headings.
+   */
+  inAscendShell: boolean;
 }
 
 const SubAccountContext = createContext<SubAccountContextValue | undefined>(
@@ -155,6 +162,7 @@ export function SubAccountProvider({
       if (inAscendShell) return resolveAscendShellHref(subAccountId, path);
       return `/sa/${subAccountId}${path}`;
     },
+    inAscendShell,
   };
 
   return (
