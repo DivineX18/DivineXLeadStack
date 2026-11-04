@@ -101,6 +101,13 @@ export default async function AscendAppLayout({ children }: { children: ReactNod
   // it requests the dark branding directly rather than inheriting
   // whatever crm_only would otherwise resolve to.
   const branding = shell.mode === "full_ascend" ? shell.branding : ascendDarkBranding();
+  // How many workspaces this account can actually reach. `candidates` is the
+  // caller's full membership list in every selection outcome except
+  // "none_available" (where it is empty), so a count of exactly 1 is the
+  // honest signal for "there is nothing to switch to, and that is expected"
+  // -- distinct from 0, which must not claim one exists. capabilities
+  // .canSwitchWorkspace is the same list read as > 1.
+  const workspaceCount = shell.workspaceSelection.candidates.length;
 
   return (
     <div className="theme-ascend flex min-h-dvh bg-[var(--dx-surface-0)] text-[var(--dx-text-primary)]">
@@ -120,12 +127,12 @@ export default async function AscendAppLayout({ children }: { children: ReactNod
           against the screen instead, and overflow-y-auto keeps the nav
           reachable on a short viewport. */}
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 overflow-y-auto border-r border-[var(--dx-border-subtle)] bg-[var(--dx-surface-1)] p-4 md:flex">
-        <AscendShellSidebarContent branding={branding} navigation={shell.navigation} capabilities={shell.capabilities} zenoHref={zenoHref} workspaceCount={shell.workspaceSelection.candidates.length} />
+        <AscendShellSidebarContent branding={branding} navigation={shell.navigation} capabilities={shell.capabilities} zenoHref={zenoHref} workspaceCount={workspaceCount} />
       </aside>
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--dx-border-subtle)] px-4 md:justify-end md:px-6">
-          <AscendMobileNav branding={branding} navigation={shell.navigation} capabilities={shell.capabilities} zenoHref={zenoHref} workspaceCount={shell.workspaceSelection.candidates.length} />
+          <AscendMobileNav branding={branding} navigation={shell.navigation} capabilities={shell.capabilities} zenoHref={zenoHref} workspaceCount={workspaceCount} />
           <span className="text-sm font-medium text-[var(--dx-text-secondary)] md:hidden">{branding.productName}</span>
           <div className="ml-auto flex items-center gap-1 md:ml-0">
             {/* Reuses the existing next-themes toggle — one theme engine, not
