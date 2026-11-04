@@ -20,7 +20,15 @@ let bad = 0;
 const check = (l: string, ok: boolean, n = "") => { console.log(`${ok ? "PASS" : "FAIL"} ${l}${n ? ` — ${n}` : ""}`); if (!ok) bad++; };
 
 // ── 1. The registry IS the locked IA ─────────────────────────────────────
-const EXPECTED = ["home", "create", "leads", "performance", "intelligence", "settings"];
+// RE-LOCKED for the Agents section, which shipped as the approved seventh
+// primary section (see ASCEND_LIFECYCLE_SECTIONS' own comment: "Leads are
+// PEOPLE; agents are the systems that talk to them"). This list is
+// deliberately hand-written and NOT derived from the registry -- deriving
+// it would make the check tautological, and the point is that changing the
+// IA requires changing the lock on purpose. It stayed at six for long
+// enough that this file, verify-shell-decisions' entitlement fixture and
+// its gating assertions had all gone stale on the same omission.
+const EXPECTED = ["home", "create", "leads", "agents", "performance", "intelligence", "settings"];
 check("1. Lifecycle sections match the locked IA", JSON.stringify([...ASCEND_LIFECYCLE_SECTIONS]) === JSON.stringify(EXPECTED),
   JSON.stringify([...ASCEND_LIFECYCLE_SECTIONS]));
 
