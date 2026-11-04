@@ -77,12 +77,25 @@ const FALLBACK_TYPE_LABELS: Record<string, string> = {
   csv: "CSV file",
 };
 
+/**
+ * "a SVG" was the first version of this, which is the same defect BUG-040
+ * was — a message that reads wrong — one layer down. An acronym is read out
+ * letter by letter, and S, F, H, L, M, N, R and X all begin with a vowel
+ * sound when you say them, so they take "an": an SVG, an HEIC, an MP3. The
+ * spelling of the first letter is not the question; how it is pronounced is.
+ */
+function articleFor(label: string): "a" | "an" {
+  if (/^[aeiou]/i.test(label)) return "an";
+  if (/^[A-Z]{2,}/.test(label) && "FHLMNRSX".includes(label[0]!)) return "an";
+  return "a";
+}
+
 export function describeFileType(file: Pick<File, "name" | "type">): string {
   const known = UPLOAD_KIND_LABELS[file.type];
-  if (known) return `a ${known}`;
+  if (known) return `${articleFor(known)} ${known}`;
   const ext = file.name.includes(".") ? file.name.split(".").pop()!.toLowerCase() : "";
   const byExt = FALLBACK_TYPE_LABELS[ext];
-  if (byExt) return byExt === "video" ? "a video" : `a ${byExt}`;
+  if (byExt) return `${articleFor(byExt)} ${byExt}`;
   // Still nothing recognisable: name the extension rather than the MIME type.
   // "a .psd file" tells the operator which file they picked; "application/
   // octet-stream" tells them nothing they can act on.

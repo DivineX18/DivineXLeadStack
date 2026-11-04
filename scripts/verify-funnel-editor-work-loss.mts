@@ -175,6 +175,19 @@ console.log("\n-- a refused upload says what the file IS, in English --");
   ck('a GIF reads as "a GIF", not "a image/gif"', describeFileType(f("logo.gif", "image/gif")) === "a GIF");
   ck("an accepted type still reads by its own name", describeFileType(f("a.png", "image/png")) === "a PNG");
 
+  // MUTATION — an acronym is read letter by letter, so the article follows how
+  // the first letter SOUNDS, not how it is spelled. "a SVG" was the first
+  // version of this and is the same class of defect as BUG-040 itself.
+  ck("MUTATION: an acronym starting with a vowel SOUND takes \"an\"",
+    describeFileType(f("d.svg", "image/svg+xml")) === "an SVG"
+    && describeFileType(f("p.heic", "image/heic")) === "an HEIC"
+    && describeFileType(f("c.mp4", "video/mp4")) === "a video");
+  ck("MUTATION: and a consonant-sound acronym still takes \"a\"",
+    describeFileType(f("s.pdf", "application/pdf")) === "a PDF"
+    && describeFileType(f("b.bmp", "image/bmp")) === "a BMP"
+    && describeFileType(f("t.csv", "text/csv")) === "a CSV file"
+    && describeFileType(f("w.webp", "image/webp")) === "a WebP");
+
   // MUTATION — the MIME table must be consulted BEFORE the extension, since
   // that is what the check rejected on. Leading with the extension would let
   // a mislabelled file be described as the thing it is not.
@@ -192,7 +205,8 @@ console.log("\n-- a refused upload says what the file IS, in English --");
   ck("the rejection message is produced", typeof msg === "string" && (msg ?? "").length > 0);
   ck("MUTATION: no MIME type reaches the operator", !/image\/|application\//.test(msg ?? ""));
   ck("it names the file and what IS accepted", /logo\.gif/.test(msg ?? "") && /JPEG, PNG, WebP/.test(msg ?? ""));
-  ck("MUTATION: the article agrees with the word after it", !/\bis a [aeiou]/i.test(msg ?? ""));
+  ck("MUTATION: the article agrees with the word after it",
+    !/\bis a [aeiou]/i.test(msg ?? "") && !/\bis a [FHLMNRSX]{2,}/.test(msg ?? ""));
 
   // The size and empty branches were already human and must stay that way.
   const big = checkUploadable(f("big.png", "image/png", 99 * 1024 * 1024));
