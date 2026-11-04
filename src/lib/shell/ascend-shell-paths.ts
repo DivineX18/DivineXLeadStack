@@ -33,7 +33,11 @@
  *  /app routes. */
 const EXACT_MAP: Record<string, string> = {
   "/dashboard": "/",
-  "/ai-suite": "/scale",
+  // Zeno. Was "/scale", which predates /app/zeno existing and is now a
+  // LEGACY REDIRECT to /intelligence — so every Flow Zeno link resolved into
+  // the Ascend shell landed on Intelligence instead of Zeno. /app/zeno is the
+  // real route and reads the same ?funnel= this maps for.
+  "/ai-suite": "/zeno",
   "/website": "/create",
   // Index only. Without this, the bare "/funnels" case fell through to the
   // /funnels PREFIX_MAP entry below (intended for /funnels/{id} only, since

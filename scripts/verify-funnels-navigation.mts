@@ -164,12 +164,40 @@ check(
 // round-trips through a redirect (next.config.ts: /app/{section} -> 307 ->
 // /{section} -> rewrite -> /app/{section}) before landing, an avoidable hop
 // that risks losing ?funnel= if that redirect's query passthrough ever
-// regresses. The canonical, zero-redirect customer-facing form is bare
-// /zeno. ──────────────────────────────────────────────────────────────────
+// regresses. The canonical, zero-redirect form is bare /zeno.
+//
+// CORRECTED after live verification on the deployed build. 12a used to
+// require a LITERAL "/zeno?funnel=${f.id}" in this component, encoding the
+// belief that bare /zeno is canonical everywhere. It is not: this list
+// renders in BOTH shells, and on the Flow host bare /zeno is not Zeno at
+// all -- it falls through to the legacy stub that redirects to the caller's
+// FIRST membership. Measured on crm.divinex.io before the fix: clicking it
+// from /sa/73Bcu.../funnels landed on /sa/MEYB8.../dashboard, a DIFFERENT
+// workspace, with ?funnel= dropped. So the assertion was passing while the
+// link was broken for every Flow user.
+//
+// The original intent is preserved, not weakened: no /app/zeno, and the
+// Ascend shell must still resolve to bare /zeno with no redirect hop. That
+// is now asserted by EXECUTING the resolver instead of pattern-matching a
+// hardcoded string, which is also what makes it shell-correct.
+// ──────────────────────────────────────────────────────────────────────────
 {
   check(
-    "12a. 'Continue with Zeno' links use the bare canonical /zeno, not the redirect-round-tripping /app/zeno",
-    !/\/app\/zeno\?funnel=/.test(list) && /\/zeno\?funnel=\$\{f\.id\}/.test(list),
+    "12a. 'Continue with Zeno' never hardcodes a shell-specific Zeno path",
+    !/\/app\/zeno\?funnel=/.test(list) && !/href=\{`\/zeno\?funnel=/.test(list),
+  );
+  check(
+    "12a-ii. both Zeno link sites resolve through saPath('/ai-suite')",
+    (list.match(/\$\{saPath\("\/ai-suite"\)\}\?funnel=\$\{f\.id\}/g) ?? []).length === 2,
+  );
+  check(
+    "12a-iii. the Ascend shell still lands on bare /zeno (original BUG-003 goal), query intact",
+    resolveAscendShellHref("sa_test", "/ai-suite") === "/zeno" &&
+      resolveAscendShellHref("sa_test", "/ai-suite?funnel=abc") === "/zeno?funnel=abc",
+  );
+  check(
+    "12a-iv. the Flow target really exists, so the Flow branch cannot 404",
+    existsSync("src/app/(dashboard)/sa/[subAccountId]/ai-suite/page.tsx"),
   );
   const config = read("next.config.ts");
   check(

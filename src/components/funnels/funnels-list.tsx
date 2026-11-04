@@ -412,13 +412,18 @@ export function FunnelsList({
                     <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
                   </Button>
                   {/* Continue with Zeno — opens Zeno already scoped to this
-                      funnel and its current state. Bare /zeno, not
-                      /app/zeno: the canonical customer-facing form
-                      (next.config.ts rewrites it transparently); the /app
-                      form round-trips through a redirect first, an avoidable
-                      hop that risks dropping ?funnel= if that redirect's
-                      query-string passthrough ever regresses. */}
-                  <Button variant="ghost" size="sm" className="hidden sm:inline-flex" render={<Link href={`/zeno?funnel=${f.id}`} />}>
+                      funnel and its current state.
+                      SHELL-AWARE, and it has to be: this list renders in BOTH
+                      shells. A hardcoded "/zeno" is an Ascend path, and on the
+                      Flow host it is not Zeno at all — it falls through to the
+                      legacy stub that redirects to the caller's FIRST
+                      membership, so clicking this from Flow landed the
+                      operator on an unrelated workspace's dashboard with the
+                      funnel id gone. saPath() is the same adapter the Orders
+                      link on this page already uses: /sa/{id}/ai-suite in
+                      Flow, /zeno in Ascend. ?funnel= is appended after
+                      resolution so the map only ever sees a clean path. */}
+                  <Button variant="ghost" size="sm" className="hidden sm:inline-flex" render={<Link href={`${saPath("/ai-suite")}?funnel=${f.id}`} />}>
                     <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Continue with Zeno
                   </Button>
 
@@ -432,7 +437,7 @@ export function FunnelsList({
                           <ExternalLink className="mr-2 h-4 w-4" /> View live page
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem render={<Link href={`/zeno?funnel=${f.id}`} />}>
+                      <DropdownMenuItem render={<Link href={`${saPath("/ai-suite")}?funnel=${f.id}`} />}>
                         <Sparkles className="mr-2 h-4 w-4" /> Continue with Zeno
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
