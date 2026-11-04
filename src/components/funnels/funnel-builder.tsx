@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { subscribeToForms } from "@/lib/firestore/forms";
 import { FunnelDomainsSection } from "@/components/funnels/funnel-domains-section";
 import { FunnelDesignFeedback } from "@/components/funnels/funnel-design-feedback";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 import type { LeadForm } from "@/types/forms";
 import { VisualCanvas } from "@/components/funnels/visual-canvas";
 import { MediaField, VideoField } from "@/components/funnels/media-field";
@@ -371,11 +372,8 @@ export function FunnelBuilder({
    * stop silent loss, so instead the saved shape is remembered and compared.
    * A path that mutates sections cannot opt out of being noticed.
    *
-   * Honest about its reach: this is the BROWSER-level guard, covering tab
-   * close, reload, and leaving for another site. In-app navigation within the
-   * same React tree does not fire beforeunload, and catching that needs router
-   * interception this component cannot do alone. Partial protection beats
-   * none, and the gap is named rather than papered over.
+   * The asking itself lives in useUnsavedChangesGuard, which covers both the
+   * document-level cases and the in-app click QA found this half missing.
    */
   const savedShape = useRef<string | null>(null);
   const currentShape = JSON.stringify(sections);
@@ -388,18 +386,48 @@ export function FunnelBuilder({
   const [view, setView] = useState<"visual" | "fields">("visual");
   const [viewport, setViewport] = useState<"desktop" | "mobile">("desktop");
 
-  // Ask before discarding. Only while dirty, so a clean editor never nags.
+  useUnsavedChangesGuard(
+    dirty,
+    "This page has changes you haven't saved. Leave and lose them?",
+  );
+
+  /**
+   * A STACK, SO REPEATED DELETES ARE EACH RECOVERABLE.
+   *
+   * The toast's Undo was the first half of this; QA then reached for Ctrl+Z,
+   * which is what anyone editing a page does, and nothing happened. Both
+   * affordances now pop the same stack, so they cannot disagree about what
+   * "the last delete" was.
+   *
+   * Deliberately NOT a general editor history: undoing a typed headline or a
+   * reorder needs a full document history, and claiming Ctrl+Z works when it
+   * only covers deletes would be worse than it plainly covering deletes. It is
+   * scoped to the one destructive action that had no recovery at all.
+   */
+  const deleted = useRef<{ index: number; section: FunnelSection }[]>([]);
+
   useEffect(() => {
-    if (!dirty) return;
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "z" && e.key !== "Z") return;
+      if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.altKey) return;
+      // Never steal undo from a field being typed in. Hijacking it there
+      // would break ordinary text editing to fix section deletes, which is a
+      // worse trade than leaving Ctrl+Z alone.
+      const t = e.target;
+      if (t instanceof HTMLElement) {
+        if (t.isContentEditable) return;
+        const tag = t.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      }
+      if (deleted.current.length === 0) return;
       e.preventDefault();
-      // Browsers show their own wording and ignore ours; returnValue is what
-      // actually triggers the prompt.
-      e.returnValue = "";
+      restoreLastDeleted();
     };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [dirty]);
+    window.addEventListener("keydown", onKeyDown);
+    // Bound once: the handler reads only refs and the setState function, both
+    // stable, so re-binding on every render would churn for nothing.
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -476,27 +504,32 @@ export function FunnelBuilder({
    * which needs a real history stack. It is the one destructive action that
    * had no recovery at all.
    */
+  function restoreLastDeleted() {
+    const entry = deleted.current.pop();
+    if (!entry) return;
+    // Restore by index into whatever the list looks like NOW, rather than
+    // replaying a stale snapshot: between delete and undo the operator may
+    // have changed something else, and undo must not revert that too. The
+    // id check makes a second undo of the same section a no-op instead of a
+    // duplicate.
+    setSections((cur) => {
+      if (cur.some((s) => s.id === entry.section.id)) return cur;
+      const next = [...cur];
+      next.splice(Math.min(entry.index, next.length), 0, entry.section);
+      return next;
+    });
+  }
+
   function removeSection(id: string) {
-    setSections((prev) => {
-      const index = prev.findIndex((s) => s.id === id);
-      if (index < 0) return prev;
-      const removed = prev[index]!;
-      // Restore by index into whatever the list looks like THEN, rather than
-      // replaying a stale snapshot: between delete and undo the operator may
-      // have changed something else, and undo must not revert that too.
-      toast("Section deleted.", {
-        action: {
-          label: "Undo",
-          onClick: () =>
-            setSections((cur) => {
-              if (cur.some((s) => s.id === removed.id)) return cur;
-              const next = [...cur];
-              next.splice(Math.min(index, next.length), 0, removed);
-              return next;
-            }),
-        },
-      });
-      return prev.filter((s) => s.id !== id);
+    const index = sections.findIndex((s) => s.id === id);
+    if (index < 0) return;
+    // The findIndex and the toast stay OUT of the setSections updater: React
+    // may call an updater more than once for one event, which would queue two
+    // toasts and two undo entries for a single click.
+    deleted.current.push({ index, section: sections[index]! });
+    setSections((prev) => prev.filter((s) => s.id !== id));
+    toast("Section deleted.", {
+      action: { label: "Undo", onClick: restoreLastDeleted },
     });
   }
 

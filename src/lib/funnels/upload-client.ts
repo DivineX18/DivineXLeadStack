@@ -39,6 +39,57 @@ const UPLOAD_KIND_LABELS: Record<string, string> = {
   "application/pdf": "PDF",
 };
 
+/**
+ * Bitrupt QA BUG-040 — the rejection message interpolated `file.type` raw, so
+ * refusing a GIF read "logo.gif is a image/gif." That is the browser's
+ * internal identifier, not a thing a person calls a file, and the article in
+ * front of it was wrong half the time too.
+ *
+ * Order matters here. The MIME table is consulted FIRST, because that is what
+ * the check actually rejected on; the extension is only a fallback, for the
+ * two cases the table cannot answer — a type with no friendly name, and an
+ * empty `file.type`, which browsers hand over for anything they do not
+ * recognise. Leading with the extension instead would let a file named
+ * `.jpg` be described as a JPEG while being refused for being something else.
+ */
+const FALLBACK_TYPE_LABELS: Record<string, string> = {
+  gif: "GIF",
+  svg: "SVG",
+  heic: "HEIC",
+  heif: "HEIF",
+  bmp: "BMP",
+  tiff: "TIFF",
+  tif: "TIFF",
+  avif: "AVIF",
+  ico: "icon",
+  mp4: "video",
+  mov: "video",
+  webm: "video",
+  avi: "video",
+  doc: "Word document",
+  docx: "Word document",
+  xls: "spreadsheet",
+  xlsx: "spreadsheet",
+  ppt: "slide deck",
+  pptx: "slide deck",
+  zip: "ZIP archive",
+  txt: "text file",
+  csv: "CSV file",
+};
+
+export function describeFileType(file: Pick<File, "name" | "type">): string {
+  const known = UPLOAD_KIND_LABELS[file.type];
+  if (known) return `a ${known}`;
+  const ext = file.name.includes(".") ? file.name.split(".").pop()!.toLowerCase() : "";
+  const byExt = FALLBACK_TYPE_LABELS[ext];
+  if (byExt) return byExt === "video" ? "a video" : `a ${byExt}`;
+  // Still nothing recognisable: name the extension rather than the MIME type.
+  // "a .psd file" tells the operator which file they picked; "application/
+  // octet-stream" tells them nothing they can act on.
+  if (ext && ext.length <= 5 && /^[a-z0-9]+$/.test(ext)) return `a .${ext} file`;
+  return "a file of a type we don't accept";
+}
+
 export function describeUploadLimit(allowedTypes: readonly string[] = UPLOAD_ACCEPT): string {
   const imageTypes = allowedTypes.filter((t) => t in UPLOAD_KIND_LABELS && t !== "application/pdf");
   const hasPdf = allowedTypes.includes("application/pdf");
@@ -79,7 +130,7 @@ export function checkUploadable(file: File, allowedTypes: readonly string[] = UP
     return null;
   }
   if (!allowedTypes.includes(file.type)) {
-    return `${file.name} is a ${file.type || "file of unknown type"}. ${describeUploadLimit(allowedTypes)}`;
+    return `${file.name} is ${describeFileType(file)}. ${describeUploadLimit(allowedTypes)}`;
   }
   if (file.size > UPLOAD_MAX_BYTES) {
     const mb = (file.size / 1024 / 1024).toFixed(1);
