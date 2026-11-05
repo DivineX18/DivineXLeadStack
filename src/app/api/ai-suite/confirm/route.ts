@@ -12,6 +12,14 @@ import {
 import { renderCompletion } from "@/lib/ai-suite/render-completion";
 import { recordAiSuiteAction } from "@/lib/ai-suite/audit";
 import { recordAiSuiteUsage } from "@/lib/ai-suite/usage";
+import {
+  claimConfirmation,
+  fingerprintArgs,
+  releaseConfirmationFailed,
+  settleConfirmationSucceeded,
+  waitForConcurrentResult,
+  type ConfirmIdentity,
+} from "@/lib/ai-suite/confirm-idempotency";
 import type { AiSuiteConfirmRequest } from "@/types/ai-suite";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +57,18 @@ export async function POST(request: Request) {
   if (!cap || cap.level !== level || cap.readonly) {
     return NextResponse.json(
       { error: "Unknown or unavailable action." },
+      { status: 400 },
+    );
+  }
+
+  // Identifies THIS specific confirm click (the model's own tool-call id),
+  // not just the capability+args -- see confirm-idempotency.ts for why that
+  // distinction matters. Required, not defaulted: a confirm with no way to
+  // tell it apart from a retry of itself can't be deduplicated.
+  const confirmationId = body.confirmationId;
+  if (!confirmationId || typeof confirmationId !== "string") {
+    return NextResponse.json(
+      { error: "`confirmationId` is required." },
       { status: 400 },
     );
   }
@@ -157,6 +177,52 @@ export async function POST(request: Request) {
 
   const summary = cap.summarize(validated.args);
 
+  // ── Idempotency: collapse a concurrent or sequential duplicate confirm of
+  // THIS SAME proposed action onto one execution. Identity is scoped to the
+  // authorized user, the workspace, the capability, and the confirmation
+  // (never args alone -- see confirm-idempotency.ts for why). A second
+  // request that loses the race waits briefly for the first's result rather
+  // than being told to retry into a double-execution.
+  const identity: ConfirmIdentity = {
+    uid: ctx.uid,
+    agencyId: ctx.agencyId,
+    subAccountId: ctx.subAccountId ?? null,
+    level,
+    capability: cap.name,
+  };
+  const argsFingerprint = fingerprintArgs(validated.args);
+  let claim = await claimConfirmation(identity, confirmationId, argsFingerprint);
+  if (claim.kind === "duplicate_in_progress") {
+    claim = await waitForConcurrentResult(identity, confirmationId, argsFingerprint);
+    if (claim.kind === "proceed") {
+      // The in-flight attempt released (it failed) while we were waiting --
+      // the lock is free, so this request gets a genuine turn.
+      claim = await claimConfirmation(identity, confirmationId, argsFingerprint);
+    }
+  }
+  if (claim.kind === "cached") {
+    return NextResponse.json(claim.response);
+  }
+  if (claim.kind === "fingerprint_mismatch") {
+    return NextResponse.json(
+      {
+        error:
+          "This confirmation was already used for a different request. Ask me again and I'll rebuild it.",
+      },
+      { status: 409 },
+    );
+  }
+  if (claim.kind === "duplicate_in_progress") {
+    return NextResponse.json(
+      {
+        error:
+          "This action is still being processed from an earlier request. Give it a moment, then check whether it completed before trying again.",
+      },
+      { status: 409 },
+    );
+  }
+  // claim.kind === "proceed" from here on.
+
   /**
    * THE TRY COVERS THE MUTATION AND NOTHING AFTER IT.
    *
@@ -190,6 +256,10 @@ export async function POST(request: Request) {
       confirmedByEmail: ctx.email,
       error: msg.slice(0, 500),
     });
+    // Release the idempotency lock so this exact confirmation can be
+    // retried -- a failure here is intentionally not a permanent block (see
+    // confirm-idempotency.ts).
+    await releaseConfirmationFailed(identity, confirmationId);
     // User-facing failures (gate off, record not in this tenant, …) are
     // surfaced verbatim; anything unexpected stays generic.
     if (err instanceof CapabilityUserError) {
@@ -242,11 +312,15 @@ export async function POST(request: Request) {
   // Capabilities without one are readonly lookups whose resultText is
   // already customer-safe prose.
   const { completion } = result;
-  return NextResponse.json({
+  const responseBody = {
     ok: true,
     ...(completion
       ? { completion, resultText: renderCompletion(completion) }
       : { resultText: result.resultText }),
     resultRef: result.ref ?? null,
-  });
+  };
+  // Cache AFTER the response body is fully built, so a safe retry replays
+  // exactly what the first caller received, byte for byte.
+  await settleConfirmationSucceeded(identity, confirmationId, argsFingerprint, responseBody);
+  return NextResponse.json(responseBody);
 }

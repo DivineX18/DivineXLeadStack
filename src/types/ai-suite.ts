@@ -106,6 +106,15 @@ export interface AiSuiteConfirmRequest {
   subAccountId?: string;
   capability: string;
   args: Record<string, unknown>;
+  /**
+   * The proposed action's own id (`AiSuiteProposedAction.id`, the model's
+   * tool-call id) -- identifies THIS specific confirm click, not just the
+   * capability+args. Required so the server can collapse a duplicate
+   * confirm (double-click, a second tab, a client retry after a timeout)
+   * onto a single execution without also collapsing two genuinely separate
+   * proposals that happen to carry identical args.
+   */
+  confirmationId: string;
 }
 
 /** Successful execution response. */

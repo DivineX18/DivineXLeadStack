@@ -542,6 +542,7 @@ export function AiSuiteChat({
           subAccountId,
           capability: msg.capability,
           args: msg.args,
+          confirmationId: msg.id,
         }),
       });
       const data = (await res.json().catch(() => null)) as {
