@@ -1,3 +1,5 @@
+import { agentOutcomeEnabled } from "@/lib/ai-suite/outcome-activation";
+import {validateRecommendation,readRecommendationProposal,beginFeedback,appendFeedback,feedbackExecutionId,type ExecutionDelivery} from "@/lib/ai-suite/outcome-feedback";
 import "server-only";
 
 import { NextResponse } from "next/server";
@@ -43,6 +45,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
+  if(body.decision!==undefined&&body.decision!=="execute"&&body.decision!=="reject")return NextResponse.json({error:"Invalid decision"},{status:400});
   const level = body.level;
   if (level !== "agency" && level !== "sub-account") {
     return NextResponse.json(
@@ -190,7 +193,11 @@ export async function POST(request: Request) {
     level,
     capability: cap.name,
   };
-  const argsFingerprint = fingerprintArgs(validated.args);
+  let reference;
+  try{reference=ctx.subAccountId?await readRecommendationProposal(ctx.uid,ctx.subAccountId,confirmationId,cap.name,validated.args,body.recommendationRef):null;}catch{return NextResponse.json({error:'Recommendation proposal mismatch'},{status:403});}
+  // Never downgrade a registered linked proposal to an unlinked action while OFF.
+  if ((reference || body.recommendationRef) && !agentOutcomeEnabled()) return NextResponse.json({error:"Recommendation execution is inactive"},{status:503});
+  const argsFingerprint = fingerprintArgs(reference?{args:validated.args,recommendationRef:reference,decision:body.decision??"execute"}:validated.args);
   let claim = await claimConfirmation(identity, confirmationId, argsFingerprint);
   if (claim.kind === "duplicate_in_progress") {
     claim = await waitForConcurrentResult(identity, confirmationId, argsFingerprint);
@@ -238,10 +245,21 @@ export async function POST(request: Request) {
    * without being able to contradict it. A failure to record is logged,
    * because an action that ran without an audit row is worth knowing about.
    */
+  if(reference){try{await validateRecommendation(ctx.subAccountId!,reference);}catch{await releaseConfirmationFailed(identity,confirmationId);return NextResponse.json({error:'Recommendation unavailable; nothing executed'},{status:503});}}
+  if(body.decision==='reject'){
+    if(!reference){await releaseConfirmationFailed(identity,confirmationId);return NextResponse.json({error:'Only registered recommendation proposals support rejection receipts'},{status:400});}
+    try{await beginFeedback(reference,feedbackExecutionId(ctx.uid,ctx.subAccountId!,cap.name,confirmationId),cap.name,true,ctx.uid);}catch{return NextResponse.json({error:'Rejection receipt unavailable'},{status:409});}
+    const response={ok:true,rejected:true};
+    await settleConfirmationSucceeded(identity,confirmationId,argsFingerprint,response,{level,capability:cap.name,args:validated.args,summary,status:'rejected',recommendationRef:reference,executionId:feedbackExecutionId(ctx.uid,ctx.subAccountId!,cap.name,confirmationId),agencyId:ctx.agencyId,subAccountId:ctx.subAccountId??null,confirmedByUid:ctx.uid,confirmedByEmail:ctx.email});
+    return NextResponse.json(response);
+  }
+  let delivery:ExecutionDelivery|undefined;
+  if(reference){try{delivery=await beginFeedback(reference,feedbackExecutionId(ctx.uid,ctx.subAccountId!,cap.name,confirmationId),cap.name,false,ctx.uid);}catch{return NextResponse.json({error:'Execution receipt unavailable; action not retried'},{status:409});}}
   let result: Awaited<ReturnType<typeof cap.execute>>;
   try {
     result = await cap.execute(ctx, validated.args);
   } catch (err) {
+    if(delivery){const batch=getAdminDb().batch();appendFeedback(batch,delivery,'failed',{reason:'execution_failed',retryAllowed:cap.name==='create_task'&&err instanceof CapabilityUserError});await batch.commit();}
     const msg = err instanceof Error ? err.message : "unknown error";
     console.error(`[ai-suite/confirm] ${cap.name} failed:`, msg);
     await recordAiSuiteAction({
@@ -255,6 +273,7 @@ export async function POST(request: Request) {
       confirmedByUid: ctx.uid,
       confirmedByEmail: ctx.email,
       error: msg.slice(0, 500),
+      ...(reference&&delivery?{recommendationRef:reference,executionId:delivery.executionId}:{}),
     });
     // Release the idempotency lock so this exact confirmation can be
     // retried -- a failure here is intentionally not a permanent block (see
@@ -271,7 +290,7 @@ export async function POST(request: Request) {
     );
   }
 
-  void recordAiSuiteAction({
+  const auditEntry = {
     level,
     capability: cap.name,
     args: validated.args,
@@ -282,12 +301,8 @@ export async function POST(request: Request) {
     confirmedByUid: ctx.uid,
     confirmedByEmail: ctx.email,
     resultRef: result.ref ?? null,
-  }).catch((e) =>
-    console.error(
-      `[ai-suite/confirm] ${cap.name} ran but its audit row could not be written:`,
-      e instanceof Error ? e.message : e,
-    ),
-  );
+    ...(reference&&delivery?{recommendationRef:reference,executionId:delivery.executionId}:{}),
+  } as const;
   void recordAiSuiteUsage({
     level,
     agencyId: ctx.agencyId,
@@ -321,6 +336,7 @@ export async function POST(request: Request) {
   };
   // Cache AFTER the response body is fully built, so a safe retry replays
   // exactly what the first caller received, byte for byte.
-  await settleConfirmationSucceeded(identity, confirmationId, argsFingerprint, responseBody);
+  const settled=await settleConfirmationSucceeded(identity, confirmationId, argsFingerprint, responseBody, auditEntry, delivery);
+  if(delivery&&!settled)return NextResponse.json({...responseBody,feedbackStatus:'outcome_unknown',auditStatus:'reconciliation_required'},{status:202});
   return NextResponse.json(responseBody);
 }

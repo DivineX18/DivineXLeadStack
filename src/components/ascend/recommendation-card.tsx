@@ -78,7 +78,7 @@ function RecommendationRow({ rec }: { rec: CroAuditRecommendation }) {
         <span className={IMPACT_TONE[rec.impact]}>{rec.impact} impact</span> · {rec.difficulty} effort · {rec.categoryLabel}
       </p>
       {/* The loop's missing edge: diagnosis you can act on without retyping it. */}
-      <FixWithZenoButton fix={rec.fix} category={rec.categoryLabel} impact={rec.impact} source={rec.source} />
+      <FixWithZenoButton recommendationRef={rec.recommendationRef} fix={rec.fix} category={rec.categoryLabel} impact={rec.impact} source={rec.source} />
     </li>
   );
 }

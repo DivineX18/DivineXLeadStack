@@ -292,6 +292,8 @@ function parseRecommendation(raw: unknown): CroAuditRecommendation | null {
     categoryLabel: str(r.categoryLabel) ?? "",
     impact: (["High", "Medium", "Low"] as const).includes(r.impact as never) ? (r.impact as "High" | "Medium" | "Low") : "Medium",
     difficulty: (["High", "Medium", "Low"] as const).includes(r.difficulty as never) ? (r.difficulty as "High" | "Medium" | "Low") : "Medium",
+    ...(r.recommendationRef&&typeof r.recommendationRef==='object'&&typeof (r.recommendationRef as Record<string,unknown>).recommendationId==='string'&&/^[a-f0-9]{64}$/.test(String((r.recommendationRef as Record<string,unknown>).evidenceId))?{recommendationRef:{recommendationId:String((r.recommendationRef as Record<string,unknown>).recommendationId),evidenceId:String((r.recommendationRef as Record<string,unknown>).evidenceId)}}:{}),
+    ...(r.source==='cro_audit'||r.source==='growth_scan'?{source:r.source}:{}),
     fix: r.fix,
     fixWithZeno: str(r.fixWithZeno),
     fixContext: str(r.fixContext) ?? "",
@@ -600,6 +602,7 @@ async function serviceFetch(params: {
   businessProfileId: string;
   fetchImpl: FetchImpl;
   body?: unknown;
+  workspaceId?: string;
 }): Promise<{ ok: true; data: unknown } | { ok: false; code: string; message: string }> {
   if (!ascendIntelligenceConfigured()) {
     recordIntelligenceAuditEvent({ kind: "not_configured", resource: params.resource });
@@ -617,6 +620,7 @@ async function serviceFetch(params: {
       headers: {
         Authorization: `Bearer ${secret}`,
         "X-Intelligence-Business-Profile-Id": params.businessProfileId,
+        ...(params.workspaceId ? {"X-Intelligence-Workspace-Id": params.workspaceId} : {}),
         Accept: "application/json",
         ...(params.body ? { "Content-Type": "application/json" } : {}),
       },
@@ -670,6 +674,10 @@ export function createAscendIntelligenceClient(options: AscendIntelligenceClient
   const fetchImpl = options.fetchImpl ?? fetch;
 
   return {
+    recommendationReferences: (businessProfileId: string, workspaceId: string) => serviceFetch({resource:'recommendation-lineage',method:'GET',path:'/internal/intelligence/recommendations',businessProfileId,workspaceId,fetchImpl}),
+    validateRecommendation: (businessProfileId: string, workspaceId: string, ref: {recommendationId:string;evidenceId:string}) => serviceFetch({resource:'recommendation-lineage',method:'GET',path:`/internal/intelligence/recommendations/${encodeURIComponent(ref.recommendationId)}?evidenceId=${encodeURIComponent(ref.evidenceId)}`,businessProfileId,workspaceId,fetchImpl}),
+    executionFeedback: (businessProfileId:string,workspaceId:string,body:unknown) => serviceFetch({resource:'execution-feedback',method:'POST',path:'/internal/intelligence/actions',businessProfileId,workspaceId,fetchImpl,body}),
+    measurementFeedback: (businessProfileId:string,workspaceId:string,body:unknown) => serviceFetch({resource:'measurement-feedback',method:'POST',path:'/internal/intelligence/outcomes',businessProfileId,workspaceId,fetchImpl,body}),
     async getDashboardSummary(businessProfileId: string): Promise<WithMeta<DashboardSummary>> {
       return readAscendResource({
         resource: "dashboard-summary",

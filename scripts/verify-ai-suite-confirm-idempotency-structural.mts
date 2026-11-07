@@ -57,11 +57,13 @@ function ok(label: string) {
   }
 
   // Ordering: the claim must happen BEFORE cap.execute(, and settle/release
-  // must happen around it, not before it ever runs.
+  // must happen around execution. Pre-execution validation can release a claim,
+  // and explicit rejection can settle without executing; inspect the success/
+  // execution-error settlements, not those intentionally separate branches.
   const claimIdx = src.indexOf("claimConfirmation(");
   const executeIdx = src.indexOf("cap.execute(");
-  const settleIdx = src.indexOf("settleConfirmationSucceeded(");
-  const releaseIdx = src.indexOf("releaseConfirmationFailed(");
+  const settleIdx = src.lastIndexOf("settleConfirmationSucceeded(");
+  const releaseIdx = src.lastIndexOf("releaseConfirmationFailed(");
   if (claimIdx < 0 || executeIdx < 0 || claimIdx > executeIdx) {
     fail("route-ordering", `claimConfirmation must run before cap.execute() -- claimIdx=${claimIdx} executeIdx=${executeIdx}`);
   } else {

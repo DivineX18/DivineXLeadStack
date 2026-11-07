@@ -1,3 +1,4 @@
+import {collectActionObservations} from "@/lib/intelligence/collect-action-observations";
 import "server-only";
 
 import { FieldValue } from "firebase-admin/firestore";
@@ -136,6 +137,10 @@ export async function syncGoogleMetricsForSubAccount(subAccountId: string): Prom
     .doc(`subAccounts/${subAccountId}/googleMetrics/${LATEST_SNAPSHOT_ID}`)
     .set(snapshot, { merge: false });
 
+  try{
+    if(ga4)await collectActionObservations(subAccountId,'ga4',String(config.ga4PropertyId),{start:rangeStart,end:rangeEnd},{conversions:{value:ga4.conversions,unit:'conversions'},sessions:{value:ga4.sessions,unit:'sessions'}},`googleMetrics/latest:ga4:${rangeEnd}`);
+    if(searchConsole)await collectActionObservations(subAccountId,'gsc',String(config.gscSiteUrl),{start:rangeStart,end:rangeEnd},{clicks:{value:searchConsole.clicks,unit:'clicks'},impressions:{value:searchConsole.impressions,unit:'impressions'}},`googleMetrics/latest:gsc:${rangeEnd}`);
+  }catch{/* feedback unavailability never fabricates a measurement or fails sync */}
   // Only a run that produced nothing at all is a failure. A partial run is
   // still fresher than what was there before.
   const anySucceeded = services.length > 0;

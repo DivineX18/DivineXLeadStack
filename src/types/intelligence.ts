@@ -153,6 +153,7 @@ export interface CroAuditCategoryScore {
  *  (a recommendation is identified by its position within an audit, not a
  *  standalone id), and the fix text lives in `fix`/`fixWithZeno`, not `title`. */
 export interface CroAuditRecommendation {
+  recommendationRef?: {recommendationId:string;evidenceId:string};
   /** Which intelligence artifact this came from. A Growth Scan is the entry
    *  point and is sufficient on its own; a CRO audit refines. Additive and
    *  optional so every stored/serialized recommendation predating it stays

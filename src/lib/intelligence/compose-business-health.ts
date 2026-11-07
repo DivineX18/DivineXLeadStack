@@ -1,3 +1,4 @@
+import {collectActionObservations} from "@/lib/intelligence/collect-action-observations";
 import "server-only";
 
 import { getAdminDb } from "@/lib/firebase/admin";
@@ -49,15 +50,20 @@ export async function composeBusinessHealthSummary(workspaceId: string): Promise
 
     let revenueThisMonthCents = 0;
     let wonDealsThisMonth = 0;
+    let measuredRevenueCents=0;
+    let revenueMeasurable=true;
     let openPipelineValueCents = 0;
     let openPipelineCount = 0;
     for (const doc of dealsSnap.docs) {
-      const d = doc.data() as { stageId?: string; value?: number; stageChangedAt?: { toDate?: () => Date } };
+      const d = doc.data() as { stageId?: string; value?: number; currency?:string; stageChangedAt?: { toDate?: () => Date } };
       const value = typeof d.value === "number" ? d.value : 0;
       if (d.stageId === "won") {
         const changedAt = d.stageChangedAt?.toDate?.() ?? null;
         if (changedAt && changedAt >= startOfMonth) {
           revenueThisMonthCents += value;
+          // Deal.value is whole currency units (the existing editor/tool contract),
+          // not cents. Never copy the legacy display field into outcome evidence.
+          if(d.currency==='USD'&&Number.isFinite(value)&&value>=0)measuredRevenueCents+=Math.round(value*100);else revenueMeasurable=false;
           wonDealsThisMonth += 1;
         }
       } else if (d.stageId !== "lost") {
@@ -87,6 +93,13 @@ export async function composeBusinessHealthSummary(workspaceId: string): Promise
       upcomingAppointmentCount: eventsSnap?.size ?? 0,
     };
 
+    // Feedback is best effort here, but once queued delivery is durable. Do
+    // not turn a failed contacts read (display fallback zero) into evidence.
+    const date=(d:Date)=>d.toISOString().slice(0,10),end=date(now);
+    try{
+      if(contactsSnap)await collectActionObservations(workspaceId,'flow_crm','crm:contacts',{start:date(startOfWeek),end},{leads:{value:contactsSnap.size,unit:'leads'}},`firestore:contacts:${end}`);
+      await collectActionObservations(workspaceId,'flow_crm','crm:deals_won',{start:date(startOfMonth),end},{...(revenueMeasurable&&wonDealsThisMonth>0?{revenue_cents:{value:measuredRevenueCents,unit:'USD cents'}}:{}),deals_won:{value:wonDealsThisMonth,unit:'deals'}},`firestore:deals:${end}`);
+    }catch{/* source summary remains available; no fabricated observation */}
     return { meta: { status: "ok", fetchedAt: Date.now(), reasonCode: null }, data: summary };
   } catch (err) {
     console.error(`[compose-business-health] failed workspaceId=${workspaceId}`, err);

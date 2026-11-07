@@ -10,19 +10,25 @@ import type { AiSuiteLevel } from "@/types/ai-suite";
  * outcome — so there's a complete trail of everything the assistant did.
  * Written via the Admin SDK; tenancy-stamped like every other collection.
  */
-export async function recordAiSuiteAction(entry: {
+export interface AiSuiteAuditEntry {
   level: AiSuiteLevel;
   capability: string;
   args: Record<string, unknown>;
   summary: string;
-  status: "executed" | "failed";
+  status: "executed" | "failed" | "rejected";
   agencyId: string;
   subAccountId: string | null;
   confirmedByUid: string;
   confirmedByEmail: string;
   resultRef?: { kind: string; id: string } | null;
   error?: string | null;
-}): Promise<void> {
+  executionId?:string;
+  recommendationRef?:{recommendationId:string;evidenceId:string;businessProfileId:string;workspaceId:string};
+}
+
+export async function recordAiSuiteAction(
+  entry: AiSuiteAuditEntry
+): Promise<void> {
   try {
     await getAdminDb()
       .collection("aiSuiteActions")
@@ -38,6 +44,8 @@ export async function recordAiSuiteAction(entry: {
         confirmedByEmail: entry.confirmedByEmail,
         resultRef: entry.resultRef ?? null,
         error: entry.error ?? null,
+        executionId:entry.executionId??null,
+        recommendationRef:entry.recommendationRef??null,
         createdAt: FieldValue.serverTimestamp(),
       });
   } catch (err) {

@@ -28,7 +28,7 @@ export async function composeIntelligenceSnapshot(workspaceId: string): Promise<
   const mapping = await getMappingBySubAccountId(workspaceId).catch(() => null);
   const businessProfileId = mapping?.primaryAscendBusinessProfileId ?? null;
 
-  if (!businessProfileId || mapping?.status === "archived") {
+  if (!businessProfileId || mapping?.status !== "active") {
     return {
       businessProfileId: null,
       dashboardSummary: UNAVAILABLE_NO_PROFILE,
@@ -69,6 +69,14 @@ export async function composeIntelligenceSnapshot(workspaceId: string): Promise<
   // passed off as an audited one.
   const derived = audited?.length ? null : recommendationsFromGrowthScan(dashboardSummary.data?.latestWebsiteScan ?? null);
   const recommendations = audited?.length ? audited : (derived?.length ? derived : audited);
+  // Link only by stable source/category identifiers, never text similarity.
+  const ledger=await client.recommendationReferences(businessProfileId,workspaceId);
+  if(ledger.ok&&Array.isArray(ledger.data)&&recommendations){
+    for(const rec of recommendations){
+      const matches=ledger.data.filter((r:Record<string,unknown>)=>rec.source==='growth_scan'&&r.category===rec.categoryKey&&r.growthScanId===dashboardSummary.data?.latestWebsiteScan?.id);
+      if(matches.length===1){const r=matches[0] as {recommendationId:string;evidenceId:string};rec.recommendationRef={recommendationId:r.recommendationId,evidenceId:r.evidenceId};}
+    }
+  }
 
   return {
     businessProfileId,

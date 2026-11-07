@@ -8372,6 +8372,7 @@ export const AI_SUITE_CAPABILITIES: AiSuiteCapability[] = [
         resultText:
           `${outcome} Funnel ${funnel.id} now has ${nextSections.length} sections, in this order: ` +
           `${nextSections.map((x) => `${x.type}(${x.id})`).join(", ")}. Status unchanged: ${funnel.status}.`,
+        ref: {kind:"funnel",id:funnel.id},
         completion: {
           outcome,
           review: [

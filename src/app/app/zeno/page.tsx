@@ -26,9 +26,9 @@ export const dynamic = "force-dynamic";
 export default async function ZenoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ funnel?: string; ask?: string }>;
+  searchParams: Promise<{ funnel?: string; ask?: string; recommendationId?: string; evidenceId?: string }>;
 }) {
-  const [{ funnel: funnelId, ask }, shell] = await Promise.all([searchParams, resolveShellContextForPage()]);
+  const [{ funnel: funnelId, ask, recommendationId, evidenceId }, shell] = await Promise.all([searchParams, resolveShellContextForPage()]);
   const workspaceId = shell?.workspace?.workspaceId ?? null;
 
   if (!workspaceId) {
@@ -69,6 +69,7 @@ export default async function ZenoPage({
         <AiSuiteChat
           level="sub-account"
           subAccountId={workspaceId}
+          recommendationRef={recommendationId&&evidenceId?{recommendationId,evidenceId}:undefined}
           seedPrompt={typeof ask === "string" && ask.trim() ? ask.slice(0, 1200) : null}
         />
       </div>

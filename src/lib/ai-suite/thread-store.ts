@@ -90,6 +90,7 @@ export function sanitizeStoredMessage(raw: unknown): StoredMessage | null {
       id: m.id.slice(0, 128),
       capability: m.capability.slice(0, 64),
       args: m.args,
+      ...(m.recommendationRef&&typeof m.recommendationRef==='object'&&typeof (m.recommendationRef as Record<string,unknown>).recommendationId==='string'&&/^[a-f0-9]{64}$/.test(String((m.recommendationRef as Record<string,unknown>).evidenceId))?{recommendationRef:{recommendationId:String((m.recommendationRef as Record<string,unknown>).recommendationId).slice(0,64),evidenceId:String((m.recommendationRef as Record<string,unknown>).evidenceId)}}:{}),
       summary: m.summary.slice(0, MAX_CONTENT_CHARS),
       status: m.status,
       resultText:

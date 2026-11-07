@@ -170,6 +170,7 @@ export function ZenoLauncher({ workspaceId }: { workspaceId?: string | null } = 
               level={level}
               subAccountId={subAccountId ?? undefined}
               seedPrompt={seed?.prompt ?? null}
+              recommendationRef={seed?.recommendationRef}
               {...(seed?.artifactRef
                 ? { artifactRef: seed.artifactRef }
                 : routeArtifact

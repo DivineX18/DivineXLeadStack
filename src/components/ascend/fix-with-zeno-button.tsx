@@ -29,11 +29,13 @@ import { askZeno } from "@/lib/divinex/ask-zeno";
  */
 export function FixWithZenoButton({
   fix,
+  recommendationRef,
   category,
   impact,
   source,
 }: {
   fix: string;
+  recommendationRef?: {recommendationId:string;evidenceId:string};
   category?: string;
   impact?: string;
   /** Where the finding came from. "growth_scan" means it describes the
@@ -63,7 +65,7 @@ export function FixWithZenoButton({
     <>
       <button
         type="button"
-        onClick={() => askZeno({ prompt })}
+        onClick={() => askZeno({ prompt, recommendationRef })}
         className="mt-2 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-colors hover:bg-[var(--dx-surface-3,rgba(127,127,127,0.12))]"
         style={{ color: "var(--dx-primary)" }}
       >

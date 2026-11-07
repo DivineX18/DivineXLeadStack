@@ -1,3 +1,4 @@
+import { drainFeedback } from "@/lib/ai-suite/outcome-feedback";
 import "server-only";
 
 import { NextResponse } from "next/server";
@@ -42,7 +43,7 @@ interface SweepResult {
 
 async function sweepFlatCollection(
   collectionGroupName: string,
-  now: Date,
+  now: Date
 ): Promise<SweepResult> {
   const db = getAdminDb();
   const snap = await db
@@ -108,48 +109,65 @@ export async function POST(request: Request) {
   const startedAt = Date.now();
   const now = new Date();
 
-  // Run all three sweeps sequentially. They're independent collection
-  // groups but parallelising adds little — each sweep is dominated by
-  // the Firestore ops, not CPU.
   const results: SweepResult[] = [];
+  let sweepFailed = false;
+  for (const sweep of [
+    () => sweepFlatCollection("apiRequestLogs", now),
+    () => sweepFlatCollection("apiIdempotency", now),
+    () => sweepWebhookEvents(now),
+  ]) {
+    try {
+      results.push(await sweep());
+    } catch {
+      sweepFailed = true;
+      console.error("[cron/api-cleanup] sweep failed");
+    }
+  }
+
+  // Receipt delivery is independent of TTL maintenance. An unrelated cleanup
+  // failure must not strand durable receipts.
+  let feedbackPending = false;
+  let feedbackFailed = false;
   try {
-    results.push(await sweepFlatCollection("apiRequestLogs", now));
-    results.push(await sweepFlatCollection("apiIdempotency", now));
-    results.push(await sweepWebhookEvents(now));
-  } catch (err) {
-    console.error("[cron/api-cleanup] sweep failed", err);
-    return NextResponse.json(
-      {
-        error: "sweep_failed",
-        message: err instanceof Error ? err.message : "unknown",
-        partial: results,
-      },
-      { status: 500 },
-    );
+    feedbackPending = await drainFeedback();
+  } catch {
+    feedbackFailed = true;
+    console.error("[cron/api-cleanup] feedback drain failed");
   }
-
-  const anyHitCap = results.some((r) => r.hitCap);
-
-  // If any sweep maxed out its batch, more work is waiting. Self-schedule
-  // a continuation so we keep draining without a long-running invocation.
-  // The daily schedule will pick up tomorrow's work; this short-window
-  // re-run is only for catching up after a spike.
-  if (anyHitCap) {
-    await publishCallback({
-      pathname: "/api/cron/api-cleanup",
-      body: {},
-      delaySeconds: CONTINUATION_DELAY_SEC,
-      // Time-based dedup id so multiple continuations within the same
-      // minute don't stomp each other but a healthy sweep can land its
-      // next run.
-      deduplicationId: `api-cleanup_continuation_${Math.floor(Date.now() / 1000 / 60)}`,
-    });
+  const continuationRequired =
+    sweepFailed ||
+    feedbackFailed ||
+    feedbackPending ||
+    results.some((r) => r.hitCap);
+  let continuationScheduled = false;
+  if (continuationRequired) {
+    try {
+      continuationScheduled = !!(await publishCallback({
+        pathname: "/api/cron/api-cleanup",
+        body: {},
+        delaySeconds: CONTINUATION_DELAY_SEC,
+        deduplicationId: `api-cleanup_continuation_${Math.floor(Date.now() / 60000)}`,
+      }));
+    } catch {
+      /* Non-2xx below preserves provider retry and exposes the failure. */
+    }
+    if (!continuationScheduled)
+      console.error("[cron/api-cleanup] continuation publish failed");
   }
-
-  return NextResponse.json({
-    ok: true,
-    durationMs: Date.now() - startedAt,
-    results,
-    continuationScheduled: anyHitCap,
-  });
+  const ok =
+    !sweepFailed &&
+    !feedbackFailed &&
+    (!continuationRequired || continuationScheduled);
+  return NextResponse.json(
+    {
+      ok,
+      durationMs: Date.now() - startedAt,
+      results,
+      sweepFailed,
+      feedbackFailed,
+      continuationRequired,
+      continuationScheduled,
+    },
+    { status: ok ? 200 : 503 }
+  );
 }

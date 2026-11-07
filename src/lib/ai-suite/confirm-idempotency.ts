@@ -1,3 +1,5 @@
+import {appendFeedback,type ExecutionDelivery} from "@/lib/ai-suite/outcome-feedback";
+import type { AiSuiteAuditEntry } from "@/lib/ai-suite/audit";
 import "server-only";
 
 import { createHash } from "node:crypto";
@@ -59,7 +61,9 @@ export type ClaimOutcome =
   | { kind: "fingerprint_mismatch" };
 
 export function fingerprintArgs(args: Record<string, unknown>): string {
-  return createHash("sha256").update(JSON.stringify(args), "utf8").digest("hex");
+  return createHash("sha256")
+    .update(JSON.stringify(args), "utf8")
+    .digest("hex");
 }
 
 function keyFor(identity: ConfirmIdentity, confirmationId: string): string {
@@ -74,10 +78,16 @@ function keyFor(identity: ConfirmIdentity, confirmationId: string): string {
 }
 
 function docRef(identity: ConfirmIdentity, confirmationId: string) {
-  return getAdminDb().collection("aiSuiteConfirmations").doc(keyFor(identity, confirmationId));
+  return getAdminDb()
+    .collection("aiSuiteConfirmations")
+    .doc(keyFor(identity, confirmationId));
 }
 
-function baseFields(identity: ConfirmIdentity, argsFingerprint: string, startedAt: number) {
+function baseFields(
+  identity: ConfirmIdentity,
+  argsFingerprint: string,
+  startedAt: number
+) {
   return {
     status: "running" as const,
     startedAt,
@@ -92,13 +102,18 @@ function baseFields(identity: ConfirmIdentity, argsFingerprint: string, startedA
 
 function resolveSucceeded(
   data: Record<string, unknown>,
-  argsFingerprint: string,
+  argsFingerprint: string
 ): ClaimOutcome | null {
   const expiresAt = data.expiresAt;
   const expiresAtMs =
-    expiresAt instanceof Timestamp ? expiresAt.toMillis() : typeof expiresAt === "number" ? expiresAt : 0;
+    expiresAt instanceof Timestamp
+      ? expiresAt.toMillis()
+      : typeof expiresAt === "number"
+        ? expiresAt
+        : 0;
   if (expiresAtMs <= Date.now()) return null; // expired -- treat as a miss
-  if (data.argsFingerprint !== argsFingerprint) return { kind: "fingerprint_mismatch" };
+  if (data.argsFingerprint !== argsFingerprint)
+    return { kind: "fingerprint_mismatch" };
   return { kind: "cached", response: data.response as CachedConfirmResponse };
 }
 
@@ -112,7 +127,7 @@ function resolveSucceeded(
 export async function claimConfirmation(
   identity: ConfirmIdentity,
   confirmationId: string,
-  argsFingerprint: string,
+  argsFingerprint: string
 ): Promise<ClaimOutcome> {
   const ref = docRef(identity, confirmationId);
   return getAdminDb().runTransaction(async (tx) => {
@@ -157,9 +172,15 @@ export async function settleConfirmationSucceeded(
   confirmationId: string,
   argsFingerprint: string,
   response: CachedConfirmResponse,
-): Promise<void> {
+  audit?: AiSuiteAuditEntry,
+  delivery?: ExecutionDelivery
+): Promise<boolean> {
+  for(let attempt=0;attempt<(delivery?3:1);attempt++){
   try {
-    await docRef(identity, confirmationId).set({
+    const db = getAdminDb();
+    const ref = docRef(identity, confirmationId);
+    const batch = db.batch();
+    batch.set(ref, {
       status: "succeeded",
       settledAt: FieldValue.serverTimestamp(),
       expiresAt: Timestamp.fromMillis(Date.now() + SUCCEEDED_TTL_MS),
@@ -171,9 +192,26 @@ export async function settleConfirmationSucceeded(
       level: identity.level,
       capability: identity.capability,
     });
+    if (audit)
+      batch.set(db.doc(`aiSuiteActions/confirm_${ref.id}`), {
+        ...audit,
+        error: audit.error ?? null,
+        resultRef: audit.resultRef ?? null,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    if(delivery)appendFeedback(batch,delivery,"succeeded",{artifactRef:audit?.resultRef?`${audit.resultRef.kind}:${audit.resultRef.id}`:"execution:"+delivery.executionId});
+    // A replayable success and its audit receipt are one atomic commit.
+    // Does not close the pre-settle crash/ambiguous-execution residual.
+    await batch.commit();
+    return true;
   } catch (err) {
-    console.warn("[ai-suite/confirm-idempotency] failed to cache succeeded result:", err);
+    console.warn(
+      "[ai-suite/confirm-idempotency] failed to cache succeeded result and audit:",
+      err
+    );
   }
+  }
+  return false;
 }
 
 /**
@@ -219,12 +257,15 @@ export async function settleConfirmationSucceeded(
  */
 export async function releaseConfirmationFailed(
   identity: ConfirmIdentity,
-  confirmationId: string,
+  confirmationId: string
 ): Promise<void> {
   try {
     await docRef(identity, confirmationId).delete();
   } catch (err) {
-    console.warn("[ai-suite/confirm-idempotency] failed to release lock after failure:", err);
+    console.warn(
+      "[ai-suite/confirm-idempotency] failed to release lock after failure:",
+      err
+    );
   }
 }
 
@@ -243,7 +284,7 @@ export async function releaseConfirmationFailed(
 export async function waitForConcurrentResult(
   identity: ConfirmIdentity,
   confirmationId: string,
-  argsFingerprint: string,
+  argsFingerprint: string
 ): Promise<ClaimOutcome> {
   const ref = docRef(identity, confirmationId);
   const deadline = Date.now() + WAIT_MAX_MS;

@@ -49,6 +49,7 @@ export interface AiSuiteKnowledgeCard {
 
 /** POST body for the AI Suite chat endpoint. */
 export interface AiSuiteChatRequest {
+  recommendationRef?: {recommendationId:string;evidenceId:string};
   level: AiSuiteLevel;
   /** Required when `level === "sub-account"`; the route scopes auth to it. */
   subAccountId?: string;
@@ -79,6 +80,7 @@ export interface AiSuiteChatRequest {
  * confirm endpoint re-checks permission, re-validates, and executes.
  */
 export interface AiSuiteProposedAction {
+  recommendationRef?: {recommendationId:string;evidenceId:string};
   /** The model's tool-call id (for UI keying). */
   id: string;
   /** Capability name from the registry. */
@@ -102,6 +104,8 @@ export type AiSuiteChatResponse =
 
 /** POST body for confirming (executing) a proposed action. */
 export interface AiSuiteConfirmRequest {
+  decision?: "execute" | "reject";
+  recommendationRef?: {recommendationId:string;evidenceId:string};
   level: AiSuiteLevel;
   subAccountId?: string;
   capability: string;

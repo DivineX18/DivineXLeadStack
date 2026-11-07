@@ -1,3 +1,5 @@
+import { agentOutcomeEnabled } from "@/lib/ai-suite/outcome-activation";
+import {validateRecommendation,bindRecommendationProposal} from "@/lib/ai-suite/outcome-feedback";
 import "server-only";
 
 import { NextResponse } from "next/server";
@@ -213,6 +215,12 @@ export async function POST(request: Request) {
     );
   }
 
+  let recommendationRef;
+  if(body.recommendationRef){
+    if(!agentOutcomeEnabled()) return NextResponse.json({error:"Recommendation execution is inactive"},{status:503});
+    if(level!=='sub-account'||!body.subAccountId)return NextResponse.json({error:'Recommendation requires a workspace'},{status:400});
+    try{recommendationRef=await validateRecommendation(body.subAccountId,body.recommendationRef);}catch{return NextResponse.json({error:'Recommendation evidence unavailable'},{status:403});}
+  }
   const messages = sanitizeMessages(body.messages);
   if (!messages || messages.length === 0) {
     return NextResponse.json(
@@ -675,10 +683,12 @@ export async function POST(request: Request) {
     if (cap && !cap.readonly && cap.level === lvl) {
       const validated = cap.validate(withOperatorFigures(turn.toolCall.args));
       if (validated.ok) {
+        if(recommendationRef)await bindRecommendationProposal(actionCtx.uid,turn.toolCall.id,cap.name,validated.args,recommendationRef);
         const response: AiSuiteChatResponse = {
           type: "proposal",
           proposal: {
             id: turn.toolCall.id,
+            ...(recommendationRef ? {recommendationRef} : {}),
             capability: cap.name,
             args: validated.args,
             summary: cap.summarize(validated.args),

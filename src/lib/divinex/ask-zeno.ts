@@ -30,6 +30,7 @@ export const ASK_ZENO_EVENT = "divinex:ask-zeno";
 export interface AskZenoDetail {
   /** The request, phrased as the customer would say it. */
   prompt: string;
+  recommendationRef?: {recommendationId:string;evidenceId:string};
   /** Optional artifact the request concerns, so Zeno reasons about the real
    *  draft rather than regenerating from a title. */
   artifactRef?: { kind: "funnel"; id: string; sectionId?: string | null };
@@ -59,5 +60,6 @@ export function askZeno(detail: AskZenoDetail): void {
   // Nothing could open the panel here. Hand the request to the Zeno page
   // rather than letting the click do nothing.
   const ask = detail.prompt.slice(0, MAX_SEEDED_PROMPT);
-  window.location.href = `${ZENO_PAGE_PATH}?ask=${encodeURIComponent(ask)}`;
+  const ref=detail.recommendationRef;
+  window.location.href = `${ZENO_PAGE_PATH}?ask=${encodeURIComponent(ask)}${ref?`&recommendationId=${encodeURIComponent(ref.recommendationId)}&evidenceId=${encodeURIComponent(ref.evidenceId)}`:""}`;
 }

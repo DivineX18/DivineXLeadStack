@@ -26,14 +26,12 @@
  *   JAVA_HOME=<jre> npx firebase emulators:exec --only firestore \
  *     "npx tsx scripts/verify-ai-suite-confirm-idempotency.mts"
  */
-import { readFileSync } from "node:fs";
-for (const l of readFileSync(new URL("../.env.local", import.meta.url), "utf8").split("\n")) {
-  const i = l.indexOf("=");
-  if (i > 0 && !l.startsWith("#")) process.env[l.slice(0, i).trim()] ??= l.slice(i + 1).trim().replace(/^["']|["']$/g, "");
-}
-// Overridable: port 8080 is this machine's default, but a long-running
-// unrelated emulator (a different project) can already be holding it.
-process.env.FIRESTORE_EMULATOR_HOST ??= "127.0.0.1:8080";
+// This verifier must never load deployment credentials or share a live namespace.
+import {initializeApp} from 'firebase-admin/app';
+const emulator=process.env.FIRESTORE_EMULATOR_HOST;
+const project=process.env.QA_EMULATOR_PROJECT_ID;
+if(!emulator||!/^(127\.0\.0\.1|localhost):\d+$/.test(emulator)||!project||!/^demo-[a-z0-9-]+$/.test(project))throw new Error('Explicit loopback FIRESTORE_EMULATOR_HOST and unique demo- QA_EMULATOR_PROJECT_ID required. No env files are loaded.');
+initializeApp({projectId:project});
 
 const { getAdminDb } = await import("../src/lib/firebase/admin");
 const {
@@ -44,6 +42,7 @@ const {
   fingerprintArgs,
 } = await import("../src/lib/ai-suite/confirm-idempotency");
 
+if(!(await getAdminDb().collection('aiSuiteConfirmations').limit(1).get()).empty)throw new Error('Use an empty dedicated demo namespace; existing fixtures will not be changed.');
 let failures = 0;
 const check = (label: string, cond: boolean, detail?: string) => {
   if (cond) {
@@ -335,5 +334,6 @@ const freshId = (label: string) => `tool_${label}_${seq++}`;
   );
 }
 
+await getAdminDb().recursiveDelete(getAdminDb().collection('aiSuiteConfirmations'));
 console.log(`\n${failures === 0 ? "ALL PASS" : `${failures} FAILED`}`);
 process.exit(failures === 0 ? 0 : 1);

@@ -47,6 +47,7 @@ interface AiSuiteChatProps {
    *  so the customer reads and chooses. Re-seeding with the same text is a
    *  no-op; a new request replaces an unsent draft. */
   seedPrompt?: string | null;
+  recommendationRef?: {recommendationId:string;evidenceId:string};
 }
 
 type ProposalStatus = "pending" | "confirmed" | "cancelled" | "failed";
@@ -68,6 +69,7 @@ type UiMessage =
       capability: string;
       args: Record<string, unknown>;
       summary: string;
+      recommendationRef?: {recommendationId:string;evidenceId:string};
       status: ProposalStatus;
       resultText?: string;
       /** BUILD COMPLETION CONTRACT (Production Experience 2.0): what Zeno
@@ -259,6 +261,7 @@ export function AiSuiteChat({
   onActiveChange,
   artifactRef,
   seedPrompt,
+  recommendationRef,
 }: AiSuiteChatProps) {
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [input, setInput] = useState("");
@@ -433,6 +436,7 @@ export function AiSuiteChat({
           level,
           subAccountId,
           messages: toApiHistory(next),
+          recommendationRef,
           // P0.6 Phase 2 — WHERE the customer is, nothing more. The server
           // normalizes this against the IA whitelist and decides what may be
           // known there. Never send profile, brand or artifact CONTENTS from
@@ -483,6 +487,7 @@ export function AiSuiteChat({
             capability: p.capability,
             args: p.args,
             summary: p.summary,
+            recommendationRef: p.recommendationRef,
             status: "pending",
           },
         ]);
@@ -543,6 +548,7 @@ export function AiSuiteChat({
           capability: msg.capability,
           args: msg.args,
           confirmationId: msg.id,
+          recommendationRef: msg.recommendationRef,
         }),
       });
       const data = (await res.json().catch(() => null)) as {
@@ -578,6 +584,16 @@ export function AiSuiteChat({
     } finally {
       setConfirmingId(null);
     }
+  }
+
+  async function cancelProposal(msg:Extract<UiMessage,{kind:"proposal"}>) {
+    if(!msg.recommendationRef){updateProposal(msg.id,{status:'cancelled'});return;}
+    if(confirmingId)return;
+    setConfirmingId(msg.id);
+    try{const r=await fetch('/api/ai-suite/confirm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({level,subAccountId,capability:msg.capability,args:msg.args,confirmationId:msg.id,recommendationRef:msg.recommendationRef,decision:'reject'})});
+      if(!r.ok)throw new Error('Rejection was not recorded. Retry cancellation.');
+      updateProposal(msg.id,{status:'cancelled'});
+    }catch{setError('Rejection was not recorded. Nothing was executed. Please retry cancellation.');}finally{setConfirmingId(null);}
   }
 
   function updateProposal(
@@ -789,9 +805,7 @@ export function AiSuiteChat({
                     msg={m}
                     busy={confirmingId === m.id}
                     onConfirm={() => confirmProposal(m.id)}
-                    onCancel={() =>
-                      updateProposal(m.id, { status: "cancelled" })
-                    }
+                    onCancel={() => cancelProposal(m)}
                   />
                 );
               }
