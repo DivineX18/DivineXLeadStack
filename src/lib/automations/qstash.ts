@@ -58,6 +58,10 @@ interface PublishCallbackInput {
   delaySeconds: number;
   /** QStash dedup id — underscores only, no colons. Reschedules pass a nonce-suffixed id. */
   deduplicationId: string;
+  /** Optional caller-specific retry bound; existing callers retain SDK defaults. */
+  retries?: number;
+  /** Allows maintenance callers to emit sanitized errors instead of raw SDK errors. */
+  onError?: (error: unknown) => void;
 }
 
 interface PublishCallbackResult {
@@ -90,10 +94,12 @@ export async function publishCallback(
       body: input.body,
       delay: Math.max(0, Math.floor(input.delaySeconds)),
       deduplicationId: input.deduplicationId,
+      ...(input.retries === undefined ? {} : { retries: input.retries }),
     });
     return { messageId: res.messageId };
   } catch (err) {
-    console.error("[qstash] publishCallback failed", err);
+    if (input.onError) input.onError(err);
+    else console.error("[qstash] publishCallback failed", err);
     return null;
   }
 }
