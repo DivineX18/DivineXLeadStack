@@ -1,3 +1,4 @@
+import { sweepBoundedWebhookEvents } from "@/lib/api/webhooks/cleanup";
 import { drainFeedback } from "@/lib/ai-suite/outcome-feedback";
 import "server-only";
 import { createHash } from "node:crypto";
@@ -170,35 +171,8 @@ async function sweepFlatCollection(
 }
 
 async function sweepWebhookEvents(now: Date): Promise<SweepResult> {
-  // webhookEvents has a `deliveries/{id}` subcollection. recursiveDelete
-  // is the only safe way to remove the parent — a batch delete would
-  // orphan the deliveries.
-  const db = getAdminDb();
-  const snap = await sweepOperation("query_expired", () =>
-    db
-      .collectionGroup("webhookEvents")
-      .where("expiresAt", "<", now)
-      .limit(BATCH_LIMIT)
-      .get()
-  );
-  if (snap.empty) {
-    return { collection: "webhookEvents", deleted: 0, hitCap: false };
-  }
-  // recursiveDelete on each ref — Firestore Admin SDK throttles internally
-  // to avoid hot-tablet writes. Sequential per doc keeps memory bounded;
-  // for our volume this is fine. If sweep volume grows past 5k/day we'd
-  // want to fan-out via QStash + parallelize. Track via the response
-  // counts before that's a real concern.
-  let deleted = 0;
-  for (const doc of snap.docs) {
-    await sweepOperation("recursive_delete", () => db.recursiveDelete(doc.ref));
-    deleted += 1;
-  }
-  return {
-    collection: "webhookEvents",
-    deleted,
-    hitCap: snap.size >= BATCH_LIMIT,
-  };
+  // 500 is a TOTAL webhook document budget, including delivery children.
+  return sweepBoundedWebhookEvents(getAdminDb(), now, sweepOperation);
 }
 
 export async function POST(request: Request) {

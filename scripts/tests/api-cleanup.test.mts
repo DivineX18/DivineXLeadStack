@@ -16,14 +16,13 @@ const state = vi.hoisted(() => ({
   errors: {} as Record<string, unknown>,
   sizes: {} as Record<string, number>,
   batchFailure: false,
-  recursiveFailure: false,
+  schemaFailure: false,
   drainFailure: false,
   pending: false,
   signed: true,
   publishOk: true,
   published: [] as Callback[],
   deleted: [] as string[],
-  recursive: [] as string[],
 }));
 vi.mock("@/lib/firebase/admin", () => ({
   getAdminDb: () => ({
@@ -40,7 +39,17 @@ vi.mock("@/lib/firebase/admin", () => ({
                 empty: size === 0,
                 size,
                 docs: Array.from({ length: size }, (_, i) => ({
-                  ref: { id: name + "-" + i },
+                  ref: {
+                    id: name + "-" + i,
+                    collection: () => ({}),
+                    listCollections: async () => {
+                      if (state.schemaFailure)
+                        throw Object.assign(Error("private record"), {
+                          code: 7,
+                        });
+                      return [];
+                    },
+                  },
                 })),
               };
             },
@@ -58,11 +67,6 @@ vi.mock("@/lib/firebase/admin", () => ({
           state.deleted.push(...ids);
         },
       };
-    },
-    recursiveDelete: async (ref: Ref) => {
-      if (state.recursiveFailure)
-        throw Object.assign(Error("private record"), { code: 7 });
-      state.recursive.push(ref.id);
     },
   }),
 }));
@@ -96,14 +100,14 @@ beforeEach(() => {
   state.errors = {};
   state.sizes = {};
   state.batchFailure = false;
-  state.recursiveFailure = false;
+  state.schemaFailure = false;
   state.drainFailure = false;
   state.pending = false;
   state.signed = true;
   state.publishOk = true;
   state.published = [];
   state.deleted = [];
-  state.recursive = [];
+
   vi.stubEnv("DIVINEX_AGENT_OUTCOME_ENABLED", "false");
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.spyOn(console, "info").mockImplementation(() => {});
@@ -185,20 +189,13 @@ describe("cleanup retention and failure diagnostics", () => {
     expect(state.deleted).toHaveLength(0);
     expect(state.published).toHaveLength(0);
   });
-  it("recursively deletes webhook children rather than orphaning deliveries", async () => {
-    state.sizes.webhookEvents = 2;
-    const b = await (await POST(request())).json();
-    expect(state.recursive).toEqual(["webhookEvents-0", "webhookEvents-1"]);
-    expect(state.deleted).toHaveLength(0);
-    expect(b.results[2].deleted).toBe(2);
-  });
-  it("identifies recursive deletion failures separately from query failures", async () => {
+  it("identifies schema inspection failures separately from query failures", async () => {
     state.sizes.webhookEvents = 1;
-    state.recursiveFailure = true;
+    state.schemaFailure = true;
     const b = await (await POST(request())).json();
     expect(b.failures[0]).toMatchObject({
       collection: "webhookEvents",
-      operation: "recursive_delete",
+      operation: "inspect_schema",
       code: "permission-denied",
       retryable: false,
     });

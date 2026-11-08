@@ -14,10 +14,11 @@ import type {
  * Admin-SDK CRUD for `subAccounts/{id}/webhookEvents/{eventId}` and its
  * `deliveries/{deliveryId}` subcollection.
  *
- * - Events are append-only. 90-day TTL on `expiresAt` for background
+ * - Event payloads are append-only; cleanup/delivery-fence metadata can change.
+ *   90-day TTL on `expiresAt` for background
  *   reaping; the manual-replay UI only shows events within the window.
  * - Deliveries are mutated through the delivery lifecycle (pending →
- *   succeeded / failed / exhausted) but never deleted — operators want
+ *   succeeded / failed / exhausted) and retained until expired-event cleanup — operators want
  *   to debug failures days after the fact.
  *
  * Server-only on every axis; Firestore rules allow admin READ on both
@@ -127,7 +128,7 @@ export async function getEvent(
     .collection("webhookEvents")
     .doc(eventId)
     .get();
-  if (!snap.exists) return null;
+  if (!snap.exists || snap.data()?.cleanupState === "deleting") return null;
   return eventSnapToDoc(snap.id, snap.data()!);
 }
 
@@ -151,21 +152,29 @@ export async function createDelivery(
     .doc(input.eventId)
     .collection("deliveries")
     .doc();
-  await ref.set({
-    eventId: input.eventId,
-    subscriptionId: input.subscriptionId,
-    subAccountId: input.subAccountId,
-    agencyId: input.agencyId,
-    attempt: input.attempt,
-    url: input.url,
-    status: "pending" satisfies WebhookDeliveryStatus,
-    httpStatus: null,
-    responseBody: null,
-    responseHeaders: null,
-    errorMessage: null,
-    scheduledAt: input.scheduledAt,
-    attemptedAt: null,
-    nextRetryAt: null,
+  const parent = ref.parent.parent!;
+  await getAdminDb().runTransaction(async (tx) => {
+    const event = await tx.get(parent);
+    if (!event.exists || event.data()?.cleanupState === "deleting")
+      throw new Error("Webhook event is unavailable for delivery");
+    tx.set(ref, {
+      eventId: input.eventId,
+      subscriptionId: input.subscriptionId,
+      subAccountId: input.subAccountId,
+      agencyId: input.agencyId,
+      attempt: input.attempt,
+      url: input.url,
+      status: "pending" satisfies WebhookDeliveryStatus,
+      httpStatus: null,
+      responseBody: null,
+      responseHeaders: null,
+      errorMessage: null,
+      scheduledAt: input.scheduledAt,
+      attemptedAt: null,
+      nextRetryAt: null,
+    });
+    // Shared parent fence makes append vs cleanup ownership serializable.
+    tx.update(parent, { deliveryUpdatedAt: FieldValue.serverTimestamp() });
   });
   return {
     id: ref.id,
@@ -279,12 +288,24 @@ export async function updateDelivery(
     nextRetryAt: Date | null;
   }>,
 ): Promise<void> {
-  await getAdminDb()
+  const db = getAdminDb();
+  const parent = db
     .collection("subAccounts")
     .doc(subAccountId)
     .collection("webhookEvents")
-    .doc(eventId)
-    .collection("deliveries")
-    .doc(deliveryId)
-    .set(patch, { merge: true });
+    .doc(eventId);
+  const ref = parent.collection("deliveries").doc(deliveryId);
+  await db.runTransaction(async (tx) => {
+    const event = await tx.get(parent);
+    const delivery = await tx.get(ref);
+    // A late worker must never recreate a deleted child/parent or extend a purge.
+    if (
+      !event.exists ||
+      event.data()?.cleanupState === "deleting" ||
+      !delivery.exists
+    )
+      return;
+    tx.update(ref, patch);
+    tx.update(parent, { deliveryUpdatedAt: FieldValue.serverTimestamp() });
+  });
 }

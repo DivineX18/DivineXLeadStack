@@ -13,6 +13,7 @@ const config = {
     include: [
       "scripts/tests/api-cleanup.test.mts",
       "scripts/tests/qstash-cleanup.test.mts",
+      "scripts/tests/webhook-cleanup-budget.test.mts",
     ],
   },
 };
