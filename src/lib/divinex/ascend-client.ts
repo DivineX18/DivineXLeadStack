@@ -1,4 +1,5 @@
 import "server-only";
+import { isStagingDeployment } from "@/lib/env/deployment-environment";
 
 /**
  * ASCEND INTELLIGENCE CLIENT (Unification Slice 4).
@@ -16,7 +17,20 @@ import "server-only";
 const BASE = () => process.env.ASCEND_API_BASE_URL ?? "https://ascend.divinex.io";
 const SECRET = () => process.env.ASCEND_SSO_SHARED_SECRET ?? "";
 
+/**
+ * Staging isolation (2026-11-09, same bug class as lib/auth/ascend-exchange-url.ts):
+ * BASE() falls back to the real PRODUCTION Ascend host when
+ * ASCEND_API_BASE_URL is unset, and ascendConfigured() only ever checked
+ * SECRET() — so a staging deployment that has ASCEND_SSO_SHARED_SECRET set
+ * (which it does, since the SSO leg reuses the same var) but no
+ * ASCEND_API_BASE_URL of its own would silently call the live production
+ * Ascend service from every Growth Score / Command Center / growth-scan
+ * surface. There is no staging counterpart to point this at today, so this
+ * fails closed exactly like the SSO exchange does, rather than guessing a
+ * URL.
+ */
 export function ascendConfigured(): boolean {
+  if (isStagingDeployment()) return false;
   return !!SECRET();
 }
 

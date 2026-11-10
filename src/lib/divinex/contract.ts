@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { resolveAuthorizedBusinessProfileId, sameProfileId } from "@/lib/divinex/profile-authorization";
+import { isStagingDeployment } from "@/lib/env/deployment-environment";
 
 /**
  * DIVINEX PROFILE CONTRACT — Flow side (Unification Slice 1).
@@ -27,7 +28,18 @@ import { resolveAuthorizedBusinessProfileId, sameProfileId } from "@/lib/divinex
 const SECRET = () => process.env.ASCEND_SSO_SHARED_SECRET ?? "";
 const MAX_SKEW_MS = 5 * 60 * 1000;
 
+/**
+ * Staging isolation (2026-11-09, same bug class as lib/divinex/ascend-client.ts
+ * and lib/auth/ascend-exchange-url.ts): reconcileProfileFromAscend() below
+ * falls back to the real PRODUCTION https://ascend.divinex.io when
+ * ASCEND_API_BASE_URL is unset, and this check only ever looked at SECRET()
+ * — so a staging deployment with ASCEND_SSO_SHARED_SECRET set (shared with
+ * the SSO leg) but no staging-specific ASCEND_API_BASE_URL would silently
+ * pull real production profile data over the network. Fails closed exactly
+ * like the other two Ascend call sites.
+ */
 export function divinexContractConfigured(): boolean {
+  if (isStagingDeployment()) return false;
   return !!SECRET();
 }
 
