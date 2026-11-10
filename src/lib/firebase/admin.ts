@@ -5,6 +5,7 @@ import { getAuth, type Auth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { assertFirebaseProjectNotProductionInStaging } from "@/lib/env/deployment-environment";
+import { normalizeFirebasePrivateKey } from "@/lib/firebase/private-key";
 
 let _app: App | null = null;
 
@@ -25,9 +26,8 @@ function getAdminApp(): App {
         credential: cert({
           projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
           clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-          privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(
-            /\\n/g,
-            "\n"
+          privateKey: normalizeFirebasePrivateKey(
+            process.env.FIREBASE_ADMIN_PRIVATE_KEY,
           ),
         }),
       });

@@ -460,10 +460,25 @@ export default async function middleware(request: NextRequest) {
     serviceAccount: {
       projectId: process.env.FIREBASE_ADMIN_PROJECT_ID ?? "",
       clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL ?? "",
-      privateKey: (process.env.FIREBASE_ADMIN_PRIVATE_KEY ?? "").replace(
-        /\\n/g,
-        "\n",
-      ),
+      // Same normalization as src/lib/firebase/private-key.ts (duplicated,
+      // not imported, to keep this Edge entrypoint's import graph exactly
+      // as it was — zero @/lib imports — rather than risk an Edge-bundling
+      // surprise for an unrelated fix): strips one layer of surrounding
+      // literal quote characters (a value pasted straight out of a
+      // `.env.local` file, quotes and all), then converts escaped \n to
+      // real newlines.
+      privateKey: (() => {
+        let value = (process.env.FIREBASE_ADMIN_PRIVATE_KEY ?? "").trim();
+        const first = value[0];
+        const last = value[value.length - 1];
+        if (
+          (first === '"' && last === '"') ||
+          (first === "'" && last === "'")
+        ) {
+          value = value.slice(1, -1);
+        }
+        return value.replace(/\\n/g, "\n");
+      })(),
     },
     handleValidToken: async ({ decodedToken }, headers) => {
       // Allow authenticated users through
