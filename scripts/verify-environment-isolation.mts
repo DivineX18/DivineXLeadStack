@@ -44,7 +44,11 @@ const recurringDisabled = process.env.DISABLE_RECURRING_SCHEDULES === "true";
 const nodeEnv = process.env.NODE_ENV;
 const deploymentEnv = process.env.DEPLOYMENT_ENV?.trim().toLowerCase();
 const isStaging = deploymentEnv === "staging";
-const blockLiveMessaging = process.env.STAGING_BLOCK_LIVE_MESSAGING === "true";
+// Mirrors lib/comms/staging-messaging-guard.ts's isBlocked(): explicit
+// true/false always wins; unset defers to DEPLOYMENT_ENV=staging.
+const messagingOverride = process.env.STAGING_BLOCK_LIVE_MESSAGING;
+const blockLiveMessaging =
+  messagingOverride === "true" || (messagingOverride !== "false" && isStaging);
 const messagingAllowlist = process.env.STAGING_MESSAGING_ALLOWLIST?.trim();
 
 console.log("=== Environment isolation pre-flight ===");
@@ -59,7 +63,8 @@ console.log(
       QSTASH_TOKEN: qstashToken ? "(set, value redacted)" : "(unset)",
       QSTASH_SCHEDULE_ID_SUFFIX: qstashSuffix ?? "(unset)",
       DISABLE_RECURRING_SCHEDULES: String(recurringDisabled),
-      STAGING_BLOCK_LIVE_MESSAGING: String(blockLiveMessaging),
+      STAGING_BLOCK_LIVE_MESSAGING_raw: messagingOverride ?? "(unset)",
+      STAGING_BLOCK_LIVE_MESSAGING_effective: String(blockLiveMessaging),
       STAGING_MESSAGING_ALLOWLIST: messagingAllowlist
         ? `(set: ${messagingAllowlist.split(",").length} entr${messagingAllowlist.split(",").length === 1 ? "y" : "ies"})`
         : "(unset)",
@@ -140,15 +145,19 @@ if (recurringDisabled) {
 // discovered via an unexpected real send to a stranger.
 if (blockLiveMessaging && messagingAllowlist) {
   pass(
-    `STAGING_BLOCK_LIVE_MESSAGING=true with an allowlist set — outbound SMS/email will refuse any recipient not explicitly listed.`,
+    `Outbound messaging is BLOCKED by default (${messagingOverride === "true" ? "STAGING_BLOCK_LIVE_MESSAGING=true" : "DEPLOYMENT_ENV=staging"}) with an allowlist set — SMS/email will refuse any recipient not explicitly listed.`,
   );
 } else if (blockLiveMessaging && !messagingAllowlist) {
   warn(
-    "STAGING_BLOCK_LIVE_MESSAGING=true but STAGING_MESSAGING_ALLOWLIST is empty — every outbound SMS/email will be refused, including to your own approved test recipients. Add them to STAGING_MESSAGING_ALLOWLIST.",
+    "Outbound messaging is BLOCKED but STAGING_MESSAGING_ALLOWLIST is empty — every outbound SMS/email will be refused, including to your own approved test recipients. Add them to STAGING_MESSAGING_ALLOWLIST before the Growth System E2E run.",
+  );
+} else if (isStaging && messagingOverride === "false") {
+  warn(
+    'DEPLOYMENT_ENV=staging but STAGING_BLOCK_LIVE_MESSAGING is explicitly "false" — outbound SMS/email sends in this run are UNRESTRICTED and will reach whatever recipient the code dials/addresses, live, through whatever real Twilio/Resend credentials this environment has. Confirm this is deliberate.',
   );
 } else {
   warn(
-    "STAGING_BLOCK_LIVE_MESSAGING is not set to \"true\" — outbound SMS/email sends in this run are UNRESTRICTED and will reach whatever recipient the code dials/addresses, live, through the real Twilio/Resend credentials this environment has. Set STAGING_BLOCK_LIVE_MESSAGING=true + STAGING_MESSAGING_ALLOWLIST before running anything that could send to a real customer.",
+    "Outbound messaging is UNRESTRICTED in this run (neither DEPLOYMENT_ENV=staging nor STAGING_BLOCK_LIVE_MESSAGING=true is set) — SMS/email sends will reach whatever recipient the code dials/addresses, live, through the real Twilio/Resend credentials this environment has. Expected for production and local dev; set DEPLOYMENT_ENV=staging (or STAGING_BLOCK_LIVE_MESSAGING=true) + STAGING_MESSAGING_ALLOWLIST before running anything staging-shaped that could send to a real customer.",
   );
 }
 

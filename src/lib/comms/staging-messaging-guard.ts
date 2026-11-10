@@ -1,25 +1,29 @@
 import "server-only";
+import { isStagingDeployment } from "@/lib/env/deployment-environment";
 
 /**
  * Outbound-messaging safety for a staging/test environment (2026-11-09
  * staging-isolation sprint).
  *
- * Deliberately NOT keyed off `isStagingDeployment()` — unlike the Firebase
- * and SSO guards, a blanket "non-production blocks all sends" rule would
- * break an already-documented, legitimate workflow: this repo's own
- * onboarding guide has buyers send real test SMS/email from local dev
- * against real Twilio/Resend creds and real numbers they own. Local dev is
- * "not production" by every signal this codebase has, and must keep working
- * exactly as documented.
+ * The instruction this exists to satisfy says "ensure staging CANNOT
+ * ACCIDENTALLY email/SMS real customers" — accidentally is the operative
+ * word, so an opt-in-only switch that a deployer could simply forget to set
+ * is not good enough. The default behavior is therefore keyed off
+ * `isStagingDeployment()` (DEPLOYMENT_ENV=staging): staging is BLOCKED by
+ * default, with an explicit allowlist for approved test recipients. Every
+ * other deployment — production, local dev, every existing buyer
+ * deployment — has never set DEPLOYMENT_ENV and defaults to unrestricted,
+ * exactly as this repo's own onboarding guide already documents (buyers
+ * send real test SMS/email from local dev against real Twilio/Resend creds
+ * and real numbers they own; that must keep working unchanged).
  *
- * So this is a SEPARATE, narrower, fully opt-in switch. Both env vars
- * default unset, which is a true no-op — zero behavior change for
- * production, local dev, and every existing buyer deployment. Only a
- * deployment that explicitly sets `STAGING_BLOCK_LIVE_MESSAGING=true` (the
- * Render staging service, for the Growth System E2E run) gets the
- * allowlist enforced, and the allowlist itself is also explicit
- * (`STAGING_MESSAGING_ALLOWLIST`) — there is no credential-based inference
- * here, per this sprint's own instruction not to infer safety from
+ * `STAGING_BLOCK_LIVE_MESSAGING` is an explicit override in BOTH directions:
+ * "true" forces the block even outside a DEPLOYMENT_ENV=staging process
+ * (useful for testing this guard itself, or any other environment that
+ * wants it); "false" is the deliberate, explicit escape hatch for a staging
+ * run that genuinely wants unrestricted sending. Unset defers to the
+ * deployment's own posture. There is no credential-based inference anywhere
+ * in this file, per this sprint's own instruction not to infer safety from
  * credential names alone.
  *
  * Throws rather than silently no-opping: a silently-swallowed send would
@@ -29,6 +33,13 @@ import "server-only";
  * normal failure to the caller, the same way SmsSuppressedError /
  * EmailAllowanceExhaustedError already do in this codebase.
  */
+
+function isBlocked(): boolean {
+  const explicit = process.env.STAGING_BLOCK_LIVE_MESSAGING;
+  if (explicit === "true") return true;
+  if (explicit === "false") return false;
+  return isStagingDeployment();
+}
 
 export class StagingMessagingBlockedError extends Error {
   constructor(public readonly to: string) {
@@ -62,7 +73,7 @@ function parseAllowlist(): Set<string> {
  * dial/address (E.164 phone or email address).
  */
 export function assertOutboundMessagingAllowed(to: string): void {
-  if (process.env.STAGING_BLOCK_LIVE_MESSAGING !== "true") return;
+  if (!isBlocked()) return;
   const allowlist = parseAllowlist();
   if (!allowlist.has(normalize(to))) {
     throw new StagingMessagingBlockedError(to);
