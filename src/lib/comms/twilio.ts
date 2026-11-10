@@ -1,4 +1,5 @@
 import { checkPlanLimit, recordPlanUsage } from "@/lib/billing/plan-limits";
+import { assertOutboundMessagingAllowed } from "@/lib/comms/staging-messaging-guard";
 import "server-only";
 
 import twilio, { type Twilio } from "twilio";
@@ -277,6 +278,7 @@ export async function sendSmsForSubAccount({
     }
   }
 
+  assertOutboundMessagingAllowed(verdict.e164);
   const msg = await resolved.client.messages.create({
     from: resolved.fromNumber,
     to: verdict.e164,
@@ -327,6 +329,7 @@ export async function sendWhatsappForSubAccount({
   // client built from the sub-account's own Twilio creds.
   const resolved = await getTwilioForSubAccount(subAccountId, subAccount);
   const from = toWhatsappAddress(cfg.whatsappFromNumber);
+  assertOutboundMessagingAllowed(to);
   const msg = await resolved.client.messages.create({
     from,
     to: toWhatsappAddress(to),
@@ -376,6 +379,7 @@ export async function sendWhatsappTemplateForSubAccount({
   contentVariables.forEach((v, i) => {
     varMap[String(i + 1)] = v;
   });
+  assertOutboundMessagingAllowed(to);
   const msg = await resolved.client.messages.create({
     from,
     to: toWhatsappAddress(to),
@@ -401,6 +405,7 @@ export async function sendSms({
   if (!from) {
     throw new Error("TWILIO_FROM_NUMBER is not set.");
   }
+  assertOutboundMessagingAllowed(to);
   const client = getEnvTwilio();
   const msg = await client.messages.create({ from, to, body });
   return { sid: msg.sid };

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { isStagingDeployment } from "@/lib/env/deployment-environment";
+
 /**
  * A LOCALHOST EXCHANGE URL IS NEVER RIGHT IN PRODUCTION.
  *
@@ -56,7 +58,19 @@ function usable(raw: string | undefined): string | null {
   return v;
 }
 
-/** The URL to POST the SSO authorization code to. Never localhost. */
-export function resolveAscendExchangeUrl(): string {
+/**
+ * Staging isolation (2026-11-09): CANONICAL above is the production Ascend
+ * Intelligence service, and the allowlist has no staging counterpart to
+ * fall back to — there is no staging Ascend BI deployment today. Without
+ * this check, a DEPLOYMENT_ENV=staging Flow service would silently exchange
+ * a one-time SSO code against the REAL production Ascend service over the
+ * network, server-to-server, on every SSO callback it receives. That is a
+ * live cross-environment call this sprint explicitly rules out ("do not
+ * touch production", "ensure staging does not invoke production workflows").
+ * Returning null here makes the callback route fail cleanly
+ * (`not_configured`) instead of silently reaching production.
+ */
+export function resolveAscendExchangeUrl(): string | null {
+  if (isStagingDeployment()) return null;
   return usable(process.env.ASCEND_SSO_EXCHANGE_URL) ?? CANONICAL;
 }

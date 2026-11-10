@@ -1,6 +1,7 @@
 import "server-only";
 
 import { checkPlanLimit, recordPlanUsage } from "@/lib/billing/plan-limits";
+import { assertOutboundMessagingAllowed } from "@/lib/comms/staging-messaging-guard";
 import type { EmailSource as EmailLogSource } from "@/types/email-events";
 
 import { Resend } from "resend";
@@ -234,6 +235,7 @@ export async function sendEmail({
     );
   }
   const client = getResend();
+  assertOutboundMessagingAllowed(to);
   const result = await client.emails.send({
     from: resolvedFrom,
     to,

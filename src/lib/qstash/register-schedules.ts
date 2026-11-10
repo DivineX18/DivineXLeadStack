@@ -31,6 +31,31 @@ import { getAdminDb } from "@/lib/firebase/admin";
  *
  * To add a new schedule: append to `SCHEDULES`. Stable scheduleId is
  * required (no random ids — that's how you end up with duplicates).
+ *
+ * Cross-environment hazard (found 2026-11-09): QStash's `create()` with an
+ * existing scheduleId REPLACES that schedule's destination in place (see the
+ * idempotency note above). If a second deployment of this codebase (e.g. a
+ * staging service) cold-starts with `NODE_ENV=production` and the SAME
+ * `QSTASH_TOKEN` as another deployment, it will silently repoint that other
+ * deployment's `leadstack-*` schedules at its own `NEXT_PUBLIC_APP_URL` —
+ * there is nothing environment-scoped about these ids by default. The
+ * optional `QSTASH_SCHEDULE_ID_SUFFIX` env var exists so a second deployment
+ * sharing a QStash account/token can register its own distinctly-named
+ * schedules instead of overwriting the first one's. Leaving it unset
+ * preserves the exact pre-existing ids and behavior for every deployment
+ * that doesn't set it (i.e. every deployment today, including production).
+ *
+ * Staging preference (2026-11-09 revenue-readiness sprint): a test
+ * environment has no reason to run these three RECURRING crons at all —
+ * none of them sit on the Growth System E2E path (that path's own follow-up
+ * delays go through ad hoc, non-recurring QStash messages scheduled by
+ * `lib/automations/qstash.ts`, which this flag does not touch). Setting
+ * `DISABLE_RECURRING_SCHEDULES=true` short-circuits this function before it
+ * ever calls QStash, which is a stronger guarantee than the suffix fix
+ * alone (that fix prevents a collision if schedules ARE registered; this
+ * flag prevents a staging deployment from registering any recurring
+ * schedule in the first place). Unset by default everywhere, including
+ * production.
  */
 
 interface ScheduleSpec {
@@ -80,6 +105,10 @@ function tsToDate(ts: Timestamp | Date | null | undefined): Date | null {
 }
 
 export async function ensureSchedulesRegistered(): Promise<void> {
+  // Explicit staging/test opt-out — see the "Staging preference" doc comment
+  // above. Checked before the QStash-credentials gate so a test environment
+  // never has to touch QStash's recurring-schedule namespace at all.
+  if (process.env.DISABLE_RECURRING_SCHEDULES === "true") return;
   // Gate: no QStash credentials → nothing to register. Local dev without
   // a tunnel falls into this path; that's correct.
   if (!process.env.QSTASH_TOKEN) return;
@@ -118,21 +147,28 @@ export async function ensureSchedulesRegistered(): Promise<void> {
     ...(process.env.QSTASH_URL ? { baseUrl: process.env.QSTASH_URL } : {}),
   });
 
+  // Unset by default: every existing deployment keeps its current
+  // scheduleIds untouched. Only a deployment that explicitly opts in (e.g.
+  // a staging service sharing production's QStash account) gets suffixed,
+  // collision-proof ids.
+  const suffix = process.env.QSTASH_SCHEDULE_ID_SUFFIX?.trim();
+  const scheduleIdFor = (baseId: string) =>
+    suffix ? `${baseId}-${suffix}` : baseId;
+
   const results: Array<{ id: string; ok: boolean; error?: string }> = [];
   for (const s of SCHEDULES) {
+    const scheduleId = scheduleIdFor(s.scheduleId);
     try {
       await client.schedules.create({
-        scheduleId: s.scheduleId,
+        scheduleId,
         destination: `${baseUrl}${s.path}`,
         cron: s.cron,
       });
-      results.push({ id: s.scheduleId, ok: true });
+      results.push({ id: scheduleId, ok: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : "unknown";
-      console.warn(
-        `[schedules] failed to register ${s.scheduleId}: ${message}`,
-      );
-      results.push({ id: s.scheduleId, ok: false, error: message });
+      console.warn(`[schedules] failed to register ${scheduleId}: ${message}`);
+      results.push({ id: scheduleId, ok: false, error: message });
     }
   }
 
@@ -145,7 +181,7 @@ export async function ensureSchedulesRegistered(): Promise<void> {
       {
         baseUrl,
         registeredAt: FieldValue.serverTimestamp(),
-        scheduleIds: SCHEDULES.map((s) => s.scheduleId),
+        scheduleIds: SCHEDULES.map((s) => scheduleIdFor(s.scheduleId)),
         lastResults: results,
       },
       { merge: true },
