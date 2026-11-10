@@ -81,10 +81,10 @@ console.log("");
 // its absence doesn't by itself mean the target is production (every other
 // check below still runs regardless).
 if (isStaging) {
-  pass('DEPLOYMENT_ENV=staging — Admin SDK init and the Ascend SSO exchange both enforce staging-only behavior.');
+  pass('DEPLOYMENT_ENV=staging — Admin SDK init and all three Ascend production-fallback guards (SSO exchange, ascend-client, divinex/contract) enforce staging-only behavior.');
 } else {
   warn(
-    'DEPLOYMENT_ENV is not "staging". The Admin SDK project guard and the Ascend SSO exchange refusal in lib/env/deployment-environment.ts / lib/auth/ascend-exchange-url.ts are both no-ops without it. Set DEPLOYMENT_ENV=staging on the Render staging service to enable them.',
+    'DEPLOYMENT_ENV is not "staging". The Admin SDK project guard and the three Ascend production-fallback guards (lib/auth/ascend-exchange-url.ts, lib/divinex/ascend-client.ts, lib/divinex/contract.ts) are all no-ops without it. Set DEPLOYMENT_ENV=staging on the Render staging service to enable them.',
   );
 }
 
