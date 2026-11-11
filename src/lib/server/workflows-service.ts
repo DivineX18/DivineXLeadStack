@@ -20,10 +20,18 @@ function toMillis(v: unknown): number {
   return m && typeof m.toMillis === "function" ? m.toMillis() : 0;
 }
 
+// Capped, not paginated: no real sub-account approaches this count, so the
+// cap only exists to stop a server-side Admin SDK read from loading an
+// unbounded number of documents into process memory (2026-11-10 staging OOM
+// investigation). No orderBy, to avoid requiring a composite index — same
+// reasoning as the client-side contacts/deals queries that sort in memory.
+const MAX_WORKFLOWS_PER_SUB_ACCOUNT = 500;
+
 export async function listWorkflows(subAccountId: string): Promise<WorkflowDoc[]> {
   const snap = await getAdminDb()
     .collection("workflows")
     .where("subAccountId", "==", subAccountId)
+    .limit(MAX_WORKFLOWS_PER_SUB_ACCOUNT)
     .get();
   return snap.docs
     .map((d) => ({ id: d.id, ...(d.data() as Omit<WorkflowDoc, "id">) }))
