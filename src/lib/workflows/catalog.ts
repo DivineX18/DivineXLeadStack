@@ -29,6 +29,7 @@ export const NODE_LABELS: Record<WorkflowNodeType, string> = {
   add_tag: "Add tag",
   remove_tag: "Remove tag",
   move_stage: "Move pipeline stage",
+  move_deal_stage: "Move deal stage",
   update_field: "Update field",
   create_task: "Create task",
   create_deal: "Create opportunity",
@@ -61,6 +62,7 @@ export const ADDABLE_TYPES: WorkflowNodeType[] = [
   "add_tag",
   "remove_tag",
   "move_stage",
+  "move_deal_stage",
   "update_field",
   "create_task",
   "create_deal",
@@ -105,6 +107,8 @@ export function defaultConfig(type: WorkflowNodeType): Record<string, unknown> {
       return { tag: "" };
     case "move_stage":
       return { stage: "new" };
+    case "move_deal_stage":
+      return { stageId: "new" };
     case "update_field":
       return { field: "", value: "" };
     case "create_task":
@@ -145,6 +149,8 @@ export function nodeSummary(step: BuilderStep): string {
       return (c.tag as string) || "No tag yet";
     case "move_stage":
       return `→ ${(c.stage as string) || "?"}`;
+    case "move_deal_stage":
+      return `Deal → ${(c.stageId as string) || "?"}`;
     case "update_field":
       return c.field ? `${c.field} = ${c.value ?? ""}` : "No field yet";
     case "create_task":

@@ -23,6 +23,7 @@ import {
   Plus,
   Tag,
   Trash2,
+  TrendingUp,
   Webhook,
   Zap,
 } from "lucide-react";
@@ -89,6 +90,7 @@ const ICONS: Record<WorkflowNodeType, typeof Mail> = {
   add_tag: Tag,
   remove_tag: Tag,
   move_stage: KanbanSquare,
+  move_deal_stage: TrendingUp,
   update_field: PencilLine,
   create_task: CheckSquare,
   create_deal: DollarSign,
