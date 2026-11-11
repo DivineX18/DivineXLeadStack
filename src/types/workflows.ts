@@ -106,6 +106,7 @@ export const WORKFLOW_NODE_TYPES = [
   "add_tag",
   "remove_tag",
   "move_stage",
+  "move_deal_stage",
   "update_field",
   "create_task",
   "create_deal",
@@ -252,6 +253,19 @@ export interface TagConfig {
 }
 export interface MoveStageConfig {
   stage: string;
+}
+/**
+ * Moves the DEAL's stage, not the contact's. Deliberately a separate action
+ * from MoveStageConfig/`move_stage` (which only ever touched
+ * `contact.pipelineStage`) rather than a change to its meaning — existing
+ * workflows built on `move_stage` keep their exact behavior. See
+ * engine.ts::execMoveDealStage for how "the" deal is resolved: an explicit
+ * `dealId` carried on the trigger context when the trigger produced one
+ * (e.g. form.submitted), else the contact's one and only deal, never a
+ * guess among several.
+ */
+export interface MoveDealStageConfig {
+  stageId: PipelineStageId;
 }
 export interface UpdateFieldConfig {
   field: string;

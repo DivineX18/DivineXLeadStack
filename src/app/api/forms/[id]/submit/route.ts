@@ -450,7 +450,10 @@ async function handleSubmit(
     subAccountId,
     type: "form.submitted",
     contactId: contactRef.id,
-    context: { formId: id, formName: form.name, formData },
+    // dealId (string | null) lets a "Move deal stage" workflow step act on
+    // the EXACT deal this submission created, rather than falling back to
+    // "the contact's only deal" — see engine.ts::resolveTargetDeal.
+    context: { formId: id, formName: form.name, formData, dealId },
   });
 
   // Outbound webhooks: a public form submission is a real contact (and

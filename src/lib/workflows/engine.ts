@@ -32,6 +32,7 @@ import type {
   CreateDealConfig,
   CreateTaskConfig,
   IfElseConfig,
+  MoveDealStageConfig,
   MoveStageConfig,
   NotifyConfig,
   SendEmailConfig,
@@ -460,6 +461,126 @@ const execMoveStage: NodeExecutor = async (ctx) => {
   return { result: { kind: "next" }, log: `stage:${stage}` };
 };
 
+/**
+ * Resolve the ONE deal a `move_deal_stage` step should act on. Never guesses
+ * among several:
+ *   1. An explicit `dealId` on the trigger context (e.g. form.submitted
+ *      threads the deal it just created) wins — it's the deterministic
+ *      reference captured at enrollment time, scoped to this contact AND
+ *      sub-account on every lookup so a stale/foreign id can't cross tenants.
+ *   2. Otherwise, only when the contact has EXACTLY ONE deal in this
+ *      sub-account is it safe to act without a guess.
+ *   3. Zero or more-than-one candidate deals is reported as a named failure,
+ *      not silently skipped and not arbitrarily picked.
+ */
+async function resolveTargetDeal(
+  ctx: NodeContext,
+): Promise<
+  | { ok: true; id: string; subAccountId: string }
+  | { ok: false; reason: "deal_not_found" | "no_deal" | "ambiguous_deal" }
+> {
+  const db = getAdminDb();
+  const explicitId = ctx.triggerContext?.dealId;
+  if (typeof explicitId === "string" && explicitId) {
+    const snap = await db.doc(`deals/${explicitId}`).get();
+    if (!snap.exists || snap.data()?.subAccountId !== ctx.subAccountId) {
+      return { ok: false, reason: "deal_not_found" };
+    }
+    return { ok: true, id: snap.id, subAccountId: ctx.subAccountId };
+  }
+
+  const candidates = await db
+    .collection("deals")
+    .where("subAccountId", "==", ctx.subAccountId)
+    .where("contactId", "==", ctx.contact.id)
+    .get();
+  if (candidates.empty) return { ok: false, reason: "no_deal" };
+  if (candidates.size > 1) return { ok: false, reason: "ambiguous_deal" };
+  return { ok: true, id: candidates.docs[0].id, subAccountId: ctx.subAccountId };
+}
+
+/**
+ * Claims this (run, node) pair ATOMICALLY before any side-effecting write,
+ * so two genuinely concurrent invocations of the SAME step can't both
+ * proceed.
+ *
+ * runStep()'s own guard (`run.history.some((h) => h.nodeId === nodeId)`) is
+ * a plain read, checked before the executor runs and before history is
+ * appended after it returns — there is a real window between those two
+ * points where a second QStash delivery of the identical message (at-least-
+ * once delivery; also possible if the first attempt is still in flight when
+ * a retry fires on a slow response) would pass that same check and run this
+ * executor a second time, CONCURRENTLY with the first. updateDealServerSide
+ * reading the deal's live stage does NOT close that window: both concurrent
+ * calls can read the SAME pre-move stage before either has written, both
+ * decide the stage changed, and both fire a duplicate activity-log entry,
+ * duplicate webhooks, and a duplicate `pipeline.stage.changed` trigger — even
+ * though the deal DOCUMENT converges to the same correct stage either way.
+ * This is a pre-existing property of every action in this engine, not
+ * introduced here; this guard is scoped to just this new action rather than
+ * changing runStep's shared control flow, which every other action also
+ * depends on.
+ *
+ * Firestore transactions make the claim itself safe under real concurrency:
+ * if two transactions race to create the same claim doc, Firestore detects
+ * the conflict at commit time and automatically re-runs the loser's
+ * transaction function against the now-current document, where it correctly
+ * observes the claim already exists and returns false. Only the winner ever
+ * proceeds to resolve/update the deal.
+ */
+async function claimDealStageMove(runId: string, nodeId: string): Promise<boolean> {
+  const claimRef = getAdminDb().doc(`workflowRuns/${runId}/dealStageClaims/${nodeId}`);
+  return getAdminDb().runTransaction(async (tx) => {
+    const existing = await tx.get(claimRef);
+    if (existing.exists) return false;
+    tx.set(claimRef, { claimedAt: FieldValue.serverTimestamp() });
+    return true;
+  });
+}
+
+/**
+ * Moves the DEAL's stage (`deals/{id}.stageId`) — the gap `move_stage` never
+ * covered, since that action only ever wrote `contact.pipelineStage` (see
+ * MoveDealStageConfig's doc comment in types/workflows.ts). Reuses
+ * updateDealServerSide(), the same chokepoint the Kanban drag-and-drop uses,
+ * so a workflow-driven move gets identical activity-log, webhook, and
+ * `deal.won`/`deal.lost`/`pipeline.stage.changed` side effects as a human
+ * drag. Concurrency safety against duplicate side effects comes from
+ * claimDealStageMove() above, not from updateDealServerSide's live-read —
+ * see that function's doc comment for why the live-read alone isn't enough.
+ */
+const execMoveDealStage: NodeExecutor = async (ctx) => {
+  const stageId = (
+    (ctx.node.config as unknown as MoveDealStageConfig).stageId ?? ""
+  ).trim() as PipelineStageId;
+  if (!stageId) return { result: { kind: "next" }, log: "skipped:no_stage" };
+  if (!VALID_STAGE_IDS.includes(stageId)) {
+    return { result: { kind: "next" }, log: "error:invalid_stage" };
+  }
+
+  const claimed = await claimDealStageMove(ctx.runId, ctx.node.id);
+  if (!claimed) {
+    return { result: { kind: "next" }, log: "skipped:duplicate_invocation" };
+  }
+
+  const target = await resolveTargetDeal(ctx);
+  if (!target.ok) {
+    return { result: { kind: "next" }, log: `error:${target.reason}` };
+  }
+
+  const { updateDealServerSide } = await import("@/lib/server/deals-service");
+  const updated = await updateDealServerSide({
+    dealId: target.id,
+    patch: { stageId },
+    userId: ctx.createdByUid,
+    expectedSubAccountId: target.subAccountId,
+  });
+  if (!updated) {
+    return { result: { kind: "next" }, log: "error:deal_not_found" };
+  }
+  return { result: { kind: "next" }, log: `deal_stage:${stageId}` };
+};
+
 // Only these top-level contact fields may be set by a workflow — prevents a
 // crafted config from clobbering tenancy/system keys. customFields.* is open.
 const WRITABLE_FIELDS = new Set([
@@ -781,6 +902,7 @@ const REGISTRY: Partial<Record<WorkflowNodeType, NodeExecutor>> = {
   add_tag: execAddTag,
   remove_tag: execRemoveTag,
   move_stage: execMoveStage,
+  move_deal_stage: execMoveDealStage,
   update_field: execUpdateField,
   create_task: execCreateTask,
   create_deal: execCreateDeal,
