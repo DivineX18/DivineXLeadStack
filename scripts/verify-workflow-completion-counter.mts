@@ -179,7 +179,7 @@ check(
 );
 check(
   "existing workflow behavior is unchanged: completeRun is still invoked from exactly the same 3 call sites (no new entry/exit path introduced)",
-  engine.split("completeRun(runRef, wf.id)").length - 1 === 3,
+  engine.split("completeRun(runRef, run.workflowId)").length - 1 === 3,
 );
 
 console.log("\n8. No unrelated workflow statistics are touched by this fix");
@@ -189,6 +189,75 @@ check(
 );
 check(
   "completeRun's own patch to the run doc is unchanged in shape (status + currentNodeId + updatedAt, nothing added or removed)",
+  /status: "completed",\s*\n\s*currentNodeId: null,\s*\n\s*updatedAt: FieldValue\.serverTimestamp\(\),/.test(completeRunBody),
+);
+
+console.log("\n9. Authoritative workflow id: completion never trusts wf.id read off wfSnap.data()");
+// The real staging failure: "NOT_FOUND: No document to update:
+// .../workflows/undefined". `wf.id` is only populated when a workflow
+// document happens to store a redundant `id` field alongside its real
+// Firestore-assigned id — scripts/seed-onboarding-workflow.mts and
+// scripts/seed-divinex-reconnect-series.mts both write workflows/* docs
+// WITHOUT that field, so `wf.id` is undefined for any workflow created that
+// way even though the document genuinely exists. `run.workflowId` is not
+// vulnerable to this: it is set once, at enroll() time, from the workflow
+// snapshot's own `.id` (see fireWorkflowTrigger's `{ id: doc.id, ...}` and
+// enrollForTest's `{ id: wfSnap.id, ...}` below) — never from `.data().id`.
+const runStepBody = sliceFunction(engine, "export async function runStep(");
+check("runStep's body was located", runStepBody.length > 500);
+check(
+  "wf.id is no longer used anywhere inside runStep (the exact field that was undefined in the staging failure)",
+  !/\bwf\.id\b/.test(runStepBody),
+);
+check(
+  "all 3 completion call sites inside runStep pass run.workflowId specifically",
+  (runStepBody.match(/completeRun\(runRef, run\.workflowId\)/g) ?? []).length === 3,
+);
+check(
+  "run.workflowId is read from the run document (not re-derived from the workflow document's own data) before any completion call site uses it",
+  runStepBody.indexOf("const wfSnap = await db.doc(`workflows/${run.workflowId}`)") <
+    Math.min(...["node) {", "result.kind === \"end\"", "if (!target)"].map((m) => runStepBody.indexOf(m)).filter((i) => i > -1)),
+);
+check(
+  "enroll()'s own wf.id usage remains safe and untouched — its callers always attach a real snapshot .id (fireWorkflowTrigger's `{ id: doc.id, ...}`, enrollForTest's `{ id: wfSnap.id, ...}`), unlike runStep's bare wfSnap.data() cast",
+  /const wf = \{ id: doc\.id, \.\.\.\(doc\.data\(\) as Omit<WorkflowDoc, "id">\) \};/.test(engine) &&
+    /const wf = \{ id: wfSnap\.id, \.\.\.\(wfSnap\.data\(\) as Omit<WorkflowDoc, "id">\) \};/.test(engine),
+);
+
+console.log("\n10. Explicit guard: a missing/invalid workflow id produces a clear diagnostic instead of targeting workflows/undefined");
+check(
+  "completeRun refuses to proceed when workflowId is falsy, BEFORE calling claimAndCountRunCompletion (which is what would construct the bad doc reference)",
+  (() => {
+    const guardIdx = completeRunBody.indexOf("if (!workflowId)");
+    const callIdx = completeRunBody.indexOf("await claimAndCountRunCompletion(runRef.id, workflowId)");
+    return guardIdx > -1 && guardIdx < callIdx;
+  })(),
+);
+check(
+  "the guard logs a clear diagnostic naming the run id, instead of silently doing nothing or substituting a different workflow",
+  /console\.error\(\s*\n\s*`\[workflows\] completeRun: refusing to count completion for run \$\{runRef\.id\}/.test(completeRunBody),
+);
+check(
+  "the guard returns immediately without ever reaching the transaction call (no accidental fallthrough)",
+  (() => {
+    const guardIdx = completeRunBody.indexOf("if (!workflowId)");
+    const block = completeRunBody.slice(guardIdx, guardIdx + 400);
+    return /if \(!workflowId\) \{\s*\n\s*console\.error\(/.test(block) && /\n\s*return;\s*\n\s*\}/.test(block);
+  })(),
+);
+
+console.log("\n11. Preservation: deal-stage idempotency, run history, and run-status transitions are untouched by this change");
+check(
+  "move_deal_stage's own claim (claimDealStageMove / dealStageClaims) is completely unmodified by this pass",
+  /async function claimDealStageMove\(runId: string, nodeId: string\): Promise<boolean> \{/.test(engine),
+);
+check(
+  "runStep still appends to run.history via arrayUnion before any completion call site (history is never skipped)",
+  runStepBody.indexOf("history: FieldValue.arrayUnion(entry)") <
+    runStepBody.indexOf('if (result.kind === "end")'),
+);
+check(
+  "the run-status transition to completed is byte-identical in shape to before (status + currentNodeId + updatedAt)",
   /status: "completed",\s*\n\s*currentNodeId: null,\s*\n\s*updatedAt: FieldValue\.serverTimestamp\(\),/.test(completeRunBody),
 );
 
