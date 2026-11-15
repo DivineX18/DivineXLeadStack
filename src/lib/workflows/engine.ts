@@ -1057,6 +1057,27 @@ async function scheduleNode(
   });
 }
 
+/**
+ * Claims this run's completion exactly once, mirroring claimDealStageMove()'s
+ * reasoning below: runStep()'s own idempotency guard (`run.history.some(...)`)
+ * is a plain read, checked before the executor runs — the same unclosed
+ * window described there applies here too. Two concurrent QStash deliveries
+ * of the same final step could both pass that check and both reach
+ * completeRun() for the same run, which would double-increment
+ * stats.completed. This claim, like that one, makes only the winner proceed.
+ */
+async function claimRunCompletion(runId: string): Promise<boolean> {
+  const claimRef = getAdminDb().doc(
+    `workflowRuns/${runId}/completionClaims/completed`
+  );
+  return getAdminDb().runTransaction(async (tx) => {
+    const existing = await tx.get(claimRef);
+    if (existing.exists) return false;
+    tx.set(claimRef, { claimedAt: FieldValue.serverTimestamp() });
+    return true;
+  });
+}
+
 async function completeRun(
   runRef: FirebaseFirestore.DocumentReference,
   workflowId: string
@@ -1066,10 +1087,42 @@ async function completeRun(
     currentNodeId: null,
     updatedAt: FieldValue.serverTimestamp(),
   });
-  await getAdminDb()
-    .doc(`workflows/${workflowId}`)
-    .update({ "stats.completed": FieldValue.increment(1) })
-    .catch(() => {});
+
+  // A RUN THAT COMPLETES MUST ACTUALLY COUNT.
+  //
+  // This used to increment stats.completed with a bare `.catch(() => {})`:
+  // any failure on that single write (a transient Firestore error, a
+  // double-delivery racing to increment twice, anything) vanished with zero
+  // trace, while the run above still said "completed" — an operator watching
+  // the Workflow Builder saw a workflow that had just finished a real
+  // conversion claim a flat 0 completions, with no error anywhere to explain
+  // why. The claim below closes the double-increment half of that (the same
+  // race claimDealStageMove() closes for move_deal_stage, above); the
+  // logging closes the other half, so a future failure is a line in the
+  // logs instead of a permanent, silent gap between "completed" and
+  // stats.completed.
+  let claimed: boolean;
+  try {
+    claimed = await claimRunCompletion(runRef.id);
+  } catch (err) {
+    console.error(
+      `[workflows] completeRun: failed to claim completion for run ${runRef.id} (workflow ${workflowId})`,
+      err
+    );
+    return;
+  }
+  if (!claimed) return; // Already counted by a concurrent completion.
+
+  try {
+    await getAdminDb()
+      .doc(`workflows/${workflowId}`)
+      .update({ "stats.completed": FieldValue.increment(1) });
+  } catch (err) {
+    console.error(
+      `[workflows] completeRun: failed to increment stats.completed for workflow ${workflowId} (run ${runRef.id})`,
+      err
+    );
+  }
 }
 
 /** Advance one node of a run. Idempotent on the run's history. */
