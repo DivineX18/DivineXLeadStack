@@ -1058,23 +1058,43 @@ async function scheduleNode(
 }
 
 /**
- * Claims this run's completion exactly once, mirroring claimDealStageMove()'s
- * reasoning below: runStep()'s own idempotency guard (`run.history.some(...)`)
- * is a plain read, checked before the executor runs — the same unclosed
- * window described there applies here too. Two concurrent QStash deliveries
- * of the same final step could both pass that check and both reach
- * completeRun() for the same run, which would double-increment
- * stats.completed. This claim, like that one, makes only the winner proceed.
+ * Claims this run's completion AND increments the parent workflow's
+ * stats.completed in one Firestore transaction, so the two can never
+ * diverge: either both the claim and the increment commit, or neither does.
+ *
+ * An earlier version of this fix created the claim in its own transaction
+ * and then issued the increment as a second, separate write. That closed
+ * the double-increment race (two concurrent completions can't both create
+ * the same claim doc) but opened a narrower one: if the increment failed
+ * AFTER the claim had already committed, the claim would be left behind
+ * permanently — correctly recording "this run was counted" for a run that,
+ * in truth, never was, with no way for a later retry to tell the
+ * difference. Folding both writes into one transaction closes that gap:
+ * Firestore only commits a transaction's staged writes together, so a
+ * failure on the increment half rolls back the claim half too.
+ *
+ * Mirrors claimDealStageMove()'s concurrency reasoning: runStep()'s own
+ * idempotency guard (`run.history.some(...)`) is a plain read, checked
+ * before the executor runs — the same unclosed window described there
+ * applies here too. Two concurrent QStash deliveries of the same final step
+ * could both pass that check and both reach completeRun() for the same
+ * run; the transaction's read-then-write of the claim doc makes only the
+ * winner's increment actually happen — the loser's transaction function is
+ * automatically re-run by the SDK on conflict, observes the claim already
+ * exists, and returns without writing anything.
  */
-async function claimRunCompletion(runId: string): Promise<boolean> {
-  const claimRef = getAdminDb().doc(
-    `workflowRuns/${runId}/completionClaims/completed`
-  );
-  return getAdminDb().runTransaction(async (tx) => {
+async function claimAndCountRunCompletion(
+  runId: string,
+  workflowId: string
+): Promise<void> {
+  const db = getAdminDb();
+  const claimRef = db.doc(`workflowRuns/${runId}/completionClaims/completed`);
+  const workflowRef = db.doc(`workflows/${workflowId}`);
+  await db.runTransaction(async (tx) => {
     const existing = await tx.get(claimRef);
-    if (existing.exists) return false;
+    if (existing.exists) return; // Already counted by a prior/concurrent completion.
     tx.set(claimRef, { claimedAt: FieldValue.serverTimestamp() });
-    return true;
+    tx.update(workflowRef, { "stats.completed": FieldValue.increment(1) });
   });
 }
 
@@ -1082,6 +1102,21 @@ async function completeRun(
   runRef: FirebaseFirestore.DocumentReference,
   workflowId: string
 ): Promise<void> {
+  // The run's own terminal status is written first and unconditionally,
+  // deliberately OUTSIDE the counting transaction below. Folding it in was
+  // considered (a run and its own completion count are logically one
+  // event) and rejected: runStep() has already appended this node to the
+  // run's history by the time completeRun() is called, so a QStash retry of
+  // the same step is no longer re-run — there is no mechanism that would
+  // call completeRun() again for this run if the combined transaction ever
+  // failed. Bundling the status write in means a transient failure on the
+  // counting half (contention, a dropped connection, anything) would ALSO
+  // leave the run permanently stuck in "running"/"waiting" with no retry
+  // path — a strictly worse outcome than the counter merely lagging behind
+  // a run whose terminal status is already correct. See the function
+  // comment on claimAndCountRunCompletion for the counting half's own
+  // atomicity guarantee, and the module-level note below for the resulting
+  // (intentionally accepted) consistency risk and its recovery path.
   await runRef.update({
     status: "completed",
     currentNodeId: null,
@@ -1091,35 +1126,28 @@ async function completeRun(
   // A RUN THAT COMPLETES MUST ACTUALLY COUNT.
   //
   // This used to increment stats.completed with a bare `.catch(() => {})`:
-  // any failure on that single write (a transient Firestore error, a
-  // double-delivery racing to increment twice, anything) vanished with zero
-  // trace, while the run above still said "completed" — an operator watching
-  // the Workflow Builder saw a workflow that had just finished a real
-  // conversion claim a flat 0 completions, with no error anywhere to explain
-  // why. The claim below closes the double-increment half of that (the same
-  // race claimDealStageMove() closes for move_deal_stage, above); the
-  // logging closes the other half, so a future failure is a line in the
-  // logs instead of a permanent, silent gap between "completed" and
-  // stats.completed.
-  let claimed: boolean;
+  // any failure on that single write vanished with zero trace, while the
+  // run above still said "completed" — an operator watching the Workflow
+  // Builder saw a workflow that had just finished a real conversion claim a
+  // flat 0 completions, with no error anywhere to explain why. The logging
+  // below closes that: a future failure is a line in the logs, naming both
+  // ids, instead of a silent gap between "completed" and stats.completed.
+  //
+  // RECOVERY if this transaction does fail and exhausts Firestore's own
+  // internal contention retries: the run's status is already durably
+  // "completed" (written above), and that — a count of
+  // `workflowRuns` where `workflowId == X && status == "completed"` — is
+  // the actual source of truth. `stats.completed` is a denormalized cache
+  // of that count for fast dashboard reads, not the source of truth itself,
+  // so a logged failure here means the cache can be recomputed from the
+  // real run history; it does not mean any data was lost. No automatic
+  // reconciliation job exists yet (out of scope for this fix — it is a new
+  // feature, not a correction to this defect).
   try {
-    claimed = await claimRunCompletion(runRef.id);
+    await claimAndCountRunCompletion(runRef.id, workflowId);
   } catch (err) {
     console.error(
-      `[workflows] completeRun: failed to claim completion for run ${runRef.id} (workflow ${workflowId})`,
-      err
-    );
-    return;
-  }
-  if (!claimed) return; // Already counted by a concurrent completion.
-
-  try {
-    await getAdminDb()
-      .doc(`workflows/${workflowId}`)
-      .update({ "stats.completed": FieldValue.increment(1) });
-  } catch (err) {
-    console.error(
-      `[workflows] completeRun: failed to increment stats.completed for workflow ${workflowId} (run ${runRef.id})`,
+      `[workflows] completeRun: completion-count transaction failed for workflow ${workflowId} (run ${runRef.id})`,
       err
     );
   }
