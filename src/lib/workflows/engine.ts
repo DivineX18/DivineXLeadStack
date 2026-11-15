@@ -1143,6 +1143,32 @@ async function completeRun(
   // real run history; it does not mean any data was lost. No automatic
   // reconciliation job exists yet (out of scope for this fix — it is a new
   // feature, not a correction to this defect).
+  //
+  // NEVER construct `workflows/${workflowId}` from a missing id. A prior
+  // version of this function trusted `wf.id` — a field read off
+  // `wfSnap.data()` — which is only populated when the document happens to
+  // store an `id` field alongside its real Firestore-assigned id. Several
+  // genuine write paths in this repo (e.g. scripts/seed-onboarding-
+  // workflow.mts, scripts/seed-divinex-reconnect-series.mts) create
+  // `workflows/*` documents without ever writing that field, so `wf.id` is
+  // undefined for a workflow created that way even though the document
+  // itself exists. That produced the exact staging failure this guard
+  // exists for: "NOT_FOUND: No document to update: .../workflows/undefined".
+  // `run.workflowId` (what every caller now passes in) is not vulnerable to
+  // this: it is set once, at enroll() time, from the workflow snapshot's
+  // own `.id` — never from `.data().id` — so it is reliable regardless of
+  // what that specific document happens to store. This check is a second,
+  // independent line of defense against any future caller reintroducing an
+  // unreliable id: if it ever fires, something upstream passed a bad id,
+  // and the only safe move is to say so loudly rather than guess a
+  // substitute workflow to credit instead.
+  if (!workflowId) {
+    console.error(
+      `[workflows] completeRun: refusing to count completion for run ${runRef.id} — no workflow id was provided (would otherwise target workflows/${workflowId})`
+    );
+    return;
+  }
+
   try {
     await claimAndCountRunCompletion(runRef.id, workflowId);
   } catch (err) {
@@ -1189,7 +1215,7 @@ export async function runStep(runId: string, nodeId: string): Promise<void> {
 
   const node = wf.nodes[nodeId];
   if (!node) {
-    await completeRun(runRef, wf.id);
+    await completeRun(runRef, run.workflowId);
     return;
   }
 
@@ -1253,7 +1279,7 @@ export async function runStep(runId: string, nodeId: string): Promise<void> {
   let target: string | null = null;
   let delay = 0;
   if (result.kind === "end") {
-    await completeRun(runRef, wf.id);
+    await completeRun(runRef, run.workflowId);
     return;
   } else if (result.kind === "branch") {
     const b = node.branches;
@@ -1269,7 +1295,7 @@ export async function runStep(runId: string, nodeId: string): Promise<void> {
   }
 
   if (!target) {
-    await completeRun(runRef, wf.id);
+    await completeRun(runRef, run.workflowId);
     return;
   }
   await scheduleNode(runRef, target, delay);
