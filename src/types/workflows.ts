@@ -185,6 +185,23 @@ export interface WorkflowRunDoc {
   qstashMessageId: string | null;
   enrolledAt: Timestamp | FieldValue | null;
   updatedAt: Timestamp | FieldValue | null;
+  /**
+   * Human-readable reason the run reached `status: "failed"` — set by
+   * runStep()'s own structural checks (deleted workflow, deleted contact),
+   * by enroll()'s unconfigured-queue guard, by scheduleNode()'s own
+   * scheduling-failure guard, and by a node executor's terminal
+   * `{kind: "failed"}` result. Absent on a run that has never failed.
+   */
+  error?: string;
+  /**
+   * Which node the failure happened at or around. `null` specifically for
+   * enroll()'s unconfigured-queue failure, which can occur before any node
+   * has started (falls back to the workflow's startNodeId, itself nullable
+   * for an empty workflow) — every other failure site sets this to the
+   * real, currently-executing nodeId. Absent on a run that has never
+   * failed.
+   */
+  failedNodeId?: string | null;
 }
 
 /* ------------------------ Node config (typed views) -------------------- */
