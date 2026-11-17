@@ -74,43 +74,74 @@ check("docs[0] is only read AFTER the ambiguous-count guard has already run", fi
 console.log("\n4. Tenancy: the target deal can only ever be one that belongs to this sub-account");
 const execMoveDealStageBody = engine.slice(
   engine.indexOf("const execMoveDealStage: NodeExecutor"),
-  engine.indexOf("const execMoveDealStage: NodeExecutor") + 1200,
+  engine.indexOf("const execMoveDealStage: NodeExecutor") + 2200,
 );
-check("execMoveDealStage passes expectedSubAccountId to updateDealServerSide (the tenancy guard that function itself enforces)", /expectedSubAccountId:\s*target\.subAccountId/.test(execMoveDealStageBody));
-check("execMoveDealStage reuses updateDealServerSide rather than writing to deals/ directly (no unrelated-deal / bypassed-activity-log risk)", /updateDealServerSide/.test(execMoveDealStageBody) && !/doc\(`deals\/\$\{target\.id\}`\)\.update/.test(execMoveDealStageBody));
+check("execMoveDealStage passes expectedSubAccountId to claimAndMoveDealStageServerSide (the tenancy guard that function itself enforces)", /expectedSubAccountId:\s*target\.subAccountId/.test(execMoveDealStageBody));
+check(
+  "execMoveDealStage reuses claimAndMoveDealStageServerSide rather than writing to deals/ directly (no unrelated-deal / bypassed-activity-log risk)",
+  /claimAndMoveDealStageServerSide/.test(execMoveDealStageBody) && !/doc\(`deals\/\$\{target\.id\}`\)\.update/.test(execMoveDealStageBody),
+);
 
 console.log("\n5. Invalid / missing stage config is rejected before any Firestore write");
 check("an empty stage config is skipped, not silently written", /if \(!stageId\) return \{ result: \{ kind: "next" \}, log: "skipped:no_stage" \};/.test(execMoveDealStageBody));
 check("a stage id outside the real pipeline stages is rejected", /VALID_STAGE_IDS\.includes\(stageId\)/.test(execMoveDealStageBody) && /error:invalid_stage/.test(execMoveDealStageBody));
 check("the invalid-stage check runs BEFORE any deal lookup (no wasted/incorrect write attempt)", execMoveDealStageBody.indexOf("invalid_stage") < execMoveDealStageBody.indexOf("resolveTargetDeal"));
 
-console.log("\n6. A failed deal update is never reported as a successful step");
-check("deal-not-found after resolution is logged as an error, not success", /if \(!updated\) \{\s*\n\s*return \{ result: \{ kind: "next" \}, log: "error:deal_not_found" \};/.test(execMoveDealStageBody));
-check("every resolveTargetDeal failure reason flows into an error:-prefixed log (never a bare \"ok\")", /log: `error:\$\{target\.reason\}`/.test(execMoveDealStageBody));
+console.log("\n6. A permanent failure is a TERMINAL outcome, never reported as a successful step");
+check(
+  "an invalid stage config is a terminal failure (kind: \"failed\"), not a soft error:-and-continue",
+  /if \(!VALID_STAGE_IDS\.includes\(stageId\)\) \{\s*\n\s*return \{\s*\n\s*result: \{\s*\n\s*kind: "failed",/.test(execMoveDealStageBody),
+);
+check(
+  "an unresolvable target deal (resolveTargetDeal failure) is a terminal failure, not a soft error:-and-continue",
+  /if \(!target\.ok\) \{\s*\n\s*return \{\s*\n\s*result: \{\s*\n\s*kind: "failed",/.test(execMoveDealStageBody),
+);
+check(
+  "a target deal that vanished before the claim transaction is ALSO a terminal failure, not a soft error:-and-continue",
+  /if \(!outcome\.ok\) \{\s*\n\s*return \{\s*\n\s*result: \{\s*\n\s*kind: "failed",/.test(execMoveDealStageBody),
+);
+check("every terminal failure still carries the original error:-prefixed log string for history continuity", /log: `error:\$\{target\.reason\}`/.test(execMoveDealStageBody) && /log: `error:\$\{outcome\.reason\}`/.test(execMoveDealStageBody));
 
-console.log("\n7. Concurrency safety — a genuinely concurrent duplicate invocation cannot produce duplicate side effects");
+console.log("\n7. Concurrency + atomicity — a genuinely concurrent duplicate invocation cannot produce duplicate side effects, AND a failed write cannot leave a dangling claim");
 // runStep's own guard (`run.history.some((h) => h.nodeId === nodeId)`) is a
 // plain read-before-execute check: it does NOT by itself prevent two
 // OVERLAPPING invocations of the same (run, node) from both passing it
-// before either has appended to history. A live-read inside
-// updateDealServerSide doesn't close that window either — two concurrent
-// callers can both read the same pre-move stage. These checks verify the
-// actual safeguard (an atomic Firestore-transaction claim), not just the
-// pre-existing sequential guard, which alone is NOT sufficient evidence of
-// concurrency safety.
-const claimFnBody = engine.slice(
-  engine.indexOf("async function claimDealStageMove"),
-  engine.indexOf("async function claimDealStageMove") + 500,
+// before either has appended to history. These checks verify the actual
+// safeguard — the claim and the deal mutation staged in ONE transaction in
+// deals-service.ts — not just the pre-existing sequential guard, which
+// alone is NOT sufficient evidence of concurrency safety.
+const claimFnBody = dealsService.slice(
+  dealsService.indexOf("export async function claimAndMoveDealStageServerSide"),
+  dealsService.indexOf("export async function claimAndMoveDealStageServerSide") + 2600,
 );
-check("a dedicated claim function exists", claimFnBody.length > 50);
-check("the claim uses a real Firestore TRANSACTION, not a plain get-then-set (which would NOT be concurrency-safe)", /runTransaction\(/.test(claimFnBody));
-check("the transaction reads the claim doc and bails if it already exists, BEFORE writing anything", /existing\.exists\)\s*return false/.test(claimFnBody));
-check("the claim write (tx.set) happens INSIDE the same transaction as the existence check (atomic create-if-absent)", /tx\.set\(claimRef/.test(claimFnBody));
-check("execMoveDealStage calls the claim BEFORE resolving the target deal or writing to it", execMoveDealStageBody.indexOf("claimDealStageMove") < execMoveDealStageBody.indexOf("resolveTargetDeal"));
-check("a lost claim race backs off cleanly (skips, does not error, does not retry into a second write)", /if \(!claimed\) \{\s*\n\s*return \{ result: \{ kind: "next" \}, log: "skipped:duplicate_invocation" \};/.test(execMoveDealStageBody));
-check("the claim is scoped per (runId, nodeId) — a legitimate different run or a different step is never blocked by another's claim", /dealStageClaims\/\$\{nodeId\}/.test(claimFnBody) && /workflowRuns\/\$\{runId\}/.test(claimFnBody));
+check("the combined claim+move function exists", claimFnBody.length > 100);
+check("it uses a real Firestore TRANSACTION, not a plain get-then-set (which would NOT be concurrency-safe)", /runTransaction</.test(claimFnBody));
+check("the transaction reads the claim doc FIRST and bails with no writes if it already exists", /if \(claimSnap\.exists\) return \{ claimed: false \};/.test(claimFnBody));
+check(
+  "the claim write (tx.set) AND the deal mutation (tx.update) are staged in the SAME transaction — a failure on either rolls back both",
+  (() => {
+    const setIdx = claimFnBody.indexOf("tx.set(claimRef");
+    const updateIdx = claimFnBody.indexOf("tx.update(dealRef");
+    const txStart = claimFnBody.indexOf("runTransaction<");
+    return setIdx > txStart && updateIdx > txStart && setIdx < updateIdx;
+  })(),
+);
+check("execMoveDealStage calls the combined claim+move function AFTER resolving the target deal (no wasted claim on an unresolvable target)", execMoveDealStageBody.indexOf("resolveTargetDeal") < execMoveDealStageBody.indexOf("claimAndMoveDealStageServerSide"));
+check("a lost claim race backs off cleanly (skips, does not error, does not retry into a second write)", /if \(!outcome\.claimed\) \{\s*\n\s*return \{ result: \{ kind: "next" \}, log: "skipped:duplicate_invocation" \};/.test(execMoveDealStageBody));
+check("the claim is scoped per (runId, nodeId) — a legitimate different run or a different step is never blocked by another's claim", /dealStageClaims\/\$\{opts\.nodeId\}/.test(claimFnBody) && /workflowRuns\/\$\{opts\.runId\}/.test(claimFnBody));
 check("execMoveDealStage creates no new deal (no duplicate-deal risk distinct from the claim question)", !/createDealServerSide/.test(execMoveDealStageBody));
-check("the old, unverified 'updateDealServerSide's live-read alone is sufficient' claim was removed from the doc comment", !/would emit no duplicate activity\/webhook\/trigger/.test(engine));
+check(
+  "the deal mutation inside the transaction re-verifies tenancy against a transactionally-fresh read, not a stale pre-transaction snapshot",
+  /dealSnap\.data\(\)\?\.subAccountId !== opts\.expectedSubAccountId/.test(claimFnBody),
+);
+check(
+  "side effects (activity/webhook/trigger) are deliberately NOT inside the transaction — applyDealUpdateSideEffects is called only after the transaction resolves",
+  (() => {
+    const txEnd = claimFnBody.indexOf("});", claimFnBody.indexOf("runTransaction<")) ;
+    const sideEffectsIdx = claimFnBody.indexOf("applyDealUpdateSideEffects(");
+    return txEnd > -1 && sideEffectsIdx > txEnd;
+  })(),
+);
 
 console.log("\n8. Reporting reflects the actual persisted deal state (no separate reporting-side fix needed)");
 check("updateDealServerSide persists stageId with a real Firestore write (merge), which is what Reports reads directly", /write\.stageId = patch\.stageId;/.test(dealsService) && /await ref\.set\(write, \{ merge: true \}\);/.test(dealsService));

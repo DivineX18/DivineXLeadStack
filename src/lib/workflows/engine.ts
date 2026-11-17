@@ -69,7 +69,22 @@ export type StepResult =
    *  (event time / cancellation) and decides again. */
   | { kind: "wait_self"; seconds: number }
   | { kind: "branch"; value: boolean }
-  | { kind: "end" };
+  | { kind: "end" }
+  /**
+   * TERMINAL, UNRECOVERABLE business-logic failure — distinct from a
+   * node that simply logs an `error:`-prefixed result and continues
+   * (the engine's long-standing default, kept for every action except
+   * the one below). Reserve this for a condition retrying can never fix
+   * on its own (e.g. move_deal_stage's target deal is genuinely
+   * ambiguous or gone) — NOT for a one-off provider hiccup or anything
+   * that might succeed if attempted again, and not merely because an
+   * executor COULD throw. runStep() reacts to this by flipping the run
+   * to `status: "failed"` with `reason` as the persisted `error`,
+   * recording the same history entry every other result gets, and
+   * stopping — no completion claim, no stats.completed increment, no
+   * further node runs.
+   */
+  | { kind: "failed"; reason: string };
 
 interface NodeContext {
   node: WorkflowNode;
@@ -500,54 +515,33 @@ async function resolveTargetDeal(
 }
 
 /**
- * Claims this (run, node) pair ATOMICALLY before any side-effecting write,
- * so two genuinely concurrent invocations of the SAME step can't both
- * proceed.
- *
- * runStep()'s own guard (`run.history.some((h) => h.nodeId === nodeId)`) is
- * a plain read, checked before the executor runs and before history is
- * appended after it returns — there is a real window between those two
- * points where a second QStash delivery of the identical message (at-least-
- * once delivery; also possible if the first attempt is still in flight when
- * a retry fires on a slow response) would pass that same check and run this
- * executor a second time, CONCURRENTLY with the first. updateDealServerSide
- * reading the deal's live stage does NOT close that window: both concurrent
- * calls can read the SAME pre-move stage before either has written, both
- * decide the stage changed, and both fire a duplicate activity-log entry,
- * duplicate webhooks, and a duplicate `pipeline.stage.changed` trigger — even
- * though the deal DOCUMENT converges to the same correct stage either way.
- * This is a pre-existing property of every action in this engine, not
- * introduced here; this guard is scoped to just this new action rather than
- * changing runStep's shared control flow, which every other action also
- * depends on.
- *
- * Firestore transactions make the claim itself safe under real concurrency:
- * if two transactions race to create the same claim doc, Firestore detects
- * the conflict at commit time and automatically re-runs the loser's
- * transaction function against the now-current document, where it correctly
- * observes the claim already exists and returns false. Only the winner ever
- * proceeds to resolve/update the deal.
- */
-async function claimDealStageMove(runId: string, nodeId: string): Promise<boolean> {
-  const claimRef = getAdminDb().doc(`workflowRuns/${runId}/dealStageClaims/${nodeId}`);
-  return getAdminDb().runTransaction(async (tx) => {
-    const existing = await tx.get(claimRef);
-    if (existing.exists) return false;
-    tx.set(claimRef, { claimedAt: FieldValue.serverTimestamp() });
-    return true;
-  });
-}
-
-/**
  * Moves the DEAL's stage (`deals/{id}.stageId`) — the gap `move_stage` never
  * covered, since that action only ever wrote `contact.pipelineStage` (see
- * MoveDealStageConfig's doc comment in types/workflows.ts). Reuses
- * updateDealServerSide(), the same chokepoint the Kanban drag-and-drop uses,
- * so a workflow-driven move gets identical activity-log, webhook, and
- * `deal.won`/`deal.lost`/`pipeline.stage.changed` side effects as a human
- * drag. Concurrency safety against duplicate side effects comes from
- * claimDealStageMove() above, not from updateDealServerSide's live-read —
- * see that function's doc comment for why the live-read alone isn't enough.
+ * MoveDealStageConfig's doc comment in types/workflows.ts).
+ *
+ * The claim and the deal mutation are performed TOGETHER, in one Firestore
+ * transaction, by claimAndMoveDealStageServerSide() — see that function's
+ * own doc comment in deals-service.ts. An earlier version of this executor
+ * took the claim in its own, separate transaction and only afterward called
+ * updateDealServerSide(): that closed the duplicate-side-effect race (two
+ * genuinely concurrent invocations can't both proceed — runStep()'s own
+ * history guard is a plain read and does not by itself close that window)
+ * but opened a narrower one — a transient failure on the deal write, AFTER
+ * the claim had already committed, permanently and silently skipped the
+ * move on every future delivery, since a retry saw the claim already taken.
+ * Folding both into one transaction closes that gap too: a failure on
+ * either half now rolls back both.
+ *
+ * Every genuinely PERMANENT failure here (the config names an invalid
+ * stage; the target deal can't be determined at all; the target deal no
+ * longer exists) is reported as a TERMINAL `{kind: "failed"}` — see the
+ * StepResult doc comment for why: retrying an ambiguous or missing deal can
+ * never resolve it, so letting the run march on to "completed" (the
+ * engine's prior, uniform behavior for every action-level error) would
+ * silently misreport that the declared business outcome happened. A lost
+ * claim race (`skipped:duplicate_invocation`) is NOT a failure — it is the
+ * correct, expected outcome for the loser of a genuine concurrent delivery,
+ * and stays a soft `{kind: "next"}` exactly as before.
  */
 const execMoveDealStage: NodeExecutor = async (ctx) => {
   const stageId = (
@@ -555,28 +549,49 @@ const execMoveDealStage: NodeExecutor = async (ctx) => {
   ).trim() as PipelineStageId;
   if (!stageId) return { result: { kind: "next" }, log: "skipped:no_stage" };
   if (!VALID_STAGE_IDS.includes(stageId)) {
-    return { result: { kind: "next" }, log: "error:invalid_stage" };
-  }
-
-  const claimed = await claimDealStageMove(ctx.runId, ctx.node.id);
-  if (!claimed) {
-    return { result: { kind: "next" }, log: "skipped:duplicate_invocation" };
+    return {
+      result: {
+        kind: "failed",
+        reason: "move_deal_stage: the configured stage is not a valid pipeline stage, and will never become one on retry",
+      },
+      log: "error:invalid_stage",
+    };
   }
 
   const target = await resolveTargetDeal(ctx);
   if (!target.ok) {
-    return { result: { kind: "next" }, log: `error:${target.reason}` };
+    return {
+      result: {
+        kind: "failed",
+        reason: `move_deal_stage: could not determine which deal to move (${target.reason})`,
+      },
+      log: `error:${target.reason}`,
+    };
   }
 
-  const { updateDealServerSide } = await import("@/lib/server/deals-service");
-  const updated = await updateDealServerSide({
+  const { claimAndMoveDealStageServerSide } = await import(
+    "@/lib/server/deals-service"
+  );
+  const outcome = await claimAndMoveDealStageServerSide({
+    runId: ctx.runId,
+    nodeId: ctx.node.id,
     dealId: target.id,
-    patch: { stageId },
+    stageId,
     userId: ctx.createdByUid,
     expectedSubAccountId: target.subAccountId,
   });
-  if (!updated) {
-    return { result: { kind: "next" }, log: "error:deal_not_found" };
+
+  if (!outcome.ok) {
+    return {
+      result: {
+        kind: "failed",
+        reason: `move_deal_stage: the target deal no longer exists (${outcome.reason})`,
+      },
+      log: `error:${outcome.reason}`,
+    };
+  }
+  if (!outcome.claimed) {
+    return { result: { kind: "next" }, log: "skipped:duplicate_invocation" };
   }
   return { result: { kind: "next" }, log: `deal_stage:${stageId}` };
 };
@@ -617,18 +632,25 @@ const execCreateTask: NodeExecutor = async (ctx) => {
     cfg.dueInDays && cfg.dueInDays > 0
       ? new Date(Date.now() + cfg.dueInDays * 86_400_000)
       : null;
-  await createTaskServerSide({
-    subAccountId: ctx.subAccountId,
-    agencyId: ctx.agencyId,
-    createdByUid: ctx.createdByUid,
-    mode: "live",
-    title,
-    notes: "Created by workflow",
-    dueAt,
-    contactId: ctx.contact.id,
-    dealId: null,
-    eventId: null,
-  });
+  await createTaskServerSide(
+    {
+      subAccountId: ctx.subAccountId,
+      agencyId: ctx.agencyId,
+      createdByUid: ctx.createdByUid,
+      mode: "live",
+      title,
+      notes: "Created by workflow",
+      dueAt,
+      contactId: ctx.contact.id,
+      dealId: null,
+      eventId: null,
+    },
+    // (runId, nodeId) is this step's logical operation identity: a retry
+    // or a genuinely concurrent duplicate delivery resolves to the SAME
+    // task document instead of creating a second one. Same convention
+    // recordWorkflowSmsAttempt already uses for workflow-originated SMS.
+    { idempotencyKey: `wf_${ctx.runId}_${ctx.node.id}` },
+  );
   return { result: { kind: "next" }, log: "task_created" };
 };
 
@@ -648,18 +670,22 @@ const execCreateDeal: NodeExecutor = async (ctx) => {
   // time, so resolving the import lazily at call time is safe and avoids
   // depending on bundler-specific circular-ESM behavior.
   const { createDealServerSide } = await import("@/lib/server/deals-service");
-  await createDealServerSide({
-    subAccountId: ctx.subAccountId,
-    agencyId: ctx.agencyId,
-    createdByUid: ctx.createdByUid,
-    mode: "live",
-    title,
-    value: Math.max(0, Number(cfg.value ?? 0)),
-    currency: cfg.currency || "usd",
-    contactId: ctx.contact.id,
-    stageId,
-    priority: (cfg.priority as DealPriority) || "medium",
-  });
+  await createDealServerSide(
+    {
+      subAccountId: ctx.subAccountId,
+      agencyId: ctx.agencyId,
+      createdByUid: ctx.createdByUid,
+      mode: "live",
+      title,
+      value: Math.max(0, Number(cfg.value ?? 0)),
+      currency: cfg.currency || "usd",
+      contactId: ctx.contact.id,
+      stageId,
+      priority: (cfg.priority as DealPriority) || "medium",
+    },
+    // Same (runId, nodeId) idempotency identity as execCreateTask above.
+    { idempotencyKey: `wf_${ctx.runId}_${ctx.node.id}` },
+  );
   return { result: { kind: "next" }, log: `deal_created:${stageId}` };
 };
 
@@ -1278,7 +1304,24 @@ export async function runStep(runId: string, nodeId: string): Promise<void> {
   // Advance control flow.
   let target: string | null = null;
   let delay = 0;
-  if (result.kind === "end") {
+  if (result.kind === "failed") {
+    // TERMINAL, UNRECOVERABLE. Unlike every other outcome, this does not
+    // advance anywhere — no completeRun (so no completion claim, no
+    // stats.completed increment), no scheduleNode, no further node runs.
+    // The history entry above already recorded WHICH node and WHAT the
+    // executor reported; this is the run-level record of the same fact, in
+    // the exact same shape runStep already uses for its own structural
+    // failures (deleted workflow / deleted contact), so it surfaces through
+    // the same operator-facing fields (`status`, `error`, `failedNodeId`)
+    // without needing a new UI or a new API shape.
+    await runRef.update({
+      status: "failed",
+      error: result.reason,
+      failedNodeId: nodeId,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    return;
+  } else if (result.kind === "end") {
     await completeRun(runRef, run.workflowId);
     return;
   } else if (result.kind === "branch") {

@@ -33,6 +33,7 @@ const check = (n: string, ok: boolean, d = "") => {
 };
 
 const engine = readFileSync("src/lib/workflows/engine.ts", "utf8");
+const dealsServiceSrc = readFileSync("src/lib/server/deals-service.ts", "utf8");
 
 function sliceFunction(src: string, marker: string): string {
   const start = src.indexOf(marker);
@@ -247,9 +248,16 @@ check(
 );
 
 console.log("\n11. Preservation: deal-stage idempotency, run history, and run-status transitions are untouched by this change");
+// move_deal_stage's claim mechanism was legitimately redesigned in a LATER,
+// separate pass (the recovery-hardening fix: claimDealStageMove's own
+// claim-before-write ordering was itself a confirmed defect, folded into
+// claimAndMoveDealStageServerSide in deals-service.ts). This check now
+// verifies the one thing that pass was required to preserve — idempotency
+// scoped to the dealStageClaims subcollection per (runId, nodeId) — rather
+// than pinning to a since-superseded function name.
 check(
-  "move_deal_stage's own claim (claimDealStageMove / dealStageClaims) is completely unmodified by this pass",
-  /async function claimDealStageMove\(runId: string, nodeId: string\): Promise<boolean> \{/.test(engine),
+  "move_deal_stage idempotency is still scoped to the same workflowRuns/{runId}/dealStageClaims/{nodeId} path this fix never touched (now implemented in deals-service.ts, not engine.ts — a later, separate, authorized redesign)",
+  /dealStageClaims\/\$\{opts\.nodeId\}/.test(dealsServiceSrc) && /workflowRuns\/\$\{opts\.runId\}/.test(dealsServiceSrc),
 );
 check(
   "runStep still appends to run.history via arrayUnion before any completion call site (history is never skipped)",
