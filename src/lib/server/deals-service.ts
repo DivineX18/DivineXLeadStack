@@ -153,12 +153,49 @@ export interface DealWriteResult {
   deal: DealApiObject;
 }
 
-/** Create a deal + log the create activity + emit `deal.created`. */
+/**
+ * gRPC/Firestore's ALREADY_EXISTS status (code 6) — what `DocumentReference
+ * .create()` throws when the target doc id already has a document. This is
+ * a stable, long-documented part of the gRPC status-code spec that
+ * Firestore's Admin SDK surfaces as-is, not something specific to one SDK
+ * version; the message check is a defensive fallback only.
+ */
+function isAlreadyExistsError(err: unknown): boolean {
+  const code = (err as { code?: number | string })?.code;
+  if (code === 6 || code === "already-exists") return true;
+  const message = err instanceof Error ? err.message : "";
+  return /already exists/i.test(message);
+}
+
+/**
+ * Create a deal + log the create activity + emit `deal.created`.
+ *
+ * `idempotencyKey`, when passed, makes this create-exactly-once: the deal
+ * is written to a document whose id IS the key (via `.create()`, which
+ * Firestore atomically refuses if that id already has a document), instead
+ * of an auto-generated id. A caller whose own request can be delivered more
+ * than once for the same logical operation (the workflow engine, keyed on
+ * `runId_nodeId`) passes this so a retry or a genuinely concurrent
+ * duplicate delivery resolves to the SAME deal document rather than
+ * creating a second one — with no separate claim step and therefore no
+ * claim-before-effect gap: the create call itself is the atomic check.
+ * Ordinary callers (the dashboard's "add deal" action, the public API) omit
+ * it and get the previous auto-id behavior, since each of their calls is
+ * intentionally a new, distinct deal.
+ *
+ * On a detected duplicate (the id already exists), the activity write and
+ * `deal.created` webhook are skipped — they already fired on whichever
+ * attempt created the document — and the existing deal's current data is
+ * returned so the caller still gets a valid result.
+ */
 export async function createDealServerSide(
   input: CreateDealInput,
+  opts?: { idempotencyKey?: string },
 ): Promise<DealWriteResult> {
   const db = getAdminDb();
-  const ref = db.collection("deals").doc();
+  const ref = opts?.idempotencyKey
+    ? db.collection("deals").doc(opts.idempotencyKey)
+    : db.collection("deals").doc();
 
   const doc = {
     title: input.title,
@@ -178,7 +215,22 @@ export async function createDealServerSide(
     updatedAt: FieldValue.serverTimestamp(),
     stageChangedAt: FieldValue.serverTimestamp(),
   };
-  await ref.set(doc);
+
+  if (opts?.idempotencyKey) {
+    try {
+      await ref.create(doc);
+    } catch (err) {
+      if (!isAlreadyExistsError(err)) throw err;
+      const existing = await ref.get();
+      const data = existing.data()!;
+      return {
+        id: ref.id,
+        deal: serializeDealForApi(ref.id, data, (data.mode as Mode) ?? input.mode),
+      };
+    }
+  } else {
+    await ref.set(doc);
+  }
 
   await writePipelineActivity(input.contactId, {
     content: `Deal "${input.title}" created in ${getStage(input.stageId).label}`,
@@ -228,36 +280,24 @@ export interface UpdateDealPatch {
   customFields?: Record<string, CustomFieldValue> | null;
 }
 
-export async function updateDealServerSide(opts: {
-  dealId: string;
-  patch: UpdateDealPatch;
-  userId: string;
-  mode?: Mode;
-  /**
-   * Tenancy guard: when set, the update is refused (returns null, exactly
-   * like a missing doc) unless the loaded deal's `subAccountId` matches.
-   * This function otherwise mutates ANY deal by id — callers whose dealId
-   * comes from an untrusted source (the AI Suite, request payloads) MUST
-   * pass this so a foreign id can't cross tenants.
-   */
-  expectedSubAccountId?: string;
-}): Promise<DealWriteResult | null> {
-  const db = getAdminDb();
-  const ref = db.doc(`deals/${opts.dealId}`);
-  const snap = await ref.get();
-  if (!snap.exists) return null;
-  if (
-    opts.expectedSubAccountId !== undefined &&
-    snap.data()?.subAccountId !== opts.expectedSubAccountId
-  ) {
-    return null;
-  }
-
-  const existing = snap.data()!;
-  const mode = opts.mode ?? (existing.mode as Mode) ?? "live";
+/**
+ * Pure computation of the Firestore patch for a deal update, given the
+ * deal's CURRENT data and the requested patch — no I/O. Shared by
+ * `updateDealServerSide` (plain read-then-write) and
+ * `claimAndMoveDealStageServerSide` (the same computation run inside a
+ * transaction) so the two code paths can never drift apart on what
+ * "unrelated deal fields are preserved" / "stage validation" / "lost
+ * reason handling" actually means.
+ */
+function buildDealUpdateWrite(
+  existing: FirebaseFirestore.DocumentData,
+  patch: UpdateDealPatch,
+): {
+  write: Record<string, unknown>;
+  stageChanged: boolean;
+  previousStage: PipelineStageId | undefined;
+} {
   const previousStage = existing.stageId as PipelineStageId | undefined;
-  const { patch } = opts;
-
   const write: Record<string, unknown> = {
     updatedAt: FieldValue.serverTimestamp(),
   };
@@ -288,25 +328,44 @@ export async function updateDealServerSide(opts: {
       }
     }
   }
+  return { write, stageChanged, previousStage };
+}
 
-  await ref.set(write, { merge: true });
+/**
+ * Side effects of a deal update, run AFTER the core write has committed —
+ * pipeline activity, webhooks, and the downstream pipeline.stage.changed
+ * trigger. Deliberately never run INSIDE a Firestore transaction: a
+ * transaction function can be internally retried by the SDK on write
+ * contention before it successfully commits, and these are non-idempotent
+ * external effects (an activity row, an outbound webhook, a workflow
+ * trigger) that must fire at most once per real commit, not once per
+ * attempt.
+ */
+async function applyDealUpdateSideEffects(opts: {
+  dealId: string;
+  data: FirebaseFirestore.DocumentData;
+  mode: Mode;
+  patch: UpdateDealPatch;
+  stageChanged: boolean;
+  previousStage: PipelineStageId | undefined;
+  userId: string;
+  subAccountId: string;
+  agencyId: string;
+}): Promise<DealWriteResult> {
+  const deal = serializeDealForApi(opts.dealId, opts.data, opts.mode);
 
-  const fresh = await ref.get();
-  const data = fresh.data()!;
-  const deal = serializeDealForApi(fresh.id, data, mode);
-
-  if (stageChanged && previousStage) {
+  if (opts.stageChanged && opts.previousStage && opts.patch.stageId) {
     const reasonSuffix =
-      patch.stageId === "lost" && write.lostReason
-        ? `, ${write.lostReason as string}`
+      opts.patch.stageId === "lost" && opts.data.lostReason
+        ? `, ${opts.data.lostReason as string}`
         : "";
-    await writePipelineActivity(data.contactId, {
-      content: `Deal "${data.title}" moved from ${getStage(previousStage).label} to ${getStage(patch.stageId!).label}${reasonSuffix}`,
+    await writePipelineActivity(opts.data.contactId, {
+      content: `Deal "${opts.data.title}" moved from ${getStage(opts.previousStage).label} to ${getStage(opts.patch.stageId).label}${reasonSuffix}`,
       createdBy: opts.userId,
       meta: {
-        dealId: fresh.id,
-        fromStageId: previousStage,
-        toStageId: patch.stageId,
+        dealId: opts.dealId,
+        fromStageId: opts.previousStage,
+        toStageId: opts.patch.stageId,
       },
     });
   }
@@ -314,35 +373,199 @@ export async function updateDealServerSide(opts: {
   // Always emit deal.updated; a stage move layers the finer events on top.
   const events: { type: WebhookEventType; extra?: Record<string, unknown> }[] =
     [{ type: "deal.updated" }];
-  if (stageChanged) {
+  if (opts.stageChanged) {
     events.push({
       type: "deal.stage.changed",
-      extra: { previous_stage: previousStage ?? null },
+      extra: { previous_stage: opts.previousStage ?? null },
     });
-    if (patch.stageId === "won") events.push({ type: "deal.won" });
-    else if (patch.stageId === "lost") events.push({ type: "deal.lost" });
+    if (opts.patch.stageId === "won") events.push({ type: "deal.won" });
+    else if (opts.patch.stageId === "lost") events.push({ type: "deal.lost" });
   }
   emitDealEvents({
-    subAccountId: existing.subAccountId,
-    agencyId: existing.agencyId,
-    mode,
+    subAccountId: opts.subAccountId,
+    agencyId: opts.agencyId,
+    mode: opts.mode,
     deal,
     events,
   });
 
   // Workflow trigger — a stage move enrolls the deal's contact (workflow runs
   // are contact-scoped). `toStage` lets a workflow narrow to one target stage.
-  if (mode === "live" && stageChanged && data.contactId) {
+  if (opts.mode === "live" && opts.stageChanged && opts.data.contactId) {
     void fireWorkflowTrigger({
-      subAccountId: existing.subAccountId as string,
-      agencyId: existing.agencyId as string,
+      subAccountId: opts.subAccountId,
+      agencyId: opts.agencyId,
       type: "pipeline.stage.changed",
-      contactId: data.contactId as string,
-      context: { toStage: patch.stageId },
+      contactId: opts.data.contactId as string,
+      context: { toStage: opts.patch.stageId },
     });
   }
 
-  return { id: fresh.id, deal };
+  return { id: opts.dealId, deal };
+}
+
+export async function updateDealServerSide(opts: {
+  dealId: string;
+  patch: UpdateDealPatch;
+  userId: string;
+  mode?: Mode;
+  /**
+   * Tenancy guard: when set, the update is refused (returns null, exactly
+   * like a missing doc) unless the loaded deal's `subAccountId` matches.
+   * This function otherwise mutates ANY deal by id — callers whose dealId
+   * comes from an untrusted source (the AI Suite, request payloads) MUST
+   * pass this so a foreign id can't cross tenants.
+   */
+  expectedSubAccountId?: string;
+}): Promise<DealWriteResult | null> {
+  const db = getAdminDb();
+  const ref = db.doc(`deals/${opts.dealId}`);
+  const snap = await ref.get();
+  if (!snap.exists) return null;
+  if (
+    opts.expectedSubAccountId !== undefined &&
+    snap.data()?.subAccountId !== opts.expectedSubAccountId
+  ) {
+    return null;
+  }
+
+  const existing = snap.data()!;
+  const mode = opts.mode ?? (existing.mode as Mode) ?? "live";
+  const { write, stageChanged, previousStage } = buildDealUpdateWrite(
+    existing,
+    opts.patch,
+  );
+
+  await ref.set(write, { merge: true });
+
+  const fresh = await ref.get();
+  const data = fresh.data()!;
+
+  return applyDealUpdateSideEffects({
+    dealId: fresh.id,
+    data,
+    mode,
+    patch: opts.patch,
+    stageChanged,
+    previousStage,
+    userId: opts.userId,
+    subAccountId: existing.subAccountId as string,
+    agencyId: existing.agencyId as string,
+  });
+}
+
+/**
+ * Atomically claims a (runId, nodeId) workflow step AND moves a deal's
+ * stage, in ONE Firestore transaction — so a failure on either half can
+ * never leave the other behind. This replaces the workflow engine's
+ * earlier two-step design (a standalone claim transaction, followed by a
+ * separate, non-transactional call to updateDealServerSide): that design
+ * closed the double-execution race but opened a narrower one — a
+ * transient failure on the deal write, AFTER the claim had already
+ * committed, permanently and silently prevented the deal from ever
+ * moving, because a retry saw the claim already taken and skipped. Here
+ * the claim and the deal mutation are staged in the same transaction, so
+ * Firestore only ever commits them together.
+ *
+ * Side effects (activity, webhooks, the downstream trigger) run AFTER the
+ * transaction commits, via the same applyDealUpdateSideEffects()
+ * updateDealServerSide uses — see that function's own comment for why
+ * they must not run inside the transaction itself.
+ */
+export async function claimAndMoveDealStageServerSide(opts: {
+  runId: string;
+  nodeId: string;
+  dealId: string;
+  stageId: PipelineStageId;
+  userId: string;
+  /** Same tenancy guard as updateDealServerSide — required here, not
+   *  optional, since every caller of this function resolves dealId from
+   *  workflow/trigger context, never from a trusted first-party id. */
+  expectedSubAccountId: string;
+  lostReason?: string | null;
+}): Promise<
+  | { ok: true; claimed: true; deal: DealApiObject }
+  | { ok: true; claimed: false }
+  | { ok: false; reason: "deal_not_found" }
+> {
+  const db = getAdminDb();
+  const claimRef = db.doc(
+    `workflowRuns/${opts.runId}/dealStageClaims/${opts.nodeId}`,
+  );
+  const dealRef = db.doc(`deals/${opts.dealId}`);
+  const patch: UpdateDealPatch = {
+    stageId: opts.stageId,
+    lostReason: opts.lostReason,
+  };
+
+  type TxResult =
+    | { claimed: false; dealMissing?: true }
+    | {
+        claimed: true;
+        mode: Mode;
+        stageChanged: boolean;
+        previousStage: PipelineStageId | undefined;
+        subAccountId: string;
+        agencyId: string;
+      };
+
+  const txResult = await db.runTransaction<TxResult>(async (tx) => {
+    const claimSnap = await tx.get(claimRef);
+    if (claimSnap.exists) return { claimed: false };
+
+    const dealSnap = await tx.get(dealRef);
+    if (
+      !dealSnap.exists ||
+      dealSnap.data()?.subAccountId !== opts.expectedSubAccountId
+    ) {
+      return { claimed: false, dealMissing: true };
+    }
+
+    const existing = dealSnap.data()!;
+    const mode = (existing.mode as Mode) ?? "live";
+    const { write, stageChanged, previousStage } = buildDealUpdateWrite(
+      existing,
+      patch,
+    );
+
+    tx.set(claimRef, { claimedAt: FieldValue.serverTimestamp() });
+    tx.update(dealRef, write);
+
+    return {
+      claimed: true,
+      mode,
+      stageChanged,
+      previousStage,
+      subAccountId: existing.subAccountId as string,
+      agencyId: existing.agencyId as string,
+    };
+  });
+
+  if (!txResult.claimed) {
+    return txResult.dealMissing
+      ? { ok: false, reason: "deal_not_found" }
+      : { ok: true, claimed: false };
+  }
+
+  // Re-read AFTER the transaction commits to resolve the serverTimestamp
+  // sentinels into real values for serialization — the same reason
+  // updateDealServerSide re-reads after its own (non-transactional) write.
+  const fresh = await dealRef.get();
+  const data = fresh.data()!;
+
+  const result = await applyDealUpdateSideEffects({
+    dealId: opts.dealId,
+    data,
+    mode: txResult.mode,
+    patch,
+    stageChanged: txResult.stageChanged,
+    previousStage: txResult.previousStage,
+    userId: opts.userId,
+    subAccountId: txResult.subAccountId,
+    agencyId: txResult.agencyId,
+  });
+
+  return { ok: true, claimed: true, deal: result.deal };
 }
 
 /**

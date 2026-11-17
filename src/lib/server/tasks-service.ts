@@ -48,13 +48,37 @@ export interface TaskWriteResult {
   task: TaskApiObject;
 }
 
-/** Create a task + emit `task.created`. */
+/** Same gRPC ALREADY_EXISTS check as deals-service.ts's createDealServerSide
+ *  — see that function's comment for why this is a stable, SDK-version-
+ *  independent check rather than something fragile. */
+function isAlreadyExistsError(err: unknown): boolean {
+  const code = (err as { code?: number | string })?.code;
+  if (code === 6 || code === "already-exists") return true;
+  const message = err instanceof Error ? err.message : "";
+  return /already exists/i.test(message);
+}
+
+/**
+ * Create a task + emit `task.created`.
+ *
+ * `idempotencyKey`, when passed, makes this create-exactly-once via
+ * Firestore's atomic `.create()` (fails if the id already has a document)
+ * instead of an auto-generated id — see createDealServerSide's comment for
+ * the full rationale. The workflow engine is the only caller that passes
+ * this, keyed on `runId_nodeId`, so a retry or a genuinely concurrent
+ * duplicate delivery resolves to the SAME task instead of creating a
+ * second one. On a detected duplicate, the `task.created` webhook is
+ * skipped (it already fired on whichever attempt created the document).
+ */
 export async function createTaskServerSide(
   input: CreateTaskInput,
+  opts?: { idempotencyKey?: string },
 ): Promise<TaskWriteResult> {
   const db = getAdminDb();
   const territoryId = await territoryForContact(input.contactId);
-  const ref = db.collection("tasks").doc();
+  const ref = opts?.idempotencyKey
+    ? db.collection("tasks").doc(opts.idempotencyKey)
+    : db.collection("tasks").doc();
 
   const doc = {
     title: input.title,
@@ -73,7 +97,22 @@ export async function createTaskServerSide(
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   };
-  await ref.set(doc);
+
+  if (opts?.idempotencyKey) {
+    try {
+      await ref.create(doc);
+    } catch (err) {
+      if (!isAlreadyExistsError(err)) throw err;
+      const existing = await ref.get();
+      const data = existing.data()!;
+      return {
+        id: ref.id,
+        task: serializeTaskForApi(ref.id, data, (data.mode as Mode) ?? input.mode),
+      };
+    }
+  } else {
+    await ref.set(doc);
+  }
 
   const now = new Date();
   const task = serializeTaskForApi(
