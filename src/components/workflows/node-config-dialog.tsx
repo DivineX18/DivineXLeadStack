@@ -228,10 +228,32 @@ export function NodeConfigDialog({
           )}
 
           {step.type === "move_stage" && (
-            <Field label="Move contact to stage">
+            <Field
+              label="Move contact to stage"
+              hint="Sets this contact's own stage field. To move the associated DEAL (what Reports/Pipeline use for won revenue), use “Move deal stage” instead."
+            >
               <select
                 value={str("stage") || "new"}
                 onChange={(e) => set({ stage: e.target.value })}
+                className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+              >
+                {PIPELINE_STAGES.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+
+          {step.type === "move_deal_stage" && (
+            <Field
+              label="Move deal to stage"
+              hint="Moves the contact's deal in the Pipeline. If the contact has more than one deal, or none, this step will fail rather than guess which one — check Runs if it doesn't take effect."
+            >
+              <select
+                value={str("stageId") || "new"}
+                onChange={(e) => set({ stageId: e.target.value })}
                 className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
               >
                 {PIPELINE_STAGES.map((s) => (

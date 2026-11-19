@@ -106,6 +106,7 @@ export const WORKFLOW_NODE_TYPES = [
   "add_tag",
   "remove_tag",
   "move_stage",
+  "move_deal_stage",
   "update_field",
   "create_task",
   "create_deal",
@@ -184,6 +185,23 @@ export interface WorkflowRunDoc {
   qstashMessageId: string | null;
   enrolledAt: Timestamp | FieldValue | null;
   updatedAt: Timestamp | FieldValue | null;
+  /**
+   * Human-readable reason the run reached `status: "failed"` — set by
+   * runStep()'s own structural checks (deleted workflow, deleted contact),
+   * by enroll()'s unconfigured-queue guard, by scheduleNode()'s own
+   * scheduling-failure guard, and by a node executor's terminal
+   * `{kind: "failed"}` result. Absent on a run that has never failed.
+   */
+  error?: string;
+  /**
+   * Which node the failure happened at or around. `null` specifically for
+   * enroll()'s unconfigured-queue failure, which can occur before any node
+   * has started (falls back to the workflow's startNodeId, itself nullable
+   * for an empty workflow) — every other failure site sets this to the
+   * real, currently-executing nodeId. Absent on a run that has never
+   * failed.
+   */
+  failedNodeId?: string | null;
 }
 
 /* ------------------------ Node config (typed views) -------------------- */
@@ -252,6 +270,19 @@ export interface TagConfig {
 }
 export interface MoveStageConfig {
   stage: string;
+}
+/**
+ * Moves the DEAL's stage, not the contact's. Deliberately a separate action
+ * from MoveStageConfig/`move_stage` (which only ever touched
+ * `contact.pipelineStage`) rather than a change to its meaning — existing
+ * workflows built on `move_stage` keep their exact behavior. See
+ * engine.ts::execMoveDealStage for how "the" deal is resolved: an explicit
+ * `dealId` carried on the trigger context when the trigger produced one
+ * (e.g. form.submitted), else the contact's one and only deal, never a
+ * guess among several.
+ */
+export interface MoveDealStageConfig {
+  stageId: PipelineStageId;
 }
 export interface UpdateFieldConfig {
   field: string;
